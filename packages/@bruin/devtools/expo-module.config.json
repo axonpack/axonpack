@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["DevtoolModule"]
+  },
+  "android": {
+    "modules": ["io.github.axonpack.bruin.devtool.DevtoolModule"]
+  }
+}

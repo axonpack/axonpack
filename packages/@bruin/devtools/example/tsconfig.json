@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@bruin/devtools": ["../src/index"],
+      "@bruin/devtools/*": ["../src/*"]
+    }
+  }
+}
