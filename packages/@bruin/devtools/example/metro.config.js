@@ -20,7 +20,7 @@ config.resolver.nodeModulesPaths = [
 ];
 
 config.resolver.extraNodeModules = {
-  'devtool': '..',
+  '@bruin/devtools': '..',
 };
 
 config.watchFolders = [path.resolve(__dirname, '..')];

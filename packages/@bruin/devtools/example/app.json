@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "devtools-example",
+    "slug": "devtools-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "io.github.axonpack.bruin.devtoolexample"
+    },
+    "android": {
+      "package": "io.github.axonpack.bruin.devtoolexample"
+    }
+  }
+}

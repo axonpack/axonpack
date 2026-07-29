@@ -25,6 +25,7 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "packages/@bruin/*"
+    "packages/@bruin/*",
+    "packages/@bruin/devtools/example"
   ]
 }
