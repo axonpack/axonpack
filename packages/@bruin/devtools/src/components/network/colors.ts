@@ -9,4 +9,5 @@ export const COLORS = {
   pending: '#5f6368',
   success: '#188038',
   error: '#d93025',
+  warning: '#f9ab00',
 };

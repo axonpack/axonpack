@@ -2,160 +2,32 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
-  LayoutAnimation,
-  Platform,
   SectionList,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  UIManager,
   View,
 } from 'react-native';
 
+import { Chip } from './Chip';
 import { DetailPanel } from './DetailPanel';
+import { IconButton } from './IconButton';
+import { LogRow } from './LogRow';
 import { OverviewStrip } from './OverviewStrip';
+import { SettingRow } from './SettingRow';
 import { COLORS } from './colors';
 import { exportNetworkLog } from './exportNetworkLog';
+import { matchesQuery } from './filterEntries';
+import { animateNextLayout } from './layoutAnimation';
 import { networkLogStore } from '../../utils/network/networkLogStore';
 import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
-import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resourceType';
+import {
+  classifyResourceType,
+  RESOURCE_TYPE_LABELS,
+  RESOURCE_TYPES,
+} from '../../utils/network/resourceType';
 import type { ResourceType } from '../../utils/network/resourceType';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-function animateNextLayout() {
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-}
-
-const TYPE_FILTERS: ResourceType[] = ['fetch-xhr', 'js', 'img', 'media', 'other'];
-
-type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
-
-function IconButton({
-  name,
-  color,
-  onPress,
-}: {
-  name: MaterialIconName;
-  color: string;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity onPress={onPress} hitSlop={8} style={styles.iconButton}>
-      <MaterialIcons name={name} size={19} color={color} />
-    </TouchableOpacity>
-  );
-}
-
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity onPress={onPress}>
-      <Text style={[styles.chip, active && styles.chipActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function SettingRow({
-  label,
-  value,
-  onValueChange,
-}: {
-  label: string;
-  value: boolean;
-  onValueChange: (next: boolean) => void;
-}) {
-  return (
-    <TouchableOpacity style={styles.settingRow} onPress={() => onValueChange(!value)}>
-      <MaterialIcons
-        name={value ? 'check-box' : 'check-box-outline-blank'}
-        size={18}
-        color={value ? COLORS.accent : COLORS.textSecondary}
-      />
-      <Text style={styles.settingLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function formatSize(bytes: number | undefined): string {
-  if (bytes === undefined) return '–';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** Last path segment plus the query string, matching Chrome's "Name" column (used for big rows). */
-function getDisplayNameWithQuery(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const segments = parsed.pathname.split('/').filter(Boolean);
-    const name =
-      segments.length > 0 ? decodeURIComponent(segments[segments.length - 1]) : parsed.hostname;
-    return parsed.search ? `${name}${parsed.search}` : name;
-  } catch {
-    return url;
-  }
-}
-
-function matchesQuery(entry: NetworkLogEntry, query: string): boolean {
-  if (!query) return true;
-  const haystack =
-    `${entry.method} ${entry.url} ${entry.statusCode ?? ''} ${entry.source ?? ''}`.toLowerCase();
-  return haystack.includes(query);
-}
-
-function LogRow({
-  entry,
-  bigRows,
-  zebra,
-  onPress,
-}: {
-  entry: NetworkLogEntry;
-  bigRows: boolean;
-  zebra: boolean;
-  onPress: () => void;
-}) {
-  const statusColor =
-    entry.status === 'success'
-      ? COLORS.success
-      : entry.status === 'error'
-        ? COLORS.error
-        : COLORS.pending;
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.row, bigRows && styles.rowBig, zebra && styles.rowZebra]}>
-      <View style={styles.rowHeaderLine}>
-        <Text style={styles.rowName} numberOfLines={1}>
-          {bigRows ? getDisplayNameWithQuery(entry.url) : `${entry.method} ${entry.url}`}
-        </Text>
-        <Text style={[styles.rowStatus, { color: statusColor }]}>
-          {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
-        </Text>
-        <Text style={styles.rowDuration}>
-          {entry.duration !== undefined ? `${entry.duration}ms` : '...'}
-        </Text>
-      </View>
-      {bigRows && (
-        <>
-          <Text style={styles.rowUrl} numberOfLines={1}>
-            {entry.method} {entry.url}
-          </Text>
-          <View style={styles.rowMetaLine}>
-            {entry.source && <Text style={styles.rowMeta}>{entry.source}</Text>}
-            <Text style={styles.rowMeta}>
-              {RESOURCE_TYPE_LABELS[classifyResourceType(entry.mimeType)]}
-            </Text>
-            <Text style={styles.rowMeta}>{formatSize(entry.size)}</Text>
-          </View>
-        </>
-      )}
-    </TouchableOpacity>
-  );
-}
 
 export function NetworkView() {
   const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getSnapshot);
@@ -244,13 +116,12 @@ export function NetworkView() {
     setMoreFiltersOpen((current) => !current);
   }
 
-  function renderRow(entry: NetworkLogEntry, index: number) {
+  function renderRow(entry: NetworkLogEntry) {
     return (
       <LogRow
         key={entry.id}
         entry={entry}
         bigRows={bigRows}
-        zebra={index % 2 === 1}
         onPress={() => setSelectedEntry(entry)}
       />
     );
@@ -351,7 +222,7 @@ export function NetworkView() {
           <Text style={styles.filterSectionLabel}>Type</Text>
           <View style={styles.chipsRow}>
             <Chip label="All" active={activeType === null} onPress={() => setActiveType(null)} />
-            {TYPE_FILTERS.map((type) => (
+            {RESOURCE_TYPES.map((type) => (
               <Chip
                 key={type}
                 label={RESOURCE_TYPE_LABELS[type]}
@@ -411,19 +282,21 @@ export function NetworkView() {
         <SectionList
           sections={sections}
           keyExtractor={(entry) => entry.id}
-          renderItem={({ item, index }) => renderRow(item, index)}
+          renderItem={({ item }) => renderRow(item)}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader}>
               {section.title} ({section.data.length})
             </Text>
           )}
+          contentContainerStyle={styles.listContent}
           ListEmptyComponent={<Text style={styles.empty}>No requests captured yet</Text>}
         />
       ) : (
         <FlatList
           data={visibleLogs}
           keyExtractor={(entry) => entry.id}
-          renderItem={({ item, index }) => renderRow(item, index)}
+          renderItem={({ item }) => renderRow(item)}
+          contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <Text style={styles.empty}>
               {logs.length === 0 ? 'No requests captured yet' : 'No requests match your filter'}
@@ -440,7 +313,12 @@ export function NetworkView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.toolbarBackground,
+  },
+  listContent: {
+    paddingVertical: 6,
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',
@@ -454,24 +332,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 2,
   },
-  iconButton: {
-    padding: 4,
-  },
   panel: {
     padding: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.background,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 6,
-  },
-  settingLabel: {
-    fontSize: 13,
-    color: COLORS.textPrimary,
   },
   searchRow: {
     flexDirection: 'row',
@@ -508,22 +373,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  chip: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    overflow: 'hidden',
-  },
-  chipActive: {
-    color: '#ffffff',
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
-  },
   sectionHeader: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -531,53 +380,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.textPrimary,
-  },
-  row: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  rowBig: {
-    paddingVertical: 14,
-  },
-  rowZebra: {
-    backgroundColor: '#fafafa',
-  },
-  rowHeaderLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  rowName: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  rowStatus: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  rowDuration: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-  },
-  rowUrl: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  rowMetaLine: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 3,
-  },
-  rowMeta: {
-    fontSize: 10,
-    color: COLORS.accent,
-    textTransform: 'uppercase',
   },
   empty: {
     textAlign: 'center',

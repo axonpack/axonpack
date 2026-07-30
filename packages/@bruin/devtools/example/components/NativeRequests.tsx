@@ -21,10 +21,19 @@ const SECTIONS: { transport: Transport; label: string }[] = [
   { transport: 'axios', label: 'axios' },
 ];
 
+// Structurally a real JWT (decodable header/payload), but the signature is fake and these are
+// public test APIs (jsonplaceholder/httpbin) that never validate it — this exists purely so the
+// devtools Headers tab has an Authorization value to show.
+const FAKE_BEARER_TOKEN =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlLXVzZXItaWQiLCJuYW1lIjoiQnJ1aW4gRGV2dG9vbHMgRXhhbXBsZSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxOTk5OTk5OTk5fQ.fake-signature-for-demo-purposes-only';
+
 async function fetchJson(method: string, url: string, body?: string | FormData) {
   const response = await fetch(url, {
     method,
-    headers: typeof body === 'string' ? { 'Content-Type': 'application/json' } : undefined,
+    headers: {
+      Authorization: `Bearer ${FAKE_BEARER_TOKEN}`,
+      ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : undefined),
+    },
     body,
   });
   const text = await response.text();
@@ -35,6 +44,7 @@ function xhrJson(method: string, url: string, body?: string | FormData) {
   return new Promise<{ status: number; text: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(method, url);
+    xhr.setRequestHeader('Authorization', `Bearer ${FAKE_BEARER_TOKEN}`);
     if (typeof body === 'string') xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
     xhr.onerror = () => reject(new Error('XHR request failed'));
@@ -43,13 +53,21 @@ function xhrJson(method: string, url: string, body?: string | FormData) {
 }
 
 async function axiosJson(method: 'get' | 'post' | 'delete', url: string, data?: unknown) {
-  const response = await axios.request({ method, url, data });
+  const response = await axios.request({
+    method,
+    url,
+    data,
+    headers: { Authorization: `Bearer ${FAKE_BEARER_TOKEN}` },
+  });
   return { status: response.status, text: JSON.stringify(response.data).slice(0, 300) };
 }
 
 async function axiosUpload(url: string, formData: FormData) {
   const response = await axios.post(url, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: {
+      Authorization: `Bearer ${FAKE_BEARER_TOKEN}`,
+      'Content-Type': 'multipart/form-data',
+    },
   });
   return { status: response.status, text: JSON.stringify(response.data).slice(0, 300) };
 }
