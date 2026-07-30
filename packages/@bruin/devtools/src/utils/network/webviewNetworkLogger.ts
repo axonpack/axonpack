@@ -3,11 +3,11 @@ import type { NetworkLogEntry } from './networkLogStore';
 
 const MESSAGE_MARKER = '__bruinDevtoolsNetwork';
 
-type WebViewNetworkMessage = {
-  [MESSAGE_MARKER]: true;
-  source: string;
-  payload: Partial<NetworkLogEntry> & Pick<NetworkLogEntry, 'id' | 'status'>;
-};
+type WebViewNetworkPayload = Partial<NetworkLogEntry> & Pick<NetworkLogEntry, 'id' | 'status'>;
+
+type WebViewMessage =
+  | { [MESSAGE_MARKER]: true; type: 'network'; source: string; payload: WebViewNetworkPayload }
+  | { [MESSAGE_MARKER]: true; type: 'navigation'; source: string };
 
 type WebViewMessageEventLike = {
   nativeEvent: {
@@ -15,15 +15,31 @@ type WebViewMessageEventLike = {
   };
 };
 
+/**
+ * A page rendered inside a <WebView> runs in its own JS engine (WKWebView/Android WebView),
+ * entirely separate from the React Native JS context — patchFetch/patchXHR can't see it.
+ * This script is meant to be passed to a WebView's `injectedJavaScript` prop: it patches
+ * fetch/XMLHttpRequest inside the page itself, then relays each request back to React Native
+ * via `window.ReactNativeWebView.postMessage`, tagged with `webviewName`.
+ */
 export function getWebViewInjectedScript(webviewName: string): string {
   const nameLiteral = JSON.stringify(webviewName);
   const markerLiteral = JSON.stringify(MESSAGE_MARKER);
 
   return `(function () {
+    var WEBVIEW_NAME = ${nameLiteral};
+
     if (window.__bruinDevtoolsWebViewPatched) return;
     window.__bruinDevtoolsWebViewPatched = true;
 
-    var WEBVIEW_NAME = ${nameLiteral};
+    try {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        ${markerLiteral}: true,
+        type: 'navigation',
+        source: WEBVIEW_NAME
+      }));
+    } catch (e) {}
+
     var counter = 0;
 
     function nextId() {
@@ -46,10 +62,45 @@ export function getWebViewInjectedScript(webviewName: string): string {
       }
     }
 
+    function normalizeHeaders(headers) {
+      var result = {};
+      if (!headers) return result;
+      if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+        headers.forEach(function (value, key) { result[key] = value; });
+        return result;
+      }
+      if (Array.isArray(headers)) {
+        headers.forEach(function (pair) { result[pair[0]] = pair[1]; });
+        return result;
+      }
+      for (var key in headers) {
+        if (Object.prototype.hasOwnProperty.call(headers, key)) result[key] = headers[key];
+      }
+      return result;
+    }
+
+    function headersFromResponse(headers) {
+      var result = {};
+      headers.forEach(function (value, key) { result[key] = value; });
+      return result;
+    }
+
+    function extractMimeType(headers) {
+      var contentType = headers['content-type'];
+      return contentType ? contentType.split(';')[0].trim().toLowerCase() : undefined;
+    }
+
+    function extractSize(headers, body) {
+      var contentLength = Number(headers['content-length']);
+      if (headers['content-length'] && !isNaN(contentLength)) return contentLength;
+      return body ? body.length : undefined;
+    }
+
     function post(payload) {
       try {
         window.ReactNativeWebView.postMessage(JSON.stringify({
           ${markerLiteral}: true,
+          type: 'network',
           source: WEBVIEW_NAME,
           payload: payload
         }));
@@ -64,14 +115,16 @@ export function getWebViewInjectedScript(webviewName: string): string {
         var method = (init && init.method) || (input && input.method) || 'GET';
         var rawUrl = typeof input === 'string' ? input : (input && input.url) || String(input);
         var url = resolveUrl(rawUrl);
+        var requestHeaders = normalizeHeaders((init && init.headers) || (input && input.headers));
 
-        post({ id: id, method: String(method).toUpperCase(), url: url, status: 'pending', requestBody: previewBody(init && init.body), startedAt: startedAt });
+        post({ id: id, method: String(method).toUpperCase(), url: url, status: 'pending', requestBody: previewBody(init && init.body), requestHeaders: requestHeaders, startedAt: startedAt });
 
         return originalFetch(input, init).then(function (response) {
+          var responseHeaders = headersFromResponse(response.headers);
           response.clone().text().then(function (text) {
-            post({ id: id, status: 'success', statusCode: response.status, responseBody: text, duration: Date.now() - startedAt });
+            post({ id: id, status: 'success', statusCode: response.status, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: extractSize(responseHeaders, text), duration: Date.now() - startedAt });
           }).catch(function () {
-            post({ id: id, status: 'success', statusCode: response.status, duration: Date.now() - startedAt });
+            post({ id: id, status: 'success', statusCode: response.status, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), duration: Date.now() - startedAt });
           });
           return response;
         }).catch(function (error) {
@@ -85,12 +138,19 @@ export function getWebViewInjectedScript(webviewName: string): string {
     if (OriginalXHR) {
       var originalOpen = OriginalXHR.prototype.open;
       var originalSend = OriginalXHR.prototype.send;
+      var originalSetRequestHeader = OriginalXHR.prototype.setRequestHeader;
 
       OriginalXHR.prototype.open = function (method, url) {
         this.__bruinId = nextId();
         this.__bruinMethod = method;
         this.__bruinUrl = resolveUrl(url);
+        this.__bruinHeaders = {};
         return originalOpen.apply(this, arguments);
+      };
+
+      OriginalXHR.prototype.setRequestHeader = function (name, value) {
+        if (this.__bruinHeaders) this.__bruinHeaders[name] = value;
+        return originalSetRequestHeader.apply(this, arguments);
       };
 
       OriginalXHR.prototype.send = function (body) {
@@ -98,16 +158,31 @@ export function getWebViewInjectedScript(webviewName: string): string {
         var id = xhr.__bruinId || nextId();
         var startedAt = Date.now();
 
-        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), startedAt: startedAt });
+        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, startedAt: startedAt });
 
         xhr.addEventListener('readystatechange', function () {
           if (xhr.readyState !== OriginalXHR.DONE) return;
           var isNetworkFailure = xhr.status === 0;
+          var responseBody = typeof xhr.responseText === 'string' ? xhr.responseText : undefined;
+          var responseHeaders = {};
+          try {
+            var raw = xhr.getAllResponseHeaders() || '';
+            raw.trim().split(/[\\r\\n]+/).forEach(function (line) {
+              var idx = line.indexOf(':');
+              if (idx > 0) {
+                responseHeaders[line.substring(0, idx).trim().toLowerCase()] = line.substring(idx + 1).trim();
+              }
+            });
+          } catch (e) {}
+
           post({
             id: id,
             status: isNetworkFailure ? 'error' : 'success',
             statusCode: xhr.status,
-            responseBody: typeof xhr.responseText === 'string' ? xhr.responseText : undefined,
+            responseBody: responseBody,
+            responseHeaders: responseHeaders,
+            mimeType: extractMimeType(responseHeaders),
+            size: extractSize(responseHeaders, responseBody),
             error: isNetworkFailure ? 'Network request failed' : undefined,
             duration: Date.now() - startedAt
           });
@@ -146,11 +221,18 @@ export function handleWebViewNetworkMessage(
     return false;
   }
 
-  const { source, payload } = parsed as WebViewNetworkMessage;
+  const message = parsed as WebViewMessage;
 
-  if (allowedSources && !allowedSources.includes(source)) {
+  if (allowedSources && !allowedSources.includes(message.source)) {
     return false;
   }
+
+  if (message.type === 'navigation') {
+    networkLogStore.notifyNavigation();
+    return true;
+  }
+
+  const { source, payload } = message;
 
   if (payload.status === 'pending') {
     networkLogStore.add({ ...payload, source } as NetworkLogEntry);

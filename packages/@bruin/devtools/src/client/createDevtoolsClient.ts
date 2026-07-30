@@ -15,7 +15,6 @@ type WebViewMessageEventLike = {
 export type DevtoolsNetworkConfig<TWebviewSources extends readonly string[]> = {
   includeFetch?: boolean;
   includeXmlHttpRequest?: boolean;
-  /** Named allowlist of WebView sources — logging a WebView requires wiring it up with one of these names. */
   webviewSources?: TWebviewSources;
 };
 
@@ -33,16 +32,13 @@ export function createDevtoolsClient<
   } = config?.network ?? {};
 
   return {
-    /** Installs the fetch/XHR patches according to the network config. Call once at app startup. */
     init() {
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
     },
-    /** Pass to a WebView's `injectedJavaScript` prop. `source` is limited to `network.webviewSources`. */
     getWebViewInjectedScript(source: TWebviewSources[number]) {
       return getWebViewInjectedScript(source);
     },
-    /** Pass to (or call from within) a WebView's `onMessage` prop. */
     handleWebViewMessage(event: WebViewMessageEventLike) {
       return handleWebViewNetworkMessage(event, webviewSources);
     },

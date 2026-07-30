@@ -15,12 +15,38 @@ function previewBody(body: unknown): string | undefined {
   return '[binary body]';
 }
 
+function parseResponseHeaders(raw: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const line of raw.trim().split(/[\r\n]+/)) {
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex < 0) continue;
+    const key = line.slice(0, separatorIndex).trim().toLowerCase();
+    const value = line.slice(separatorIndex + 1).trim();
+    if (key) result[key] = value;
+  }
+  return result;
+}
+
+function extractMimeType(headers: Record<string, string>): string | undefined {
+  return headers['content-type']?.split(';')[0]?.trim().toLowerCase();
+}
+
+function extractSize(
+  headers: Record<string, string>,
+  body: string | undefined
+): number | undefined {
+  const contentLength = Number(headers['content-length']);
+  if (!Number.isNaN(contentLength) && headers['content-length']) return contentLength;
+  return body?.length;
+}
+
 export function patchXHR() {
   if (isPatched) return;
   isPatched = true;
 
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
+  const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
 
   XMLHttpRequest.prototype.open = function (
     this: XMLHttpRequest,
@@ -35,13 +61,25 @@ export function patchXHR() {
         __networkLogId?: string;
         __networkLogMethod?: string;
         __networkLogUrl?: string;
+        __networkLogHeaders?: Record<string, string>;
       }
     ).__networkLogId = nextRequestId();
     (this as any).__networkLogMethod = method;
     (this as any).__networkLogUrl = url;
+    (this as any).__networkLogHeaders = {};
 
     return originalOpen.call(this, method, url, async ?? true, username, password);
   } as typeof XMLHttpRequest.prototype.open;
+
+  XMLHttpRequest.prototype.setRequestHeader = function (
+    this: XMLHttpRequest,
+    name: string,
+    value: string
+  ) {
+    const headers = (this as any).__networkLogHeaders as Record<string, string> | undefined;
+    if (headers) headers[name] = value;
+    return originalSetRequestHeader.call(this, name, value);
+  };
 
   XMLHttpRequest.prototype.send = function (
     this: XMLHttpRequest,
@@ -51,6 +89,7 @@ export function patchXHR() {
       __networkLogId: string;
       __networkLogMethod?: string;
       __networkLogUrl?: string;
+      __networkLogHeaders?: Record<string, string>;
       readyState: number;
       status: number;
       responseText: string;
@@ -64,6 +103,7 @@ export function patchXHR() {
       url: xhr.__networkLogUrl ?? '',
       status: 'pending',
       requestBody: previewBody(body),
+      requestHeaders: xhr.__networkLogHeaders,
       startedAt,
       source: 'xhr',
     });
@@ -72,10 +112,21 @@ export function patchXHR() {
       if (xhr.readyState !== XMLHttpRequest.DONE) return;
 
       const isNetworkFailure = xhr.status === 0;
+      const responseBody = typeof xhr.responseText === 'string' ? xhr.responseText : undefined;
+      let responseHeaders: Record<string, string> | undefined;
+      try {
+        responseHeaders = parseResponseHeaders(this.getAllResponseHeaders());
+      } catch {
+        responseHeaders = undefined;
+      }
+
       networkLogStore.update(id, {
         status: isNetworkFailure ? 'error' : 'success',
         statusCode: xhr.status,
-        responseBody: typeof xhr.responseText === 'string' ? xhr.responseText : undefined,
+        responseBody,
+        responseHeaders,
+        mimeType: responseHeaders ? extractMimeType(responseHeaders) : undefined,
+        size: responseHeaders ? extractSize(responseHeaders, responseBody) : responseBody?.length,
         error: isNetworkFailure ? 'Network request failed' : undefined,
         duration: Date.now() - startedAt,
       });
