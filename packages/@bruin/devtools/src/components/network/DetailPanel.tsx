@@ -30,7 +30,9 @@ function HeaderList({
       ) : (
         entries.map(([key, value]) => (
           <View key={key} style={styles.headerRow}>
-            <Text style={styles.headerKey}>{key}</Text>
+            <Text style={styles.headerKey} selectable>
+              {key}
+            </Text>
             <Text style={styles.headerValue} selectable>
               {value}
             </Text>
@@ -47,23 +49,37 @@ function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>General</Text>
         <View style={styles.headerRow}>
-          <Text style={styles.headerKey}>Request URL</Text>
+          <Text style={styles.headerKey} selectable>
+            Request URL
+          </Text>
           <Text style={styles.headerValue} selectable>
             {entry.url}
           </Text>
         </View>
         <View style={styles.headerRow}>
-          <Text style={styles.headerKey}>Request Method</Text>
-          <Text style={styles.headerValue}>{entry.method}</Text>
+          <Text style={styles.headerKey} selectable>
+            Request Method
+          </Text>
+          <Text style={styles.headerValue} selectable>
+            {entry.method}
+          </Text>
         </View>
         <View style={styles.headerRow}>
-          <Text style={styles.headerKey}>Status Code</Text>
-          <Text style={styles.headerValue}>{entry.statusCode ?? entry.error ?? '(pending)'}</Text>
+          <Text style={styles.headerKey} selectable>
+            Status Code
+          </Text>
+          <Text style={styles.headerValue} selectable>
+            {entry.statusCode ?? entry.error ?? '(pending)'}
+          </Text>
         </View>
         {entry.source && (
           <View style={styles.headerRow}>
-            <Text style={styles.headerKey}>Source</Text>
-            <Text style={styles.headerValue}>{entry.source}</Text>
+            <Text style={styles.headerKey} selectable>
+              Source
+            </Text>
+            <Text style={styles.headerValue} selectable>
+              {entry.source}
+            </Text>
           </View>
         )}
       </View>
@@ -124,16 +140,22 @@ function TimingTab({ entry }: { entry: NetworkLogEntry }) {
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
-        <Text style={styles.headerKey}>Started At</Text>
-        <Text style={styles.headerValue}>{new Date(entry.startedAt).toLocaleTimeString()}</Text>
+        <Text style={styles.headerKey} selectable>
+          Started At
+        </Text>
+        <Text style={styles.headerValue} selectable>
+          {new Date(entry.startedAt).toLocaleTimeString()}
+        </Text>
       </View>
       <View style={styles.headerRow}>
-        <Text style={styles.headerKey}>Duration</Text>
-        <Text style={styles.headerValue}>
+        <Text style={styles.headerKey} selectable>
+          Duration
+        </Text>
+        <Text style={styles.headerValue} selectable>
           {entry.duration !== undefined ? `${entry.duration} ms` : '(pending)'}
         </Text>
       </View>
-      <Text style={styles.timingNote}>
+      <Text style={styles.timingNote} selectable>
         A DNS/TCP/TLS/TTFB phase breakdown isn't available here — those phases happen in the native
         networking stack, below what a fetch/XHR patch can observe from JS. Start and total duration
         are the honest ceiling for on-device requests.

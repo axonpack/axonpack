@@ -8,7 +8,7 @@ export function InfoBadge({ icon, label }: { icon?: MaterialIconName; label: str
   return (
     <View style={styles.badge}>
       {icon && <MaterialIcons name={icon} size={11} color={COLORS.textSecondary} />}
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={styles.label} numberOfLines={1} selectable>
         {label}
       </Text>
     </View>

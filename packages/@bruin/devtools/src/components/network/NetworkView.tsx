@@ -284,7 +284,7 @@ export function NetworkView() {
           keyExtractor={(entry) => entry.id}
           renderItem={({ item }) => renderRow(item)}
           renderSectionHeader={({ section }) => (
-            <Text style={styles.sectionHeader}>
+            <Text style={styles.sectionHeader} selectable>
               {section.title} ({section.data.length})
             </Text>
           )}

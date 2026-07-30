@@ -29,25 +29,30 @@ export function LogRow({
     <TouchableOpacity onPress={onPress} style={[styles.card, bigRows && styles.cardBig]}>
       <View style={styles.topRow}>
         <View style={[styles.methodPill, { backgroundColor: methodColor }]}>
-          <Text style={styles.methodPillText}>{entry.method}</Text>
+          <Text style={styles.methodPillText} selectable>
+            {entry.method}
+          </Text>
         </View>
         <View style={[styles.statusPill, { borderColor: statusColor }]}>
-          <Text style={[styles.statusPillText, { color: statusColor }]}>
+          <Text style={[styles.statusPillText, { color: statusColor }]} selectable>
             {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
           </Text>
         </View>
-        <Text style={styles.timing} numberOfLines={1}>
+        <Text style={styles.timing} numberOfLines={1} selectable>
           {entry.duration !== undefined ? `${entry.duration}ms` : '...'} ·{' '}
           {new Date(entry.startedAt).toLocaleTimeString()}
         </Text>
       </View>
 
       {bigRows && (
-        <Text style={styles.cardName} numberOfLines={1}>
+        <Text style={styles.cardName} numberOfLines={1} selectable>
           {getDisplayNameWithQuery(entry.url)}
         </Text>
       )}
-      <Text style={[styles.cardUrl, !bigRows && styles.cardUrlPrimary]} numberOfLines={2}>
+      <Text
+        style={[styles.cardUrl, !bigRows && styles.cardUrlPrimary]}
+        numberOfLines={2}
+        selectable>
         {entry.url}
       </Text>
 
