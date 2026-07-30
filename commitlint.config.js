@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   extends: ['@commitlint/config-conventional'],
   rules: {
     'type-enum': [
@@ -21,5 +21,6 @@ export default {
       ],
     ],
     'body-max-line-length': [2, 'always', 200],
+    'scope-enum': [2, 'always', ['@bruin/devtools']],
   },
 };

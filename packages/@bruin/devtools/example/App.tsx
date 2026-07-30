@@ -126,14 +126,12 @@ export default function App() {
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tabButton, tab === 'requests' && styles.tabButtonActive]}
-          onPress={() => setTab('requests')}
-        >
+          onPress={() => setTab('requests')}>
           <Text style={styles.tabLabel}>Requests</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabButton, tab === 'network' && styles.tabButtonActive]}
-          onPress={() => setTab('network')}
-        >
+          onPress={() => setTab('network')}>
           <Text style={styles.tabLabel}>Network</Text>
         </TouchableOpacity>
       </View>
