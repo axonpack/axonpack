@@ -1,7 +1,5 @@
 import { networkLogStore } from './networkLogStore';
 
-const BODY_PREVIEW_LENGTH = 500;
-
 let isPatched = false;
 let requestCounter = 0;
 
@@ -12,7 +10,7 @@ function nextRequestId(): string {
 
 function previewBody(body: unknown): string | undefined {
   if (body == null) return undefined;
-  if (typeof body === 'string') return body.slice(0, BODY_PREVIEW_LENGTH);
+  if (typeof body === 'string') return body;
   if (typeof FormData !== 'undefined' && body instanceof FormData) return '[FormData]';
   return '[binary body]';
 }
@@ -67,6 +65,7 @@ export function patchXHR() {
       status: 'pending',
       requestBody: previewBody(body),
       startedAt,
+      source: 'xhr',
     });
 
     this.addEventListener('readystatechange', function onReadyStateChange() {
@@ -76,10 +75,7 @@ export function patchXHR() {
       networkLogStore.update(id, {
         status: isNetworkFailure ? 'error' : 'success',
         statusCode: xhr.status,
-        responseBody:
-          typeof xhr.responseText === 'string'
-            ? xhr.responseText.slice(0, BODY_PREVIEW_LENGTH)
-            : undefined,
+        responseBody: typeof xhr.responseText === 'string' ? xhr.responseText : undefined,
         error: isNetworkFailure ? 'Network request failed' : undefined,
         duration: Date.now() - startedAt,
       });

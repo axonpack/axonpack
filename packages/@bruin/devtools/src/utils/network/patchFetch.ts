@@ -1,7 +1,5 @@
 import { networkLogStore } from './networkLogStore';
 
-const BODY_PREVIEW_LENGTH = 500;
-
 let isPatched = false;
 let requestCounter = 0;
 
@@ -24,7 +22,7 @@ function resolveUrl(input: RequestInfo | URL): string {
 
 function previewBody(body: BodyInit | null | undefined): string | undefined {
   if (body == null) return undefined;
-  if (typeof body === 'string') return body.slice(0, BODY_PREVIEW_LENGTH);
+  if (typeof body === 'string') return body;
   if (typeof FormData !== 'undefined' && body instanceof FormData) return '[FormData]';
   return '[binary body]';
 }
@@ -52,6 +50,7 @@ export function patchFetch() {
       status: 'pending',
       requestBody: previewBody(init?.body),
       startedAt,
+      source: 'fetch',
     });
 
     try {
@@ -59,7 +58,7 @@ export function patchFetch() {
 
       let responseBody: string | undefined;
       try {
-        responseBody = (await response.clone().text()).slice(0, BODY_PREVIEW_LENGTH);
+        responseBody = await response.clone().text();
       } catch {
         responseBody = undefined;
       }

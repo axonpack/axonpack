@@ -23,6 +23,7 @@ function LogRow({ entry }: { entry: NetworkLogEntry }) {
       <Text style={styles.url} numberOfLines={1}>
         {entry.url}
       </Text>
+      {entry.source && <Text style={styles.source}>{entry.source}</Text>}
     </View>
   );
 }
@@ -98,6 +99,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#333',
     marginTop: 2,
+  },
+  source: {
+    fontSize: 10,
+    color: '#0a7ea4',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
   empty: {
     textAlign: 'center',

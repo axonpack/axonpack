@@ -13,6 +13,8 @@ export type NetworkLogEntry = {
   error?: string;
   startedAt: number;
   duration?: number;
+  /** Where this request came from — 'fetch', 'xhr', or a WebView name. */
+  source?: string;
 };
 
 type NetworkLogEvents = {
