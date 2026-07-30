@@ -8,7 +8,7 @@ Scope: this package specifically. For the wider `@bruin/*` family (lite-storage,
 - Network capture from three independent sources, all feeding one shared store:
   - `patchFetch` — Expo's native `fetch` (not XHR-based, so needs its own patch).
   - `patchXHR` — catches axios (RN adapter uses XHR) and raw `XMLHttpRequest`.
-  - WebView logging — `getWebViewInjectedScript(name)` + `handleWebViewMessage`, patches fetch/XHR *inside* a `<WebView>` page and relays back over `postMessage`, since a WebView is a separate JS engine invisible to the two patches above. Also posts a `navigation` event on every fresh page load (each navigation gets a new `window`, so the injected script re-running is itself the navigation signal) — used for Preserve Log.
+  - WebView logging — `getWebViewInjectedScript(name)` + `handleWebViewMessage`, patches fetch/XHR _inside_ a `<WebView>` page and relays back over `postMessage`, since a WebView is a separate JS engine invisible to the two patches above. Also posts a `navigation` event on every fresh page load (each navigation gets a new `window`, so the injected script re-running is itself the navigation signal) — used for Preserve Log.
 - `webviewSources` as a typed, enforced allowlist (compile-time via a `const` type parameter, runtime via a filter in the message handler).
 - Request/response headers, mimeType, and size are captured for all three sources (`patchFetch`, `patchXHR`, and the webview script) — headers via `init.headers`/`response.headers` for fetch, a `setRequestHeader` patch + `getAllResponseHeaders()` for XHR. `mimeType` is the content-type header with the charset stripped; `size` prefers `Content-Length`, falling back to the response body's length.
 - `classifyResourceType` buckets a response into Chrome's own Network-tab type categories from its mimeType: Fetch/XHR, JS, Img, Media, Other.
@@ -20,7 +20,7 @@ Scope: this package specifically. For the wider `@bruin/*` family (lite-storage,
   - **Filter panel**: search + Invert, "More filters" (Hide data URLs, Hide failed requests — this is our analog of Chrome's "blocked requests" checkbox; we don't have active request blocking, so it hides `status === 'error'` entries instead), Type chips (Fetch/XHR, JS, Img, Media, Other — matches Chrome's exact set), Method chips (GET/POST/etc., derived from what's present — our own addition, Chrome doesn't have this), Source chips (fetch/xhr/webview name — also our own addition).
   - Row view: zebra striping, Name/Status/Type/Size/Time columns (Name = last URL path segment, full method+URL shown as a secondary line).
   - Tap a row → a custom animated slide-up detail panel (`Animated.timing`, not a bottom-sheet library) with **Headers** (General + Request/Response headers), **Preview** (JSON pretty-printed when parseable), **Response** (raw body), **Timing** (Started At + Duration, with an explicit note that phase breakdown isn't available — see hard limits) tabs.
-- Full, untruncated request/response bodies — no size cap on what's stored per entry (only the ring buffer's 200-entry *count* is capped).
+- Full, untruncated request/response bodies — no size cap on what's stored per entry (only the ring buffer's 200-entry _count_ is capped).
 
 ## Hard platform limits (not effort, not planned)
 

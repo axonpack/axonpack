@@ -13,14 +13,6 @@ import {
   View,
 } from 'react-native';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-function animateNextLayout() {
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-}
-
 import { DetailPanel } from './DetailPanel';
 import { OverviewStrip } from './OverviewStrip';
 import { COLORS } from './colors';
@@ -29,6 +21,14 @@ import { networkLogStore } from '../../utils/network/networkLogStore';
 import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resourceType';
 import type { ResourceType } from '../../utils/network/resourceType';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+function animateNextLayout() {
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+}
 
 const TYPE_FILTERS: ResourceType[] = ['fetch-xhr', 'js', 'img', 'media', 'other'];
 
@@ -173,10 +173,9 @@ export function NetworkView() {
   const [activeMethod, setActiveMethod] = useState<string | null>(null);
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [reversed, setReversed] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openPanel, setOpenPanel] = useState<'settings' | 'filters' | null>(null);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [bigRows, setBigRows] = useState(false);
+  const [bigRows, setBigRows] = useState(true);
   const [groupByFetchClient, setGroupByFetchClient] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
@@ -235,6 +234,16 @@ export function NetworkView() {
     return Array.from(bySource.entries()).map(([title, data]) => ({ title, data }));
   }, [visibleLogs, groupByFetchClient]);
 
+  function togglePanel(panel: 'settings' | 'filters') {
+    animateNextLayout();
+    setOpenPanel((current) => (current === panel ? null : panel));
+  }
+
+  function toggleMoreFilters() {
+    animateNextLayout();
+    setMoreFiltersOpen((current) => !current);
+  }
+
   function renderRow(entry: NetworkLogEntry, index: number) {
     return (
       <LogRow
@@ -274,18 +283,18 @@ export function NetworkView() {
           />
           <IconButton
             name="settings"
-            color={settingsOpen ? COLORS.accent : COLORS.textSecondary}
-            onPress={() => setSettingsOpen((c) => !c)}
+            color={openPanel === 'settings' ? COLORS.accent : COLORS.textSecondary}
+            onPress={() => togglePanel('settings')}
           />
           <IconButton
             name="filter-list"
-            color={filtersOpen ? COLORS.accent : COLORS.textSecondary}
-            onPress={() => setFiltersOpen((c) => !c)}
+            color={openPanel === 'filters' ? COLORS.accent : COLORS.textSecondary}
+            onPress={() => togglePanel('filters')}
           />
         </View>
       </View>
 
-      {settingsOpen && (
+      {openPanel === 'settings' && (
         <View style={styles.panel}>
           <SettingRow label="Large request rows" value={bigRows} onValueChange={setBigRows} />
           <SettingRow
@@ -297,7 +306,7 @@ export function NetworkView() {
         </View>
       )}
 
-      {filtersOpen && (
+      {openPanel === 'filters' && (
         <View style={styles.panel}>
           <View style={styles.searchRow}>
             <MaterialIcons name="search" size={16} color={COLORS.textSecondary} />
@@ -318,7 +327,7 @@ export function NetworkView() {
             <Chip label="Invert" active={invertSearch} onPress={() => setInvertSearch((c) => !c)} />
           </View>
 
-          <TouchableOpacity onPress={() => setMoreFiltersOpen((c) => !c)}>
+          <TouchableOpacity onPress={toggleMoreFilters}>
             <Text style={styles.moreFiltersToggle}>
               {moreFiltersOpen ? 'Hide more filters' : 'More filters'}
             </Text>

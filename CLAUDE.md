@@ -53,8 +53,15 @@ The public API is a single factory, deliberately **not** a React Provider/Contex
 
 ```ts
 const devtools = createDevtoolsClient({
-  network: { includeFetch, includeXmlHttpRequest, webviewSources: ['my-webview'] },
-  theme: { accentColor: '#...', network: { /* per-view override, wins over the root fields above */ } },
+  network: {
+    includeFetch,
+    includeXmlHttpRequest,
+    webviewSources: ["my-webview"],
+  },
+  theme: {
+    accentColor: "#...",
+    network: {/* per-view override, wins over the root fields above */},
+  },
 });
 devtools.init(); // call once at app startup — installs the fetch/XHR patches
 ```
@@ -68,7 +75,7 @@ Three independent interception paths feed one shared store (`networkLogStore.ts`
 
 - `patchFetch.ts` — wraps `globalThis.fetch`. Required because **Expo installs its own native fetch by default** (`expo/winter/fetch`), which does not route through `XMLHttpRequest` the way the old whatwg-fetch polyfill did — patching XHR alone cannot see it.
 - `patchXHR.ts` — patches `XMLHttpRequest.prototype.open`/`.send`. This is what actually catches axios (its RN adapter uses XHR, not fetch) and any raw `XMLHttpRequest` usage.
-- `webviewNetworkLogger.ts` — a `<WebView>` runs in a completely separate JS engine (WKWebView/Android WebView), invisible to both patches above. `getWebViewInjectedScript(name)` returns a JS string that patches fetch/XHR *inside the page* and relays every request back via `postMessage`; `handleWebViewNetworkMessage(event, allowedSources)` (called through the client, not directly) parses that and writes into the same store. Relative URLs are resolved against `location.href` since real pages request plenty of relative paths.
+- `webviewNetworkLogger.ts` — a `<WebView>` runs in a completely separate JS engine (WKWebView/Android WebView), invisible to both patches above. `getWebViewInjectedScript(name)` returns a JS string that patches fetch/XHR _inside the page_ and relays every request back via `postMessage`; `handleWebViewNetworkMessage(event, allowedSources)` (called through the client, not directly) parses that and writes into the same store. Relative URLs are resolved against `location.href` since real pages request plenty of relative paths.
 
 Request/response bodies are logged in full — no truncation, by design.
 
