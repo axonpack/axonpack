@@ -23,6 +23,13 @@ type WebViewMessageEventLike = {
  * via `window.ReactNativeWebView.postMessage`, tagged with `webviewName`.
  */
 export function getWebViewInjectedScript(webviewName: string): string {
+  // Checked at generation time, not injection time — if devtools was never enabled (no `init()`
+  // call), don't even patch fetch/XHR inside the page, rather than patching them and just
+  // dropping the messages. Avoids any behavior change to the host page when devtools is off.
+  if (!networkLogStore.isEnabled()) {
+    return 'true;';
+  }
+
   const nameLiteral = JSON.stringify(webviewName);
   const markerLiteral = JSON.stringify(MESSAGE_MARKER);
 
@@ -206,6 +213,10 @@ export function handleWebViewNetworkMessage(
   event: WebViewMessageEventLike,
   allowedSources?: readonly string[]
 ): boolean {
+  // Belt-and-suspenders: the injected script itself already becomes a no-op when disabled, but
+  // this guards against a page that already ran the real script before devtools was disabled.
+  if (!networkLogStore.isEnabled()) return false;
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(event.nativeEvent.data);

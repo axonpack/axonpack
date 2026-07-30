@@ -32,6 +32,10 @@ const MAX_ENTRIES = 200;
 let entries: NetworkLogEntry[] = [];
 let paused = false;
 let preserveLog = true;
+// Off until `createDevtoolsClient(...).init()` actually runs — so forgetting to call `init()`
+// (e.g. a build that skips it in production) fails safe: no capture happens anywhere, including
+// WebView instrumentation, which isn't otherwise gated by anything else in this file.
+let enabled = false;
 const emitter = new EventEmitter<NetworkLogEvents>();
 
 export const networkLogStore = {
@@ -44,9 +48,17 @@ export const networkLogStore = {
   isPreserveLogEnabled(): boolean {
     return preserveLog;
   },
+  isEnabled(): boolean {
+    return enabled;
+  },
   subscribe(listener: () => void) {
     const subscription = emitter.addListener('change', listener);
     return () => subscription.remove();
+  },
+  /** Set by `createDevtoolsClient(...).init()`. Nothing records until this is true. */
+  setEnabled(nextEnabled: boolean) {
+    enabled = nextEnabled;
+    emitter.emit('change');
   },
   /** Stops new requests from being recorded. Requests already in-flight still get their final result filled in via `update`. */
   setPaused(nextPaused: boolean) {
@@ -66,11 +78,12 @@ export const networkLogStore = {
     }
   },
   add(entry: NetworkLogEntry) {
-    if (paused) return;
+    if (!enabled || paused) return;
     entries = [entry, ...entries].slice(0, MAX_ENTRIES);
     emitter.emit('change');
   },
   update(id: string, patch: Partial<NetworkLogEntry>) {
+    if (!enabled) return;
     entries = entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
     emitter.emit('change');
   },

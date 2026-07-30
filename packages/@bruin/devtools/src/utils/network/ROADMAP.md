@@ -5,6 +5,7 @@ Scope: this package specifically. For the wider `@bruin/*` family (lite-storage,
 ## Implemented today
 
 - `createDevtoolsClient({ network })` — factory, not a Provider/Context. `.init()` installs the patches.
+- **Prod-safe by default**: `networkLogStore` starts disabled and stays that way until `.init()` actually runs, so an app that skips calling `init()` in production captures nothing — no patched `fetch`/XHR, no store writes, and the WebView injected script itself becomes a no-op (`getWebViewInjectedScript` checks `isEnabled()` at generation time, so a disabled WebView page's `fetch`/XHR are never even patched, not patched-then-dropped). `createDevtoolsClient({ enabled: false })` gives the same effect explicitly for call sites that always invoke `.init()` unconditionally.
 - Network capture from three independent sources, all feeding one shared store:
   - `patchFetch` — Expo's native `fetch` (not XHR-based, so needs its own patch).
   - `patchXHR` — catches axios (RN adapter uses XHR) and raw `XMLHttpRequest`.
