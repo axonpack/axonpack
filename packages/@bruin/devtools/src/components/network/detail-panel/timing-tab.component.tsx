@@ -8,7 +8,7 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
   return (
     <View style={rowStyles.section}>
       <View style={rowStyles.headerRow}>
-        <Text style={rowStyles.headerKey} selectable>
+        <Text style={rowStyles.headerListKey} selectable>
           Started At
         </Text>
         <Text style={rowStyles.headerValue} selectable>
@@ -16,7 +16,7 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
         </Text>
       </View>
       <View style={rowStyles.headerRow}>
-        <Text style={rowStyles.headerKey} selectable>
+        <Text style={rowStyles.headerListKey} selectable>
           Duration
         </Text>
         <Text style={rowStyles.headerValue} selectable>

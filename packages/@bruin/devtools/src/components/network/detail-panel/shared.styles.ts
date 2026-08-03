@@ -13,11 +13,6 @@ export const rowStyles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
-  headerKey: {
-    width: 140,
-    fontSize: 12,
-    color: COLORS.textPrimary,
-  },
   headerValue: {
     flex: 1,
     fontSize: 12,
@@ -40,7 +35,17 @@ export const rowStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 6,
     marginBottom: 2,
+  },
+  // Same accent as headerListKey, but no fixed width — there's no column to align in the
+  // stacked layout, and a fixed width wraps long header names (e.g. Strict-Transport-Security)
+  // onto a second line for no reason.
+  stackedKey: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.keyAccent,
   },
   stackedValue: {
     fontSize: 12,

@@ -22,7 +22,7 @@ export function HeaderList({
         entries.map(([key, value]) => (
           <View key={key} style={rowStyles.stackedRow}>
             <View style={rowStyles.stackedTopRow}>
-              <Text style={rowStyles.headerListKey} selectable>
+              <Text style={rowStyles.stackedKey} selectable>
                 {key}
               </Text>
               <CopyIconButton value={value} />
