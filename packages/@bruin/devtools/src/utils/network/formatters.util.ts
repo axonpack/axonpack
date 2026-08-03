@@ -79,12 +79,21 @@ const HTTP_STATUS_TEXTS: Record<number, string> = {
   511: 'Network Authentication Required',
 };
 
-/** `statusText` from the response if the runtime populated it, else the standard reason phrase for the code. */
+/**
+ * Our own mapped reason phrase leads (e.g. "OK" for 200) since some runtimes report a
+ * `statusText` that isn't the real reason phrase at all (observed: "no error" for a 200) — the
+ * server/runtime value is only appended in brackets when it disagrees with our mapping, e.g.
+ * "OK (no error)". Falls back to the raw statusText for a status code we don't have mapped.
+ */
 export function getStatusText(
   statusCode: number,
   statusText: string | undefined
 ): string | undefined {
-  return statusText || HTTP_STATUS_TEXTS[statusCode];
+  const mapped = HTTP_STATUS_TEXTS[statusCode];
+  const reported = statusText?.trim();
+  if (!mapped) return reported;
+  if (reported && reported.toLowerCase() !== mapped.toLowerCase()) return `${mapped} (${reported})`;
+  return mapped;
 }
 
 /** Color-codes an HTTP method the way most API tooling does (GET blue, POST green, mutate-in-place amber, DELETE red). */
