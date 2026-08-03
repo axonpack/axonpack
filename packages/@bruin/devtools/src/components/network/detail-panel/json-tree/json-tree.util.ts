@@ -24,6 +24,7 @@ export function chunkArrayRange(length: number): [number, number][] {
 
 // Chrome shows this many entries inline before truncating with `,…` — matches its own preview.
 const PREVIEW_MAX_ENTRIES = 4;
+const PREVIEW_MAX_LENGTH = 80;
 
 function previewOf(value: JsonValue): string {
   if (Array.isArray(value)) return value.length === 0 ? '[]' : '[…]';
@@ -38,17 +39,21 @@ function previewOf(value: JsonValue): string {
  * Nested objects/arrays only get a shallow `{…}`/`[…]` placeholder, not a further-nested preview.
  */
 export function buildPreview(value: JsonValue[] | { [key: string]: JsonValue }): string {
-  if (Array.isArray(value)) {
-    const shown = value.slice(0, PREVIEW_MAX_ENTRIES).map(previewOf);
-    const suffix = value.length > PREVIEW_MAX_ENTRIES ? ',…' : '';
-    return `[${shown.join(', ')}${suffix}]`;
+  const isArray = Array.isArray(value);
+  let shown;
+  if (isArray) {
+    shown = value.slice(0, PREVIEW_MAX_ENTRIES).map(previewOf);
+  } else {
+    const entries = Object.entries(value);
+    shown = entries
+      .slice(0, PREVIEW_MAX_ENTRIES)
+      .map(([key, item]) => `${key}: ${previewOf(item)}`);
   }
-  const entries = Object.entries(value);
-  const shown = entries
-    .slice(0, PREVIEW_MAX_ENTRIES)
-    .map(([key, item]) => `${key}: ${previewOf(item)}`);
-  const suffix = entries.length > PREVIEW_MAX_ENTRIES ? ',…' : '';
-  return `{${shown.join(', ')}${suffix}}`;
+  const joinedText = shown.join(', ');
+  const suffix = joinedText.length > PREVIEW_MAX_LENGTH ? ', …' : '';
+  return isArray
+    ? `[${joinedText.slice(0, PREVIEW_MAX_LENGTH)}${suffix}]`
+    : `{${joinedText.slice(0, PREVIEW_MAX_LENGTH)}${suffix}}`;
 }
 
 /** Every descendant path under `path` that's itself expandable (object/array/chunk group). */
