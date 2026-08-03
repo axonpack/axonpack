@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -29,7 +30,12 @@ import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { SettingRow } from '../ui/setting-row.ui';
 
+// Below this width, a fixed-width key column is cramped enough that the stacked header
+// layout is the better default (e.g. phones); wider screens (tablets) default to columns.
+const SMALL_SCREEN_MAX_WIDTH = 768;
+
 export function NetworkView() {
+  const { width } = useWindowDimensions();
   const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getSnapshot);
   const paused = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.isPaused);
   const preserveLog = useSyncExternalStore(
@@ -50,7 +56,7 @@ export function NetworkView() {
   const [bigRows, setBigRows] = useState(true);
   const [groupByFetchClient, setGroupByFetchClient] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
-  const [stackedHeaders, setStackedHeaders] = useState(false);
+  const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
 
   const sources = useMemo(() => {
