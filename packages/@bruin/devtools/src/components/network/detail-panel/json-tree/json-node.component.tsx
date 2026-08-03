@@ -3,8 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 
 import {
   ARRAY_CHUNK_SIZE,
+  buildPreview,
   chunkArrayRange,
-  collapsedSummary,
   isExpandable,
   isPlainObject,
   type JsonValue,
@@ -55,7 +55,7 @@ export function JsonNode({
         </View>
         <Text style={treeStyles.text} selectable>
           {label !== undefined && <Text style={treeStyles.key}>{label}: </Text>}
-          <ValuePreview value={value} expanded={expanded} />
+          <ValuePreview value={value} />
         </Text>
       </Pressable>
       {expandable && expanded && (
@@ -73,9 +73,9 @@ export function JsonNode({
   );
 }
 
-function ValuePreview({ value, expanded }: { value: JsonValue; expanded: boolean }) {
+function ValuePreview({ value }: { value: JsonValue }) {
   if (isExpandable(value)) {
-    return expanded ? null : <Text style={treeStyles.punctuation}>{collapsedSummary(value)}</Text>;
+    return <Text style={treeStyles.punctuation}>{buildPreview(value)}</Text>;
   }
   if (typeof value === 'string') return <Text style={treeStyles.string}>&quot;{value}&quot;</Text>;
   if (typeof value === 'number') return <Text style={treeStyles.number}>{value}</Text>;
@@ -142,9 +142,12 @@ function JsonChildren({
   }
 
   if (isPlainObject(value)) {
+    // Chrome alphabetizes the expanded property list, even though the inline preview above
+    // keeps the object's original key order.
+    const sortedEntries = Object.entries(value).sort(([a], [b]) => a.localeCompare(b));
     return (
       <>
-        {Object.entries(value).map(([key, item]) => (
+        {sortedEntries.map(([key, item]) => (
           <JsonNode
             key={`${path}.${key}`}
             path={`${path}.${key}`}

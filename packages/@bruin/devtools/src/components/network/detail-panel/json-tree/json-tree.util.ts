@@ -22,10 +22,33 @@ export function chunkArrayRange(length: number): [number, number][] {
   return chunks;
 }
 
-/** Collapsed-state label, e.g. `{3}` for an object with 3 keys or `[12]` for a 12-item array. */
-export function collapsedSummary(value: JsonValue[] | { [key: string]: JsonValue }): string {
-  const count = Array.isArray(value) ? value.length : Object.keys(value).length;
-  return Array.isArray(value) ? `[${count}]` : `{${count}}`;
+// Chrome shows this many entries inline before truncating with `,…` — matches its own preview.
+const PREVIEW_MAX_ENTRIES = 4;
+
+function previewOf(value: JsonValue): string {
+  if (Array.isArray(value)) return value.length === 0 ? '[]' : '[…]';
+  if (isPlainObject(value)) return Object.keys(value).length === 0 ? '{}' : '{…}';
+  if (typeof value === 'string') return `"${value}"`;
+  return String(value);
+}
+
+/**
+ * Chrome's inline object/array preview — shown on the header line whether collapsed or
+ * expanded, in the object's original (unsorted) key order, truncated to a handful of entries.
+ * Nested objects/arrays only get a shallow `{…}`/`[…]` placeholder, not a further-nested preview.
+ */
+export function buildPreview(value: JsonValue[] | { [key: string]: JsonValue }): string {
+  if (Array.isArray(value)) {
+    const shown = value.slice(0, PREVIEW_MAX_ENTRIES).map(previewOf);
+    const suffix = value.length > PREVIEW_MAX_ENTRIES ? ',…' : '';
+    return `[${shown.join(', ')}${suffix}]`;
+  }
+  const entries = Object.entries(value);
+  const shown = entries
+    .slice(0, PREVIEW_MAX_ENTRIES)
+    .map(([key, item]) => `${key}: ${previewOf(item)}`);
+  const suffix = entries.length > PREVIEW_MAX_ENTRIES ? ',…' : '';
+  return `{${shown.join(', ')}${suffix}}`;
 }
 
 /** Every descendant path under `path` that's itself expandable (object/array/chunk group). */
