@@ -1,6 +1,6 @@
 import { Text } from 'react-native';
 
-import { MAX_HIGHLIGHT_LENGTH, tokenize, type Language } from './code-highlight.util';
+import { formatCode, MAX_HIGHLIGHT_LENGTH, tokenize, type Language } from './code-highlight.util';
 import { codeStyles } from './shared.styles';
 
 export function CodeHighlight({ code, language }: { code: string; language: Language }) {
@@ -14,9 +14,11 @@ export function CodeHighlight({ code, language }: { code: string; language: Lang
     );
   }
 
+  const formatted = formatCode(code, language);
+
   return (
     <Text style={codeStyles.text} selectable>
-      {tokenize(code, language).map((token, index) => (
+      {tokenize(formatted, language).map((token, index) => (
         <Text key={index} style={codeStyles[token.type]}>
           {token.text}
         </Text>

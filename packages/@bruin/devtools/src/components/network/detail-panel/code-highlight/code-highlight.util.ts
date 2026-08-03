@@ -124,3 +124,68 @@ export function tokenize(code: string, language: Language): Token[] {
   }
   return tokens;
 }
+
+const INDENT_UNIT = '  ';
+
+/**
+ * Reflows minified/single-line JS or CSS onto multiple indented lines for readability —
+ * not a real formatter (no operator spacing, no line-length wrapping), just enough structure
+ * from `{`/`}`/`;` to make a minified body skimmable. Re-tokenizes the raw code internally so
+ * it never breaks a line inside a string or comment; markup/plain pass through unchanged.
+ */
+export function formatCode(code: string, language: Language): string {
+  if (language !== 'javascript' && language !== 'css') return code;
+
+  let output = '';
+  let indent = 0;
+  let atLineStart = true;
+  // Set after `,`/`:`, where we already appended our own trailing space — otherwise an input
+  // that (unlike the typical minified case) already had a space there would get a second one.
+  let justInsertedSpace = false;
+
+  for (const token of tokenize(code, language)) {
+    const isWhitespaceOnly = token.type === 'plain' && /^\s+$/.test(token.text);
+    if (isWhitespaceOnly) {
+      if (!atLineStart && !justInsertedSpace) output += ' ';
+      justInsertedSpace = false;
+      continue;
+    }
+
+    if (token.type === 'punctuation' && (token.text === ',' || token.text === ':')) {
+      output += `${token.text} `;
+      atLineStart = false;
+      justInsertedSpace = true;
+      continue;
+    }
+    justInsertedSpace = false;
+
+    if (token.type === 'punctuation' && token.text === '{') {
+      output = atLineStart ? `${output}{` : `${output.replace(/[ \t]+$/, '')} {`;
+      indent += 1;
+      output += `\n${INDENT_UNIT.repeat(indent)}`;
+      atLineStart = true;
+      continue;
+    }
+
+    if (token.type === 'punctuation' && token.text === '}') {
+      indent = Math.max(0, indent - 1);
+      output = atLineStart
+        ? output.replace(/\n[ \t]*$/, `\n${INDENT_UNIT.repeat(indent)}`)
+        : `${output.replace(/[ \t]+$/, '')}\n${INDENT_UNIT.repeat(indent)}`;
+      output += `}\n${INDENT_UNIT.repeat(indent)}`;
+      atLineStart = true;
+      continue;
+    }
+
+    if (token.type === 'punctuation' && token.text === ';') {
+      output += `;\n${INDENT_UNIT.repeat(indent)}`;
+      atLineStart = true;
+      continue;
+    }
+
+    output += token.text;
+    atLineStart = false;
+  }
+
+  return output.trim();
+}
