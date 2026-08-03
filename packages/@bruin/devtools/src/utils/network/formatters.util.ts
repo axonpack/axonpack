@@ -111,6 +111,16 @@ export function formatSize(bytes: number | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * `entry.source` is 'fetch'/'xhr' for native requests, or the WebView's own name for anything
+ * captured via the injected script (see webview-network-logger.service.ts) — the only way to
+ * tell those apart is that a WebView name is never literally 'fetch' or 'xhr'.
+ */
+export function formatSource(source: string): string {
+  if (source === 'fetch' || source === 'xhr') return source;
+  return `WebView::[${source}]`;
+}
+
 /** Last path segment plus the query string, matching Chrome's "Name" column (used for big rows). */
 export function getDisplayNameWithQuery(url: string): string {
   try {

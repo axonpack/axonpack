@@ -20,6 +20,7 @@ import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
 import { exportNetworkLog } from '../../utils/network/export-network-log.util';
 import { matchesQuery } from '../../utils/network/filter-entries.util';
+import { formatSource } from '../../utils/network/formatters.util';
 import {
   classifyResourceType,
   RESOURCE_TYPE_LABELS,
@@ -277,7 +278,7 @@ export function NetworkView() {
                 {sources.map((source) => (
                   <Chip
                     key={source}
-                    label={source}
+                    label={formatSource(source)}
                     active={activeSource === source}
                     onPress={() => setActiveSource(source)}
                   />
@@ -297,7 +298,7 @@ export function NetworkView() {
           renderItem={({ item }) => renderRow(item)}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader} selectable>
-              {section.title} ({section.data.length})
+              {formatSource(section.title)} ({section.data.length})
             </Text>
           )}
           contentContainerStyle={styles.listContent}

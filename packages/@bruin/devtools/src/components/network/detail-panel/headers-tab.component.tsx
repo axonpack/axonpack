@@ -3,7 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { HeaderList } from './header-list.component';
 import { rowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
-import { getStatusColor, getStatusText } from '../../../utils/network/formatters.util';
+import {
+  formatSource,
+  getStatusColor,
+  getStatusText,
+} from '../../../utils/network/formatters.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 
 function formatStatus(entry: NetworkLogEntry): string {
@@ -55,7 +59,7 @@ export function HeadersTab({
               Source
             </Text>
             <Text style={rowStyles.headerValue} selectable>
-              {entry.source}
+              {formatSource(entry.source)}
             </Text>
           </View>
         )}

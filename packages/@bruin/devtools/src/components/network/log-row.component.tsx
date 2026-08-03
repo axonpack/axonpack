@@ -5,6 +5,7 @@ import { RESOURCE_TYPE_ICONS } from '../../constants/network/resource-type-icons
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import {
   formatSize,
+  formatSource,
   getDisplayNameWithQuery,
   getMethodColor,
   getStatusColor,
@@ -62,7 +63,7 @@ export function LogRow({
             icon={RESOURCE_TYPE_ICONS[resourceType]}
             label={RESOURCE_TYPE_LABELS[resourceType]}
           />
-          {entry.source && <InfoBadge icon="hub" label={entry.source} />}
+          {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
           <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
         </View>
       )}
