@@ -22,11 +22,10 @@ export function MethodSelector({
 
 const styles = StyleSheet.create({
   row: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
   },
 });

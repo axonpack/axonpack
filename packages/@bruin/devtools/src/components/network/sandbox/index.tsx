@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MethodSelector } from './method-selector.component';
 import { RequestPanel } from './request-panel.component';
 import { ResponsePanel } from './response-panel.component';
 import { SandboxTabBar } from './sandbox-tab-bar.component';
+import { SendButton } from './send-button.component';
 import { UrlBar } from './url-bar.component';
 import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
@@ -23,6 +24,7 @@ import {
   type SandboxTab,
 } from '../../../utils/network/sandbox.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
+import { SparkleIcon } from '../../ui/sparkle-icon.ui';
 
 export function SandboxSheet({
   visible,
@@ -80,10 +82,16 @@ export function SandboxSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <Text style={styles.title}>Sandbox</Text>
+      <View style={styles.titleRow}>
+        <SparkleIcon size={14} />
+        <Text style={styles.title}>Sandbox</Text>
+      </View>
 
-      <MethodSelector method={method} onChange={setMethod} />
-      <UrlBar url={url} onChangeUrl={setUrl} sending={sending} onSend={handleSend} />
+      <UrlBar url={url} onChangeUrl={setUrl} />
+      <View style={styles.actionRow}>
+        <MethodSelector method={method} onChange={setMethod} />
+        <SendButton sending={sending} onPress={handleSend} />
+      </View>
       <SandboxTabBar
         tab={tab}
         onChange={setTab}
@@ -113,12 +121,25 @@ export function SandboxSheet({
 }
 
 const styles = StyleSheet.create({
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
   title: {
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.textPrimary,
+    textTransform: 'uppercase',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
   content: {
     flexGrow: 0,
