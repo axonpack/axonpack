@@ -10,12 +10,9 @@ import {
   View,
 } from 'react-native';
 
-import { Chip } from './chip.ui';
 import { DetailPanel } from './detail-panel';
-import { IconButton } from './icon-button.ui';
 import { LogRow } from './log-row.component';
 import { OverviewStrip } from './overview-strip.component';
-import { SettingRow } from './setting-row.ui';
 import { COLORS } from '../../constants/colors.const';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
@@ -28,6 +25,9 @@ import {
   RESOURCE_TYPES,
 } from '../../utils/network/resource-type.util';
 import type { ResourceType } from '../../utils/network/resource-type.util';
+import { Chip } from '../ui/chip.ui';
+import { IconButton } from '../ui/icon-button.ui';
+import { SettingRow } from '../ui/setting-row.ui';
 
 export function NetworkView() {
   const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getSnapshot);

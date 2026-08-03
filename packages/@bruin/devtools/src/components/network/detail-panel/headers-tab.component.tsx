@@ -1,10 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { CollapsibleSection } from './collapsible-section.ui';
 import { HeaderList } from './header-list.component';
 import { rowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import { getStatusColor, getStatusText } from '../../../utils/network/formatters.util';
+import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 
 function formatStatus(entry: NetworkLogEntry): string {
   if (entry.statusCode === undefined) return entry.error ?? '(pending)';

@@ -1,6 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { InfoBadge } from './info-badge.ui';
 import { COLORS } from '../../constants/colors.const';
 import { RESOURCE_TYPE_ICONS } from '../../constants/network/resource-type-icons.const';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
@@ -11,6 +10,7 @@ import {
   getStatusColor,
 } from '../../utils/network/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resource-type.util';
+import { InfoBadge } from '../ui/info-badge.ui';
 
 export function LogRow({
   entry,
