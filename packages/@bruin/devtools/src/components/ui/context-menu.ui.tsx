@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
@@ -5,6 +6,8 @@ import { COLORS } from '../../constants/colors.const';
 export type ContextMenuItem = {
   label: string;
   onPress: () => void;
+  /** Rendered before the label, e.g. SparkleIcon to flag a novel/featured item. */
+  icon?: ReactNode;
 };
 
 const MENU_WIDTH = 230;
@@ -39,7 +42,10 @@ export function ContextMenu({
                 item.onPress();
                 onClose();
               }}>
-              <Text style={styles.itemText}>{item.label}</Text>
+              <View style={styles.itemRow}>
+                {item.icon}
+                <Text style={styles.itemText}>{item.label}</Text>
+              </View>
             </Pressable>
           ))}
         </View>
@@ -66,6 +72,11 @@ const styles = StyleSheet.create({
   item: {
     paddingVertical: 10,
     paddingHorizontal: 14,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   itemText: {
     fontSize: 13,
