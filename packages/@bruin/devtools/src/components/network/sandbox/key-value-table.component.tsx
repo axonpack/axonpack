@@ -40,7 +40,7 @@ export function KeyValueTable({
               />
             </TouchableOpacity>
             <TextInput
-              style={sandboxStyles.input}
+              style={[sandboxStyles.fieldBox, sandboxStyles.keyField]}
               value={row.key}
               onChangeText={(key) => updateRow(row.id, { key })}
               placeholder="Key"
@@ -49,7 +49,7 @@ export function KeyValueTable({
               autoCorrect={false}
             />
             <TextInput
-              style={sandboxStyles.input}
+              style={[sandboxStyles.fieldBox, sandboxStyles.valueField]}
               value={row.value}
               onChangeText={(value) => updateRow(row.id, { value })}
               placeholder="Value"

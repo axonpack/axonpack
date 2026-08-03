@@ -104,6 +104,7 @@ export function SandboxSheet({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.methodScroll}
         contentContainerStyle={styles.methodRow}>
         {METHODS.map((m) => (
           <Chip key={m} label={m} active={method === m} onPress={() => setMethod(m)} />
@@ -176,7 +177,7 @@ export function SandboxSheet({
                   requestHeaders: curlHeaders,
                   requestBody: bodyText,
                 })}
-                style={sandboxStyles.input}
+                style={sandboxStyles.codeSnippet}
               />
             </CollapsibleSection>
           </>
@@ -261,8 +262,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 8,
   },
+  methodScroll: {
+    flexGrow: 0,
+  },
   methodRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
     paddingBottom: 8,
