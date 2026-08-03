@@ -21,9 +21,11 @@ const TABS: { key: Tab; label: string }[] = [
 export function DetailPanel({
   entry,
   onClose,
+  stackedHeaders,
 }: {
   entry: NetworkLogEntry | null;
   onClose: () => void;
+  stackedHeaders: boolean;
 }) {
   const [translateY] = useState(() => new Animated.Value(400));
   const [tab, setTab] = useState<Tab>('headers');
@@ -82,7 +84,7 @@ export function DetailPanel({
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          {tab === 'headers' && <HeadersTab entry={active} />}
+          {tab === 'headers' && <HeadersTab entry={active} stackedHeaders={stackedHeaders} />}
           {tab === 'preview' && <PreviewTab entry={active} />}
           {tab === 'response' && <ResponseTab entry={active} />}
           {tab === 'timing' && <TimingTab entry={active} />}

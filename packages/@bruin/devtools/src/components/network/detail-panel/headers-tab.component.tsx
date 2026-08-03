@@ -12,12 +12,18 @@ function formatStatus(entry: NetworkLogEntry): string {
   return statusText ? `${entry.statusCode} ${statusText}` : `${entry.statusCode}`;
 }
 
-export function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
+export function HeadersTab({
+  entry,
+  stackedHeaders,
+}: {
+  entry: NetworkLogEntry;
+  stackedHeaders: boolean;
+}) {
   return (
     <View>
       <CollapsibleSection title="General">
         <View style={rowStyles.headerRow}>
-          <Text style={rowStyles.headerKey} selectable>
+          <Text style={rowStyles.headerListKey} selectable>
             Request URL
           </Text>
           <Text style={rowStyles.headerValue} selectable>
@@ -25,7 +31,7 @@ export function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
           </Text>
         </View>
         <View style={rowStyles.headerRow}>
-          <Text style={rowStyles.headerKey} selectable>
+          <Text style={rowStyles.headerListKey} selectable>
             Request Method
           </Text>
           <Text style={rowStyles.headerValue} selectable>
@@ -33,7 +39,7 @@ export function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
           </Text>
         </View>
         <View style={rowStyles.headerRow}>
-          <Text style={rowStyles.headerKey} selectable>
+          <Text style={rowStyles.headerListKey} selectable>
             Status Code
           </Text>
           <View style={styles.statusValue}>
@@ -45,7 +51,7 @@ export function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
         </View>
         {entry.source && (
           <View style={rowStyles.headerRow}>
-            <Text style={rowStyles.headerKey} selectable>
+            <Text style={rowStyles.headerListKey} selectable>
               Source
             </Text>
             <Text style={rowStyles.headerValue} selectable>
@@ -54,8 +60,12 @@ export function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
           </View>
         )}
       </CollapsibleSection>
-      <HeaderList title="Request Headers" headers={entry.requestHeaders} />
-      <HeaderList title="Response Headers" headers={entry.responseHeaders} />
+      <HeaderList title="Request Headers" headers={entry.requestHeaders} stacked={stackedHeaders} />
+      <HeaderList
+        title="Response Headers"
+        headers={entry.responseHeaders}
+        stacked={stackedHeaders}
+      />
     </View>
   );
 }

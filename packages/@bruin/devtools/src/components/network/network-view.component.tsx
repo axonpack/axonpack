@@ -50,6 +50,7 @@ export function NetworkView() {
   const [bigRows, setBigRows] = useState(true);
   const [groupByFetchClient, setGroupByFetchClient] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
+  const [stackedHeaders, setStackedHeaders] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
 
   const sources = useMemo(() => {
@@ -174,6 +175,11 @@ export function NetworkView() {
             onValueChange={setGroupByFetchClient}
           />
           <SettingRow label="Show overview" value={showOverview} onValueChange={setShowOverview} />
+          <SettingRow
+            label="Stack header values"
+            value={stackedHeaders}
+            onValueChange={setStackedHeaders}
+          />
         </View>
       )}
 
@@ -305,7 +311,11 @@ export function NetworkView() {
         />
       )}
 
-      <DetailPanel entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
+      <DetailPanel
+        entry={selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        stackedHeaders={stackedHeaders}
+      />
     </View>
   );
 }

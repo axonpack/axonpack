@@ -11,4 +11,5 @@ export const COLORS = {
   success: '#188038',
   error: '#d93025',
   warning: '#f9ab00',
+  keyAccent: '#d97706',
 };
