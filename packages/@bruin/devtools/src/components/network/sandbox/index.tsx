@@ -101,15 +101,11 @@ export function SandboxSheet({
     <BottomSheet visible={visible} onClose={onClose}>
       <Text style={styles.title}>Sandbox</Text>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.methodScroll}
-        contentContainerStyle={styles.methodRow}>
+      <View style={styles.methodRow}>
         {METHODS.map((m) => (
           <Chip key={m} label={m} active={method === m} onPress={() => setMethod(m)} />
         ))}
-      </ScrollView>
+      </View>
 
       <View style={styles.urlRow}>
         <TextInput
@@ -262,15 +258,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 8,
   },
-  methodScroll: {
-    flexGrow: 0,
-  },
   methodRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
   urlRow: {
     flexDirection: 'row',
