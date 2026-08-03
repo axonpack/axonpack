@@ -1,7 +1,11 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
-import { RESOURCE_TYPE_ICONS } from '../../constants/network/resource-type-icons.const';
+import {
+  getResponseTypeVisual,
+  RESOURCE_TYPE_ICONS,
+} from '../../constants/network/resource-type-icons.const';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import {
   formatSize,
@@ -25,6 +29,7 @@ export function LogRow({
   const statusColor = getStatusColor(entry.status);
   const methodColor = getMethodColor(entry.method);
   const resourceType = classifyResourceType(entry.mimeType);
+  const typeVisual = getResponseTypeVisual(entry.mimeType);
 
   return (
     <TouchableOpacity onPress={onPress} style={[styles.row, bigRows && styles.rowBig]}>
@@ -41,17 +46,27 @@ export function LogRow({
         </Text>
       </View>
 
-      {bigRows && (
-        <Text style={styles.name} numberOfLines={1} selectable>
-          {getDisplayNameWithQuery(entry.url)}
-        </Text>
-      )}
-      <Text
-        style={[styles.url, !bigRows && styles.urlPrimary]}
-        numberOfLines={bigRows ? 1 : 2}
-        selectable>
-        {entry.url}
-      </Text>
+      <View style={styles.urlRow}>
+        <MaterialIcons
+          name={typeVisual.icon}
+          size={14}
+          color={typeVisual.color}
+          style={styles.typeIcon}
+        />
+        <View style={styles.urlTextGroup}>
+          {bigRows && (
+            <Text style={styles.name} numberOfLines={1} selectable>
+              {getDisplayNameWithQuery(entry.url)}
+            </Text>
+          )}
+          <Text
+            style={[styles.url, !bigRows && styles.urlPrimary]}
+            numberOfLines={bigRows ? 1 : 2}
+            selectable>
+            {entry.url}
+          </Text>
+        </View>
+      </View>
 
       {bigRows && (
         <View style={styles.badgeRow}>
@@ -97,6 +112,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
     textAlign: 'right',
+  },
+  urlRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  typeIcon: {
+    marginTop: 2,
+  },
+  urlTextGroup: {
+    flex: 1,
   },
   name: {
     fontSize: 13,
