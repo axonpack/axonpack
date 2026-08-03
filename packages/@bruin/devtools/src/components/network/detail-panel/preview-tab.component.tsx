@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CodeHighlight } from './code-highlight';
+import { detectLanguage } from './code-highlight/code-highlight.util';
 import { JsonTree } from './json-tree';
 import type { JsonValue } from './json-tree/json-tree.util';
 import { rowStyles } from './shared.styles';
@@ -36,9 +38,10 @@ export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
       {parsed !== undefined ? (
         <JsonTree value={parsed} />
       ) : (
-        <Text style={rowStyles.monospace} selectable>
-          {entry.responseBody}
-        </Text>
+        <CodeHighlight
+          code={entry.responseBody}
+          language={detectLanguage(entry.mimeType, entry.responseBody)}
+        />
       )}
     </View>
   );

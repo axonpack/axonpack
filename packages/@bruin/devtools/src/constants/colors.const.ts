@@ -16,4 +16,9 @@ export const COLORS = {
   jsonKey: '#881391',
   jsonString: '#c41a16',
   jsonNumber: '#1c00cf',
+  // Extra tokens for the Preview tab's plain-text code highlighter (JS/CSS/HTML) — string,
+  // number, and key/name-ish tokens reuse the JSON colors above rather than adding more hues.
+  codeKeyword: '#0000ff',
+  codeComment: '#008000',
+  codeTag: '#800000',
 };
