@@ -12,4 +12,8 @@ export const COLORS = {
   error: '#d93025',
   warning: '#f9ab00',
   keyAccent: '#d97706',
+  // Matches Chrome DevTools' JS/JSON syntax highlighting (object key, string, number/boolean).
+  jsonKey: '#881391',
+  jsonString: '#c41a16',
+  jsonNumber: '#1c00cf',
 };

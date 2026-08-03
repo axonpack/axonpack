@@ -1,33 +1,31 @@
 import { Text, View } from 'react-native';
 
+import { JsonTree } from './json-tree';
+import type { JsonValue } from './json-tree/json-tree.util';
 import { rowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 
-function prettyPrint(body: string | undefined, mimeType: string | undefined): string | null {
-  if (!body) return null;
-  if (mimeType?.includes('json')) {
-    try {
-      return JSON.stringify(JSON.parse(body), null, 2);
-    } catch {
-      return body;
-    }
-  }
-  // Attempt JSON pretty-printing even without an explicit content-type, since it's common
-  // for APIs to omit or mislabel it.
+// Attempted regardless of the content-type header, since it's common for APIs to omit or
+// mislabel it — a body that happens to parse as JSON is shown as JSON either way.
+function parseJson(body: string | undefined): JsonValue | undefined {
+  if (!body) return undefined;
   try {
-    return JSON.stringify(JSON.parse(body), null, 2);
+    return JSON.parse(body);
   } catch {
-    return body;
+    return undefined;
   }
 }
 
 export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
-  const preview = prettyPrint(entry.responseBody, entry.mimeType);
+  const parsed = parseJson(entry.responseBody);
+
   return (
     <View style={rowStyles.section}>
-      {preview ? (
+      {parsed !== undefined ? (
+        <JsonTree value={parsed} />
+      ) : entry.responseBody ? (
         <Text style={rowStyles.monospace} selectable>
-          {preview}
+          {entry.responseBody}
         </Text>
       ) : (
         <Text style={rowStyles.emptyText}>No preview available</Text>
