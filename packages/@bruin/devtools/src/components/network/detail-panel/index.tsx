@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import { HeadersTab } from './headers-tab.component';
 import { PayloadTab } from './payload-tab.component';
@@ -50,13 +50,20 @@ export function DetailPanel({
 
   return (
     <BottomSheet visible={entry !== null} onClose={onClose}>
-      <View style={styles.tabBar}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabBar}
+        contentContainerStyle={styles.tabBarContent}>
         {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
-          <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={styles.tabButton}>
+          <TouchableOpacity
+            key={t.key}
+            onPress={() => setTab(t.key)}
+            style={[styles.tabButton, tab === t.key && styles.tabButtonActive]}>
             <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {tab === 'headers' && <HeadersTab entry={active} stackedHeaders={stackedHeaders} />}
@@ -71,14 +78,22 @@ export function DetailPanel({
 
 const styles = StyleSheet.create({
   tabBar: {
-    flexDirection: 'row',
+    flexGrow: 0,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
+  tabBarContent: {
+    flexDirection: 'row',
+  },
   tabButton: {
-    flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabButtonActive: {
+    borderBottomColor: COLORS.accent,
   },
   tabLabel: {
     fontSize: 13,
