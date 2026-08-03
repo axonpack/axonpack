@@ -1,11 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CodeHighlight } from './code-highlight';
-import { detectLanguage } from './code-highlight/code-highlight.util';
 import { JsonTree } from './json-tree';
-import type { JsonValue } from './json-tree/json-tree.util';
 import { rowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
+import { detectLanguage } from '../../../utils/network/code-highlight.util';
+import type { JsonValue } from '../../../utils/network/json-tree.util';
 import { ShareIconButton } from '../../ui/share-icon-button.ui';
 
 // Attempted regardless of the content-type header, since it's common for APIs to omit or

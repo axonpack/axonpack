@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { JsonTree } from './json-tree';
-import type { JsonValue } from './json-tree/json-tree.util';
 import { rowStyles } from './shared.styles';
 import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
+import type { JsonValue } from '../../../utils/network/json-tree.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
 import { ShareIconButton } from '../../ui/share-icon-button.ui';

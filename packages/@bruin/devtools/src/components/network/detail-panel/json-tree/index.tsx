@@ -8,7 +8,7 @@ import {
   formatCopyValue,
   isExpandable,
   type JsonValue,
-} from './json-tree.util';
+} from '../../../../utils/network/json-tree.util';
 import { ContextMenu, type ContextMenuItem } from '../../../ui/context-menu.ui';
 
 const ROOT_PATH = '$';

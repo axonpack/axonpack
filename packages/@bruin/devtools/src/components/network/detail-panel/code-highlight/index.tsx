@@ -1,7 +1,12 @@
 import { Text } from 'react-native';
 
-import { formatCode, MAX_HIGHLIGHT_LENGTH, tokenize, type Language } from './code-highlight.util';
 import { codeStyles } from './shared.styles';
+import {
+  formatCode,
+  MAX_HIGHLIGHT_LENGTH,
+  tokenize,
+  type Language,
+} from '../../../../utils/network/code-highlight.util';
 
 export function CodeHighlight({ code, language }: { code: string; language: Language }) {
   // A TextInput can't render multi-colored inline runs, so unlike the read-only response/payload

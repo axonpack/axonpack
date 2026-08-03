@@ -1,6 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, Text, View } from 'react-native';
 
+import { treeStyles } from './shared.styles';
+import { COLORS } from '../../../../constants/colors.const';
 import {
   ARRAY_CHUNK_SIZE,
   buildPreview,
@@ -8,9 +10,7 @@ import {
   isExpandable,
   isPlainObject,
   type JsonValue,
-} from './json-tree.util';
-import { treeStyles } from './shared.styles';
-import { COLORS } from '../../../../constants/colors.const';
+} from '../../../../utils/network/json-tree.util';
 
 const INDENT_PER_DEPTH = 14;
 
