@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
@@ -27,66 +28,86 @@ export function LogRow({
   const resourceType = classifyResourceType(entry.mimeType);
 
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.card, bigRows && styles.cardBig]}>
-      <View style={styles.topRow}>
-        <View style={[styles.methodPill, { backgroundColor: methodColor }]}>
-          <Text style={styles.methodPillText} selectable>
-            {entry.method}
+    <TouchableOpacity onPress={onPress} style={styles.card}>
+      <View style={[styles.accentBar, { backgroundColor: statusColor }]} />
+
+      <View style={[styles.content, bigRows && styles.contentBig]}>
+        <View style={styles.topRow}>
+          <View style={[styles.methodPill, { backgroundColor: methodColor }]}>
+            <Text style={styles.methodPillText} selectable>
+              {entry.method}
+            </Text>
+          </View>
+          <View style={[styles.statusPill, { borderColor: statusColor }]}>
+            <Text style={[styles.statusPillText, { color: statusColor }]} selectable>
+              {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
+            </Text>
+          </View>
+          <Text style={styles.timing} numberOfLines={1} selectable>
+            {entry.duration !== undefined ? `${entry.duration}ms` : '...'} ·{' '}
+            {new Date(entry.startedAt).toLocaleTimeString()}
           </Text>
         </View>
-        <View style={[styles.statusPill, { borderColor: statusColor }]}>
-          <Text style={[styles.statusPillText, { color: statusColor }]} selectable>
-            {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
+
+        {bigRows && (
+          <Text style={styles.cardName} numberOfLines={1} selectable>
+            {getDisplayNameWithQuery(entry.url)}
           </Text>
-        </View>
-        <Text style={styles.timing} numberOfLines={1} selectable>
-          {entry.duration !== undefined ? `${entry.duration}ms` : '...'} ·{' '}
-          {new Date(entry.startedAt).toLocaleTimeString()}
+        )}
+        <Text
+          style={[styles.cardUrl, !bigRows && styles.cardUrlPrimary]}
+          numberOfLines={2}
+          selectable>
+          {entry.url}
         </Text>
+
+        {bigRows && (
+          <View style={styles.badgeRow}>
+            <InfoBadge
+              icon={RESOURCE_TYPE_ICONS[resourceType]}
+              label={RESOURCE_TYPE_LABELS[resourceType]}
+            />
+            {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
+            <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
+          </View>
+        )}
       </View>
 
-      {bigRows && (
-        <Text style={styles.cardName} numberOfLines={1} selectable>
-          {getDisplayNameWithQuery(entry.url)}
-        </Text>
-      )}
-      <Text
-        style={[styles.cardUrl, !bigRows && styles.cardUrlPrimary]}
-        numberOfLines={2}
-        selectable>
-        {entry.url}
-      </Text>
-
-      {bigRows && (
-        <View style={styles.badgeRow}>
-          <InfoBadge
-            icon={RESOURCE_TYPE_ICONS[resourceType]}
-            label={RESOURCE_TYPE_LABELS[resourceType]}
-          />
-          {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
-          <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
-        </View>
-      )}
+      <MaterialIcons name="chevron-right" size={18} color={COLORS.border} style={styles.chevron} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
     backgroundColor: COLORS.background,
     borderRadius: 10,
-    padding: 10,
     marginHorizontal: 10,
     marginTop: 8,
-    gap: 4,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 2,
     elevation: 1,
   },
-  cardBig: {
+  accentBar: {
+    width: 3,
+  },
+  content: {
+    flex: 1,
+    gap: 4,
+    padding: 10,
+  },
+  contentBig: {
     padding: 14,
+  },
+  chevron: {
+    alignSelf: 'center',
+    marginLeft: 2,
+    marginRight: 8,
   },
   topRow: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   SectionList,
@@ -29,10 +29,10 @@ import {
 import type { ResourceType } from '../../utils/network/resource-type.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
+import { RecordToggleIcon } from '../ui/record-toggle-icon.ui';
 import { SettingRow } from '../ui/setting-row.ui';
+import { Tooltip } from '../ui/tooltip.ui';
 
-// Below this width, a fixed-width key column is cramped enough that the stacked header
-// layout is the better default (e.g. phones); wider screens (tablets) default to columns.
 const SMALL_SCREEN_MAX_WIDTH = 768;
 
 export function NetworkView() {
@@ -59,6 +59,11 @@ export function NetworkView() {
   const [showOverview, setShowOverview] = useState(false);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
+  const [recordToggleTooltipAnchor, setRecordToggleTooltipAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const suppressNextRecordTogglePress = useRef(false);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -139,36 +144,82 @@ export function NetworkView() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerActions}>
-          <IconButton
-            name={paused ? 'radio-button-unchecked' : 'fiber-manual-record'}
-            color={paused ? COLORS.textSecondary : COLORS.error}
-            onPress={() => networkLogStore.setPaused(!paused)}
+          <TouchableOpacity
+            onPress={() => {
+              if (suppressNextRecordTogglePress.current) {
+                suppressNextRecordTogglePress.current = false;
+                return;
+              }
+              networkLogStore.setPaused(!paused);
+            }}
+            onLongPress={(event) => {
+              suppressNextRecordTogglePress.current = true;
+              setRecordToggleTooltipAnchor({
+                x: event.nativeEvent.pageX,
+                y: event.nativeEvent.pageY,
+              });
+            }}
+            onPressOut={() => setRecordToggleTooltipAnchor(null)}
+            hitSlop={8}
+            style={[styles.recordToggle, paused && styles.recordToggleActive]}>
+            <RecordToggleIcon
+              size={18}
+              color={paused ? COLORS.textSecondary : COLORS.error}
+              shape={paused ? 'circle' : 'square'}
+            />
+          </TouchableOpacity>
+          <Tooltip
+            anchor={recordToggleTooltipAnchor}
+            label={paused ? 'Start recording' : 'Stop recording'}
+            onClose={() => setRecordToggleTooltipAnchor(null)}
           />
           <IconButton
-            name="swap-vert"
+            name="block"
+            color={COLORS.textSecondary}
+            onPress={networkLogStore.clear}
+            label="Clear log"
+          />
+
+          <View style={styles.headerDivider} />
+
+          <IconButton
+            name={reversed ? 'arrow-upward' : 'arrow-downward'}
             color={COLORS.textSecondary}
             onPress={() => setReversed((c) => !c)}
-          />
-          <IconButton name="block" color={COLORS.textSecondary} onPress={networkLogStore.clear} />
-          <IconButton
-            name={preserveLog ? 'bookmark' : 'bookmark-border'}
-            color={preserveLog ? COLORS.accent : COLORS.textSecondary}
-            onPress={() => networkLogStore.setPreserveLog(!preserveLog)}
-          />
-          <IconButton
-            name="file-download"
-            color={COLORS.textSecondary}
-            onPress={() => exportNetworkLog(visibleLogs)}
-          />
-          <IconButton
-            name="settings"
-            color={openPanel === 'settings' ? COLORS.accent : COLORS.textSecondary}
-            onPress={() => togglePanel('settings')}
+            label={reversed ? 'Show oldest first' : 'Show newest first'}
           />
           <IconButton
             name="filter-list"
             color={openPanel === 'filters' ? COLORS.accent : COLORS.textSecondary}
+            active={openPanel === 'filters'}
             onPress={() => togglePanel('filters')}
+            label="Filter"
+          />
+
+          <View style={styles.headerDivider} />
+
+          <IconButton
+            name={preserveLog ? 'bookmark' : 'bookmark-border'}
+            color={preserveLog ? COLORS.accent : COLORS.textSecondary}
+            active={preserveLog}
+            onPress={() => networkLogStore.setPreserveLog(!preserveLog)}
+            label="Preserve log"
+          />
+
+          <View style={styles.headerDivider} />
+
+          <IconButton
+            name="file-download"
+            color={COLORS.textSecondary}
+            onPress={() => exportNetworkLog(visibleLogs)}
+            label="Export"
+          />
+          <IconButton
+            name="settings"
+            color={openPanel === 'settings' ? COLORS.accent : COLORS.textSecondary}
+            active={openPanel === 'settings'}
+            onPress={() => togglePanel('settings')}
+            label="Settings"
           />
         </View>
       </View>
@@ -347,7 +398,21 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 2,
+  },
+  headerDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 18,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 6,
+  },
+  recordToggle: {
+    padding: 4,
+    borderRadius: 8,
+  },
+  recordToggleActive: {
+    backgroundColor: COLORS.sectionTint,
   },
   panel: {
     padding: 12,
