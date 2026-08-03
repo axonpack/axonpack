@@ -1,3 +1,5 @@
+export type SandboxTab = 'request' | 'response';
+
 export type KeyValueRow = { id: string; key: string; value: string; enabled: boolean };
 
 let rowCounter = 0;
