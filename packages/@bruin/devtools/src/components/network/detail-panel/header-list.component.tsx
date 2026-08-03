@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { rowStyles } from './shared.styles';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
+import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 
 export function HeaderList({
   title,
@@ -24,6 +25,7 @@ export function HeaderList({
             <Text style={rowStyles.headerValue} selectable>
               {value}
             </Text>
+            <CopyIconButton value={value} />
           </View>
         ))
       )}
