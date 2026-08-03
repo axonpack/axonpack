@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+@INPUT_STYLES.md
+
+@CONVENTIONS.md
+
 ## Repository overview
 
 Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS foundation libraries for React Native/Expo (ahooks / Software Mansion style). See `docs/plan.md` for the roadmap (`@bruin/lite-storage`, `@bruin/devtools`, `@bruin/api-kit`, `@bruin/i18n`). **Only `@bruin/devtools` is implemented so far**; `apps/` exists but is currently empty.
