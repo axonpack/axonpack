@@ -8,6 +8,7 @@ export type NetworkLogEntry = {
   url: string;
   status: NetworkLogStatus;
   statusCode?: number;
+  statusText?: string;
   requestBody?: string;
   responseBody?: string;
   error?: string;

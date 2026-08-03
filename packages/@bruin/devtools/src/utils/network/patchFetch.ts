@@ -109,6 +109,7 @@ export function patchFetch() {
       networkLogStore.update(id, {
         status: 'success',
         statusCode: response.status,
+        statusText: response.statusText,
         responseBody,
         responseHeaders,
         mimeType: extractMimeType(responseHeaders),

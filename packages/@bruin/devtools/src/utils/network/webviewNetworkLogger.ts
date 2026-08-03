@@ -129,9 +129,9 @@ export function getWebViewInjectedScript(webviewName: string): string {
         return originalFetch(input, init).then(function (response) {
           var responseHeaders = headersFromResponse(response.headers);
           response.clone().text().then(function (text) {
-            post({ id: id, status: 'success', statusCode: response.status, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: extractSize(responseHeaders, text), duration: Date.now() - startedAt });
+            post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: extractSize(responseHeaders, text), duration: Date.now() - startedAt });
           }).catch(function () {
-            post({ id: id, status: 'success', statusCode: response.status, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), duration: Date.now() - startedAt });
+            post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), duration: Date.now() - startedAt });
           });
           return response;
         }).catch(function (error) {
@@ -186,6 +186,7 @@ export function getWebViewInjectedScript(webviewName: string): string {
             id: id,
             status: isNetworkFailure ? 'error' : 'success',
             statusCode: xhr.status,
+            statusText: xhr.statusText,
             responseBody: responseBody,
             responseHeaders: responseHeaders,
             mimeType: extractMimeType(responseHeaders),

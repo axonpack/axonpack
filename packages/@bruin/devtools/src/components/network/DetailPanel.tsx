@@ -4,7 +4,7 @@ import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 
 import { CollapsibleSection } from './CollapsibleSection';
 import { COLORS } from './colors';
-import { getStatusColor } from './formatters';
+import { getStatusColor, getStatusText } from './formatters';
 import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
 
 type Tab = 'headers' | 'preview' | 'response' | 'timing';
@@ -44,6 +44,12 @@ function HeaderList({
   );
 }
 
+function formatStatus(entry: NetworkLogEntry): string {
+  if (entry.statusCode === undefined) return entry.error ?? '(pending)';
+  const statusText = getStatusText(entry.statusCode, entry.statusText);
+  return statusText ? `${entry.statusCode} ${statusText}` : `${entry.statusCode}`;
+}
+
 function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
   return (
     <View>
@@ -71,7 +77,7 @@ function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
           <View style={styles.statusValue}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(entry.status) }]} />
             <Text style={styles.headerValue} selectable>
-              {entry.statusCode ?? entry.error ?? '(pending)'}
+              {formatStatus(entry)}
             </Text>
           </View>
         </View>

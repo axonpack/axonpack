@@ -92,6 +92,7 @@ export function patchXHR() {
       __networkLogHeaders?: Record<string, string>;
       readyState: number;
       status: number;
+      statusText: string;
       responseText: string;
     };
     const id = xhr.__networkLogId ?? nextRequestId();
@@ -123,6 +124,7 @@ export function patchXHR() {
       networkLogStore.update(id, {
         status: isNetworkFailure ? 'error' : 'success',
         statusCode: xhr.status,
+        statusText: xhr.statusText,
         responseBody,
         responseHeaders,
         mimeType: responseHeaders ? extractMimeType(responseHeaders) : undefined,
