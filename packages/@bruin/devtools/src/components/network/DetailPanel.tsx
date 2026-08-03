@@ -4,6 +4,7 @@ import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 
 import { CollapsibleSection } from './CollapsibleSection';
 import { COLORS } from './colors';
+import { getStatusColor } from './formatters';
 import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
 
 type Tab = 'headers' | 'preview' | 'response' | 'timing';
@@ -67,9 +68,12 @@ function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
           <Text style={styles.headerKey} selectable>
             Status Code
           </Text>
-          <Text style={styles.headerValue} selectable>
-            {entry.statusCode ?? entry.error ?? '(pending)'}
-          </Text>
+          <View style={styles.statusValue}>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor(entry.status) }]} />
+            <Text style={styles.headerValue} selectable>
+              {entry.statusCode ?? entry.error ?? '(pending)'}
+            </Text>
+          </View>
         </View>
         {entry.source && (
           <View style={styles.headerRow}>
@@ -303,17 +307,30 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    paddingVertical: 3,
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
   headerKey: {
-    width: 130,
+    width: 140,
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
   },
   headerValue: {
     flex: 1,
     fontSize: 12,
     color: COLORS.textPrimary,
+  },
+  statusValue: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   monospace: {
     fontFamily: 'monospace',

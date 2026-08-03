@@ -1,4 +1,16 @@
 import { COLORS } from './colors';
+import type { NetworkLogStatus } from '../../utils/network/networkLogStore';
+
+export function getStatusColor(status: NetworkLogStatus): string {
+  switch (status) {
+    case 'success':
+      return COLORS.success;
+    case 'error':
+      return COLORS.error;
+    default:
+      return COLORS.pending;
+  }
+}
 
 /** Color-codes an HTTP method the way most API tooling does (GET blue, POST green, mutate-in-place amber, DELETE red). */
 export function getMethodColor(method: string): string {

@@ -2,7 +2,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { InfoBadge } from './InfoBadge';
 import { COLORS } from './colors';
-import { formatSize, getDisplayNameWithQuery, getMethodColor } from './formatters';
+import { formatSize, getDisplayNameWithQuery, getMethodColor, getStatusColor } from './formatters';
 import { RESOURCE_TYPE_ICONS } from './resourceTypeIcons';
 import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resourceType';
@@ -16,12 +16,7 @@ export function LogRow({
   bigRows: boolean;
   onPress: () => void;
 }) {
-  const statusColor =
-    entry.status === 'success'
-      ? COLORS.success
-      : entry.status === 'error'
-        ? COLORS.error
-        : COLORS.pending;
+  const statusColor = getStatusColor(entry.status);
   const methodColor = getMethodColor(entry.method);
   const resourceType = classifyResourceType(entry.mimeType);
 

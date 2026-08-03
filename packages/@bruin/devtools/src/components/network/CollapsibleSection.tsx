@@ -17,22 +17,23 @@ export function CollapsibleSection({
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <View style={styles.section}>
+    <View>
       <TouchableOpacity
         style={styles.header}
         onPress={() => {
           animateNextLayout();
           setExpanded((prev) => !prev);
         }}>
+        <MaterialIcons
+          name="arrow-drop-down"
+          size={18}
+          color={COLORS.textSecondary}
+          style={!expanded && styles.iconCollapsed}
+        />
         <Text style={styles.sectionTitle}>
           {title}
           {!expanded && count !== undefined ? ` (${count})` : ''}
         </Text>
-        <MaterialIcons
-          name={expanded ? 'expand-less' : 'expand-more'}
-          size={18}
-          color={COLORS.textSecondary}
-        />
       </TouchableOpacity>
       {expanded && <View style={styles.body}>{children}</View>}
     </View>
@@ -40,27 +41,29 @@ export function CollapsibleSection({
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginBottom: 12,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     backgroundColor: COLORS.sectionTint,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
+    // Bleeds past the screen's own horizontal content padding so the tint spans edge-to-edge,
+    // then reapplies it via paddingHorizontal to keep the title's inset unchanged.
+    marginHorizontal: -12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+  iconCollapsed: {
+    transform: [{ rotate: '-90deg' }],
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
   },
   body: {
-    paddingHorizontal: 6,
-    paddingBottom: 4,
+    paddingTop: 2,
   },
 });
