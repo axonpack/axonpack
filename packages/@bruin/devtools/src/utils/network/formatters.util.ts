@@ -1,5 +1,5 @@
-import { COLORS } from './colors';
-import type { NetworkLogStatus } from '../../utils/network/networkLogStore';
+import { COLORS } from '../../constants/colors.const';
+import type { NetworkLogStatus } from '../../stores/network/network-log.store';
 
 export function getStatusColor(status: NetworkLogStatus): string {
   switch (status) {

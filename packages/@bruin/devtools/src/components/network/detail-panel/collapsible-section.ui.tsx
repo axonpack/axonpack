@@ -2,8 +2,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../colors';
-import { animateNextLayout } from '../layoutAnimation';
+import { COLORS } from '../../../constants/colors.const';
+import { animateNextLayout } from '../../../utils/layout-animation.util';
 
 export function CollapsibleSection({
   title,

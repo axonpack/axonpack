@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { rowStyles } from './sharedStyles';
-import type { NetworkLogEntry } from '../../../utils/network/networkLogStore';
-import { COLORS } from '../colors';
+import { rowStyles } from './shared.styles';
+import { COLORS } from '../../../constants/colors.const';
+import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 
 export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
   return (

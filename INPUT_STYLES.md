@@ -1,9 +1,9 @@
 # Input styles
 
 Canonical text-input styling for `@bruin/devtools`, based on the network filter search box
-(`packages/@bruin/devtools/src/components/network/NetworkView.tsx`). Use this as the reference
-when adding another text input anywhere in the devtools UI, so inputs stay visually consistent
-with the rest of the Chrome DevTools-style network view.
+(`packages/@bruin/devtools/src/components/network/network-view.component.tsx`). Use this as the
+reference when adding another text input anywhere in the devtools UI, so inputs stay visually
+consistent with the rest of the Chrome DevTools-style network view.
 
 ## Structure
 
@@ -56,8 +56,8 @@ const styles = StyleSheet.create({
 
 - Border/radius/spacing live on the wrapping row, not the `TextInput` itself — the `TextInput`
   stays visually bare (`padding: 0`, no border) so the row is the only visible chrome.
-- Colors always come from `COLORS` (`src/components/network/colors.ts`) — never hardcode hex
-  values in an input's styles.
+- Colors always come from `COLORS` (`src/constants/colors.const.ts`) — never hardcode hex values
+  in an input's styles.
 - `placeholderTextColor` is always `COLORS.textSecondary`, matching how secondary text is styled
   everywhere else in the network view.
 
@@ -67,7 +67,8 @@ Per this repo's file-naming convention (see the root `CLAUDE.md`):
 
 - **Single-use** — if the input only appears in one view (the current state), its styles stay
   inline in that file's own `StyleSheet.create`, same as `searchInput`/`searchRow` in
-  `NetworkView.tsx` today. Don't create a separate styles file for a single consumer.
+  `network-view.component.tsx` today. Don't create a separate styles file for a single consumer.
 - **Reusable** — if an input is needed in more than one place, promote it to its own component
-  file (e.g. `src/components/network/SearchInput.tsx`), PascalCase, sibling to `Chip.tsx` /
-  `IconButton.tsx` / `SettingRow.tsx`, with the styles above co-located inside that same file.
+  file (e.g. `src/components/network/search-input.ui.tsx`), sibling to `chip.ui.tsx` /
+  `icon-button.ui.tsx` / `setting-row.ui.tsx`, with the styles above co-located inside that same
+  file.

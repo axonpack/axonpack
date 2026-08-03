@@ -1,11 +1,16 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { InfoBadge } from './InfoBadge';
-import { COLORS } from './colors';
-import { formatSize, getDisplayNameWithQuery, getMethodColor, getStatusColor } from './formatters';
-import { RESOURCE_TYPE_ICONS } from './resourceTypeIcons';
-import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
-import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resourceType';
+import { InfoBadge } from './info-badge.ui';
+import { COLORS } from '../../constants/colors.const';
+import { RESOURCE_TYPE_ICONS } from '../../constants/network/resource-type-icons.const';
+import type { NetworkLogEntry } from '../../stores/network/network-log.store';
+import {
+  formatSize,
+  getDisplayNameWithQuery,
+  getMethodColor,
+  getStatusColor,
+} from '../../utils/network/formatters.util';
+import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resource-type.util';
 
 export function LogRow({
   entry,

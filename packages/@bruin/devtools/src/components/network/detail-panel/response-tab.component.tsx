@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
-import { rowStyles } from './sharedStyles';
-import type { NetworkLogEntry } from '../../../utils/network/networkLogStore';
+import { rowStyles } from './shared.styles';
+import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 
 export function ResponseTab({ entry }: { entry: NetworkLogEntry }) {
   return (

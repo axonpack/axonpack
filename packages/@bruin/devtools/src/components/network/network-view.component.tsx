@@ -10,24 +10,24 @@ import {
   View,
 } from 'react-native';
 
-import { Chip } from './Chip';
-import { DetailPanel } from './DetailPanel';
-import { IconButton } from './IconButton';
-import { LogRow } from './LogRow';
-import { OverviewStrip } from './OverviewStrip';
-import { SettingRow } from './SettingRow';
-import { COLORS } from './colors';
-import { exportNetworkLog } from './exportNetworkLog';
-import { matchesQuery } from './filterEntries';
-import { animateNextLayout } from './layoutAnimation';
-import { networkLogStore } from '../../utils/network/networkLogStore';
-import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
+import { Chip } from './chip.ui';
+import { DetailPanel } from './detail-panel';
+import { IconButton } from './icon-button.ui';
+import { LogRow } from './log-row.component';
+import { OverviewStrip } from './overview-strip.component';
+import { SettingRow } from './setting-row.ui';
+import { COLORS } from '../../constants/colors.const';
+import { networkLogStore } from '../../stores/network/network-log.store';
+import type { NetworkLogEntry } from '../../stores/network/network-log.store';
+import { animateNextLayout } from '../../utils/layout-animation.util';
+import { exportNetworkLog } from '../../utils/network/export-network-log.util';
+import { matchesQuery } from '../../utils/network/filter-entries.util';
 import {
   classifyResourceType,
   RESOURCE_TYPE_LABELS,
   RESOURCE_TYPES,
-} from '../../utils/network/resourceType';
-import type { ResourceType } from '../../utils/network/resourceType';
+} from '../../utils/network/resource-type.util';
+import type { ResourceType } from '../../utils/network/resource-type.util';
 
 export function NetworkView() {
   const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getSnapshot);

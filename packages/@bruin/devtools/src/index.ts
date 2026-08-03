@@ -1,5 +1,8 @@
-export { createDevtoolsClient } from './client/createDevtoolsClient';
-export type { DevtoolsClientConfig, DevtoolsNetworkConfig } from './client/createDevtoolsClient';
-export { NetworkView } from './components/network/NetworkView';
-export { networkLogStore } from './utils/network/networkLogStore';
-export type { NetworkLogEntry, NetworkLogStatus } from './utils/network/networkLogStore';
+export { createDevtoolsClient } from './client/create-devtools-client.client';
+export type {
+  DevtoolsClientConfig,
+  DevtoolsNetworkConfig,
+} from './client/create-devtools-client.client';
+export { NetworkView } from './components/network/network-view.component';
+export { networkLogStore } from './stores/network/network-log.store';
+export type { NetworkLogEntry, NetworkLogStatus } from './stores/network/network-log.store';

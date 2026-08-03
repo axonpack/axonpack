@@ -51,7 +51,7 @@ Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS fou
 
 Pure JS/TSX Expo module — no native iOS/Android code (removed; `expo-module.config.json` declares no native platforms). `package.json` `exports` uses an `expo-source` condition pointing Metro straight at `src/index.ts`, and a `default` condition pointing other consumers at the compiled `build/`.
 
-### Client pattern (`src/client/createDevtoolsClient.ts`)
+### Client pattern (`src/client/create-devtools-client.client.ts`)
 
 The public API is a single factory, deliberately **not** a React Provider/Context:
 
@@ -73,13 +73,13 @@ devtools.init(); // call once at app startup — installs the fetch/XHR patches
 - `webviewSources` uses a TS 5 `const` type parameter, so the literal array flows into `getWebViewInjectedScript`/`handleWebViewMessage`'s parameter types — passing an undeclared name is a compile error, not just a lint warning. It doubles as a runtime allowlist: `handleWebViewNetworkMessage` silently drops messages whose `source` isn't in the list.
 - Theme resolution is layered (`mergeNetworkTheme` in `src/components/network/theme.ts`, takes N partial layers applied in order): `DEFAULT_NETWORK_THEME` → root-level shared fields on `theme` → `theme.network` (per-view override).
 
-### Network logging (`src/utils/network/`)
+### Network logging (`src/services/network/`, `src/stores/network/`)
 
-Three independent interception paths feed one shared store (`networkLogStore.ts` — in-memory ring buffer capped at 200 entries, pub/sub via `expo`'s `EventEmitter`, read via `useSyncExternalStore` in `NetworkView`):
+Three independent interception paths feed one shared store (`stores/network/network-log.store.ts` — in-memory ring buffer capped at 200 entries, pub/sub via `expo`'s `EventEmitter`, read via `useSyncExternalStore` in `network-view.component.tsx`):
 
-- `patchFetch.ts` — wraps `globalThis.fetch`. Required because **Expo installs its own native fetch by default** (`expo/winter/fetch`), which does not route through `XMLHttpRequest` the way the old whatwg-fetch polyfill did — patching XHR alone cannot see it.
-- `patchXHR.ts` — patches `XMLHttpRequest.prototype.open`/`.send`. This is what actually catches axios (its RN adapter uses XHR, not fetch) and any raw `XMLHttpRequest` usage.
-- `webviewNetworkLogger.ts` — a `<WebView>` runs in a completely separate JS engine (WKWebView/Android WebView), invisible to both patches above. `getWebViewInjectedScript(name)` returns a JS string that patches fetch/XHR _inside the page_ and relays every request back via `postMessage`; `handleWebViewNetworkMessage(event, allowedSources)` (called through the client, not directly) parses that and writes into the same store. Relative URLs are resolved against `location.href` since real pages request plenty of relative paths.
+- `services/network/patch-fetch.service.ts` — wraps `globalThis.fetch`. Required because **Expo installs its own native fetch by default** (`expo/winter/fetch`), which does not route through `XMLHttpRequest` the way the old whatwg-fetch polyfill did — patching XHR alone cannot see it.
+- `services/network/patch-xhr.service.ts` — patches `XMLHttpRequest.prototype.open`/`.send`. This is what actually catches axios (its RN adapter uses XHR, not fetch) and any raw `XMLHttpRequest` usage.
+- `services/network/webview-network-logger.service.ts` — a `<WebView>` runs in a completely separate JS engine (WKWebView/Android WebView), invisible to both patches above. `getWebViewInjectedScript(name)` returns a JS string that patches fetch/XHR _inside the page_ and relays every request back via `postMessage`; `handleWebViewNetworkMessage(event, allowedSources)` (called through the client, not directly) parses that and writes into the same store. Relative URLs are resolved against `location.href` since real pages request plenty of relative paths.
 
 Request/response bodies are logged in full — no truncation, by design.
 

@@ -1,4 +1,4 @@
-import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
+import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 
 export function matchesQuery(entry: NetworkLogEntry, query: string): boolean {
   if (!query) return true;

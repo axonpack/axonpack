@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { COLORS } from './colors';
-import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
+import { COLORS } from '../../constants/colors.const';
+import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 
 /** A simplified analog of Chrome's Network tab overview — a tick per request, positioned by relative start time. */
 export function OverviewStrip({ entries }: { entries: NetworkLogEntry[] }) {

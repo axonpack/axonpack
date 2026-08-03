@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
-import { COLORS } from './colors';
+import { COLORS } from '../../constants/colors.const';
 
 export function SettingRow({
   label,

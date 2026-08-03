@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { COLORS } from '../colors';
+import { COLORS } from '../../../constants/colors.const';
 
 // Row/text styles shared across the Headers, Preview, Response, and Timing tabs.
 export const rowStyles = StyleSheet.create({

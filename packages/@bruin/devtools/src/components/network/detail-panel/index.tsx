@@ -2,12 +2,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { HeadersTab } from './HeadersTab';
-import { PreviewTab } from './PreviewTab';
-import { ResponseTab } from './ResponseTab';
-import { TimingTab } from './TimingTab';
-import type { NetworkLogEntry } from '../../../utils/network/networkLogStore';
-import { COLORS } from '../colors';
+import { HeadersTab } from './headers-tab.component';
+import { PreviewTab } from './preview-tab.component';
+import { ResponseTab } from './response-tab.component';
+import { TimingTab } from './timing-tab.component';
+import { COLORS } from '../../../constants/colors.const';
+import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 
 type Tab = 'headers' | 'preview' | 'response' | 'timing';
 

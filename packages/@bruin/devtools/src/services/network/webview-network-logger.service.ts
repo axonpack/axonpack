@@ -1,5 +1,5 @@
-import { networkLogStore } from './networkLogStore';
-import type { NetworkLogEntry } from './networkLogStore';
+import { networkLogStore } from '../../stores/network/network-log.store';
+import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 
 const MESSAGE_MARKER = '__bruinDevtoolsNetwork';
 

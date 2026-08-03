@@ -1,6 +1,6 @@
 import { Share } from 'react-native';
 
-import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
+import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 
 /** Shares the given entries as JSON via the OS share sheet — no filesystem dependency needed. */
 export async function exportNetworkLog(entries: NetworkLogEntry[]) {

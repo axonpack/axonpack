@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
-import { CollapsibleSection } from './CollapsibleSection';
-import { rowStyles } from './sharedStyles';
+import { CollapsibleSection } from './collapsible-section.ui';
+import { rowStyles } from './shared.styles';
 
 export function HeaderList({
   title,

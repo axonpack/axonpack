@@ -1,4 +1,4 @@
-import { networkLogStore } from './networkLogStore';
+import { networkLogStore } from '../../stores/network/network-log.store';
 
 let isPatched = false;
 let requestCounter = 0;

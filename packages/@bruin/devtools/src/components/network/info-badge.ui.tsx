@@ -1,8 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { MaterialIconName } from './IconButton';
-import { COLORS } from './colors';
+import type { MaterialIconName } from './icon-button.ui';
+import { COLORS } from '../../constants/colors.const';
 
 export function InfoBadge({ icon, label }: { icon?: MaterialIconName; label: string }) {
   return (

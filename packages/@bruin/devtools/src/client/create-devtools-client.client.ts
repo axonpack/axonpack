@@ -1,10 +1,10 @@
-import { networkLogStore } from '../utils/network/networkLogStore';
-import { patchFetch } from '../utils/network/patchFetch';
-import { patchXHR } from '../utils/network/patchXHR';
+import { patchFetch } from '../services/network/patch-fetch.service';
+import { patchXHR } from '../services/network/patch-xhr.service';
 import {
   getWebViewInjectedScript,
   handleWebViewNetworkMessage,
-} from '../utils/network/webviewNetworkLogger';
+} from '../services/network/webview-network-logger.service';
+import { networkLogStore } from '../stores/network/network-log.store';
 
 type WebViewMessageEventLike = {
   nativeEvent: {
