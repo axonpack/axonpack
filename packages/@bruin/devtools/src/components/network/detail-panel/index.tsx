@@ -1,5 +1,6 @@
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HeadersTab } from './headers-tab.component';
 import { PayloadTab } from './payload-tab.component';
@@ -8,7 +9,10 @@ import { ResponseTab } from './response-tab.component';
 import { TimingTab } from './timing-tab.component';
 import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
+import { buildCurlCommand } from '../../../utils/network/curl.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
+import { ContextMenu, type ContextMenuItem } from '../../ui/context-menu.ui';
+import { IconButton } from '../../ui/icon-button.ui';
 
 type Tab = 'headers' | 'payload' | 'preview' | 'response' | 'timing';
 
@@ -32,6 +36,7 @@ export function DetailPanel({
   const [tab, setTab] = useState<Tab>('headers');
   const [renderedEntry, setRenderedEntry] = useState<NetworkLogEntry | null>(null);
   const [prevEntry, setPrevEntry] = useState<NetworkLogEntry | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
 
   // Adjust state during render when `entry` changes, rather than mirroring it via an effect
   // (see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
@@ -48,22 +53,55 @@ export function DetailPanel({
   const active = entry ?? renderedEntry;
   if (!active) return null;
 
+  const menuItems: ContextMenuItem[] = [
+    { label: 'Copy URL', onPress: () => Clipboard.setStringAsync(active.url) },
+    { label: 'Copy as cURL', onPress: () => Clipboard.setStringAsync(buildCurlCommand(active)) },
+    ...(active.requestBody
+      ? [
+          {
+            label: 'Copy request payload',
+            onPress: () => Clipboard.setStringAsync(active.requestBody as string),
+          },
+        ]
+      : []),
+    ...(active.responseBody
+      ? [
+          {
+            label: 'Copy response',
+            onPress: () => Clipboard.setStringAsync(active.responseBody as string),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <BottomSheet visible={entry !== null} onClose={onClose}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabBar}
-        contentContainerStyle={styles.tabBarContent}>
-        {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            onPress={() => setTab(t.key)}
-            style={[styles.tabButton, tab === t.key && styles.tabButtonActive]}>
-            <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.tabBarRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabBar}
+          contentContainerStyle={styles.tabBarContent}>
+          {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              onPress={() => setTab(t.key)}
+              style={[styles.tabButton, tab === t.key && styles.tabButtonActive]}>
+              <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <IconButton
+          name="more-vert"
+          color={COLORS.textSecondary}
+          hitSlop={12}
+          onPress={(event) =>
+            setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })
+          }
+        />
+      </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {tab === 'headers' && <HeadersTab entry={active} stackedHeaders={stackedHeaders} />}
@@ -72,15 +110,22 @@ export function DetailPanel({
         {tab === 'response' && <ResponseTab entry={active} />}
         {tab === 'timing' && <TimingTab entry={active} />}
       </ScrollView>
+
+      <ContextMenu anchor={menuAnchor} items={menuItems} onClose={() => setMenuAnchor(null)} />
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    flexGrow: 0,
+  tabBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+  },
+  tabBar: {
+    flex: 1,
   },
   tabBarContent: {
     flexDirection: 'row',

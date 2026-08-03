@@ -7,7 +7,7 @@ export type ContextMenuItem = {
   onPress: () => void;
 };
 
-const MENU_WIDTH = 200;
+const MENU_WIDTH = 230;
 const EDGE_MARGIN = 8;
 
 /** A long-press action menu — RN has no right-click, so this is the mobile equivalent. */

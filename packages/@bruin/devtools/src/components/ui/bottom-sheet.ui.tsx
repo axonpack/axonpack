@@ -62,7 +62,7 @@ export function BottomSheet({
         <View style={styles.header}>
           <View style={styles.handle} />
           <View style={styles.closeButton}>
-            <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} />
+            <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
           </View>
         </View>
         {children}
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   handle: {
     width: 36,
@@ -105,6 +105,6 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     right: 8,
-    top: 2,
+    top: 4,
   },
 });

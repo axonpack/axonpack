@@ -21,7 +21,7 @@ Scope: this package specifically. For the wider `@bruin/*` family (lite-storage,
   - **Settings panel**: Big request rows (row density), Group by frame (groups rows by `source` via `SectionList` — our analog of Chrome's iframe-based frames, since we don't have iframes but do have distinct transports/WebView names), Show overview (a simplified timeline strip, ticks positioned by relative `startedAt`, colored by status — no phase breakdown, see hard limits).
   - **Filter panel**: search + Invert, "More filters" (Hide data URLs, Hide failed requests — this is our analog of Chrome's "blocked requests" checkbox; we don't have active request blocking, so it hides `status === 'error'` entries instead), Type chips (Fetch/XHR, JS, Img, Media, Other — matches Chrome's exact set), Method chips (GET/POST/etc., derived from what's present — our own addition, Chrome doesn't have this), Source chips (fetch/xhr/webview name — also our own addition).
   - Row view: zebra striping, Name/Status/Type/Size/Time columns (Name = last URL path segment, full method+URL shown as a secondary line).
-  - Tap a row → a custom animated slide-up detail panel (`Animated.timing`, not a bottom-sheet library) with **Headers** (General + Request/Response headers), **Preview** (JSON pretty-printed when parseable), **Response** (raw body), **Timing** (Started At + Duration, with an explicit note that phase breakdown isn't available — see hard limits) tabs.
+  - Tap a row → a custom animated slide-up detail panel (`Animated.timing`, not a bottom-sheet library) with **Headers** (General + Request/Response headers), **Preview** (JSON pretty-printed when parseable), **Response** (raw body), **Timing** (Started At + Duration, with an explicit note that phase breakdown isn't available — see hard limits) tabs. A kebab menu next to the tab bar offers quick actions on the current entry: Copy URL, **Copy as cURL** (method + headers + body serialized into a copy-pasteable curl command), and Copy request payload/response when present.
 - Full, untruncated request/response bodies — no size cap on what's stored per entry (only the ring buffer's 200-entry _count_ is capped).
 
 ## Hard platform limits (not effort, not planned)
@@ -34,10 +34,9 @@ Scope: this package specifically. For the wider `@bruin/*` family (lite-storage,
 
 ## Feasible, not yet built
 
-1. **Copy as cURL** — headers now exist, so this is mostly plumbing: serialize method + headers + body into a curl command string, wire to a row's context menu or the detail panel.
-2. **Initiator (call site)** — capture `new Error().stack` at request time in each patch to show what code triggered a request.
-3. **Cookies tab** — for WebView-sourced requests specifically, since real cookies exist there (not for native fetch/XHR, per the hard limits above).
-4. **WebView-only real timing breakdown** — a WebView page has the actual `PerformanceResourceTiming` API, so a DNS/connect/TTFB/download phase breakdown is genuinely possible there specifically, unlike native fetch/XHR.
+1. **Initiator (call site)** — capture `new Error().stack` at request time in each patch to show what code triggered a request.
+2. **Cookies tab** — for WebView-sourced requests specifically, since real cookies exist there (not for native fetch/XHR, per the hard limits above).
+3. **WebView-only real timing breakdown** — a WebView page has the actual `PerformanceResourceTiming` API, so a DNS/connect/TTFB/download phase breakdown is genuinely possible there specifically, unlike native fetch/XHR.
 
 ## Beyond network: other tabs from the original plan
 
