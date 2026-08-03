@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { JsonTree } from './json-tree';
 import type { JsonValue } from './json-tree/json-tree.util';
@@ -8,6 +8,7 @@ import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
+import { ShareIconButton } from '../../ui/share-icon-button.ui';
 
 // Attempted regardless of the request's content-type, same rationale as the Preview tab.
 function parseJson(body: string | undefined): JsonValue | undefined {
@@ -33,11 +34,14 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
     <CollapsibleSection
       title="Request Payload"
       headerRight={
-        parsed !== undefined ? (
-          <TouchableOpacity onPress={() => setViewSource((prev) => !prev)} hitSlop={8}>
-            <Text style={styles.toggle}>{showSource ? 'View parsed' : 'View source'}</Text>
-          </TouchableOpacity>
-        ) : undefined
+        <View style={styles.headerRight}>
+          {parsed !== undefined && (
+            <TouchableOpacity onPress={() => setViewSource((prev) => !prev)} hitSlop={8}>
+              <Text style={styles.toggle}>{showSource ? 'View parsed' : 'View source'}</Text>
+            </TouchableOpacity>
+          )}
+          <ShareIconButton value={entry.requestBody} />
+        </View>
       }>
       {showSource ? (
         <ReadOnlyTextInput value={entry.requestBody} style={rowStyles.monospace} />
@@ -49,6 +53,11 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
 }
 
 const styles = StyleSheet.create({
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   toggle: {
     fontSize: 12,
     fontWeight: '600',

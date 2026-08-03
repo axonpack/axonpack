@@ -53,7 +53,7 @@ export function JsonNode({
             />
           )}
         </View>
-        <Text style={treeStyles.text} selectable>
+        <Text style={treeStyles.text}>
           {label !== undefined && <Text style={treeStyles.key}>{label}: </Text>}
           <ValuePreview value={value} />
         </Text>
