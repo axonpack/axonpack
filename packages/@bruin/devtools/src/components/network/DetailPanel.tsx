@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { CollapsibleSection } from './CollapsibleSection';
 import { COLORS } from './colors';
 import type { NetworkLogEntry } from '../../utils/network/networkLogStore';
 
@@ -23,8 +24,7 @@ function HeaderList({
 }) {
   const entries = headers ? Object.entries(headers) : [];
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+    <CollapsibleSection title={title} count={entries.length}>
       {entries.length === 0 ? (
         <Text style={styles.emptyText}>No headers captured</Text>
       ) : (
@@ -39,15 +39,14 @@ function HeaderList({
           </View>
         ))
       )}
-    </View>
+    </CollapsibleSection>
   );
 }
 
 function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
   return (
     <View>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>General</Text>
+      <CollapsibleSection title="General">
         <View style={styles.headerRow}>
           <Text style={styles.headerKey} selectable>
             Request URL
@@ -82,7 +81,7 @@ function HeadersTab({ entry }: { entry: NetworkLogEntry }) {
             </Text>
           </View>
         )}
-      </View>
+      </CollapsibleSection>
       <HeaderList title="Request Headers" headers={entry.requestHeaders} />
       <HeaderList title="Response Headers" headers={entry.responseHeaders} />
     </View>
@@ -301,13 +300,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    marginBottom: 6,
   },
   headerRow: {
     flexDirection: 'row',
