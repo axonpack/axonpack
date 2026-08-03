@@ -3,16 +3,18 @@ import { useEffect, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HeadersTab } from './headers-tab.component';
+import { PayloadTab } from './payload-tab.component';
 import { PreviewTab } from './preview-tab.component';
 import { ResponseTab } from './response-tab.component';
 import { TimingTab } from './timing-tab.component';
 import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 
-type Tab = 'headers' | 'preview' | 'response' | 'timing';
+type Tab = 'headers' | 'payload' | 'preview' | 'response' | 'timing';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'headers', label: 'Headers' },
+  { key: 'payload', label: 'Payload' },
   { key: 'preview', label: 'Preview' },
   { key: 'response', label: 'Response' },
   { key: 'timing', label: 'Timing' },
@@ -74,7 +76,7 @@ export function DetailPanel({
         </View>
 
         <View style={styles.tabBar}>
-          {TABS.map((t) => (
+          {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
             <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={styles.tabButton}>
               <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>
                 {t.label}
@@ -85,6 +87,7 @@ export function DetailPanel({
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           {tab === 'headers' && <HeadersTab entry={active} stackedHeaders={stackedHeaders} />}
+          {tab === 'payload' && <PayloadTab entry={active} />}
           {tab === 'preview' && <PreviewTab entry={active} />}
           {tab === 'response' && <ResponseTab entry={active} />}
           {tab === 'timing' && <TimingTab entry={active} />}
