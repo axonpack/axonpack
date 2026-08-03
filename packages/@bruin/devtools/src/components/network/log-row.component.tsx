@@ -1,4 +1,3 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
@@ -28,128 +27,87 @@ export function LogRow({
   const resourceType = classifyResourceType(entry.mimeType);
 
   return (
-    <TouchableOpacity onPress={onPress} style={styles.card}>
-      <View style={[styles.accentBar, { backgroundColor: statusColor }]} />
-
-      <View style={[styles.content, bigRows && styles.contentBig]}>
-        <View style={styles.topRow}>
-          <View style={[styles.methodPill, { backgroundColor: methodColor }]}>
-            <Text style={styles.methodPillText} selectable>
-              {entry.method}
-            </Text>
-          </View>
-          <View style={[styles.statusPill, { borderColor: statusColor }]}>
-            <Text style={[styles.statusPillText, { color: statusColor }]} selectable>
-              {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
-            </Text>
-          </View>
-          <Text style={styles.timing} numberOfLines={1} selectable>
-            {entry.duration !== undefined ? `${entry.duration}ms` : '...'} ·{' '}
-            {new Date(entry.startedAt).toLocaleTimeString()}
-          </Text>
-        </View>
-
-        {bigRows && (
-          <Text style={styles.cardName} numberOfLines={1} selectable>
-            {getDisplayNameWithQuery(entry.url)}
-          </Text>
-        )}
-        <Text
-          style={[styles.cardUrl, !bigRows && styles.cardUrlPrimary]}
-          numberOfLines={2}
-          selectable>
-          {entry.url}
+    <TouchableOpacity onPress={onPress} style={[styles.row, bigRows && styles.rowBig]}>
+      <View style={styles.topRow}>
+        <Text style={[styles.method, { color: methodColor }]} selectable>
+          {entry.method}
         </Text>
-
-        {bigRows && (
-          <View style={styles.badgeRow}>
-            <InfoBadge
-              icon={RESOURCE_TYPE_ICONS[resourceType]}
-              label={RESOURCE_TYPE_LABELS[resourceType]}
-            />
-            {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
-            <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
-          </View>
-        )}
+        <Text style={[styles.status, { color: statusColor }]} selectable>
+          {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
+        </Text>
+        <Text style={styles.timing} numberOfLines={1} selectable>
+          {entry.duration !== undefined ? `${entry.duration}ms` : '...'} ·{' '}
+          {new Date(entry.startedAt).toLocaleTimeString()}
+        </Text>
       </View>
 
-      <MaterialIcons name="chevron-right" size={18} color={COLORS.border} style={styles.chevron} />
+      {bigRows && (
+        <Text style={styles.name} numberOfLines={1} selectable>
+          {getDisplayNameWithQuery(entry.url)}
+        </Text>
+      )}
+      <Text
+        style={[styles.url, !bigRows && styles.urlPrimary]}
+        numberOfLines={bigRows ? 1 : 2}
+        selectable>
+        {entry.url}
+      </Text>
+
+      {bigRows && (
+        <View style={styles.badgeRow}>
+          <InfoBadge
+            icon={RESOURCE_TYPE_ICONS[resourceType]}
+            label={RESOURCE_TYPE_LABELS[resourceType]}
+          />
+          {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
+          <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
+  row: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 2,
     backgroundColor: COLORS.background,
-    borderRadius: 10,
-    marginHorizontal: 10,
-    marginTop: 8,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
-  accentBar: {
-    width: 3,
-  },
-  content: {
-    flex: 1,
-    gap: 4,
-    padding: 10,
-  },
-  contentBig: {
-    padding: 14,
-  },
-  chevron: {
-    alignSelf: 'center',
-    marginLeft: 2,
-    marginRight: 8,
+  rowBig: {
+    paddingVertical: 10,
   },
   topRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    alignItems: 'baseline',
+    gap: 8,
   },
-  methodPill: {
-    borderRadius: 5,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  methodPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  statusPill: {
-    borderWidth: 1.5,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  statusPillText: {
+  method: {
     fontSize: 11,
+    fontWeight: '700',
+  },
+  status: {
+    fontSize: 12,
     fontWeight: '700',
   },
   timing: {
     flex: 1,
-    fontSize: 10,
+    fontSize: 11,
     color: COLORS.textSecondary,
     textAlign: 'right',
   },
-  cardName: {
+  name: {
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.textPrimary,
   },
-  cardUrl: {
+  url: {
     fontSize: 11,
     color: COLORS.textSecondary,
   },
-  cardUrlPrimary: {
+  urlPrimary: {
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.textPrimary,
