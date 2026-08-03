@@ -19,7 +19,7 @@ export function CopyIconButton({ value }: { value: string }) {
   }
 
   return (
-    <TouchableOpacity onPress={handlePress} hitSlop={8} style={styles.button}>
+    <TouchableOpacity onPress={handlePress} hitSlop={12} style={styles.button}>
       <MaterialIcons
         name={copied ? 'check' : 'content-copy'}
         size={14}
