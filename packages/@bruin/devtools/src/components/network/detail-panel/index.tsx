@@ -130,6 +130,7 @@ export function DetailPanel({
           {tab === 'preview' && <PreviewTab entry={active} />}
           {tab === 'response' && <ResponseTab entry={active} />}
           {tab === 'timing' && <TimingTab entry={active} />}
+          <InsetPadding edge="bottom" />
         </ScrollView>
 
         <ContextMenu anchor={menuAnchor} items={menuItems} onClose={() => setMenuAnchor(null)} />

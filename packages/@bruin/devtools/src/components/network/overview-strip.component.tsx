@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     height: 20,
     marginHorizontal: 12,
     marginTop: 8,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.background,
     borderRadius: 4,
     overflow: 'hidden',
   },

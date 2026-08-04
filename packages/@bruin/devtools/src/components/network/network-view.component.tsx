@@ -29,6 +29,7 @@ import {
 import type { ResourceType } from '../../utils/network/resource-type.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
+import { InsetPadding } from '../ui/inset-padding.ui';
 import { RecordToggleIcon } from '../ui/record-toggle-icon.ui';
 import { SettingRow } from '../ui/setting-row.ui';
 import { Tooltip } from '../ui/tooltip.ui';
@@ -354,6 +355,7 @@ export function NetworkView() {
           )}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={<Text style={styles.empty}>No requests captured yet</Text>}
+          ListFooterComponent={<InsetPadding edge="bottom" />}
         />
       ) : (
         <FlatList
@@ -366,6 +368,7 @@ export function NetworkView() {
               {logs.length === 0 ? 'No requests captured yet' : 'No requests match your filter'}
             </Text>
           }
+          ListFooterComponent={<InsetPadding edge="bottom" />}
         />
       )}
 
@@ -381,7 +384,7 @@ export function NetworkView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.background,
   },
   listContent: {
     paddingVertical: 6,
@@ -392,7 +395,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: '#0000000D',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
