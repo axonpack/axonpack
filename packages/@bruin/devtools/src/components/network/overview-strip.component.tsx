@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
@@ -13,7 +13,11 @@ export type TimeRange = { start: number; end: number };
 
 type Bucket = TimeRange & { count: number; hasError: boolean };
 
-function buildBuckets(entries: NetworkLogEntry[]): Bucket[] {
+function buildOverview(entries: NetworkLogEntry[]): {
+  buckets: Bucket[];
+  min: number;
+  max: number;
+} {
   const startedTimes = entries.map((entry) => entry.startedAt);
   const min = Math.min(...startedTimes);
   const max = Math.max(...startedTimes);
@@ -33,7 +37,15 @@ function buildBuckets(entries: NetworkLogEntry[]): Bucket[] {
     if (getStatusColor(entry.status, entry.statusCode) === COLORS.error) bucket.hasError = true;
   }
 
-  return buckets;
+  return { buckets, min, max };
+}
+
+function formatClockTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString();
+}
+
+function formatSpan(ms: number): string {
+  return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
 /**
@@ -52,49 +64,65 @@ export function OverviewStrip({
   activeRange: TimeRange | null;
   onSelectRange: (range: TimeRange | null) => void;
 }) {
-  const buckets = useMemo(() => buildBuckets(entries), [entries]);
+  const { buckets, min, max } = useMemo(() => buildOverview(entries), [entries]);
 
   if (entries.length === 0) return null;
 
   const maxCount = Math.max(...buckets.map((bucket) => bucket.count), 1);
 
   return (
-    <View style={styles.strip}>
-      {buckets.map((bucket, index) => {
-        const isActive = activeRange !== null && activeRange.start === bucket.start;
-        const height =
-          bucket.count === 0
-            ? 0
-            : Math.max(MIN_BAR_HEIGHT, (bucket.count / maxCount) * MAX_BAR_HEIGHT);
+    <View style={styles.container}>
+      <View style={styles.strip}>
+        {buckets.map((bucket, index) => {
+          const isActive = activeRange !== null && activeRange.start === bucket.start;
+          const height =
+            bucket.count === 0
+              ? 0
+              : Math.max(MIN_BAR_HEIGHT, (bucket.count / maxCount) * MAX_BAR_HEIGHT);
 
-        return (
-          <TouchableOpacity
-            key={index}
-            style={[styles.barColumn, isActive && styles.barColumnActive]}
-            disabled={bucket.count === 0}
-            onPress={() =>
-              onSelectRange(isActive ? null : { start: bucket.start, end: bucket.end })
-            }>
-            <View
-              style={[
-                styles.bar,
-                { height, backgroundColor: bucket.hasError ? COLORS.error : COLORS.accent },
-              ]}
-            />
-          </TouchableOpacity>
-        );
-      })}
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[styles.barColumn, isActive && styles.barColumnActive]}
+              disabled={bucket.count === 0}
+              onPress={() =>
+                onSelectRange(isActive ? null : { start: bucket.start, end: bucket.end })
+              }>
+              <View
+                style={[
+                  styles.bar,
+                  { height, backgroundColor: bucket.hasError ? COLORS.error : COLORS.accent },
+                ]}
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <View style={styles.timeRow}>
+        <Text style={styles.timeLabel}>{formatClockTime(min)}</Text>
+        {activeRange ? (
+          <Text style={[styles.timeLabel, styles.timeLabelActive]}>
+            {formatClockTime(activeRange.start)} – {formatClockTime(activeRange.end)}
+          </Text>
+        ) : (
+          <Text style={styles.timeLabel}>{formatSpan(max - min)} total</Text>
+        )}
+        <Text style={styles.timeLabel}>{formatClockTime(max)}</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    marginHorizontal: 12,
+    marginTop: 8,
+  },
   strip: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     height: MAX_BAR_HEIGHT + 12,
-    marginHorizontal: 12,
-    marginTop: 8,
     paddingHorizontal: 2,
     paddingBottom: 4,
     backgroundColor: COLORS.background,
@@ -115,5 +143,18 @@ const styles = StyleSheet.create({
   bar: {
     width: '60%',
     borderRadius: 1,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  timeLabel: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+  },
+  timeLabelActive: {
+    color: COLORS.accent,
+    fontWeight: '600',
   },
 });
