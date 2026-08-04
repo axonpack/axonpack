@@ -3,6 +3,5 @@ export type {
   DevtoolsClientConfig,
   DevtoolsNetworkConfig,
 } from './client/create-devtools-client.client';
-export { NetworkView } from './components/network/network-view.component';
-export { networkLogStore } from './stores/network/network-log.store';
+export { DevtoolsOverlay } from './components/devtools-overlay/devtools-overlay.component';
 export type { NetworkLogEntry, NetworkLogStatus } from './stores/network/network-log.store';

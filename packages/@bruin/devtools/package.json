@@ -75,6 +75,7 @@
     "jest-expo": "~57.0.2",
     "prettier": "^3.0.0",
     "react-native": "0.86.0",
+    "react-native-safe-area-context": "^5.8.0",
     "typescript": "^5.9.2"
   },
   "jest": {
@@ -86,6 +87,7 @@
   "peerDependencies": {
     "expo": "*",
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-safe-area-context": "*"
   }
 }
