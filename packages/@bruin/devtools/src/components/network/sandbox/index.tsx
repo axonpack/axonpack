@@ -10,15 +10,19 @@ import { UrlBar } from './url-bar.component';
 import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import {
+  buildAuthHeaders,
   buildFinalUrl,
   ensureTrailingBlankRow,
+  extractAuthConfig,
   extractCookieHeader,
+  newAuthConfig,
   parseCookieHeader,
   rowsFromRecord,
   rowsToCookieHeader,
   rowsToRecord,
   sendSandboxRequest,
   splitUrl,
+  type AuthConfig,
   type KeyValueRow,
   type SandboxResult,
   type SandboxTab,
@@ -38,6 +42,7 @@ export function SandboxSheet({
   const [prevVisible, setPrevVisible] = useState(false);
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
+  const [auth, setAuth] = useState<AuthConfig>(() => newAuthConfig());
   const [headerRows, setHeaderRows] = useState<KeyValueRow[]>(() => ensureTrailingBlankRow([]));
   const [paramRows, setParamRows] = useState<KeyValueRow[]>(() => ensureTrailingBlankRow([]));
   const [cookieRows, setCookieRows] = useState<KeyValueRow[]>(() => ensureTrailingBlankRow([]));
@@ -52,9 +57,11 @@ export function SandboxSheet({
     setPrevVisible(visible);
     if (visible && entry) {
       const { base, params } = splitUrl(entry.url);
-      const { cookieValue, rest } = extractCookieHeader(entry.requestHeaders);
+      const { cookieValue, rest: withoutCookie } = extractCookieHeader(entry.requestHeaders);
+      const { auth: seededAuth, rest } = extractAuthConfig(withoutCookie);
       setMethod(entry.method);
       setUrl(base);
+      setAuth(seededAuth);
       setParamRows(params);
       setHeaderRows(rowsFromRecord(rest));
       setCookieRows(parseCookieHeader(cookieValue));
@@ -69,6 +76,7 @@ export function SandboxSheet({
     const headers = rowsToRecord(headerRows);
     const cookieHeader = rowsToCookieHeader(cookieRows);
     if (cookieHeader) headers.Cookie = cookieHeader;
+    Object.assign(headers, buildAuthHeaders(auth));
     const response = await sendSandboxRequest({
       method,
       url: buildFinalUrl(url, paramRows),
@@ -103,6 +111,8 @@ export function SandboxSheet({
           <RequestPanel
             method={method}
             url={url}
+            auth={auth}
+            onChangeAuth={setAuth}
             paramRows={paramRows}
             onChangeParamRows={setParamRows}
             headerRows={headerRows}

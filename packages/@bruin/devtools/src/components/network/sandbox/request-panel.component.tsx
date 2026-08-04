@@ -1,13 +1,16 @@
 import { StyleSheet, TextInput } from 'react-native';
 
+import { AuthSection } from './auth-section.component';
 import { KeyValueTable } from './key-value-table.component';
 import { sandboxStyles } from './shared.styles';
 import { COLORS } from '../../../constants/colors.const';
 import { buildCurlCommand } from '../../../utils/network/curl.util';
 import {
+  buildAuthHeaders,
   buildFinalUrl,
   rowsToCookieHeader,
   rowsToRecord,
+  type AuthConfig,
   type KeyValueRow,
 } from '../../../utils/network/sandbox.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
@@ -16,6 +19,8 @@ import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
 export function RequestPanel({
   method,
   url,
+  auth,
+  onChangeAuth,
   paramRows,
   onChangeParamRows,
   headerRows,
@@ -27,6 +32,8 @@ export function RequestPanel({
 }: {
   method: string;
   url: string;
+  auth: AuthConfig;
+  onChangeAuth: (auth: AuthConfig) => void;
   paramRows: KeyValueRow[];
   onChangeParamRows: (rows: KeyValueRow[]) => void;
   headerRows: KeyValueRow[];
@@ -40,10 +47,12 @@ export function RequestPanel({
   const curlHeaders = {
     ...rowsToRecord(headerRows),
     ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+    ...buildAuthHeaders(auth),
   };
 
   return (
     <>
+      <AuthSection auth={auth} onChange={onChangeAuth} />
       <CollapsibleSection title="Query Parameters" count={paramRows.length - 1}>
         <KeyValueTable rows={paramRows} onChange={onChangeParamRows} />
       </CollapsibleSection>

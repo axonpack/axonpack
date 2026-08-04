@@ -1,0 +1,145 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { sandboxStyles } from './shared.styles';
+import { COLORS } from '../../../constants/colors.const';
+import type { AuthConfig, AuthType } from '../../../utils/network/sandbox.util';
+import { CollapsibleSection } from '../../ui/collapsible-section.ui';
+
+const AUTH_TYPES: { value: AuthType; label: string }[] = [
+  { value: 'none', label: 'none' },
+  { value: 'bearer', label: 'bearer' },
+  { value: 'apikey', label: 'apikey' },
+];
+
+/** A field whose value can be hidden behind dots (like a password field), toggled via an eye icon. */
+function SecretField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+}) {
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <View style={styles.fieldRow}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={[sandboxStyles.fieldBox, styles.fieldInput]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={COLORS.textSecondary}
+        secureTextEntry={!revealed}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+      <TouchableOpacity onPress={() => setRevealed((prev) => !prev)} hitSlop={8}>
+        <MaterialIcons
+          name={revealed ? 'visibility-off' : 'visibility'}
+          size={16}
+          color={COLORS.textSecondary}
+        />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+export function AuthSection({
+  auth,
+  onChange,
+}: {
+  auth: AuthConfig;
+  onChange: (auth: AuthConfig) => void;
+}) {
+  return (
+    <CollapsibleSection title="Authentication">
+      <View style={styles.typeTabs}>
+        {AUTH_TYPES.map((t) => (
+          <TouchableOpacity key={t.value} onPress={() => onChange({ ...auth, type: t.value })}>
+            <Text style={[styles.typeTab, auth.type === t.value && styles.typeTabActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {auth.type === 'bearer' && (
+        <SecretField
+          label="Token"
+          value={auth.bearerToken}
+          onChangeText={(bearerToken) => onChange({ ...auth, bearerToken })}
+          placeholder="Bearer token"
+        />
+      )}
+
+      {auth.type === 'apikey' && (
+        <>
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Name</Text>
+            <TextInput
+              style={[sandboxStyles.fieldBox, styles.fieldInput]}
+              value={auth.apiKeyName}
+              onChangeText={(apiKeyName) => onChange({ ...auth, apiKeyName })}
+              placeholder="e.g. x-api-key"
+              placeholderTextColor={COLORS.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {auth.apiKeyName !== '' && (
+              <TouchableOpacity onPress={() => onChange({ ...auth, apiKeyName: '' })} hitSlop={8}>
+                <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <SecretField
+            label="Value"
+            value={auth.apiKeyValue}
+            onChangeText={(apiKeyValue) => onChange({ ...auth, apiKeyValue })}
+          />
+        </>
+      )}
+    </CollapsibleSection>
+  );
+}
+
+const styles = StyleSheet.create({
+  typeTabs: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingBottom: 8,
+  },
+  typeTab: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    paddingBottom: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  typeTabActive: {
+    color: COLORS.textPrimary,
+    borderBottomColor: COLORS.accent,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  fieldLabel: {
+    width: 40,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  fieldInput: {
+    flex: 1,
+  },
+});

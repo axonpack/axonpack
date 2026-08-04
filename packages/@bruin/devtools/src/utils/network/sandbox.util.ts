@@ -1,5 +1,52 @@
 export type SandboxTab = 'request' | 'response';
 
+export type AuthType = 'none' | 'bearer' | 'apikey';
+
+export type AuthConfig = {
+  type: AuthType;
+  bearerToken: string;
+  apiKeyName: string;
+  apiKeyValue: string;
+};
+
+export function newAuthConfig(): AuthConfig {
+  return { type: 'none', bearerToken: '', apiKeyName: '', apiKeyValue: '' };
+}
+
+/** The header this auth config contributes, merged on top of the Headers table at send/snippet
+ * time — mirrors Scalar's "Authentication" panel (Bearer token / API key). */
+export function buildAuthHeaders(auth: AuthConfig): Record<string, string> {
+  if (auth.type === 'bearer' && auth.bearerToken.trim()) {
+    return { Authorization: `Bearer ${auth.bearerToken}` };
+  }
+  if (auth.type === 'apikey' && auth.apiKeyName.trim()) {
+    return { [auth.apiKeyName]: auth.apiKeyValue };
+  }
+  return {};
+}
+
+const BEARER_HEADER_RE = /^Bearer\s+(.+)$/i;
+
+/** Splits a `Bearer <token>` Authorization header out of a header set so it seeds the
+ * Authentication section instead of showing up twice (once there, once in the Headers table). */
+export function extractAuthConfig(headers: Record<string, string> | undefined): {
+  auth: AuthConfig;
+  rest: Record<string, string>;
+} {
+  const rest: Record<string, string> = {};
+  const auth = newAuthConfig();
+  for (const [key, value] of Object.entries(headers ?? {})) {
+    const bearerMatch = key.toLowerCase() === 'authorization' && BEARER_HEADER_RE.exec(value);
+    if (bearerMatch) {
+      auth.type = 'bearer';
+      auth.bearerToken = bearerMatch[1];
+    } else {
+      rest[key] = value;
+    }
+  }
+  return { auth, rest };
+}
+
 export type KeyValueRow = { id: string; key: string; value: string; enabled: boolean };
 
 let rowCounter = 0;
