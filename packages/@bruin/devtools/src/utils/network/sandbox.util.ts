@@ -138,6 +138,7 @@ export function rowsToCookieHeader(rows: KeyValueRow[]): string | undefined {
 export type SandboxResult =
   | {
       ok: true;
+      url: string;
       status: number;
       statusText: string;
       headers: Record<string, string>;
@@ -174,6 +175,7 @@ export async function sendSandboxRequest({
     });
     return {
       ok: true,
+      url,
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,

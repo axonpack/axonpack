@@ -16,6 +16,7 @@ export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
       <ResponseBodyPreview
         body={entry.responseBody}
         mimeType={entry.mimeType}
+        url={entry.url}
         emptyText="No preview available"
         emptyTextStyle={rowStyles.emptyText}
       />

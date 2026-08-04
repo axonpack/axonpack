@@ -63,6 +63,7 @@ export function ResponsePanel({
         <ResponseBodyPreview
           body={result.body}
           mimeType={result.headers['content-type']}
+          url={result.url}
           emptyText="Empty response body"
           emptyTextStyle={sandboxStyles.emptyText}
         />
