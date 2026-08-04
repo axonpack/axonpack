@@ -21,12 +21,6 @@ function getInitialPosition(): { x: number; y: number } {
   return { x: width - FAB_SIZE - EDGE_MARGIN, y: height - FAB_SIZE - EDGE_MARGIN * 4 };
 }
 
-/**
- * A floating, draggable trigger the host app mounts once (anywhere in its tree) to reach
- * `NetworkView` without wiring up its own button/screen. Opens a plain RN `Modal` — safe to do
- * because the button is only tappable when visible, which means no host modal is currently
- * covering it, so we're never stacking on top of an existing one.
- */
 export function DevtoolsOverlay() {
   const [open, setOpen] = useState(false);
   const [pan] = useState(() => new Animated.ValueXY(getInitialPosition()));
@@ -34,8 +28,6 @@ export function DevtoolsOverlay() {
   const [panResponder] = useState(() =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      // `stopAnimation`'s callback fires synchronously with the current value — reads it
-      // without needing a ref kept in sync via a listener.
       onPanResponderGrant: () => {
         pan.stopAnimation((value) => {
           pan.setOffset(value);
@@ -70,8 +62,6 @@ export function DevtoolsOverlay() {
       </Animated.View>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-        {/* Modal content mounts in its own native window — it can't inherit the host app's
-            SafeAreaProvider measurement, so it needs its own instance to get real insets. */}
         <SafeAreaProvider>
           <SafeAreaView edges={['left', 'right', 'top']} style={styles.modal}>
             <View style={styles.header}>
