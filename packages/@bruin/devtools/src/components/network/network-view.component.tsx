@@ -13,7 +13,7 @@ import {
 
 import { DetailPanel } from './detail-panel';
 import { LogRow } from './log-row.component';
-import { OverviewStrip } from './overview-strip.component';
+import { OverviewStrip, type TimeRange } from './overview-strip.component';
 import { COLORS } from '../../constants/colors.const';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
@@ -58,6 +58,7 @@ export function NetworkView() {
   const [bigRows, setBigRows] = useState(true);
   const [groupByFetchClient, setGroupByFetchClient] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
+  const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
   const [recordToggleTooltipAnchor, setRecordToggleTooltipAnchor] = useState<{
@@ -80,9 +81,11 @@ export function NetworkView() {
     return Array.from(seen);
   }, [logs]);
 
-  const visibleLogs = useMemo(() => {
+  // Excludes the overview's time-range filter so the histogram itself always shows the full
+  // timeline — selecting a bucket narrows the list below without the strip rescaling under you.
+  const overviewLogs = useMemo(() => {
     const query = searchText.trim().toLowerCase();
-    let result = logs.filter((entry) => {
+    return logs.filter((entry) => {
       if (hideDataUrls && entry.url.startsWith('data:')) return false;
       if (hideFailed && entry.status === 'error') return false;
       if (activeSource !== null && entry.source !== activeSource) return false;
@@ -92,10 +95,6 @@ export function NetworkView() {
       const matches = matchesQuery(entry, query);
       return invertSearch ? !matches : matches;
     });
-    if (reversed) {
-      result = [...result].reverse();
-    }
-    return result;
   }, [
     logs,
     searchText,
@@ -105,8 +104,20 @@ export function NetworkView() {
     activeSource,
     activeMethod,
     activeType,
-    reversed,
   ]);
+
+  const visibleLogs = useMemo(() => {
+    let result = activeTimeRange
+      ? overviewLogs.filter(
+          (entry) =>
+            entry.startedAt >= activeTimeRange.start && entry.startedAt <= activeTimeRange.end
+        )
+      : overviewLogs;
+    if (reversed) {
+      result = [...result].reverse();
+    }
+    return result;
+  }, [overviewLogs, activeTimeRange, reversed]);
 
   const sections = useMemo(() => {
     if (!groupByFetchClient) return [];
@@ -233,7 +244,14 @@ export function NetworkView() {
             value={groupByFetchClient}
             onValueChange={setGroupByFetchClient}
           />
-          <SettingRow label="Show overview" value={showOverview} onValueChange={setShowOverview} />
+          <SettingRow
+            label="Show overview"
+            value={showOverview}
+            onValueChange={(value) => {
+              setShowOverview(value);
+              if (!value) setActiveTimeRange(null);
+            }}
+          />
           <SettingRow
             label="Stack header values"
             value={stackedHeaders}
@@ -341,7 +359,13 @@ export function NetworkView() {
         </View>
       )}
 
-      {showOverview && <OverviewStrip entries={visibleLogs} />}
+      {showOverview && (
+        <OverviewStrip
+          entries={overviewLogs}
+          activeRange={activeTimeRange}
+          onSelectRange={setActiveTimeRange}
+        />
+      )}
 
       {groupByFetchClient ? (
         <SectionList
