@@ -378,6 +378,7 @@ export function NetworkView() {
             </Text>
           )}
           contentContainerStyle={styles.listContent}
+          contentInsetAdjustmentBehavior="never"
           ListEmptyComponent={<Text style={styles.empty}>No requests captured yet</Text>}
           ListFooterComponent={<InsetPadding edge="bottom" />}
         />
@@ -387,6 +388,7 @@ export function NetworkView() {
           keyExtractor={(entry) => entry.id}
           renderItem={({ item }) => renderRow(item)}
           contentContainerStyle={styles.listContent}
+          contentInsetAdjustmentBehavior="never"
           ListEmptyComponent={
             <Text style={styles.empty}>
               {logs.length === 0 ? 'No requests captured yet' : 'No requests match your filter'}

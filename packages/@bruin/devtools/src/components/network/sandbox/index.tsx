@@ -106,7 +106,6 @@ export function SandboxSheet({
         onChange={setTab}
         responseStatus={result?.ok ? result.status : undefined}
       />
-
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {tab === 'request' ? (
           <RequestPanel

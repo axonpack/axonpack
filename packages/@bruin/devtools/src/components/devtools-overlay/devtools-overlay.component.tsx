@@ -62,7 +62,7 @@ export function DevtoolsOverlay() {
       </Animated.View>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-        <SafeAreaProvider>
+        <SafeAreaProvider style={{ flex: 1, backgroundColor: COLORS.background }}>
           <SafeAreaView edges={['left', 'right', 'top']} style={styles.modal}>
             <View style={styles.header}>
               <Text style={styles.headerTitle}>Devtools</Text>

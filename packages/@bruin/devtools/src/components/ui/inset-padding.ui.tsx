@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,16 +10,8 @@ const EDGE_PADDING_PROP: Record<InsetEdge, keyof ViewStyle> = {
   right: 'paddingRight',
 };
 
-export function InsetPadding({
-  edge,
-  style,
-  children,
-}: {
-  edge: InsetEdge;
-  style?: ViewStyle | ViewStyle[];
-  children?: ReactNode;
-}) {
+export function InsetPadding({ edge }: { edge: InsetEdge }) {
   const insets = useSafeAreaInsets();
 
-  return <View style={[{ [EDGE_PADDING_PROP[edge]]: insets[edge] }, style]}>{children}</View>;
+  return <View style={[{ [EDGE_PADDING_PROP[edge]]: insets[edge] }]} />;
 }

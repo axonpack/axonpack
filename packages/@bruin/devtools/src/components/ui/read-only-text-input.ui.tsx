@@ -20,6 +20,8 @@ export function ReadOnlyTextInput({
       onChangeText={blockEdits}
       multiline
       editable
+      scrollEnabled={false}
+      showSoftInputOnFocus={false}
     />
   );
 }

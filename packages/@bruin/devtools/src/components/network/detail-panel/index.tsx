@@ -101,6 +101,10 @@ export function DetailPanel({
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.tabBar}
+            automaticallyAdjustKeyboardInsets
+            automaticallyAdjustsScrollIndicatorInsets
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             contentContainerStyle={styles.tabBarContent}>
             {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
               <TouchableOpacity
@@ -112,7 +116,6 @@ export function DetailPanel({
                 </Text>
               </TouchableOpacity>
             ))}
-            <InsetPadding edge="bottom" />
           </ScrollView>
           <IconButton
             name="more-vert"
@@ -124,13 +127,21 @@ export function DetailPanel({
           />
         </View>
 
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          {tab === 'headers' && <HeadersTab entry={active} stackedHeaders={stackedHeaders} />}
-          {tab === 'payload' && <PayloadTab entry={active} />}
-          {tab === 'preview' && <PreviewTab entry={active} />}
-          {tab === 'response' && <ResponseTab entry={active} />}
-          {tab === 'timing' && <TimingTab entry={active} />}
-          <InsetPadding edge="bottom" />
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          automaticallyAdjustKeyboardInsets
+          automaticallyAdjustsScrollIndicatorInsets
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive">
+          <View>
+            {tab === 'headers' && <HeadersTab entry={active} stackedHeaders={stackedHeaders} />}
+            {tab === 'payload' && <PayloadTab entry={active} />}
+            {tab === 'preview' && <PreviewTab entry={active} />}
+            {tab === 'response' && <ResponseTab entry={active} />}
+            {tab === 'timing' && <TimingTab entry={active} />}
+            <InsetPadding edge="bottom" />
+          </View>
         </ScrollView>
 
         <ContextMenu anchor={menuAnchor} items={menuItems} onClose={() => setMenuAnchor(null)} />
