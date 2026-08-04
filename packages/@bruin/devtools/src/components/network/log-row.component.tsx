@@ -26,7 +26,7 @@ export function LogRow({
   bigRows: boolean;
   onPress: () => void;
 }) {
-  const statusColor = getStatusColor(entry.status);
+  const statusColor = getStatusColor(entry.status, entry.statusCode);
   const methodColor = getMethodColor(entry.method);
   const resourceType = classifyResourceType(entry.mimeType);
   const typeVisual = getResponseTypeVisual(entry.mimeType);

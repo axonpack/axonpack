@@ -47,7 +47,12 @@ export function HeadersTab({
             Status Code
           </Text>
           <View style={styles.statusValue}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor(entry.status) }]} />
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: getStatusColor(entry.status, entry.statusCode) },
+              ]}
+            />
             <Text style={rowStyles.headerValue} selectable>
               {formatStatus(entry)}
             </Text>

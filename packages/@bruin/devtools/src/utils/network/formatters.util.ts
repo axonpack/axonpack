@@ -1,14 +1,19 @@
 import { COLORS } from '../../constants/colors.const';
 import type { NetworkLogStatus } from '../../stores/network/network-log.store';
 
-export function getStatusColor(status: NetworkLogStatus): string {
+/**
+ * `status` alone only reflects whether the fetch/XHR call itself completed — `fetch()` and XHR
+ * both resolve normally on a 4xx/5xx response, so a 503 comes through as `'success'`. Pass
+ * `statusCode` too to color those as errors, matching Chrome DevTools.
+ */
+export function getStatusColor(status: NetworkLogStatus, statusCode?: number): string {
   switch (status) {
-    case 'success':
-      return COLORS.success;
     case 'error':
       return COLORS.error;
-    default:
+    case 'pending':
       return COLORS.pending;
+    default:
+      return statusCode !== undefined && statusCode >= 400 ? COLORS.error : COLORS.success;
   }
 }
 

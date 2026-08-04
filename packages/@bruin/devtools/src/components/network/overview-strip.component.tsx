@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
+import { getStatusColor } from '../../utils/network/formatters.util';
 
 /** A simplified analog of Chrome's Network tab overview — a tick per request, positioned by relative start time. */
 export function OverviewStrip({ entries }: { entries: NetworkLogEntry[] }) {
@@ -20,12 +21,7 @@ export function OverviewStrip({ entries }: { entries: NetworkLogEntry[] }) {
       {width > 0 &&
         entries.map((entry) => {
           const left = ((entry.startedAt - min) / range) * Math.max(width - 4, 0);
-          const color =
-            entry.status === 'success'
-              ? COLORS.success
-              : entry.status === 'error'
-                ? COLORS.error
-                : COLORS.pending;
+          const color = getStatusColor(entry.status, entry.statusCode);
           return <View key={entry.id} style={[styles.tick, { left, backgroundColor: color }]} />;
         })}
     </View>
