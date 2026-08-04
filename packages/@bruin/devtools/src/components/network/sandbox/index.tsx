@@ -28,6 +28,7 @@ import {
   type SandboxTab,
 } from '../../../utils/network/sandbox.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
+import { InsetPadding } from '../../ui/inset-padding.ui';
 import { SparkleIcon } from '../../ui/sparkle-icon.ui';
 
 export function SandboxSheet({
@@ -125,6 +126,7 @@ export function SandboxSheet({
         ) : (
           <ResponsePanel sending={sending} result={result} />
         )}
+        <InsetPadding edge="bottom" />
       </ScrollView>
     </BottomSheet>
   );

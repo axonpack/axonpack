@@ -17,6 +17,7 @@ import {
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
 import { ContextMenu, type ContextMenuItem } from '../../ui/context-menu.ui';
 import { IconButton } from '../../ui/icon-button.ui';
+import { InsetPadding } from '../../ui/inset-padding.ui';
 import { SparkleIcon } from '../../ui/sparkle-icon.ui';
 import { SandboxSheet } from '../sandbox';
 
@@ -111,6 +112,7 @@ export function DetailPanel({
                 </Text>
               </TouchableOpacity>
             ))}
+            <InsetPadding edge="bottom" />
           </ScrollView>
           <IconButton
             name="more-vert"
