@@ -10,14 +10,14 @@
     "expo",
     "react-native"
   ],
-  "homepage": "https://github.com/axonpack/bruin#readme",
+  "homepage": "https://github.com/axonpack/axonpack#readme",
   "bugs": {
-    "url": "https://github.com/axonpack/bruin/issues"
+    "url": "https://github.com/axonpack/axonpack/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/axonpack/bruin.git",
+    "url": "https://github.com/axonpack/axonpack.git",
     "directory": "packages/@axonpack/expo-devtools"
   },
   "publishConfig": {

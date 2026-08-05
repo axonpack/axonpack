@@ -1,4 +1,4 @@
-# Bruin
+# Axonpack
 
 Free, open-source foundation libraries for React Native and Expo apps: small, focused,
 dependency-light packages you drop in rather than a framework you adopt.
@@ -28,8 +28,8 @@ See each package's own README for installation and usage — start with
 This repo uses **Bun only** (pinned via `devEngines.packageManager`, Bun 1.3.14, Node >= 24).
 
 ```sh
-git clone https://github.com/axonpack/bruin.git
-cd bruin
+git clone https://github.com/axonpack/axonpack.git
+cd axonpack
 bun install
 ```
 

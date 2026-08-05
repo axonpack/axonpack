@@ -1,4 +1,4 @@
-# Contributing to Bruin
+# Contributing to Axonpack
 
 Thanks for taking the time to contribute! This repo hosts `@axonpack/*` — free, open-source
 foundation libraries for React Native / Expo apps. Only `@axonpack/expo-devtools` is implemented so far;
@@ -16,8 +16,8 @@ Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
 ## Getting set up
 
 ```sh
-git clone https://github.com/axonpack/bruin.git
-cd bruin
+git clone https://github.com/axonpack/axonpack.git
+cd axonpack
 bun install
 ```
 

@@ -1,5 +1,5 @@
 {
-  "name": "bruin",
+  "name": "axonpack",
   "private": true,
   "scripts": {
     "build": "turbo run build",
