@@ -380,7 +380,7 @@ export function NetworkView() {
           contentContainerStyle={styles.listContent}
           contentInsetAdjustmentBehavior="never"
           ListEmptyComponent={<Text style={styles.empty}>No requests captured yet</Text>}
-          ListFooterComponent={<InsetPadding edge="bottom" />}
+          ListFooterComponent=<InsetPadding edge="bottom" />
         />
       ) : (
         <FlatList
@@ -394,7 +394,7 @@ export function NetworkView() {
               {logs.length === 0 ? 'No requests captured yet' : 'No requests match your filter'}
             </Text>
           }
-          ListFooterComponent={<InsetPadding edge="bottom" />}
+          ListFooterComponent=<InsetPadding edge="bottom" />
         />
       )}
 

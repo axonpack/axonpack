@@ -20,6 +20,9 @@
     "url": "https://github.com/axonpack/bruin.git",
     "directory": "packages/@bruin/devtools"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "files": [
     "build"
   ],
@@ -39,8 +42,8 @@
   "scripts": {
     "build": "node internal/module_scripts/build.js",
     "clean": "node internal/module_scripts/clean.js",
-    "lint": "eslint src",
-    "format": "eslint src --fix",
+    "lint": "oxlint src",
+    "format": "oxlint src --fix",
     "test": "node internal/module_scripts/test.js",
     "check-types": "tsc --noEmit",
     "open:ios": "node internal/module_scripts/open-ios.js",
@@ -73,6 +76,8 @@
     "expo": "^57.0.7",
     "jest": "^29.7.0",
     "jest-expo": "~57.0.2",
+    "linter": "*",
+    "oxlint": "^1.77.0",
     "prettier": "^3.0.0",
     "react-native": "0.86.0",
     "react-native-safe-area-context": "^5.8.0",
