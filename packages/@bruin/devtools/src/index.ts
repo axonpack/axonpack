@@ -1,4 +1,7 @@
-// Reexport the native module. On web, it will be resolved to DevtoolModule.web.ts
-// and on native platforms to DevtoolModule.ts
-export { default } from './DevtoolModule';
-export * from './Devtool.types';
+export { createDevtoolsClient } from './client/create-devtools-client.client';
+export type {
+  DevtoolsClientConfig,
+  DevtoolsNetworkConfig,
+} from './client/create-devtools-client.client';
+export { DevtoolsOverlay } from './components/devtools-overlay/devtools-overlay.component';
+export type { NetworkLogEntry, NetworkLogStatus } from './stores/network/network-log.store';
