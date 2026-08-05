@@ -1,159 +1,53 @@
-# Turborepo starter
+# Axonpack
 
-This Turborepo starter is maintained by the Turborepo core team.
+Free, open-source foundation libraries for React Native and Expo apps: small, focused,
+dependency-light packages you drop in rather than a framework you adopt.
 
-## Using this example
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Conventional Commits](https://img.shields.io/badge/commits-conventional-fe5196.svg)](https://www.conventionalcommits.org)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-Run the following command:
+> **Status:** early days. Only [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) is implemented so
+> far. `@axonpack/lite-storage`, `@axonpack/api-kit`, and `@axonpack/i18n` are planned — see
+> [`docs/plan.md`](./docs/plan.md) for the roadmap and rationale.
 
-```sh
-npx create-turbo@latest
-```
+## Packages
 
-## What's inside?
+This is a [Turborepo](https://turborepo.dev) + [Bun workspaces](https://bun.sh/docs/install/workspaces)
+monorepo. Each package under `packages/@axonpack/*` is published independently.
 
-This Turborepo includes the following packages/apps:
+| Package                                                         | Description                                                    | Version                                                                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) | On-device, prod-safe network inspector for React Native / Expo | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools) |
 
-### Apps and Packages
+See each package's own README for installation and usage — start with
+[`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools/README.md).
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Development
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+This repo uses **Bun only** (pinned via `devEngines.packageManager`, Bun 1.3.14, Node >= 24).
 
 ```sh
-cd my-turborepo
-turbo build
+git clone https://github.com/axonpack/axonpack.git
+cd axonpack
+bun install
 ```
-
-Without global `turbo`, use your package manager:
 
 ```sh
-cd my-turborepo
-npx turbo build
-bun dlx turbo build
-bun exec turbo build
+bun run build         # turbo run build
+bun run lint          # turbo run lint
+bun run check-types   # turbo run check-types
+bun run format        # prettier --write "**/*.{ts,tsx,md}"
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full workflow, coding conventions, commit
+format, and how to run a package's example app.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Contributing
 
-```sh
-turbo build --filter=docs
-```
+Contributions are very welcome — bug reports, docs fixes, and PRs alike. Please read
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) and our [Code of Conduct](./CODE_OF_CONDUCT.md) first.
 
-Without global `turbo`:
+## License
 
-```sh
-npx turbo build --filter=docs
-bun exec turbo build --filter=docs
-bun exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-bun exec turbo dev
-bun exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-bun exec turbo dev --filter=web
-bun exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-bun exec turbo login
-bun exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-bun exec turbo link
-bun exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+MIT © [Md Asadujjaman](https://github.com/abappi19) — see [`LICENSE`](./LICENSE).

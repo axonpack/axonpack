@@ -1,0 +1,15 @@
+# .husky/pre-commit
+
+# Block direct commits on protected branches — commit from a feature branch instead.
+branch="$(git rev-parse --abbrev-ref HEAD)"
+for protected in main dev; do
+	if [ "$branch" = "$protected" ]; then
+		echo "✖ Direct commits to '$branch' are blocked."
+		echo "  Create a feature branch first:"
+		echo "      git switch -c <type>/<short-description>"
+		echo "  (to bypass intentionally: git commit --no-verify)"
+		exit 1
+	fi
+done
+
+bun run format && bun run lint

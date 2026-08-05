@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@axonpack/expo-devtools": ["../src/index"],
+      "@axonpack/expo-devtools/*": ["../src/*"]
+    }
+  }
+}
