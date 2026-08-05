@@ -7,7 +7,7 @@ import type { OxlintConfig } from "oxlint";
  *
  * ```ts
  * import { defineConfig } from "oxlint";
- * import base from "@bruin/linter";
+ * import base from "linter";
  *
  * export default defineConfig({
  *   extends: [base],

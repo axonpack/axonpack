@@ -80,7 +80,7 @@ run by hand from your own machine, for when you don't want to go through GitHub.
 
 ## Notes
 
-- `@bruin/linter` and `devtools-example` never publish — both are `"private": true`, and
+- `linter` and `devtools-example` never publish — both are `"private": true`, and
   Changesets skips private packages automatically. You won't be prompted for them in step 1, and
   they're excluded from versioning and publishing in every step above.
 - Verify a publish landed with `npm view @bruin/devtools version` or by checking
