@@ -20,6 +20,9 @@
     "url": "https://github.com/axonpack/bruin.git",
     "directory": "packages/@bruin/devtools"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "files": [
     "build"
   ],
