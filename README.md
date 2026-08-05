@@ -1,8 +1,7 @@
 # Bruin
 
-Free, open-source foundation libraries for React Native and Expo apps — built in the spirit of
-[ahooks](https://ahooks.js.org/) and [Software Mansion](https://swmansion.com/)'s OSS work: small,
-focused, dependency-light packages you drop in rather than a framework you adopt.
+Free, open-source foundation libraries for React Native and Expo apps: small, focused,
+dependency-light packages you drop in rather than a framework you adopt.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-fe5196.svg)](https://www.conventionalcommits.org)

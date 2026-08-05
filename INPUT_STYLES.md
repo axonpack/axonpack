@@ -3,7 +3,7 @@
 Canonical text-input styling for `@bruin/devtools`, based on the network filter search box
 (`packages/@bruin/devtools/src/components/network/network-view.component.tsx`). Use this as the
 reference when adding another text input anywhere in the devtools UI, so inputs stay visually
-consistent with the rest of the Chrome DevTools-style network view.
+consistent with the rest of the browser-devtools-style network view.
 
 ## Structure
 

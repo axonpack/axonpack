@@ -68,7 +68,7 @@ function extractSize(
  * Expo installs its own native `fetch` (expo/winter/fetch) by default, which does NOT
  * go through `XMLHttpRequest` like classic React Native's whatwg-fetch polyfill did.
  * That's why this needs its own patch alongside patchXHR — one covers fetch, the other
- * covers axios and raw XHR, and neither overlaps with the other in this setup.
+ * covers XHR-based HTTP client libraries and raw XHR, and neither overlaps with the other in this setup.
  */
 export function patchFetch() {
   if (isPatched) return;

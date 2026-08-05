@@ -1,7 +1,7 @@
 # @bruin/devtools
 
-On-device, production-safe network inspector for React Native and Expo apps — a Chrome
-DevTools-style Network tab that lives inside your app, no desktop tooling required.
+On-device, production-safe network inspector for React Native and Expo apps — a familiar,
+browser-devtools-style Network tab that lives inside your app, no desktop tooling required.
 
 [![npm version](https://img.shields.io/npm/v/@bruin/devtools.svg)](https://www.npmjs.com/package/@bruin/devtools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../../LICENSE)
@@ -11,12 +11,12 @@ DevTools-style Network tab that lives inside your app, no desktop tooling requir
 - **Drop-in overlay** — `<DevtoolsOverlay />` is a draggable FAB that opens a full Network tab on
   tap. No native code, no separate desktop app.
 - **Three capture sources feeding one log**: patches Expo's native `fetch`, `XMLHttpRequest`
-  (catches axios, since its RN adapter uses XHR), and `<WebView>` traffic via an injected script
-  relayed over `postMessage` — a WebView runs in its own JS engine that the other two patches
-  can't see into.
+  (catches most third-party HTTP client libraries, since their RN adapter is typically built on
+  XHR), and `<WebView>` traffic via an injected script relayed over `postMessage` — a WebView runs
+  in its own JS engine that the other two patches can't see into.
 - **Prod-safe by default** — nothing is patched and nothing is recorded until you call `.init()`.
   Skip calling it (or pass `enabled: false`) in production and the library is a complete no-op.
-- Chrome DevTools-familiar UI: search/filter (method, type, source), a tap-to-filter activity
+- Browser-devtools-familiar UI: search/filter (method, type, source), a tap-to-filter activity
   histogram, Preserve Log, Copy as cURL, and a "Try in sandbox" request playground seeded from any
   captured entry.
 - Full, untruncated request/response bodies — everything is `selectable` and copyable on-device.
@@ -71,8 +71,8 @@ export default function App() {
 }
 ```
 
-That's it — fetch, XHR (and therefore axios), and any WebView tagged with a name from
-`webviewSources` all show up in the same Network tab.
+That's it — fetch, XHR (and therefore most XHR-based HTTP client libraries), and any WebView
+tagged with a name from `webviewSources` all show up in the same Network tab.
 
 ## Capturing traffic inside a `<WebView>`
 
@@ -102,13 +102,13 @@ here is caught before it silently drops messages.
 | ------------------------------- | ---------- | ----------- | ------------------------------------------------------------------------------------------ |
 | `enabled`                       | `boolean`  | `true`      | Master switch. `false` makes `.init()` a no-op — no patching, no capture, no store writes. |
 | `network.includeFetch`          | `boolean`  | `true`      | Patch `globalThis.fetch`.                                                                  |
-| `network.includeXmlHttpRequest` | `boolean`  | `true`      | Patch `XMLHttpRequest` (covers axios and raw XHR usage).                                   |
+| `network.includeXmlHttpRequest` | `boolean`  | `true`      | Patch `XMLHttpRequest` (covers XHR-based HTTP client libraries and raw XHR usage).         |
 | `network.webviewSources`        | `string[]` | `undefined` | Allowlist of WebView names permitted to report traffic into the shared log.                |
 
 ## Example app
 
-`example/` is a runnable Expo app demonstrating native fetch/XHR/axios requests and WebView
-capture side by side:
+`example/` is a runnable Expo app demonstrating native fetch/XHR/third-party HTTP client requests
+and WebView capture side by side:
 
 ```sh
 cd example

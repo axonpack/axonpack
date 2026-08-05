@@ -1,6 +1,6 @@
 # Plan
 
-Free OSS foundation libraries for React Native / Expo (ahooks / Software Mansion style).
+Free OSS foundation libraries for React Native / Expo.
 Priority order below is based on what's already duplicated across our apps.
 
 ## @bruin/lite-storage
@@ -8,7 +8,7 @@ Priority order below is based on what's already duplicated across our apps.
 - local storage by sqlite database with in-memory caching
 - one `AsyncStorage` interface, swappable sqlite/mmkv backends
 - debounced + batched writes (single transaction)
-- useCase namespacing; drop-in for zustand-persist & react-query-persist
+- useCase namespacing; drop-in for common state-management persistence middleware
 - enable WAL - write ahead log
 
 ```javascript
@@ -29,7 +29,7 @@ db.execSync("PRAGMA busy_timeout = 5000;");
 
 ## @bruin/api-kit
 
-- axios client factory with auth
+- HTTP client factory with auth
 - single-flight 401 refresh + retry
 - token service (sync cache + debounced persist)
 
