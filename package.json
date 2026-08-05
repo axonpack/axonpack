@@ -35,6 +35,7 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "packages/@bruin/*"
+    "packages/@axonpack/*",
+    "packages/@axonpack/expo-devtools/example"
   ]
 }

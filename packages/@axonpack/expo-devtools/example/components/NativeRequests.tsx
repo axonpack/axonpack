@@ -141,7 +141,7 @@ export function NativeRequests() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>@bruin/devtools example</Text>
+      <Text style={styles.header}>@axonpack/expo-devtools example</Text>
 
       {SECTIONS.map((section) => (
         <View key={section.transport} style={styles.section}>

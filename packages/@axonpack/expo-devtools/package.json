@@ -1,5 +1,5 @@
 {
-  "name": "@bruin/devtools",
+  "name": "@axonpack/expo-devtools",
   "version": "1.0.0",
   "description": "Development Debugging tool for React Native",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
@@ -18,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/axonpack/bruin.git",
-    "directory": "packages/@bruin/devtools"
+    "directory": "packages/@axonpack/expo-devtools"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"

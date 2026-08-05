@@ -147,7 +147,7 @@ export type SandboxResult =
     }
   | { ok: false; error: string; duration: number };
 
-/** Sends via the global fetch — same one @bruin/devtools may have already patched, so a sandbox
+/** Sends via the global fetch — same one @axonpack/expo-devtools may have already patched, so a sandbox
  * request shows up as new activity in the log, same as a real replay would in any devtool. */
 export async function sendSandboxRequest({
   method,

@@ -1,7 +1,7 @@
 import type { OxlintConfig } from "oxlint";
 
 /**
- * Shared oxlint rules for @bruin/* packages, ported from this repo's original
+ * Shared oxlint rules for @axonpack/* packages, ported from this repo's original
  * eslint-config-universe-based flat config via `@oxlint/migrate`. Consuming packages
  * extend this from their own `oxlint.config.mts`:
  *

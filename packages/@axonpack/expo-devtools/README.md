@@ -1,9 +1,9 @@
-# @bruin/devtools
+# @axonpack/expo-devtools
 
 On-device, production-safe network inspector for React Native and Expo apps — a familiar,
 browser-devtools-style Network tab that lives inside your app, no desktop tooling required.
 
-[![npm version](https://img.shields.io/npm/v/@bruin/devtools.svg)](https://www.npmjs.com/package/@bruin/devtools)
+[![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../../LICENSE)
 
 ## Features
@@ -26,7 +26,7 @@ browser-devtools-style Network tab that lives inside your app, no desktop toolin
 ## Installation
 
 ```sh
-npx expo install @bruin/devtools react-native-safe-area-context react-native-webview
+npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview
 ```
 
 `react-native-safe-area-context` and `react-native-webview` are peer dependencies — the overlay
@@ -36,7 +36,7 @@ and its response preview rely on them directly.
 
 ```tsx
 // devtools.ts — one shared instance for your app
-import { createDevtoolsClient } from '@bruin/devtools';
+import { createDevtoolsClient } from '@axonpack/expo-devtools';
 
 export const devtools = createDevtoolsClient({
   network: {
@@ -59,7 +59,7 @@ registerRootComponent(App);
 
 ```tsx
 // App.tsx — mount the overlay anywhere in your tree
-import { DevtoolsOverlay } from '@bruin/devtools';
+import { DevtoolsOverlay } from '@axonpack/expo-devtools';
 
 export default function App() {
   return (

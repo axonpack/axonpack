@@ -1,4 +1,4 @@
-# @bruin/devtools
+# @axonpack/expo-devtools
 
 ## 1.0.0
 
@@ -6,7 +6,7 @@
 
 - b1abc8e: ## ✨ Features
 
-  First release of `@bruin/devtools` — an on-device network inspector for React Native and Expo apps.
+  First release of `@axonpack/expo-devtools` — an on-device network inspector for React Native and Expo apps.
 
   - A draggable button opens a full network inspector right inside your app, no desktop tool needed.
   - Nothing is captured until you turn it on, so it's safe to leave in a production build.

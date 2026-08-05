@@ -1,4 +1,4 @@
-import { createDevtoolsClient } from '@bruin/devtools';
+import { createDevtoolsClient } from '@axonpack/expo-devtools';
 
 export const devtools = createDevtoolsClient({
   network: {

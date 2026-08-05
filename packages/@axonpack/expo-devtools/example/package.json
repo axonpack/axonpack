@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
-    "@bruin/devtools": "*",
+    "@axonpack/expo-devtools": "*",
     "axios": "^1.18.1",
     "expo": "~57.0.8",
     "expo-asset": "~57.0.7",
