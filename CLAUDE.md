@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository overview
 
-Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS foundation libraries for React Native/Expo (ahooks / Software Mansion style). See `docs/plan.md` for the roadmap (`@bruin/lite-storage`, `@bruin/devtools`, `@bruin/api-kit`, `@bruin/i18n`). **Only `@bruin/devtools` is implemented so far**; `apps/` exists but is currently empty.
+Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS foundation libraries for React Native/Expo. See `docs/plan.md` for the roadmap (`@bruin/lite-storage`, `@bruin/devtools`, `@bruin/api-kit`, `@bruin/i18n`). **Only `@bruin/devtools` is implemented so far**; `apps/` exists but is currently empty.
 
 `README.md` is stale `create-turbo` boilerplate — it describes a `web`/`docs` Next.js setup and `@repo/ui`/`@repo/eslint-config`/`@repo/typescript-config` packages that don't exist in this repo. Don't rely on it.
 
@@ -78,14 +78,14 @@ devtools.init(); // call once at app startup — installs the fetch/XHR patches
 Three independent interception paths feed one shared store (`stores/network/network-log.store.ts` — in-memory ring buffer capped at 200 entries, pub/sub via `expo`'s `EventEmitter`, read via `useSyncExternalStore` in `network-view.component.tsx`):
 
 - `services/network/patch-fetch.service.ts` — wraps `globalThis.fetch`. Required because **Expo installs its own native fetch by default** (`expo/winter/fetch`), which does not route through `XMLHttpRequest` the way the old whatwg-fetch polyfill did — patching XHR alone cannot see it.
-- `services/network/patch-xhr.service.ts` — patches `XMLHttpRequest.prototype.open`/`.send`. This is what actually catches axios (its RN adapter uses XHR, not fetch) and any raw `XMLHttpRequest` usage.
+- `services/network/patch-xhr.service.ts` — patches `XMLHttpRequest.prototype.open`/`.send`. This is what actually catches third-party HTTP client libraries whose RN adapter is built on XHR rather than fetch (a common pattern) and any raw `XMLHttpRequest` usage.
 - `services/network/webview-network-logger.service.ts` — a `<WebView>` runs in a completely separate JS engine (WKWebView/Android WebView), invisible to both patches above. `getWebViewInjectedScript(name)` returns a JS string that patches fetch/XHR _inside the page_ and relays every request back via `postMessage`; `handleWebViewNetworkMessage(event, allowedSources)` (called through the client, not directly) parses that and writes into the same store. Relative URLs are resolved against `location.href` since real pages request plenty of relative paths.
 
 Request/response bodies are logged in full — no truncation, by design.
 
 ### Example app (`example/`)
 
-Regenerated via `create-expo-app` (not the `create-expo-module` template) — hence its own `assets/`/`app.json` rather than the module scaffold's. `App.tsx` is just a top-level tab switcher; real screens live in `components/`: `NativeRequests.tsx` (fetch/XHR/axios demo buttons), `WebViewDemo.tsx` (loads a real external site so its traffic gets captured), `RequestsScreen.tsx` (Native/WebView sub-tabs), `TabBar.tsx` (shared, `primary`/`secondary` visual variants). `devtools.ts` creates the one shared client instance, imported by both `index.ts` (`.init()`) and `WebViewDemo.tsx` (`.getWebViewInjectedScript`/`.handleWebViewMessage`).
+Regenerated via `create-expo-app` (not the `create-expo-module` template) — hence its own `assets/`/`app.json` rather than the module scaffold's. `App.tsx` is just a top-level tab switcher; real screens live in `components/`: `NativeRequests.tsx` (fetch/XHR/third-party HTTP client demo buttons), `WebViewDemo.tsx` (loads a real external site so its traffic gets captured), `RequestsScreen.tsx` (Native/WebView sub-tabs), `TabBar.tsx` (shared, `primary`/`secondary` visual variants). `devtools.ts` creates the one shared client instance, imported by both `index.ts` (`.init()`) and `WebViewDemo.tsx` (`.getWebViewInjectedScript`/`.handleWebViewMessage`).
 
 ## Known quirks worth remembering
 
