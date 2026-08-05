@@ -1,0 +1,17 @@
+{
+  "name": "@bruin/linter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared oxlint base configuration for @bruin/* packages",
+  "license": "MIT",
+  "type": "module",
+  "main": "./base.ts",
+  "types": "./base.ts",
+  "exports": {
+    ".": "./base.ts",
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "oxlint": "^1.77.0"
+  }
+}

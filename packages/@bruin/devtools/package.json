@@ -40,6 +40,7 @@
     "build": "node internal/module_scripts/build.js",
     "clean": "node internal/module_scripts/clean.js",
     "lint": "eslint src",
+    "lint:oxlint": "oxlint src",
     "format": "eslint src --fix",
     "test": "node internal/module_scripts/test.js",
     "check-types": "tsc --noEmit",
@@ -63,6 +64,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@bruin/linter": "*",
     "@types/jest": "^29.2.1",
     "@types/react": "~19.2.2",
     "@typescript-eslint/parser": "^8.65.0",
@@ -73,6 +75,7 @@
     "expo": "^57.0.7",
     "jest": "^29.7.0",
     "jest-expo": "~57.0.2",
+    "oxlint": "^1.77.0",
     "prettier": "^3.0.0",
     "react-native": "0.86.0",
     "react-native-safe-area-context": "^5.8.0",

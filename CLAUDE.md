@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository overview
 
-Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS foundation libraries for React Native/Expo. See `docs/plan.md` for the roadmap (`@bruin/lite-storage`, `@bruin/devtools`, `@bruin/api-kit`, `@bruin/i18n`). **Only `@bruin/devtools` is implemented so far**; `apps/` exists but is currently empty.
+Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS foundation libraries for React Native/Expo. See `docs/plan.md` for the roadmap (`@bruin/lite-storage`, `@bruin/devtools`, `@bruin/api-kit`, `@bruin/i18n`). **Only `@bruin/devtools` is implemented so far**; `apps/` exists but is currently empty. `packages/linter` (`@bruin/linter`) is separate from that roadmap — it's an internal, non-public shared oxlint base config, not a `@bruin/*` product library.
 
 `README.md` is stale `create-turbo` boilerplate — it describes a `web`/`docs` Next.js setup and `@repo/ui`/`@repo/eslint-config`/`@repo/typescript-config` packages that don't exist in this repo. Don't rely on it.
 
@@ -32,6 +32,7 @@ Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS fou
 
 - `bun run build` — `node internal/module_scripts/build.js`: plain `tsc` compile of `src` → `build`. Does **not** clean first, so stale compiled files from removed/renamed sources linger — run `bun run clean` first when that matters.
 - `bun run lint` / `bun run format` — `eslint src` / `eslint src --fix`.
+- `bun run lint:oxlint` — `oxlint src`, an oxlint-based alternative to the eslint gate above. Not wired into `pre-commit` yet — its rules come from `oxlint.config.mts` extending the shared `@bruin/linter` base config.
 - `bun run check-types` — `tsc --noEmit`.
 - `bun run test` — jest (`jest-expo` preset, roots at `src`). No test files exist yet; runs in watch mode locally unless `CI`/`EXPO_NONINTERACTIVE` is set.
 
@@ -92,3 +93,4 @@ Regenerated via `create-expo-app` (not the `create-expo-module` template) — he
 - Root `turbo.json`'s `outputs: [".next/**", ...]` is left over from the Next.js starter and doesn't match `@bruin/devtools`'s actual build output (`build/**`) — `turbo run build` warns `no output files found for task @bruin/devtools#build` and can never cache it. Not a bug to "fix" reflexively; just don't be surprised the build always re-runs.
 - bun's install layout doesn't hoist a config package's own tooling deps into whatever package uses that config. `eslint-config-universe`'s `import/resolver`/`import/parsers` settings reference `eslint-import-resolver-node` and `@typescript-eslint/parser` by string name, which only resolve correctly (including in editor ESLint integrations, not just the CLI) if those packages are listed directly as devDependencies of `@bruin/devtools` — both already are, for this reason. If a similar "works via CLI, fails in editor" resolver error shows up for another `eslint-config-universe` dependency, the fix is the same: add it directly to that package's own `devDependencies`.
 - `react-native-webview` in the example app links via classic RN community autolinking (`react-native.config.js`), not Expo Modules autolinking — `expo-modules-autolinking search` won't list it; that's expected, not a bug.
+- oxlint's `jsPlugins` resolves the same way the `eslint-config-universe` quirk above describes: a JS plugin declared in the shared `@bruin/linter` base config is resolved from the *consuming* package's own `node_modules`, not from `@bruin/linter`'s. The original `@oxlint/migrate` output for `@bruin/devtools` pulled in `eslint-plugin-prettier` this way; it was dropped from `@bruin/linter` entirely rather than have every consumer redeclare it, since Prettier already runs as its own `format` step and oxlint's own docs call that plugin slow.
