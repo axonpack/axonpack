@@ -64,3 +64,6 @@ jobs:
         run: bunx changeset publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push release tags
+        run: git push origin --tags
