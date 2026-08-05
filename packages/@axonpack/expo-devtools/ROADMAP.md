@@ -1,6 +1,6 @@
-# @bruin/devtools — what's possible
+# @axonpack/expo-devtools — what's possible
 
-Scope: this package specifically. For the wider `@bruin/*` family (lite-storage, api-kit, i18n), see `docs/plan.md` at the repo root.
+Scope: this package specifically. For the wider `@axonpack/*` family (lite-storage, api-kit, i18n), see `docs/plan.md` at the repo root.
 
 ## Implemented today
 
@@ -41,9 +41,9 @@ Scope: this package specifically. For the wider `@bruin/*` family (lite-storage,
 
 ## Beyond network: other tabs from the original plan
 
-From `docs/plan.md`'s description of `@bruin/devtools` ("on-device, prod-safe debug tool... network / storage / database / console inspector tabs... console ring-buffer capture... logger... draggable DEV FAB") — none of these are built yet:
+From `docs/plan.md`'s description of `@axonpack/expo-devtools` ("on-device, prod-safe debug tool... network / storage / database / console inspector tabs... console ring-buffer capture... logger... draggable DEV FAB") — none of these are built yet:
 
 - **Console tab** — ring-buffer capture of `console.log`/`warn`/`error`, same store/subscribe pattern as network logging.
-- **Storage tab** — inspect AsyncStorage / SQLite / MMKV, whichever backend `@bruin/lite-storage` ends up using.
-- **Database tab** — likely overlaps heavily with the storage tab depending on what "database" ends up meaning once `@bruin/lite-storage` exists.
+- **Storage tab** — inspect AsyncStorage / SQLite / MMKV, whichever backend `@axonpack/lite-storage` ends up using.
+- **Database tab** — likely overlaps heavily with the storage tab depending on what "database" ends up meaning once `@axonpack/lite-storage` exists.
 - **Draggable dev FAB** — the actual on-device entry point tying all inspector tabs together; right now consumers wire `NetworkView` into their own UI (as the example app's "Network" tab does), there's no floating launcher.

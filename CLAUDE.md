@@ -8,16 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository overview
 
-Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS foundation libraries for React Native/Expo. See `docs/plan.md` for the roadmap (`@bruin/lite-storage`, `@bruin/devtools`, `@bruin/api-kit`, `@bruin/i18n`). **Only `@bruin/devtools` is implemented so far**; `apps/` exists but is currently empty. `packages/linter` (npm name: `linter`, deliberately _not_ `@bruin/*`-scoped) is separate from that roadmap — it's an internal, non-public shared oxlint base config, not a `@bruin/*` product library. Only packages actually meant for npm carry the `@bruin/` scope; right now that's `@bruin/devtools` alone.
+Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS foundation libraries for React Native/Expo. See `docs/plan.md` for the roadmap (`@axonpack/lite-storage`, `@axonpack/expo-devtools`, `@axonpack/api-kit`, `@axonpack/i18n`). **Only `@axonpack/expo-devtools` is implemented so far**; `apps/` exists but is currently empty. `packages/linter` (npm name: `linter`, deliberately _not_ `@axonpack/*`-scoped) is separate from that roadmap — it's an internal, non-public shared oxlint base config, not a `@axonpack/*` product library. Only packages actually meant for npm carry the `@axonpack/` scope; right now that's `@axonpack/expo-devtools` alone.
 
 `README.md` is stale `create-turbo` boilerplate — it describes a `web`/`docs` Next.js setup and `@repo/ui`/`@repo/eslint-config`/`@repo/typescript-config` packages that don't exist in this repo. Don't rely on it.
 
 ## Package manager & workspaces
 
 - **bun only** — pinned via `devEngines.packageManager` in the root `package.json` (bun 1.3.14, Node >=24).
-- Root `workspaces` glob is non-standard because of the `@bruin` npm scope directory and a nested example app:
-  `apps/*`, `packages/*`, `packages/@bruin/*`, `packages/@bruin/devtools/example`.
-  A plain `packages/*` glob does **not** match `packages/@bruin/devtools` (two levels deep) — new scoped packages are covered by the `packages/@bruin/*` entry, but each package's own `example/` app needs its own explicit workspace entry to get linked via bun (otherwise its `@bruin/devtools` dependency won't resolve to the local package).
+- Root `workspaces` glob is non-standard because of the `@axonpack` npm scope directory and a nested example app:
+  `apps/*`, `packages/*`, `packages/@axonpack/*`, `packages/@axonpack/expo-devtools/example`.
+  A plain `packages/*` glob does **not** match `packages/@axonpack/expo-devtools` (two levels deep) — new scoped packages are covered by the `packages/@axonpack/*` entry, but each package's own `example/` app needs its own explicit workspace entry to get linked via bun (otherwise its `@axonpack/expo-devtools` dependency won't resolve to the local package).
 - Run `bun install` from the **repo root**, not from inside a package or example — bun's workspace linking depends on the root lockfile.
 
 ## Commands
@@ -28,7 +28,7 @@ Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS fou
 - `bun run build` / `bun run lint` / `bun run check-types` — `turbo run <task>`; only runs for workspaces that define that script, others are silently skipped.
 - `bun run format` — `prettier --write "**/*.{ts,tsx,md}"` across the whole repo.
 
-### `@bruin/devtools` package (run from `packages/@bruin/devtools`)
+### `@axonpack/expo-devtools` package (run from `packages/@axonpack/expo-devtools`)
 
 - `bun run build` — `node internal/module_scripts/build.js`: plain `tsc` compile of `src` → `build`. Does **not** clean first, so stale compiled files from removed/renamed sources linger — run `bun run clean` first when that matters.
 - `bun run lint` / `bun run format` — `eslint src` / `eslint src --fix`.
@@ -36,7 +36,7 @@ Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS fou
 - `bun run check-types` — `tsc --noEmit`.
 - `bun run test` — jest (`jest-expo` preset, roots at `src`). No test files exist yet; runs in watch mode locally unless `CI`/`EXPO_NONINTERACTIVE` is set.
 
-### Example app (run from `packages/@bruin/devtools/example`)
+### Example app (run from `packages/@axonpack/expo-devtools/example`)
 
 - `bun run ios` / `bun run android` — `expo run:ios` / `expo run:android` (full native build via prebuild — needs Xcode/Android Studio).
 - `bun run start` — `expo start` (Expo Go / dev client, no native rebuild).
@@ -45,10 +45,10 @@ Turborepo + bun workspaces monorepo intended to hold `@bruin/*` — free OSS fou
 ### Git hooks (husky, installed automatically by root `prepare`)
 
 - `pre-commit` — blocks direct commits to `main`/`dev` (create a feature branch: `git switch -c <type>/<short-description>`), then runs `bun run format && bun run lint`.
-- `commit-msg` — runs commitlint (`commitlint.config.js` at repo root): conventional-commit `type` restricted to a fixed enum, and if a scope is given it must be exactly `@bruin/devtools` (the only package that exists yet — extend `scope-enum` there when adding more packages).
+- `commit-msg` — runs commitlint (`commitlint.config.js` at repo root): conventional-commit `type` restricted to a fixed enum, and if a scope is given it must be exactly `@axonpack/expo-devtools` (the only package that exists yet — extend `scope-enum` there when adding more packages).
 - `post-merge` — runs `bun install`.
 
-## Architecture: `@bruin/devtools`
+## Architecture: `@axonpack/expo-devtools`
 
 Pure JS/TSX Expo module — no native iOS/Android code (removed; `expo-module.config.json` declares no native platforms). `package.json` `exports` uses an `expo-source` condition pointing Metro straight at `src/index.ts`, and a `default` condition pointing other consumers at the compiled `build/`.
 
@@ -90,7 +90,7 @@ Regenerated via `create-expo-app` (not the `create-expo-module` template) — he
 
 ## Known quirks worth remembering
 
-- Root `turbo.json`'s `outputs: [".next/**", ...]` is left over from the Next.js starter and doesn't match `@bruin/devtools`'s actual build output (`build/**`) — `turbo run build` warns `no output files found for task @bruin/devtools#build` and can never cache it. Not a bug to "fix" reflexively; just don't be surprised the build always re-runs.
-- bun's install layout doesn't hoist a config package's own tooling deps into whatever package uses that config. `eslint-config-universe`'s `import/resolver`/`import/parsers` settings reference `eslint-import-resolver-node` and `@typescript-eslint/parser` by string name, which only resolve correctly (including in editor ESLint integrations, not just the CLI) if those packages are listed directly as devDependencies of `@bruin/devtools` — both already are, for this reason. If a similar "works via CLI, fails in editor" resolver error shows up for another `eslint-config-universe` dependency, the fix is the same: add it directly to that package's own `devDependencies`.
+- Root `turbo.json`'s `outputs: [".next/**", ...]` is left over from the Next.js starter and doesn't match `@axonpack/expo-devtools`'s actual build output (`build/**`) — `turbo run build` warns `no output files found for task @axonpack/expo-devtools#build` and can never cache it. Not a bug to "fix" reflexively; just don't be surprised the build always re-runs.
+- bun's install layout doesn't hoist a config package's own tooling deps into whatever package uses that config. `eslint-config-universe`'s `import/resolver`/`import/parsers` settings reference `eslint-import-resolver-node` and `@typescript-eslint/parser` by string name, which only resolve correctly (including in editor ESLint integrations, not just the CLI) if those packages are listed directly as devDependencies of `@axonpack/expo-devtools` — both already are, for this reason. If a similar "works via CLI, fails in editor" resolver error shows up for another `eslint-config-universe` dependency, the fix is the same: add it directly to that package's own `devDependencies`.
 - `react-native-webview` in the example app links via classic RN community autolinking (`react-native.config.js`), not Expo Modules autolinking — `expo-modules-autolinking search` won't list it; that's expected, not a bug.
-- oxlint's `jsPlugins` resolves the same way the `eslint-config-universe` quirk above describes: a JS plugin declared in the shared `linter` base config is resolved from the _consuming_ package's own `node_modules`, not from `linter`'s. The original `@oxlint/migrate` output for `@bruin/devtools` pulled in `eslint-plugin-prettier` this way; it was dropped from `linter` entirely rather than have every consumer redeclare it, since Prettier already runs as its own `format` step and oxlint's own docs call that plugin slow.
+- oxlint's `jsPlugins` resolves the same way the `eslint-config-universe` quirk above describes: a JS plugin declared in the shared `linter` base config is resolved from the _consuming_ package's own `node_modules`, not from `linter`'s. The original `@oxlint/migrate` output for `@axonpack/expo-devtools` pulled in `eslint-plugin-prettier` this way; it was dropped from `linter` entirely rather than have every consumer redeclare it, since Prettier already runs as its own `format` step and oxlint's own docs call that plugin slow.

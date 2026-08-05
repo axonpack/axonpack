@@ -21,6 +21,6 @@ module.exports = {
       ],
     ],
     'body-max-line-length': [2, 'always', 200],
-    'scope-enum': [2, 'always', ['@bruin/devtools', 'linter']],
+    'scope-enum': [2, 'always', ['@axonpack/expo-devtools', 'linter']],
   },
 };

@@ -1,4 +1,4 @@
-# Bruin
+# Axonpack
 
 Free, open-source foundation libraries for React Native and Expo apps: small, focused,
 dependency-light packages you drop in rather than a framework you adopt.
@@ -7,29 +7,29 @@ dependency-light packages you drop in rather than a framework you adopt.
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-fe5196.svg)](https://www.conventionalcommits.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-> **Status:** early days. Only [`@bruin/devtools`](./packages/@bruin/devtools) is implemented so
-> far. `@bruin/lite-storage`, `@bruin/api-kit`, and `@bruin/i18n` are planned — see
+> **Status:** early days. Only [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) is implemented so
+> far. `@axonpack/lite-storage`, `@axonpack/api-kit`, and `@axonpack/i18n` are planned — see
 > [`docs/plan.md`](./docs/plan.md) for the roadmap and rationale.
 
 ## Packages
 
 This is a [Turborepo](https://turborepo.dev) + [Bun workspaces](https://bun.sh/docs/install/workspaces)
-monorepo. Each package under `packages/@bruin/*` is published independently.
+monorepo. Each package under `packages/@axonpack/*` is published independently.
 
-| Package                                         | Description                                                    | Version                                                                                                   |
-| ----------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| [`@bruin/devtools`](./packages/@bruin/devtools) | On-device, prod-safe network inspector for React Native / Expo | [![npm](https://img.shields.io/npm/v/@bruin/devtools.svg)](https://www.npmjs.com/package/@bruin/devtools) |
+| Package                                                         | Description                                                    | Version                                                                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) | On-device, prod-safe network inspector for React Native / Expo | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools) |
 
 See each package's own README for installation and usage — start with
-[`@bruin/devtools`](./packages/@bruin/devtools/README.md).
+[`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools/README.md).
 
 ## Development
 
 This repo uses **Bun only** (pinned via `devEngines.packageManager`, Bun 1.3.14, Node >= 24).
 
 ```sh
-git clone https://github.com/axonpack/bruin.git
-cd bruin
+git clone https://github.com/axonpack/axonpack.git
+cd axonpack
 bun install
 ```
 

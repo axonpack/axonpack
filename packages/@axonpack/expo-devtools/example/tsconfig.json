@@ -3,8 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@bruin/devtools": ["../src/index"],
-      "@bruin/devtools/*": ["../src/*"]
+      "@axonpack/expo-devtools": ["../src/index"],
+      "@axonpack/expo-devtools/*": ["../src/*"]
     }
   }
 }

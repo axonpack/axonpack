@@ -7,7 +7,7 @@ run by hand from your own machine, for when you don't want to go through GitHub.
 
 ## Prerequisites
 
-- You're logged in to npm with publish access to the `@bruin` scope: `npm whoami` should print
+- You're logged in to npm with publish access to the `@axonpack` scope: `npm whoami` should print
   your username. If not, `npm login` first.
 - An npm token with publish rights, exported in your shell:
   ```sh
@@ -63,10 +63,10 @@ run by hand from your own machine, for when you don't want to go through GitHub.
    bun run release
    ```
 
-   This runs `turbo run build` (compiles `@bruin/devtools`'s `src` → `build`, which is what
+   This runs `turbo run build` (compiles `@axonpack/expo-devtools`'s `src` → `build`, which is what
    actually gets published) followed by `changeset publish`, which pushes to npm any package whose
    version isn't live on the registry yet, and tags each one it publishes
-   (e.g. `@bruin/devtools@0.2.0`) as a local git tag.
+   (e.g. `@axonpack/expo-devtools@0.2.0`) as a local git tag.
 
 6. **Push the commit and the tags.**
 
@@ -83,5 +83,5 @@ run by hand from your own machine, for when you don't want to go through GitHub.
 - `linter` and `devtools-example` never publish — both are `"private": true`, and
   Changesets skips private packages automatically. You won't be prompted for them in step 1, and
   they're excluded from versioning and publishing in every step above.
-- Verify a publish landed with `npm view @bruin/devtools version` or by checking
-  [npmjs.com/package/@bruin/devtools](https://www.npmjs.com/package/@bruin/devtools).
+- Verify a publish landed with `npm view @axonpack/expo-devtools version` or by checking
+  [npmjs.com/package/@axonpack/expo-devtools](https://www.npmjs.com/package/@axonpack/expo-devtools).

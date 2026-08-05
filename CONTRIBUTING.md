@@ -1,7 +1,7 @@
-# Contributing to Bruin
+# Contributing to Axonpack
 
-Thanks for taking the time to contribute! This repo hosts `@bruin/*` — free, open-source
-foundation libraries for React Native / Expo apps. Only `@bruin/devtools` is implemented so far;
+Thanks for taking the time to contribute! This repo hosts `@axonpack/*` — free, open-source
+foundation libraries for React Native / Expo apps. Only `@axonpack/expo-devtools` is implemented so far;
 see [`docs/plan.md`](./docs/plan.md) for the roadmap of what's coming next.
 
 Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
@@ -16,8 +16,8 @@ Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
 ## Getting set up
 
 ```sh
-git clone https://github.com/axonpack/bruin.git
-cd bruin
+git clone https://github.com/axonpack/axonpack.git
+cd axonpack
 bun install
 ```
 
@@ -26,17 +26,17 @@ workspace linking depends on the root lockfile. This also runs `prepare` (husky 
 automatically.
 
 > New scoped package? The root `workspaces` glob is non-standard: `apps/*`, `packages/*`,
-> `packages/@bruin/*`, and `packages/@bruin/devtools/example`. A plain `packages/*` glob doesn't
-> match `packages/@bruin/devtools` (two levels deep). Each package's own `example/` app also needs
-> its own explicit workspace entry, or its `@bruin/<package>` dependency won't resolve locally.
+> `packages/@axonpack/*`, and `packages/@axonpack/expo-devtools/example`. A plain `packages/*` glob doesn't
+> match `packages/@axonpack/expo-devtools` (two levels deep). Each package's own `example/` app also needs
+> its own explicit workspace entry, or its `@axonpack/<package>` dependency won't resolve locally.
 
 ## Project structure
 
 ```
-packages/@bruin/<name>/       # a published package
-packages/@bruin/<name>/example/  # its Expo example/demo app
+packages/@axonpack/<name>/       # a published package
+packages/@axonpack/<name>/example/  # its Expo example/demo app
 apps/                          # currently empty — reserved for future standalone apps
-docs/plan.md                   # roadmap for the wider @bruin/* family
+docs/plan.md                   # roadmap for the wider @axonpack/* family
 ```
 
 ## Development workflow
@@ -50,11 +50,11 @@ bun run check-types   # turbo run check-types
 bun run format        # prettier --write "**/*.{ts,tsx,md}" across the whole repo
 ```
 
-Working on a specific package (e.g. `@bruin/devtools`), run its scripts directly from that
+Working on a specific package (e.g. `@axonpack/expo-devtools`), run its scripts directly from that
 package's directory — see that package's own `README.md` for details:
 
 ```sh
-cd packages/@bruin/devtools
+cd packages/@axonpack/expo-devtools
 bun run build
 bun run lint
 bun run check-types
@@ -64,7 +64,7 @@ bun run test
 To try your changes in the example app:
 
 ```sh
-cd packages/@bruin/devtools/example
+cd packages/@axonpack/expo-devtools/example
 bun run start   # Expo Go / dev client, no native rebuild
 bun run ios     # or: bun run android — full native build via prebuild
 ```
@@ -84,11 +84,11 @@ commitlint (see `commitlint.config.js`):
 - **Type** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`,
   `chore`, `revert`, `wip`, `release`.
 - **Scope** — optional, but if given it must exactly match an existing package name (currently only
-  `@bruin/devtools`).
+  `@axonpack/expo-devtools`).
 
 ```
-feat(@bruin/devtools): add cookie jar visibility for webview requests
-fix(@bruin/devtools): resolve scroll issue in detail panel
+feat(@axonpack/expo-devtools): add cookie jar visibility for webview requests
+fix(@axonpack/expo-devtools): resolve scroll issue in detail panel
 docs: update contributing guide
 ```
 
@@ -106,7 +106,7 @@ User-facing changes to a package should ship with a changeset, so they land in t
 changelog on release:
 
 ```sh
-cd packages/@bruin/devtools
+cd packages/@axonpack/expo-devtools
 bun run release:add
 ```
 

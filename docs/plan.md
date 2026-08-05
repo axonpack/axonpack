@@ -3,7 +3,7 @@
 Free OSS foundation libraries for React Native / Expo.
 Priority order below is based on what's already duplicated across our apps.
 
-## @bruin/lite-storage
+## @axonpack/lite-storage
 
 - local storage by sqlite database with in-memory caching
 - one `AsyncStorage` interface, swappable sqlite/mmkv backends
@@ -19,7 +19,7 @@ db.execSync("PRAGMA journal_mode = WAL;");
 db.execSync("PRAGMA busy_timeout = 5000;");
 ```
 
-## @bruin/devtools
+## @axonpack/expo-devtools
 
 - on-device, prod-safe debug tool (no desktop app)
 - draggable DEV FAB
@@ -27,13 +27,13 @@ db.execSync("PRAGMA busy_timeout = 5000;");
 - console ring-buffer capture
 - logger
 
-## @bruin/api-kit
+## @axonpack/api-kit
 
 - HTTP client factory with auth
 - single-flight 401 refresh + retry
 - token service (sync cache + debounced persist)
 
-## @bruin/i18n
+## @axonpack/i18n
 
 - type safety
 - no complex config
