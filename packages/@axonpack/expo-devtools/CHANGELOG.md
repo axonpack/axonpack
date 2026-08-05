@@ -1,5 +1,12 @@
 # @axonpack/expo-devtools
 
+## 1.0.1
+
+### Patch Changes
+
+- ## 🐛 Bug Fixes
+  - Fixed links on the npm package page that pointed to the project's old GitHub location.
+
 ## 1.0.0
 
 ### Major Changes
