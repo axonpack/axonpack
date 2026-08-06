@@ -192,14 +192,21 @@ export function ConsoleView() {
               active={activeLevel === null}
               onPress={() => setActiveLevel(null)}
             />
-            {CONSOLE_LEVELS.map((level) => (
-              <Chip
-                key={level}
-                label={`${CONSOLE_LEVEL_LABELS[level]} (${countsByLevel[level] ?? 0})`}
-                active={activeLevel === level}
-                onPress={() => setActiveLevel(level)}
-              />
-            ))}
+            {CONSOLE_LEVELS.map((level) => {
+              const { icon, color } = CONSOLE_LEVEL_VISUALS[level];
+              return (
+                <Chip
+                  key={level}
+                  label={`${CONSOLE_LEVEL_LABELS[level]} (${countsByLevel[level] ?? 0})`}
+                  // Same glyph and color the rows use, so a chip and its output read as one thing.
+                  // Logs has no glyph by design, which leaves it a plain chip on the default accent.
+                  icon={icon ?? undefined}
+                  tint={icon ? color : undefined}
+                  active={activeLevel === level}
+                  onPress={() => setActiveLevel(level)}
+                />
+              );
+            })}
           </View>
 
           {sources.length > 0 && (
