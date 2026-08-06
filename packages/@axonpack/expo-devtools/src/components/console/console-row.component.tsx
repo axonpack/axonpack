@@ -1,18 +1,21 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ConsoleArgCell } from './console-arg-cell.component';
 import { COLORS } from '../../constants/colors.const';
 import { CONSOLE_LEVEL_VISUALS } from '../../constants/console/console-levels.const';
+import { consolePromptStore } from '../../stores/console/console-prompt.store';
 import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
 import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
 export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
   const visual = CONSOLE_LEVEL_VISUALS[entry.level];
+  // Only the REPL's own echo is replayable — there's no source text behind a captured log.
+  const recallable = entry.level === 'input';
 
-  return (
+  const content = (
     <View style={[styles.row, visual.surface ? { backgroundColor: visual.surface } : null]}>
       <View style={styles.main}>
         {visual.icon ? (
@@ -26,6 +29,8 @@ export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLo
               key={`${entry.id}-${index}`}
               arg={arg}
               plainColor={entry.level === 'error' ? COLORS.error : undefined}
+              // A `selectable` Text swallows taps on iOS, which would eat the recall press.
+              selectable={!recallable}
             />
           ))}
         </View>
@@ -42,6 +47,14 @@ export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLo
         <CopyIconButton value={entry.text} />
       </View>
     </View>
+  );
+
+  if (!recallable) return content;
+
+  return (
+    <TouchableOpacity activeOpacity={0.6} onPress={() => consolePromptStore.recall(entry.text)}>
+      {content}
+    </TouchableOpacity>
   );
 });
 

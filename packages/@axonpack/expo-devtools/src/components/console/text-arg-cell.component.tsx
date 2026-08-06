@@ -21,11 +21,13 @@ export function TextArgCell({
   text,
   tone,
   plainColor,
+  selectable = true,
 }: {
   text: string;
   tone: ConsoleArgTone;
   /** Overrides the `plain` tone only — an error-level row prints its message in red. */
   plainColor?: string;
+  selectable?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const color = tone === 'plain' ? (plainColor ?? TONE_COLORS.plain) : TONE_COLORS[tone];
@@ -33,7 +35,7 @@ export function TextArgCell({
 
   if (!clampable) {
     return (
-      <Text style={[styles.text, { color }]} selectable>
+      <Text style={[styles.text, { color }]} selectable={selectable}>
         {text}
       </Text>
     );
@@ -49,7 +51,7 @@ export function TextArgCell({
       <Text
         style={[styles.text, { color }]}
         numberOfLines={expanded ? undefined : CLAMP_LINES}
-        selectable>
+        selectable={selectable}>
         {text}
       </Text>
       {/* Its own tap target — a `selectable` Text above can swallow the press on iOS. */}

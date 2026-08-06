@@ -1,15 +1,29 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
 import { getCompletions } from '../../services/console/complete-expression.service';
 import { runReplCommand } from '../../services/console/run-repl-command.service';
+import { consolePromptStore } from '../../stores/console/console-prompt.store';
 import { normalizeExpressionInput } from '../../utils/console/normalize-expression.util';
 import { Chip } from '../ui/chip.ui';
 
 export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
-  const [source, setSource] = useState('');
+  const source = useSyncExternalStore(consolePromptStore.subscribe, consolePromptStore.getDraft);
+  const focusRequest = useSyncExternalStore(
+    consolePromptStore.subscribe,
+    consolePromptStore.getFocusRequest
+  );
+  const inputRef = useRef<TextInput>(null);
+
+  // Skips the first render — mount shouldn't pop the keyboard, only an actual recall should.
+  const lastFocusRequest = useRef(focusRequest);
+  useEffect(() => {
+    if (focusRequest === lastFocusRequest.current) return;
+    lastFocusRequest.current = focusRequest;
+    inputRef.current?.focus();
+  }, [focusRequest]);
 
   const completion = useMemo(() => getCompletions(source), [source]);
   const canRun = source.trim().length > 0;
@@ -19,12 +33,12 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
     // Ahead of the run so the rows it adds land while the list is already following the tail.
     onSubmit?.();
     runReplCommand(source.trim());
-    setSource('');
+    consolePromptStore.setDraft('');
   }
 
   function applyCompletion(option: string) {
     if (!completion) return;
-    setSource(source.slice(0, completion.start) + option);
+    consolePromptStore.setDraft(source.slice(0, completion.start) + option);
   }
 
   return (
@@ -50,10 +64,11 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
       <View style={styles.row}>
         <MaterialIcons name="chevron-right" size={16} color={COLORS.accent} />
         <TextInput
+          ref={inputRef}
           style={styles.input}
           value={source}
           // Normalized here rather than at evaluation, so what you see in the field is what runs.
-          onChangeText={(text) => setSource(normalizeExpressionInput(text))}
+          onChangeText={(text) => consolePromptStore.setDraft(normalizeExpressionInput(text))}
           onSubmitEditing={submit}
           placeholder="Run an expression"
           placeholderTextColor={COLORS.textSecondary}
@@ -66,7 +81,7 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
           blurOnSubmit={false}
         />
         {source.length > 0 && (
-          <TouchableOpacity onPress={() => setSource('')} hitSlop={8}>
+          <TouchableOpacity onPress={() => consolePromptStore.setDraft('')} hitSlop={8}>
             <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
         )}

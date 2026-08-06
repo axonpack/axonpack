@@ -66,7 +66,7 @@ Evaluation uses `new Function(...names, source)`, expression form first (`1 + 1`
 
 Not built for console yet:
 
-- **REPL history** — no recall of previous commands, and an `input` row isn't tappable to re-run. Chrome's eager-evaluation preview is also absent. Completion itself exists, but only for identifier paths — it can't complete the string argument inside `$m('…')`.
+- **REPL history beyond tap-to-recall** — tapping an `input` row loads it back into the prompt (via `consolePromptStore`, which also holds the draft so typing doesn't re-render the list), but there's no up-arrow-style cycling and no eager-evaluation preview. Completion covers identifier paths only — it can't complete the string argument inside `$m('…')`.
 - **`%s`/`%d`/`%o` format specifiers** — a `console.log('n: %d', 5)` renders as `n: %d 5` rather than substituting.
 - **Call-site (which file logged this)** — same `new Error().stack` approach as the network initiator idea, and the same reason it's not on by default: capturing a stack on every log is expensive.
 - **Console entries in Export** — Export is still network-only.
