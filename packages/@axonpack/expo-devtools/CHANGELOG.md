@@ -1,5 +1,13 @@
 # @axonpack/expo-devtools
 
+## 1.1.1
+
+### Patch Changes
+
+- ## 📝 Documentation
+  - The package page now shows what the tools actually look like, with screenshots of the request list, the console, and the expression prompt.
+  - Rewritten as a walkthrough of what you can do — find one request among hundreds, try a slow connection, resend a request with different details, read your logs and run an expression — rather than a list of settings.
+
 ## 1.1.0
 
 ### Minor Changes
