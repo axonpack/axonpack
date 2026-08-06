@@ -16,6 +16,7 @@ import {
 } from '../../utils/network/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resource-type.util';
 import { InfoBadge } from '../ui/info-badge.ui';
+import { JsonIcon } from '../ui/json-icon.ui';
 
 export function LogRow({
   entry,
@@ -37,22 +38,28 @@ export function LogRow({
         <Text style={[styles.method, { color: methodColor }]} selectable>
           {entry.method}
         </Text>
+        {/* Spelled out rather than "..." — the timing column shows "..." too while in flight, so
+            the two were indistinguishable at a glance. */}
         <Text style={[styles.status, { color: statusColor }]} selectable>
-          {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
+          {entry.status === 'pending' ? 'PENDING' : (entry.statusCode ?? entry.error ?? '')}
         </Text>
         <Text style={styles.timing} numberOfLines={1} selectable>
-          {entry.duration !== undefined ? `${entry.duration}ms` : '...'} ·{' '}
+          {entry.duration !== undefined ? `${entry.duration}ms` : '–'} ·{' '}
           {new Date(entry.startedAt).toLocaleTimeString()}
         </Text>
       </View>
 
       <View style={styles.urlRow}>
-        <MaterialIcons
-          name={typeVisual.icon}
-          size={14}
-          color={typeVisual.color}
-          style={styles.typeIcon}
-        />
+        {typeVisual.kind === 'json' ? (
+          <JsonIcon size={14} color={typeVisual.color} />
+        ) : (
+          <MaterialIcons
+            name={typeVisual.icon}
+            size={14}
+            color={typeVisual.color}
+            style={styles.typeIcon}
+          />
+        )}
         <View style={styles.urlTextGroup}>
           {bigRows && (
             <Text style={styles.name} numberOfLines={1} selectable>

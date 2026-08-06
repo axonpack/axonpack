@@ -77,7 +77,9 @@ The dispatch-point trick is what makes this work properly.
 - [x] Inject via `injectedJavaScriptBeforeContentLoaded`, not `injectedJavaScript` — the latter runs at document-end, after the page's own scripts have already fired their requests
 - [x] Messages queue in an outbox until `window.ReactNativeWebView` exists — injecting early means the bridge may not be up yet (notably on Android), and dropping those would defeat the point of injecting early
 - [x] In-page fetch: full offline + latency + bandwidth throttling
-- [x] In-page XHR: `send()` delayed by latency; offline dispatches a synthetic `error`/`loadend`. No `setReadyState` equivalent exists in a real browser engine, so bandwidth delay isn't applied there
+- [x] In-page XHR: full latency + bandwidth. A browser engine has no `setReadyState` hook to defer the whole DONE transition the way RN's XHR does, so the page's listeners are wrapped individually — via `addEventListener` **and** the `on*` property setters, which in a browser register internally rather than routing through `addEventListener` (the opposite of RN, where patching `addEventListener` alone was enough)
+- [x] The delivery target is computed once per request and cached, so every listener on the same dispatch resolves to the same deadline and fires in registration order
+- [x] `progress` is deliberately not deferred — delaying each tick by the full remaining time would just bunch them all at the end
 - [x] `navigator.sendBeacon` patched too — analytics libraries lean on it, so it'd otherwise be steady traffic ignoring Offline
 - [x] `shouldAllowWebViewRequest` for `onShouldStartLoadWithRequest` blocks document/iframe navigation while offline, which no in-page patch can do
 - [x] User agent: the script overrides `navigator.userAgent` in the page, which covers client-side UA sniffing. The real HTTP header needs `react-native-webview`'s own `userAgent` prop — `devtools.getWebViewUserAgent()` exposes the current value for it
@@ -97,7 +99,7 @@ Write into `ROADMAP.md`'s hard-limits section.
 - [x] Upload throttling isn't modeled
 - [x] No persistence across restarts
 - [x] Native UA override is best-effort: RN doesn't enforce the browser's forbidden-header rule, but the native stack (OkHttp / `NSURLSession`) has final say
-- [x] WebView in-page XHR gets latency only, not bandwidth
+- [x] A page that swaps in its own `XMLHttpRequest` wrapper before ours, or reads `onload` off the prototype descriptor directly, can bypass the deferral — the on\* patch redefines accessors the page could in principle redefine again
 - [x] **A WebView can never be fully throttled or taken offline from JS.** Only requests page JS makes through `fetch`/XHR/`sendBeacon` are interceptable. Everything the WebView's _native_ loader issues goes out regardless: the top-level document, `<img>`/`<script src>`/`<link rel=stylesheet>`, `@font-face`, CSS `url()`, `<video>`/`<audio>`, favicons, `<link rel=preload/prefetch>`, and service-worker traffic. On a content-heavy site that's the majority of requests, so expect plenty to slip past Offline. `onShouldStartLoadWithRequest` only recovers navigations — it doesn't fire for subresources on either platform. Genuinely fixing this needs native request interception (`WKURLSchemeHandler` / `shouldInterceptRequest`), which `react-native-webview` doesn't expose
 
 ## Implementation plan
@@ -134,4 +136,3 @@ Not built.
 
 - [ ] Persistence once `@axonpack/lite-storage` exists
 - [ ] Upload-speed modeling
-- [ ] Bandwidth throttling for in-page WebView XHR

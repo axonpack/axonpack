@@ -237,6 +237,104 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
       var originalOpen = OriginalXHR.prototype.open;
       var originalSend = OriginalXHR.prototype.send;
       var originalSetRequestHeader = OriginalXHR.prototype.setRequestHeader;
+      var originalAddEventListener = OriginalXHR.prototype.addEventListener;
+      var originalRemoveEventListener = OriginalXHR.prototype.removeEventListener;
+
+      // Only the terminal events get held back. 'progress' is deliberately left alone: delaying
+      // each tick by the full remaining time would bunch them all at the end anyway.
+      var DEFERRED_EVENTS = ['readystatechange', 'load', 'loadend', 'error', 'timeout'];
+      var wrappedListeners = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+
+      function estimateSize(xhr) {
+        try {
+          var length = Number(xhr.getResponseHeader('content-length'));
+          if (length > 0 && !isNaN(length)) return length;
+        } catch (e) {}
+        try {
+          return typeof xhr.responseText === 'string' ? xhr.responseText.length : 0;
+        } catch (e) {
+          return 0;
+        }
+      }
+
+      // Resolved once per request and cached, so every listener on the same dispatch computes the
+      // same target and fires in registration order rather than drifting apart.
+      function deliveryDelay(xhr) {
+        var state = xhr.__bruinThrottle;
+        if (!state || xhr.readyState !== OriginalXHR.DONE) return 0;
+        if (state.deliverAt === undefined) {
+          var throttle = state.profile;
+          var transfer =
+            throttle.downloadKbps > 0 ? (estimateSize(xhr) * 8) / throttle.downloadKbps : 0;
+          state.deliverAt = state.startedAt + Math.round(throttle.latencyMs + transfer);
+        }
+        return Math.max(0, state.deliverAt - Date.now());
+      }
+
+      // A browser engine has no setReadyState hook to defer the whole DONE transition the way
+      // React Native's own XHR does, so the page's listeners have to be wrapped individually.
+      function deferListener(listener) {
+        return function (event) {
+          var xhr = event.currentTarget || event.target || this;
+          var invoke = function () {
+            if (typeof listener === 'function') listener.call(xhr, event);
+            else if (listener && typeof listener.handleEvent === 'function') {
+              listener.handleEvent.call(listener, event);
+            }
+          };
+          var wait = deliveryDelay(xhr);
+          if (wait > 0) setTimeout(invoke, wait);
+          else invoke();
+        };
+      }
+
+      OriginalXHR.prototype.addEventListener = function (type, listener, options) {
+        if (!listener || DEFERRED_EVENTS.indexOf(type) === -1) {
+          return originalAddEventListener.call(this, type, listener, options);
+        }
+        var wrapped = wrappedListeners ? wrappedListeners.get(listener) : null;
+        if (!wrapped) {
+          wrapped = deferListener(listener);
+          if (wrappedListeners) wrappedListeners.set(listener, wrapped);
+        }
+        return originalAddEventListener.call(this, type, wrapped, options);
+      };
+
+      OriginalXHR.prototype.removeEventListener = function (type, listener, options) {
+        var wrapped = listener && wrappedListeners ? wrappedListeners.get(listener) : null;
+        return originalRemoveEventListener.call(this, type, wrapped || listener, options);
+      };
+
+      // Unlike React Native's XHR, a browser's on* setters register internally rather than going
+      // through the public addEventListener, so patching that alone would miss xhr.onload = fn.
+      DEFERRED_EVENTS.forEach(function (type) {
+        var name = 'on' + type;
+        var owner = OriginalXHR.prototype;
+        var descriptor = null;
+        while (owner && !descriptor) {
+          descriptor = Object.getOwnPropertyDescriptor(owner, name);
+          if (!descriptor) owner = Object.getPrototypeOf(owner);
+        }
+        if (!descriptor || !descriptor.set || !descriptor.configurable) return;
+        var originalSetter = descriptor.set;
+        Object.defineProperty(owner, name, {
+          configurable: true,
+          enumerable: descriptor.enumerable,
+          // Hands back what the page assigned, not our wrapper, so identity checks still hold.
+          get: function () {
+            return this.__bruinHandlers && name in this.__bruinHandlers
+              ? this.__bruinHandlers[name]
+              : descriptor.get
+                ? descriptor.get.call(this)
+                : null;
+          },
+          set: function (listener) {
+            if (!this.__bruinHandlers) this.__bruinHandlers = {};
+            this.__bruinHandlers[name] = listener;
+            originalSetter.call(this, typeof listener === 'function' ? deferListener(listener) : listener);
+          }
+        });
+      });
 
       OriginalXHR.prototype.open = function (method, url) {
         this.__bruinId = nextId();
@@ -255,8 +353,13 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
         var xhr = this;
         var id = xhr.__bruinId || nextId();
         var startedAt = Date.now();
+        var activeConditions = conditions();
 
-        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, startedAt: startedAt, conditions: conditions() });
+        if (activeConditions.throttle) {
+          xhr.__bruinThrottle = { profile: activeConditions.throttle, startedAt: startedAt };
+        }
+
+        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, startedAt: startedAt, conditions: activeConditions });
 
         xhr.addEventListener('readystatechange', function () {
           if (xhr.readyState !== OriginalXHR.DONE) return;
@@ -287,9 +390,6 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
           });
         });
 
-        var sendArgs = arguments;
-        var activeConditions = conditions();
-
         if (activeConditions.offline) {
           setTimeout(function () {
             post({ id: id, status: 'error', error: 'Network request failed (offline — simulated by devtools)', duration: Date.now() - startedAt });
@@ -301,14 +401,8 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
           return;
         }
 
-        // A real browser engine has no setReadyState hook to defer the response the way RN's XHR
-        // does, so only the latency half of the profile is applied here — as a delayed send.
-        var latency = activeConditions.throttle ? activeConditions.throttle.latencyMs : 0;
-        if (latency > 0) {
-          setTimeout(function () { originalSend.apply(xhr, sendArgs); }, latency);
-          return;
-        }
-
+        // Sent immediately — latency and bandwidth are both applied when the response is handed
+        // to the page's listeners, so delaying the send here too would double-count the latency.
         return originalSend.apply(this, arguments);
       };
     }
@@ -316,19 +410,10 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
   true;`;
 }
 
-/**
- * Pass to a WebView's `onMessage` prop (or call from within your own handler — it returns
- * `true` when it consumed a devtools message, `false` for anything else, so it composes with
- * app-specific onMessage logic instead of requiring exclusive ownership of the prop).
- *
- * When `allowedSources` is provided, messages from any other source name are silently dropped.
- */
 export function handleWebViewNetworkMessage(
   event: WebViewMessageEventLike,
   allowedSources?: readonly string[]
 ): boolean {
-  // Belt-and-suspenders: the injected script itself already becomes a no-op when disabled, but
-  // this guards against a page that already ran the real script before devtools was disabled.
   if (!networkLogStore.isEnabled()) return false;
 
   let parsed: unknown;
@@ -353,8 +438,6 @@ export function handleWebViewNetworkMessage(
   }
 
   if (message.type === 'navigation') {
-    // The fresh page carries whatever conditions snapshot was baked into the injected script, so
-    // re-push the live ones — otherwise navigating silently reverts the page to the old settings.
     pushConditionsToWebView(message.source);
     networkLogStore.notifyNavigation();
     return true;
