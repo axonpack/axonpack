@@ -17,7 +17,7 @@
     },
     "packages/@axonpack/expo-devtools": {
       "name": "@axonpack/expo-devtools",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@changesets/changelog-git": "^0.2.1",
         "@expo/vector-icons": "^15.1.1",
