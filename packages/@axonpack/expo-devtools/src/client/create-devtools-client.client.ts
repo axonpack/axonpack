@@ -1,3 +1,4 @@
+import { patchConsole } from '../services/console/patch-console.service';
 import { patchFetch } from '../services/network/patch-fetch.service';
 import { patchXHR } from '../services/network/patch-xhr.service';
 import {
@@ -9,6 +10,7 @@ import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../services/network/webview-network-logger.service';
+import { consoleLogStore } from '../stores/console/console-log.store';
 import { networkConditionsStore } from '../stores/network/network-conditions.store';
 import { networkLogStore } from '../stores/network/network-log.store';
 
@@ -24,9 +26,14 @@ export type DevtoolsNetworkConfig<TWebviewSources extends readonly string[]> = {
   webviewSources?: TWebviewSources;
 };
 
+export type DevtoolsConsoleConfig = {
+  capture?: boolean;
+};
+
 export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   enabled?: boolean;
   network?: DevtoolsNetworkConfig<TWebviewSources>;
+  console?: DevtoolsConsoleConfig;
 };
 
 export function createDevtoolsClient<
@@ -38,6 +45,7 @@ export function createDevtoolsClient<
     includeXmlHttpRequest = true,
     webviewSources,
   } = config?.network ?? {};
+  const { capture: captureConsole = true } = config?.console ?? {};
 
   return {
     init() {
@@ -45,6 +53,10 @@ export function createDevtoolsClient<
       networkLogStore.setEnabled(true);
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
+      if (captureConsole) {
+        consoleLogStore.setEnabled(true);
+        patchConsole();
+      }
     },
 
     getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
@@ -63,5 +75,6 @@ export function createDevtoolsClient<
     getWebViewUserAgent,
     networkLogStore,
     networkConditionsStore,
+    consoleLogStore,
   };
 }

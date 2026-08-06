@@ -4,7 +4,8 @@ Scope: this package specifically. For the wider `@axonpack/*` family (lite-stora
 
 ## Implemented today
 
-- `createDevtoolsClient({ network })` — factory, not a Provider/Context. `.init()` installs the patches.
+- `createDevtoolsClient({ network, console })` — factory, not a Provider/Context. `.init()` installs the patches.
+- `DevtoolsOverlay` — the on-device entry point: a draggable FAB that opens a full-screen modal with a compact **Network / Console** tab bar under its header. Both tabs stay mounted while the modal is open (the inactive one is `display: 'none'`) so switching doesn't wipe the filters and scroll position on the other. The Console tab carries a red badge with its error count while you're on another tab.
 - **Prod-safe by default**: `networkLogStore` starts disabled and stays that way until `.init()` actually runs, so an app that skips calling `init()` in production captures nothing — no patched `fetch`/XHR, no store writes, and the WebView injected script itself becomes a no-op (`getWebViewInjectedJavaScriptBeforeContentLoaded` checks `isEnabled()` at generation time, so a disabled WebView page's `fetch`/XHR are never even patched, not patched-then-dropped). `createDevtoolsClient({ enabled: false })` gives the same effect explicitly for call sites that always invoke `.init()` unconditionally.
 - All request/response text (URLs, headers, bodies, method/status/timing pills) is rendered with `selectable` so it can be copied on-device. Each request/response header row also has a one-tap copy icon (`CopyIconButton`, `expo-clipboard`) next to its value, for copying without a long-press text selection.
 - Network capture from three independent sources, all feeding one shared store:
@@ -38,12 +39,24 @@ Scope: this package specifically. For the wider `@axonpack/*` family (lite-stora
 1. **Initiator (call site)** — capture `new Error().stack` at request time in each patch to show what code triggered a request.
 2. **Cookies tab** — for WebView-sourced requests specifically, since real cookies exist there (not for native fetch/XHR, per the hard limits above).
 3. **WebView-only real timing breakdown** — a WebView page has the actual `PerformanceResourceTiming` API, so a DNS/connect/TTFB/download phase breakdown is genuinely possible there specifically, unlike native fetch/XHR.
+4. **Console REPL (run an expression on-device)** — possible, and in a dev build it needs no wiring from the consumer at all. Hermes deliberately excludes _local mode_ `eval()`, but global `eval` and `new Function(...)` work, so a typed expression runs against globals. Reaching the app's own modules is separately solvable: Metro's runtime sets `global.__r` unconditionally, and under `__DEV__` it also exposes `__r.getModules()` — a `Map` of module id → `{ verboseName, isInitialized, publicModule.exports }` — plus lookup by source path, `__r('src/stores/auth')`. That's enough to browse and grab any loaded module's exports from the REPL.
+
+   What that registry can't do: it's gone in a release build (opaque numeric ids, no `verboseName`, no `getModules`), it's undocumented Metro internals that can change between versions, `__r`-ing an _uninitialized_ module executes it (side effects), and it surfaces every node_modules internal alongside app code. So an optional `console: { context: { store, queryClient } }` compiled as `new Function(...Object.keys(context), 'return (' + source + ')')` is sugar — short stable names that also survive a release build — not a prerequisite. Either way it's arbitrary code execution shipped inside the app binary, so it stays opt-in.
 
 ## Beyond network: other tabs from the original plan
 
-From `docs/plan.md`'s description of `@axonpack/expo-devtools` ("on-device, prod-safe debug tool... network / storage / database / console inspector tabs... console ring-buffer capture... logger... draggable DEV FAB") — none of these are built yet:
+From `docs/plan.md`'s description of `@axonpack/expo-devtools` ("on-device, prod-safe debug tool... network / storage / database / console inspector tabs... console ring-buffer capture... logger... draggable DEV FAB"), the console tab and the FAB now exist; the storage/database tabs don't.
 
-- **Console tab** — ring-buffer capture of `console.log`/`warn`/`error`, same store/subscribe pattern as network logging.
+**Console tab — built.** `patchConsole` wraps `log`/`info`/`warn`/`error`/`debug` and forwards to whatever was already there, so React Native's own LogBox (which patches `console.error`/`warn` itself) keeps working. Entries land in `consoleLogStore`, the same disabled-until-`init()` ring buffer pattern as the network log, capped at 500 rather than 200 — console output arrives an order of magnitude faster than requests do. Consecutive identical messages collapse into one row with a count, the way a browser console does, so one log inside a render doesn't evict the buffer. Arguments are serialized by `formatConsoleArgs` (circular-safe, depth-capped at 4); an `Error` argument's stack is kept and shown when the row is expanded. The view has record/clear/sort/filter matching the Network toolbar, level chips with counts, and warning/error counts in the toolbar.
+
+Not built for console yet:
+
+- **REPL / expression evaluation** — see "Feasible, not yet built" above.
+- **`%s`/`%d`/`%o` format specifiers** — a `console.log('n: %d', 5)` renders as `n: %d 5` rather than substituting.
+- **Call-site (which file logged this)** — same `new Error().stack` approach as the network initiator idea, and the same reason it's not on by default: capturing a stack on every log is expensive.
+- **Console entries in Export** — Export is still network-only.
+
+Still missing entirely:
+
 - **Storage tab** — inspect AsyncStorage / SQLite / MMKV, whichever backend `@axonpack/lite-storage` ends up using.
 - **Database tab** — likely overlaps heavily with the storage tab depending on what "database" ends up meaning once `@axonpack/lite-storage` exists.
-- **Draggable dev FAB** — the actual on-device entry point tying all inspector tabs together; right now consumers wire `NetworkView` into their own UI (as the example app's "Network" tab does), there's no floating launcher.
