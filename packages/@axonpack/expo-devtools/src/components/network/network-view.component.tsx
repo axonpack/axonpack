@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   ScrollView,
@@ -33,9 +33,8 @@ import type { ResourceType } from '../../utils/network/resource-type.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
-import { RecordToggleIcon } from '../ui/record-toggle-icon.ui';
+import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 import { SettingRow } from '../ui/setting-row.ui';
-import { Tooltip } from '../ui/tooltip.ui';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
 
@@ -64,11 +63,6 @@ export function NetworkView() {
   const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
-  const [recordToggleTooltipAnchor, setRecordToggleTooltipAnchor] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const suppressNextRecordTogglePress = useRef(false);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -159,35 +153,7 @@ export function NetworkView() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => {
-              if (suppressNextRecordTogglePress.current) {
-                suppressNextRecordTogglePress.current = false;
-                return;
-              }
-              networkLogStore.setPaused(!paused);
-            }}
-            onLongPress={(event) => {
-              suppressNextRecordTogglePress.current = true;
-              setRecordToggleTooltipAnchor({
-                x: event.nativeEvent.pageX,
-                y: event.nativeEvent.pageY,
-              });
-            }}
-            onPressOut={() => setRecordToggleTooltipAnchor(null)}
-            hitSlop={8}
-            style={[styles.recordToggle, paused && styles.recordToggleActive]}>
-            <RecordToggleIcon
-              size={18}
-              color={paused ? COLORS.textSecondary : COLORS.error}
-              shape={paused ? 'circle' : 'square'}
-            />
-          </TouchableOpacity>
-          <Tooltip
-            anchor={recordToggleTooltipAnchor}
-            label={paused ? 'Start recording' : 'Stop recording'}
-            onClose={() => setRecordToggleTooltipAnchor(null)}
-          />
+          <RecordToggleButton paused={paused} onToggle={() => networkLogStore.setPaused(!paused)} />
           <IconButton
             name="block"
             color={COLORS.textSecondary}
@@ -425,7 +391,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 8,
     backgroundColor: '#0000000D',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
@@ -440,13 +406,6 @@ const styles = StyleSheet.create({
     height: 18,
     backgroundColor: COLORS.border,
     marginHorizontal: 6,
-  },
-  recordToggle: {
-    padding: 4,
-    borderRadius: 8,
-  },
-  recordToggleActive: {
-    backgroundColor: COLORS.sectionTint,
   },
   panel: {
     padding: 12,

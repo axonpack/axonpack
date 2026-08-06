@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { JsonTree } from './json-tree';
 import { rowStyles } from './shared.styles';
 import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
-import type { JsonValue } from '../../../utils/network/json-tree.util';
+import type { JsonValue } from '../../../utils/json-tree.util';
+import { JsonTree } from '../../json-tree';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
 import { ShareIconButton } from '../../ui/share-icon-button.ui';

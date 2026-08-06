@@ -2,10 +2,10 @@ import { Image, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-n
 import WebView from 'react-native-webview';
 
 import { CodeHighlight } from './detail-panel/code-highlight';
-import { JsonTree } from './detail-panel/json-tree';
+import { JsonTree } from '../json-tree';
 import { COLORS } from '../../constants/colors.const';
 import { detectLanguage } from '../../utils/network/code-highlight.util';
-import type { JsonValue } from '../../utils/network/json-tree.util';
+import type { JsonValue } from '../../utils/json-tree.util';
 
 // Attempted regardless of the content-type header, since it's common for APIs to omit or
 // mislabel it — a body that happens to parse as JSON is shown as JSON either way.
