@@ -13,11 +13,8 @@ export function isReplEnabled(): boolean {
   return replEnabled;
 }
 
-export function getReplContextNames(): string[] {
-  return Object.keys(buildContext());
-}
-
-function buildContext(): Record<string, unknown> {
+/** The injected names an expression can use — the built-in helpers plus whatever the app passed. */
+export function getReplContext(): Record<string, unknown> {
   return { $m: findModule, $modules: listModules, ...userContext };
 }
 
@@ -29,7 +26,7 @@ function buildContext(): Record<string, unknown> {
  * Throws whatever the expression throws; the caller renders it as the result.
  */
 export function evaluateExpression(source: string): unknown {
-  const context = buildContext();
+  const context = getReplContext();
   const names = Object.keys(context);
   const values = names.map((name) => context[name]);
 

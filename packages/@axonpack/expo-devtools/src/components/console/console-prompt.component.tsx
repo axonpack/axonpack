@@ -1,66 +1,105 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { getCompletions } from '../../services/console/complete-expression.service';
 import { runReplCommand } from '../../services/console/run-repl-command.service';
+import { Chip } from '../ui/chip.ui';
 
-export function ConsolePrompt() {
+export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
   const [source, setSource] = useState('');
 
+  const completion = useMemo(() => getCompletions(source), [source]);
+  const canRun = source.trim().length > 0;
+
   function submit() {
-    const trimmed = source.trim();
-    if (trimmed.length === 0) return;
-    runReplCommand(trimmed);
+    if (!canRun) return;
+    // Ahead of the run so the rows it adds land while the list is already following the tail.
+    onSubmit?.();
+    runReplCommand(source.trim());
     setSource('');
   }
 
+  function applyCompletion(option: string) {
+    if (!completion) return;
+    setSource(source.slice(0, completion.start) + option);
+  }
+
   return (
-    <View style={styles.row}>
-      <MaterialIcons name="chevron-right" size={16} color={COLORS.accent} />
-      <TextInput
-        style={styles.input}
-        value={source}
-        onChangeText={setSource}
-        onSubmitEditing={submit}
-        placeholder="Run an expression"
-        placeholderTextColor={COLORS.textSecondary}
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoComplete="off"
-        spellCheck={false}
-        returnKeyType="send"
-        // Keeps the keyboard up so a second command doesn't need another tap into the field.
-        blurOnSubmit={false}
-      />
-      {source.length > 0 && (
-        <TouchableOpacity onPress={() => setSource('')} hitSlop={8}>
-          <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
-        </TouchableOpacity>
+    <View style={styles.container}>
+      {completion && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          // Without "always", the first tap only dismisses the keyboard and the chip never fires.
+          keyboardShouldPersistTaps="always"
+          contentContainerStyle={styles.suggestions}>
+          {completion.options.map((option) => (
+            <Chip
+              key={option}
+              label={option}
+              active={false}
+              onPress={() => applyCompletion(option)}
+            />
+          ))}
+        </ScrollView>
       )}
-      <TouchableOpacity onPress={submit} hitSlop={8} disabled={source.trim().length === 0}>
-        <MaterialIcons
-          name="play-arrow"
-          size={18}
-          color={source.trim().length > 0 ? COLORS.accent : COLORS.border}
+
+      <View style={styles.row}>
+        <MaterialIcons name="chevron-right" size={16} color={COLORS.accent} />
+        <TextInput
+          style={styles.input}
+          value={source}
+          onChangeText={setSource}
+          onSubmitEditing={submit}
+          placeholder="Run an expression"
+          placeholderTextColor={COLORS.textSecondary}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="off"
+          spellCheck={false}
+          returnKeyType="send"
+          // Keeps the keyboard up so a second command doesn't need another tap into the field.
+          blurOnSubmit={false}
         />
-      </TouchableOpacity>
+        {source.length > 0 && (
+          <TouchableOpacity onPress={() => setSource('')} hitSlop={8}>
+            <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity onPress={submit} hitSlop={8} disabled={!canRun}>
+          <MaterialIcons
+            name="play-arrow"
+            size={18}
+            color={canRun ? COLORS.accent : COLORS.border}
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Docked to the bottom of the tab rather than floating inside it, so it gets a single top
+  // separator instead of the bordered, rounded box `INPUT_STYLES.md` describes for inline inputs.
+  container: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.background,
+  },
+  suggestions: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginHorizontal: 12,
-    marginVertical: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   input: {
     flex: 1,

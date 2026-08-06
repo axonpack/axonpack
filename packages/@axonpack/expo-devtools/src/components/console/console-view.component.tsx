@@ -1,6 +1,17 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useState, useSyncExternalStore } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 
 import { ConsolePrompt } from './console-prompt.component';
 import { ConsoleRow } from './console-row.component';
@@ -12,12 +23,16 @@ import {
 } from '../../constants/console/console-levels.const';
 import { isReplEnabled } from '../../services/console/evaluate-expression.service';
 import { consoleLogStore } from '../../stores/console/console-log.store';
-import type { ConsoleLogLevel } from '../../stores/console/console-log.store';
+import type { ConsoleLogEntry, ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
 import { RecordToggleButton } from '../ui/record-toggle-button.ui';
+
+// How close to the end still counts as "following the tail". A few pixels of slack absorbs the
+// rounding you get from variable-height rows without needing an exact match.
+const NEAR_BOTTOM_SLACK = 40;
 
 export function ConsoleView() {
   const entries = useSyncExternalStore(consoleLogStore.subscribe, consoleLogStore.getSnapshot);
@@ -25,8 +40,13 @@ export function ConsoleView() {
 
   const [searchText, setSearchText] = useState('');
   const [activeLevel, setActiveLevel] = useState<ConsoleLogLevel | null>(null);
-  const [reversed, setReversed] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  const listRef = useRef<FlatList<ConsoleLogEntry>>(null);
+  // A ref, not state: the auto-scroll effect has to read the latest value without re-running every
+  // time the user's scroll position changes.
+  const followingTail = useRef(true);
 
   const countsByLevel = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -42,12 +62,36 @@ export function ConsoleView() {
       if (activeLevel !== null && entry.level !== activeLevel) return false;
       return query.length === 0 || entry.text.toLowerCase().includes(query);
     });
-    // Newest-first is the stored order, so "oldest first" is the one that needs reversing.
-    return reversed ? [...filtered].reverse() : filtered;
-  }, [entries, activeLevel, searchText, reversed]);
+    // The store keeps newest-first; the list reads oldest-to-newest like a terminal, so the prompt
+    // at the bottom sits right below the most recent output.
+    return filtered.reverse();
+  }, [entries, activeLevel, searchText]);
+
+  useEffect(() => {
+    if (followingTail.current) listRef.current?.scrollToEnd({ animated: true });
+  }, [visibleEntries]);
+
+  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    const atBottom = distanceFromEnd <= NEAR_BOTTOM_SLACK;
+    followingTail.current = atBottom;
+    setShowScrollToBottom(!atBottom);
+  }
+
+  function scrollToBottom() {
+    followingTail.current = true;
+    setShowScrollToBottom(false);
+    listRef.current?.scrollToEnd({ animated: true });
+  }
 
   return (
-    <View style={styles.container}>
+    // The whole tab lifts, not just the prompt, so the tail of the log stays visible while typing.
+    // Android gets an explicit behavior rather than relying on `adjustResize`: this renders inside
+    // a `Modal`, whose window doesn't reliably inherit the activity's soft-input mode.
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
         <View style={styles.headerActions}>
           <RecordToggleButton paused={paused} onToggle={() => consoleLogStore.setPaused(!paused)} />
@@ -60,12 +104,6 @@ export function ConsoleView() {
 
           <View style={styles.headerDivider} />
 
-          <IconButton
-            name={reversed ? 'arrow-upward' : 'arrow-downward'}
-            color={COLORS.textSecondary}
-            onPress={() => setReversed((current) => !current)}
-            label={reversed ? 'Show oldest first' : 'Show newest first'}
-          />
           <IconButton
             name="filter-list"
             color={filtersOpen ? COLORS.accent : COLORS.textSecondary}
@@ -135,27 +173,38 @@ export function ConsoleView() {
         </View>
       )}
 
-      {/* Above the list, not pinned below it: the list is newest-first, so a command's result
-          appears directly under the prompt — and a bottom-anchored input would sit behind the
-          on-screen keyboard. */}
-      {isReplEnabled() && <ConsolePrompt />}
+      <View style={styles.listArea}>
+        <FlatList
+          ref={listRef}
+          data={visibleEntries}
+          keyExtractor={(entry) => entry.id}
+          renderItem={({ item }) => <ConsoleRow entry={item} />}
+          contentContainerStyle={styles.listContent}
+          contentInsetAdjustmentBehavior="never"
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          ListEmptyComponent={
+            <Text style={styles.empty}>
+              {entries.length === 0
+                ? 'No console output captured yet'
+                : 'No messages match your filter'}
+            </Text>
+          }
+        />
 
-      <FlatList
-        data={visibleEntries}
-        keyExtractor={(entry) => entry.id}
-        renderItem={({ item }) => <ConsoleRow entry={item} />}
-        contentContainerStyle={styles.listContent}
-        contentInsetAdjustmentBehavior="never"
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {entries.length === 0
-              ? 'No console output captured yet'
-              : 'No messages match your filter'}
-          </Text>
-        }
-        ListFooterComponent=<InsetPadding edge="bottom" />
-      />
-    </View>
+        {showScrollToBottom && (
+          <TouchableOpacity style={styles.scrollToBottom} onPress={scrollToBottom} hitSlop={8}>
+            <MaterialIcons name="arrow-downward" size={18} color="#ffffff" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Submitting jumps to the tail even if you'd scrolled up — you asked for that output. */}
+      {isReplEnabled() && <ConsolePrompt onSubmit={scrollToBottom} />}
+      <InsetPadding edge="bottom" />
+    </KeyboardAvoidingView>
   );
 }
 
@@ -168,7 +217,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
+    paddingHorizontal: 8,
     backgroundColor: '#0000000D',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
@@ -233,10 +282,28 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  listArea: {
+    flex: 1,
+  },
   listContent: {
     paddingVertical: 6,
-    paddingBottom: 24,
     flexGrow: 1,
+  },
+  scrollToBottom: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.accent,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   empty: {
     textAlign: 'center',
