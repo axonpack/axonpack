@@ -1,3 +1,8 @@
+import {
+  buildConditionsScript,
+  CONDITIONS_GLOBAL,
+  pushConditionsToWebView,
+} from './webview-conditions.service';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 
@@ -15,17 +20,7 @@ type WebViewMessageEventLike = {
   };
 };
 
-/**
- * A page rendered inside a <WebView> runs in its own JS engine (WKWebView/Android WebView),
- * entirely separate from the React Native JS context — patchFetch/patchXHR can't see it.
- * This script is meant to be passed to a WebView's `injectedJavaScript` prop: it patches
- * fetch/XMLHttpRequest inside the page itself, then relays each request back to React Native
- * via `window.ReactNativeWebView.postMessage`, tagged with `webviewName`.
- */
-export function getWebViewInjectedScript(webviewName: string): string {
-  // Checked at generation time, not injection time — if devtools was never enabled (no `init()`
-  // call), don't even patch fetch/XHR inside the page, rather than patching them and just
-  // dropping the messages. Avoids any behavior change to the host page when devtools is off.
+export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: string): string {
   if (!networkLogStore.isEnabled()) {
     return 'true;';
   }
@@ -36,16 +31,87 @@ export function getWebViewInjectedScript(webviewName: string): string {
   return `(function () {
     var WEBVIEW_NAME = ${nameLiteral};
 
+    // Re-seeded on every navigation, and pushed over injectJavaScript whenever the store changes
+    // — see webview-conditions.service.ts.
+    ${buildConditionsScript()}
+
     if (window.__bruinDevtoolsWebViewPatched) return;
     window.__bruinDevtoolsWebViewPatched = true;
 
-    try {
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        ${markerLiteral}: true,
-        type: 'navigation',
-        source: WEBVIEW_NAME
-      }));
-    } catch (e) {}
+    function conditions() {
+      return window.${CONDITIONS_GLOBAL} || { offline: false, throttle: null, userAgent: null };
+    }
+
+    function sleep(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms > 0 ? ms : 0); });
+    }
+
+    // Bytes to bits, then bits over kbps lands directly in milliseconds.
+    function throttleRemainingMs(size, startedAt) {
+      var throttle = conditions().throttle;
+      if (!throttle) return 0;
+      var transfer = size && throttle.downloadKbps > 0 ? (size * 8) / throttle.downloadKbps : 0;
+      return Math.max(0, Math.round(throttle.latencyMs + transfer) - (Date.now() - startedAt));
+    }
+
+    // Only affects in-page JS that sniffs navigator.userAgent — the real HTTP header comes from
+    // react-native-webview's own userAgent prop, since User-Agent is a forbidden fetch header.
+    (function () {
+      var override = conditions().userAgent;
+      if (!override) return;
+      try {
+        Object.defineProperty(window.navigator, 'userAgent', {
+          configurable: true,
+          get: function () { return override; }
+        });
+      } catch (e) {}
+    })();
+
+    // Injected before content loads, the RN bridge may not exist yet (notably on Android), so
+    // messages are queued rather than dropped. Without this, everything captured during page
+    // startup — the whole reason for injecting early — would be lost.
+    var outbox = [];
+    var flushTimer = null;
+
+    function bridgeReady() {
+      return !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
+    }
+
+    function flushOutbox() {
+      while (outbox.length) {
+        try { window.ReactNativeWebView.postMessage(outbox.shift()); } catch (e) {}
+      }
+    }
+
+    function send(message) {
+      var json;
+      try { json = JSON.stringify(message); } catch (e) { return; }
+      if (bridgeReady()) {
+        try { window.ReactNativeWebView.postMessage(json); } catch (e) {}
+        return;
+      }
+      outbox.push(json);
+      if (flushTimer) return;
+      flushTimer = setInterval(function () {
+        if (!bridgeReady()) return;
+        clearInterval(flushTimer);
+        flushTimer = null;
+        flushOutbox();
+      }, 25);
+    }
+
+    function envelope(type, payload) {
+      var message = {};
+      message[${markerLiteral}] = true;
+      message.type = type;
+      message.source = WEBVIEW_NAME;
+      if (payload) message.payload = payload;
+      return message;
+    }
+
+    // Doubles as the cue for React Native to push fresh conditions back — the snapshot baked into
+    // this script is whatever the consumer last rendered with, which may be stale by now.
+    send(envelope('navigation'));
 
     var counter = 0;
 
@@ -104,14 +170,7 @@ export function getWebViewInjectedScript(webviewName: string): string {
     }
 
     function post(payload) {
-      try {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          ${markerLiteral}: true,
-          type: 'network',
-          source: WEBVIEW_NAME,
-          payload: payload
-        }));
-      } catch (e) {}
+      send(envelope('network', payload));
     }
 
     var originalFetch = window.fetch;
@@ -124,20 +183,52 @@ export function getWebViewInjectedScript(webviewName: string): string {
         var url = resolveUrl(rawUrl);
         var requestHeaders = normalizeHeaders((init && init.headers) || (input && input.headers));
 
-        post({ id: id, method: String(method).toUpperCase(), url: url, status: 'pending', requestBody: previewBody(init && init.body), requestHeaders: requestHeaders, startedAt: startedAt });
+        // Reported from the page rather than stamped natively: an in-flight request keeps the
+        // conditions the page had, even if a new set is pushed over before it finishes.
+        post({ id: id, method: String(method).toUpperCase(), url: url, status: 'pending', requestBody: previewBody(init && init.body), requestHeaders: requestHeaders, startedAt: startedAt, conditions: conditions() });
+
+        if (conditions().offline) {
+          post({ id: id, status: 'error', error: 'Network request failed (offline — simulated by devtools)', duration: Date.now() - startedAt });
+          return Promise.reject(new TypeError('Network request failed'));
+        }
 
         return originalFetch(input, init).then(function (response) {
           var responseHeaders = headersFromResponse(response.headers);
-          response.clone().text().then(function (text) {
-            post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: extractSize(responseHeaders, text), duration: Date.now() - startedAt });
-          }).catch(function () {
-            post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), duration: Date.now() - startedAt });
-          });
-          return response;
+          // Body has to be read before the throttle wait so the delay can account for its size,
+          // and the response is only handed back once that wait is over.
+          return response.clone().text().then(function (text) { return text; }, function () { return undefined; })
+            .then(function (text) {
+              var size = extractSize(responseHeaders, text);
+              return sleep(throttleRemainingMs(size, startedAt)).then(function () {
+                post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: size, duration: Date.now() - startedAt });
+                return response;
+              });
+            });
         }).catch(function (error) {
           post({ id: id, status: 'error', error: error && error.message ? error.message : String(error), duration: Date.now() - startedAt });
           throw error;
         });
+      };
+    }
+
+    // Analytics libraries lean on sendBeacon, so it'd otherwise be a steady stream of traffic
+    // that ignores Offline entirely. Returning false is the API's own "couldn't queue it" signal.
+    if (navigator.sendBeacon) {
+      var originalSendBeacon = navigator.sendBeacon.bind(navigator);
+      navigator.sendBeacon = function (url, data) {
+        var id = nextId();
+        var startedAt = Date.now();
+        var resolved = resolveUrl(url);
+        post({ id: id, method: 'POST', url: resolved, status: 'pending', requestBody: previewBody(data), startedAt: startedAt, conditions: conditions() });
+
+        if (conditions().offline) {
+          post({ id: id, status: 'error', error: 'Network request failed (offline — simulated by devtools)', duration: 0 });
+          return false;
+        }
+
+        var queued = originalSendBeacon(url, data);
+        post({ id: id, status: queued ? 'success' : 'error', error: queued ? undefined : 'sendBeacon refused to queue', duration: Date.now() - startedAt });
+        return queued;
       };
     }
 
@@ -165,7 +256,7 @@ export function getWebViewInjectedScript(webviewName: string): string {
         var id = xhr.__bruinId || nextId();
         var startedAt = Date.now();
 
-        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, startedAt: startedAt });
+        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, startedAt: startedAt, conditions: conditions() });
 
         xhr.addEventListener('readystatechange', function () {
           if (xhr.readyState !== OriginalXHR.DONE) return;
@@ -195,6 +286,28 @@ export function getWebViewInjectedScript(webviewName: string): string {
             duration: Date.now() - startedAt
           });
         });
+
+        var sendArgs = arguments;
+        var activeConditions = conditions();
+
+        if (activeConditions.offline) {
+          setTimeout(function () {
+            post({ id: id, status: 'error', error: 'Network request failed (offline — simulated by devtools)', duration: Date.now() - startedAt });
+            try {
+              xhr.dispatchEvent(new Event('error'));
+              xhr.dispatchEvent(new Event('loadend'));
+            } catch (e) {}
+          }, 0);
+          return;
+        }
+
+        // A real browser engine has no setReadyState hook to defer the response the way RN's XHR
+        // does, so only the latency half of the profile is applied here — as a delayed send.
+        var latency = activeConditions.throttle ? activeConditions.throttle.latencyMs : 0;
+        if (latency > 0) {
+          setTimeout(function () { originalSend.apply(xhr, sendArgs); }, latency);
+          return;
+        }
 
         return originalSend.apply(this, arguments);
       };
@@ -240,6 +353,9 @@ export function handleWebViewNetworkMessage(
   }
 
   if (message.type === 'navigation') {
+    // The fresh page carries whatever conditions snapshot was baked into the injected script, so
+    // re-push the live ones — otherwise navigating silently reverts the page to the old settings.
+    pushConditionsToWebView(message.source);
     networkLogStore.notifyNavigation();
     return true;
   }

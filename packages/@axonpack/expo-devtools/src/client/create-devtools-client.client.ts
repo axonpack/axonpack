@@ -1,9 +1,15 @@
 import { patchFetch } from '../services/network/patch-fetch.service';
 import { patchXHR } from '../services/network/patch-xhr.service';
 import {
-  getWebViewInjectedScript,
+  getWebViewConditionsRef,
+  getWebViewUserAgent,
+  shouldAllowWebViewRequest,
+} from '../services/network/webview-conditions.service';
+import {
+  getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../services/network/webview-network-logger.service';
+import { networkConditionsStore } from '../stores/network/network-conditions.store';
 import { networkLogStore } from '../stores/network/network-log.store';
 
 type WebViewMessageEventLike = {
@@ -19,14 +25,6 @@ export type DevtoolsNetworkConfig<TWebviewSources extends readonly string[]> = {
 };
 
 export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
-  /**
-   * Master switch. When `false` (e.g. a production build), `init()` becomes a no-op: no
-   * fetch/XHR patching, no WebView instrumentation, and `networkLogStore` never records or
-   * emits. Defaults to `true` — the flag exists for callers who always call `init()`
-   * unconditionally and want a single option to disable capture instead of branching at the
-   * call site. Not calling `init()` at all has the same effect, since the store defaults to
-   * disabled.
-   */
   enabled?: boolean;
   network?: DevtoolsNetworkConfig<TWebviewSources>;
 };
@@ -48,12 +46,22 @@ export function createDevtoolsClient<
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
     },
-    getWebViewInjectedScript(source: TWebviewSources[number]) {
-      return getWebViewInjectedScript(source);
+
+    getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
+      return getWebViewInjectedJavaScriptBeforeContentLoaded(source);
     },
+
+    shouldAllowWebViewRequest,
     handleWebViewMessage(event: WebViewMessageEventLike) {
       return handleWebViewNetworkMessage(event, webviewSources);
     },
+
+    getWebViewRef(source: TWebviewSources[number]) {
+      return getWebViewConditionsRef(source);
+    },
+
+    getWebViewUserAgent,
     networkLogStore,
+    networkConditionsStore,
   };
 }
