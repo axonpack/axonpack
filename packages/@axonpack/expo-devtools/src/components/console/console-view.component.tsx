@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -44,9 +44,6 @@ export function ConsoleView() {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   const listRef = useRef<FlatList<ConsoleLogEntry>>(null);
-  // A ref, not state: the auto-scroll effect has to read the latest value without re-running every
-  // time the user's scroll position changes.
-  const followingTail = useRef(true);
 
   const countsByLevel = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -62,27 +59,19 @@ export function ConsoleView() {
       if (activeLevel !== null && entry.level !== activeLevel) return false;
       return query.length === 0 || entry.text.toLowerCase().includes(query);
     });
-    // The store keeps newest-first; the list reads oldest-to-newest like a terminal, so the prompt
-    // at the bottom sits right below the most recent output.
-    return filtered.reverse();
+    // Left newest-first, the order the store keeps. The list is `inverted`, which both flips it to
+    // read oldest-to-newest and anchors it to the newest end — so the tail follows itself.
+    return filtered;
   }, [entries, activeLevel, searchText]);
 
-  useEffect(() => {
-    if (followingTail.current) listRef.current?.scrollToEnd({ animated: true });
-  }, [visibleEntries]);
-
+  // In an inverted list the newest end is offset 0, not the content height.
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
-    const atBottom = distanceFromEnd <= NEAR_BOTTOM_SLACK;
-    followingTail.current = atBottom;
-    setShowScrollToBottom(!atBottom);
+    setShowScrollToBottom(event.nativeEvent.contentOffset.y > NEAR_BOTTOM_SLACK);
   }
 
   function scrollToBottom() {
-    followingTail.current = true;
     setShowScrollToBottom(false);
-    listRef.current?.scrollToEnd({ animated: true });
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
   }
 
   return (
@@ -117,20 +106,16 @@ export function ConsoleView() {
         </View>
 
         <View style={styles.headerSummary}>
-          {(['warn', 'error'] as const).map((level) =>
-            countsByLevel[level] ? (
+          {(['warn', 'error'] as const).map((level) => {
+            const { icon, color } = CONSOLE_LEVEL_VISUALS[level];
+            if (!countsByLevel[level] || !icon) return null;
+            return (
               <View key={level} style={styles.summaryItem}>
-                <MaterialIcons
-                  name={CONSOLE_LEVEL_VISUALS[level].icon}
-                  size={13}
-                  color={CONSOLE_LEVEL_VISUALS[level].color}
-                />
-                <Text style={[styles.summaryCount, { color: CONSOLE_LEVEL_VISUALS[level].color }]}>
-                  {countsByLevel[level]}
-                </Text>
+                <MaterialIcons name={icon} size={13} color={color} />
+                <Text style={[styles.summaryCount, { color }]}>{countsByLevel[level]}</Text>
               </View>
-            ) : null
-          )}
+            );
+          })}
         </View>
       </View>
 
@@ -185,6 +170,10 @@ export function ConsoleView() {
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
+          inverted
+          // New rows are prepended (index 0 renders at the visual bottom). Without this, scrolling
+          // back through history jolts by a row's height every time something new arrives.
+          maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
           ListEmptyComponent={
             <Text style={styles.empty}>
               {entries.length === 0

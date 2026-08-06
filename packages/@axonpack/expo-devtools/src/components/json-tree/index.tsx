@@ -15,8 +15,19 @@ const ROOT_PATH = '$';
 
 type MenuState = { path: string; value: JsonValue; x: number; y: number };
 
-export function JsonTree({ value, rootLabel }: { value: JsonValue; rootLabel?: string }) {
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set([ROOT_PATH]));
+export function JsonTree({
+  value,
+  rootLabel,
+  defaultExpanded = true,
+}: {
+  value: JsonValue;
+  rootLabel?: string;
+  /** Console rows pass `false` — an argument starts as a one-line `{…}` preview, like Chrome. */
+  defaultExpanded?: boolean;
+}) {
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() =>
+    defaultExpanded ? new Set([ROOT_PATH]) : new Set()
+  );
   const [menu, setMenu] = useState<MenuState | null>(null);
 
   function toggle(path: string) {

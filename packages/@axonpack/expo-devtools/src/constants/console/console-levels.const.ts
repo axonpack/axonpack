@@ -19,19 +19,21 @@ export const CONSOLE_LEVEL_LABELS: Record<ConsoleLogLevel, string> = {
 };
 
 export type ConsoleLevelVisual = {
-  icon: MaterialIconName;
+  /** `null` for a plain log — Chrome gives it no glyph, and the row keeps a spacer for alignment. */
+  icon: MaterialIconName | null;
   color: string;
   /** Row tint. Only the two levels worth spotting mid-scroll get one. */
   surface?: string;
 };
 
-// Chevrons are reserved for things that actually expand — the JSON tree's nodes and an Error's
-// stack. A plain log's bullet has to read as inert, so it's a dash rather than a `chevron-right`.
+// Matching Chrome's console glyphs: solid fills for the levels that demand attention, nothing at
+// all for a plain log. Chevrons stay reserved for things that actually expand (a JSON tree node, an
+// Error's stack) — except the prompt pair below, where the chevron means direction.
 export const CONSOLE_LEVEL_VISUALS: Record<ConsoleLogLevel, ConsoleLevelVisual> = {
-  log: { icon: 'remove', color: COLORS.border },
-  info: { icon: 'info-outline', color: COLORS.accent },
-  warn: { icon: 'warning-amber', color: COLORS.warning, surface: COLORS.warningSurface },
-  error: { icon: 'error-outline', color: COLORS.error, surface: COLORS.errorSurface },
+  log: { icon: null, color: COLORS.textSecondary },
+  info: { icon: 'info', color: COLORS.accent },
+  warn: { icon: 'warning', color: COLORS.warning, surface: COLORS.warningSurface },
+  error: { icon: 'cancel', color: COLORS.error, surface: COLORS.errorSurface },
   debug: { icon: 'bug-report', color: '#9334e6' },
   // The prompt pair, pointing the way a browser console points them: `›` for what you typed,
   // `‹` for what came back. A chevron here reads as direction, not as a disclosure.

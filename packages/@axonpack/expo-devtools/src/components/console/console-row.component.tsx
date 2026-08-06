@@ -15,7 +15,12 @@ export function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
       {/* Each argument owns its own interaction — the row itself is deliberately not tappable, so
           a tap inside a JSON tree expands that node instead of being eaten by a parent touchable. */}
       <View style={styles.main}>
-        <MaterialIcons name={visual.icon} size={14} color={visual.color} style={styles.icon} />
+        {visual.icon ? (
+          <MaterialIcons name={visual.icon} size={14} color={visual.color} style={styles.icon} />
+        ) : (
+          // Keeps an un-iconed log's text on the same left edge as every other row's.
+          <View style={styles.icon} />
+        )}
         <View style={styles.body}>
           {entry.parts.map((arg, index) => (
             <ConsoleArgCell
@@ -51,11 +56,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   icon: {
+    width: 14,
     marginTop: 1,
   },
+  // Arguments flow inline and wrap, rather than stacking — `console.log('user', {…})` reads as one
+  // sentence the way it does in a browser console. An expanded tree still pushes the rest down.
   body: {
     flex: 1,
-    gap: 2,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    columnGap: 6,
+    rowGap: 2,
   },
   meta: {
     flexDirection: 'row',

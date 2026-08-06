@@ -17,7 +17,7 @@ export function ErrorArgCell({ text, stack }: { text: string; stack?: string }) 
   }
 
   return (
-    <View>
+    <View style={styles.container}>
       <TouchableOpacity
         style={styles.header}
         activeOpacity={0.7}
@@ -43,13 +43,17 @@ export function ErrorArgCell({ text, stack }: { text: string; stack?: string }) 
 }
 
 const styles = StyleSheet.create({
+  // An error message plus its stack owns the full row width rather than flowing beside other args.
+  container: {
+    flexBasis: '100%',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 2,
   },
   message: {
-    flex: 1,
+    flexShrink: 1,
     fontFamily: 'monospace',
     fontSize: 12,
     color: COLORS.error,
