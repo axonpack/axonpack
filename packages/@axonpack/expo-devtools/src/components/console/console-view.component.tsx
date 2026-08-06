@@ -102,13 +102,12 @@ export function ConsoleView() {
   }, [entries, activeLevel, activeSource, searchText]);
 
   /**
-   * `maintainVisibleContentPosition` keeps history stable while you scroll back, but it does that by
-   * bumping the offset whenever a row is prepended — which also pushes you off the newest end. So
-   * following the tail has to be re-asserted explicitly here rather than falling out of the list
-   * staying at offset 0.
+   * Unanimated on purpose. An animated scroll emits a stream of `onScroll` events at intermediate
+   * offsets, and `handleScroll` can't tell those from a real drag — it would clear the follow flag
+   * mid-flight and pop the jump-to-bottom button up instead. Jumping lands one event, at offset 0.
    */
   useEffect(() => {
-    if (followingTail.current) listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    if (followingTail.current) listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [visibleEntries]);
 
   // In an inverted list the newest end is offset 0, not the content height.
@@ -121,7 +120,7 @@ export function ConsoleView() {
   function scrollToBottom() {
     followingTail.current = true;
     setShowScrollToBottom(false);
-    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }
 
   return (
@@ -243,9 +242,10 @@ export function ConsoleView() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           inverted
-          // New rows are prepended (index 0 renders at the visual bottom). Without this, scrolling
-          // back through history jolts by a row's height every time something new arrives.
-          maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+          // Deliberately no `maintainVisibleContentPosition`: it keeps history steady while you
+          // scroll back, but it does that by bumping the offset on every prepend, which both pushes
+          // you off the newest end and fires an `onScroll` that reads as "the user scrolled away".
+          // Tail-following matters more than a jolt while reading history.
           ListEmptyComponent={
             <Text style={styles.empty}>
               {entries.length === 0
