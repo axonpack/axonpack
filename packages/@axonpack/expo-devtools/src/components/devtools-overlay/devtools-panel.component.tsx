@@ -31,7 +31,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <AxonpackLogo size={20} />
-          <Text style={styles.headerTitle}>Devtools</Text>
+          <Text style={styles.headerTitle}>@axonpack/expo-devtools</Text>
         </View>
         <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
       </View>
@@ -69,7 +69,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.textPrimary,
-    textTransform: 'uppercase',
+    textAlign: 'center',
+    // textTransform: 'uppercase',
   },
   tabPanel: {
     flex: 1,
