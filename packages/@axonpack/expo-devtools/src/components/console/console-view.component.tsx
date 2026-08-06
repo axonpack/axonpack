@@ -1,9 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
@@ -56,7 +55,21 @@ export function ConsoleView() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
   const listRef = useRef<FlatList<ConsoleLogEntry>>(null);
+  // A ref, not state: the auto-scroll effect has to read the current value without re-running every
+  // time the scroll position changes.
+  const followingTail = useRef(true);
+
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
 
   const countsByLevel = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -88,23 +101,33 @@ export function ConsoleView() {
     return filtered;
   }, [entries, activeLevel, activeSource, searchText]);
 
+  /**
+   * `maintainVisibleContentPosition` keeps history stable while you scroll back, but it does that by
+   * bumping the offset whenever a row is prepended — which also pushes you off the newest end. So
+   * following the tail has to be re-asserted explicitly here rather than falling out of the list
+   * staying at offset 0.
+   */
+  useEffect(() => {
+    if (followingTail.current) listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [visibleEntries]);
+
   // In an inverted list the newest end is offset 0, not the content height.
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    setShowScrollToBottom(event.nativeEvent.contentOffset.y > NEAR_BOTTOM_SLACK);
+    const atBottom = event.nativeEvent.contentOffset.y <= NEAR_BOTTOM_SLACK;
+    followingTail.current = atBottom;
+    setShowScrollToBottom(!atBottom);
   }
 
   function scrollToBottom() {
+    followingTail.current = true;
     setShowScrollToBottom(false);
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   }
 
   return (
-    // The whole tab lifts, not just the prompt, so the tail of the log stays visible while typing.
-    // Android gets an explicit behavior rather than relying on `adjustResize`: this renders inside
-    // a `Modal`, whose window doesn't reliably inherit the activity's soft-input mode.
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    // Keyboard avoidance lives on `DevtoolsPanel`, not here — see the note there for why it has to
+    // sit directly under the SafeAreaView.
+    <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerActions}>
           <RecordToggleButton paused={paused} onToggle={() => consoleLogStore.setPaused(!paused)} />
@@ -241,8 +264,10 @@ export function ConsoleView() {
 
       {/* Submitting jumps to the tail even if you'd scrolled up — you asked for that output. */}
       {isReplEnabled() && <ConsolePrompt onSubmit={scrollToBottom} />}
-      <InsetPadding edge="bottom" />
-    </KeyboardAvoidingView>
+      {/* Dropped while the keyboard is up: the keyboard already covers the home-indicator area, so
+          keeping the inset would float the prompt above the keyboard by its height. */}
+      {!keyboardVisible && <InsetPadding edge="bottom" />}
+    </View>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
 import { COLORS } from '../../constants/colors.const';
@@ -27,7 +27,18 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
   );
 
   return (
-    <>
+    /**
+     * Keyboard avoidance has to live here, wrapping everything, rather than inside the tab that owns
+     * the text input. `KeyboardAvoidingView` measures itself from `onLayout`, whose coordinates are
+     * parent-relative — placed below the header and tab bar it reads its own bottom edge as ~120px
+     * higher than it is and under-pads by exactly that, leaving the console prompt behind the
+     * keyboard. As a direct child of the modal's SafeAreaView its measured bottom is the screen's.
+     * Android gets an explicit behavior too: this renders inside a `Modal`, whose window doesn't
+     * reliably inherit the activity's `adjustResize`.
+     */
+    <KeyboardAvoidingView
+      style={styles.panel}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <AxonpackLogo size={20} />
@@ -46,11 +57,14 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
       <View style={[styles.tabPanel, tab !== 'console' && styles.hiddenTabPanel]}>
         <ConsoleView />
       </View>
-    </>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  panel: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
