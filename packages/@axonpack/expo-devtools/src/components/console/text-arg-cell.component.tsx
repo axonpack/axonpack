@@ -41,7 +41,6 @@ export function TextArgCell({
 
   return (
     <TouchableOpacity
-      style={styles.clamped}
       activeOpacity={0.7}
       onPress={() => {
         animateNextLayout();
@@ -60,15 +59,9 @@ export function TextArgCell({
 }
 
 const styles = StyleSheet.create({
-  // Shrinkable so a long argument wraps inside the row's inline flow instead of overflowing it.
   text: {
-    flexShrink: 1,
     fontFamily: 'monospace',
     fontSize: 12,
-  },
-  // A clamped argument takes the whole row — a Show more toggle reads as detached otherwise.
-  clamped: {
-    flexBasis: '100%',
   },
   toggle: {
     marginTop: 2,

@@ -62,13 +62,11 @@ const styles = StyleSheet.create({
     width: 14,
     marginTop: 1,
   },
+  // One argument per line. Chrome flows them inline, but a phone's width doesn't hold a string and
+  // an object side by side often enough for that to be worth the wrapping it causes.
   body: {
     flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    columnGap: 6,
-    rowGap: 2,
+    gap: 2,
   },
   meta: {
     flexDirection: 'row',
