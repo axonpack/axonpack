@@ -1,5 +1,7 @@
 import { EventEmitter } from 'expo';
 
+import type { ResolvedNetworkConditions } from './network-conditions.store';
+
 export type NetworkLogStatus = 'pending' | 'success' | 'error';
 
 export type NetworkLogEntry = {
@@ -22,6 +24,12 @@ export type NetworkLogEntry = {
   mimeType?: string;
   /** Best-effort byte size — prefers the Content-Length header, falls back to the response body's length. */
   size?: number;
+  /**
+   * Throttle/user-agent settings as they were when this request started. Stamped per entry rather
+   * than read live at render time, so changing the setting afterwards doesn't retroactively
+   * relabel requests that ran under the old one.
+   */
+  conditions?: ResolvedNetworkConditions;
 };
 
 type NetworkLogEvents = {
