@@ -37,11 +37,13 @@ export function LogRow({
         <Text style={[styles.method, { color: methodColor }]} selectable>
           {entry.method}
         </Text>
+        {/* Spelled out rather than "..." — the timing column shows "..." too while in flight, so
+            the two were indistinguishable at a glance. */}
         <Text style={[styles.status, { color: statusColor }]} selectable>
-          {entry.status === 'pending' ? '...' : (entry.statusCode ?? entry.error ?? '')}
+          {entry.status === 'pending' ? 'PENDING' : (entry.statusCode ?? entry.error ?? '')}
         </Text>
         <Text style={styles.timing} numberOfLines={1} selectable>
-          {entry.duration !== undefined ? `${entry.duration}ms` : '...'} ·{' '}
+          {entry.duration !== undefined ? `${entry.duration}ms` : '–'} ·{' '}
           {new Date(entry.startedAt).toLocaleTimeString()}
         </Text>
       </View>
