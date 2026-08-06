@@ -1,27 +1,33 @@
 # @axonpack/expo-devtools
 
-On-device, production-safe network inspector for React Native and Expo apps — a familiar,
-browser-devtools-style Network tab that lives inside your app, no desktop tooling required.
+Browser-style devtools that live **inside** your React Native or Expo app. Tap a floating button and
+you get a **Network** tab and a **Console** tab on the device itself — no desktop debugger, no cable,
+no native code.
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../../LICENSE)
 
-## Features
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/network-log.png" width="260" alt="Network tab listing captured requests" /></td>
+    <td><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/console-log.png" width="260" alt="Console tab listing captured logs" /></td>
+    <td><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/console-repl.png" width="260" alt="Running a JavaScript expression at the console prompt" /></td>
+  </tr>
+</table>
 
-- **Drop-in overlay** — `<DevtoolsOverlay />` is a draggable FAB that opens a full Network tab on
-  tap. No native code, no separate desktop app.
-- **Three capture sources feeding one log**: patches Expo's native `fetch`, `XMLHttpRequest`
-  (catches most third-party HTTP client libraries, since their RN adapter is typically built on
-  XHR), and `<WebView>` traffic via an injected script relayed over `postMessage` — a WebView runs
-  in its own JS engine that the other two patches can't see into.
-- **Prod-safe by default** — nothing is patched and nothing is recorded until you call `.init()`.
-  Skip calling it (or pass `enabled: false`) in production and the library is a complete no-op.
-- Browser-devtools-familiar UI: search/filter (method, type, source), a tap-to-filter activity
-  histogram, Preserve Log, Copy as cURL, and a "Try in sandbox" request playground seeded from any
-  captured entry.
-- Full, untruncated request/response bodies — everything is `selectable` and copyable on-device.
-  No native fetch/XHR timing waterfall exists to fabricate (see [`ROADMAP.md`](./ROADMAP.md) for
-  the platform limits this is built around, and what's still on the table).
+## Why you'd want it
+
+Debugging on a real device usually means plugging into a laptop, or losing the thing you were trying
+to reproduce the moment you reach for a menu. This puts the tools where the bug is:
+
+- **See every request** your app makes — including ones from inside an in-app browser page, and from
+  HTTP libraries like axios.
+- **See everything your app logs**, with objects you can actually open up and explore.
+- **Try things out** — resend any request with different headers or a different body, or type a line
+  of JavaScript and see what it returns.
+- **Pretend the network is bad** — switch to Slow 3G or go offline without touching your Wi-Fi.
+- **Safe to ship** — nothing is captured until you switch it on, so leaving the code in a production
+  build costs you nothing.
 
 ## Installation
 
@@ -29,26 +35,22 @@ browser-devtools-style Network tab that lives inside your app, no desktop toolin
 npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview
 ```
 
-`react-native-safe-area-context` and `react-native-webview` are peer dependencies — the overlay
-and its response preview rely on them directly.
+`react-native-safe-area-context` and `react-native-webview` are peer dependencies — the overlay and
+its response previews rely on them.
 
 ## Quick start
 
-```tsx
+Three small steps: create a client, start it, mount the button.
+
+```ts
 // devtools.ts — one shared instance for your app
 import { createDevtoolsClient } from '@axonpack/expo-devtools';
 
-export const devtools = createDevtoolsClient({
-  network: {
-    includeFetch: true,
-    includeXmlHttpRequest: true,
-    webviewSources: ['my-webview'],
-  },
-});
+export const devtools = createDevtoolsClient();
 ```
 
-```tsx
-// index.ts — call once at app startup
+```ts
+// index.ts — start it once, at launch
 import { registerRootComponent } from 'expo';
 import App from './App';
 import { devtools } from './devtools';
@@ -58,7 +60,7 @@ registerRootComponent(App);
 ```
 
 ```tsx
-// App.tsx — mount the overlay anywhere in your tree
+// App.tsx — mount the floating button anywhere in your tree
 import { DevtoolsOverlay } from '@axonpack/expo-devtools';
 
 export default function App() {
@@ -71,60 +73,205 @@ export default function App() {
 }
 ```
 
-That's it — fetch, XHR (and therefore most XHR-based HTTP client libraries), and any WebView
-tagged with a name from `webviewSources` all show up in the same Network tab.
+That's everything. Drag the button anywhere on screen, tap it to open the panel, and both tabs are
+already recording.
 
-## Capturing traffic inside a `<WebView>`
+## The Network tab
 
-A `<WebView>` is a separate JS engine, invisible to the fetch/XHR patches above. Wire it up
-explicitly with the injected script and message handler:
+Every request lands as a row: the method, the status, how long it took, and when. Underneath, the
+short name and the full URL, plus badges for the kind of response, where the request came from, and
+how big it was. A request still in flight shows an amber **PENDING** so you can tell "waiting" from
+"finished".
+
+<table>
+  <tr>
+    <td width="33%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/network-filters.png" width="260" alt="Filter panel with type, method and source chips" /></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/network-conditions.png" width="260" alt="Throttling and user agent options" /></td>
+    <td width="33%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/network-overview.png" width="260" alt="Traffic graph with requests grouped by source" /></td>
+  </tr>
+  <tr>
+    <td>Search, then narrow by type, method, or where it came from.</td>
+    <td>Slow the connection down, go offline, or pretend to be another browser.</td>
+    <td>A traffic graph over time, with requests grouped by source.</td>
+  </tr>
+</table>
+
+**Finding one request among hundreds.** Search the text, then narrow with the chips: type
+(Fetch/XHR, JS, Img, Media, Other), method, or source. The method and source chips are built from
+what you've actually captured, so they only ever offer real options. There's an **Invert** switch for
+"everything except this", and extra toggles to hide data URLs or hide failed requests.
+
+**Testing a bad connection.** Pick Slow 3G, Fast 3G, Fast 4G, Offline, or set your own speed and
+delay. It applies immediately, to your app's own requests and to in-app browser pages. You can also
+pretend to be an iPhone, an Android phone, a desktop browser, or Googlebot. Every captured request
+remembers the settings it ran under, so requests from before and after a change stay easy to tell
+apart.
+
+**Reading the room.** Turn on the traffic graph to see request volume over time and tap a section to
+zoom the list to that moment. Turn on grouping to bundle rows by where they came from, with a count
+per group. Or switch to compact rows to fit more on screen.
+
+### Tapping a request
+
+<table>
+  <tr>
+    <td width="50%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/request-headers.png" width="260" alt="Response headers, each with its own copy button" /></td>
+    <td width="50%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/sandbox.png" width="260" alt="Sandbox with editable URL, method, auth and query parameters" /></td>
+  </tr>
+  <tr>
+    <td>Headers, with a one-tap copy button on every value.</td>
+    <td>The sandbox: change anything, send it again.</td>
+  </tr>
+</table>
+
+A panel slides up with everything captured, across a few tabs:
+
+- **Headers** — what was sent and what came back, each value with its own copy button, plus the
+  connection settings this request ran under.
+- **Payload** — what you sent, as an explorable tree rather than a wall of text.
+- **Preview** — the response pretty-printed and colour-coded; images and HTML render as a real
+  preview.
+- **Response** — the raw body, in full, never cut off.
+- **Timing** — when it started and how long it took. It also tells you plainly that a
+  DNS/TCP/TLS breakdown isn't available on-device, rather than showing numbers it can't measure.
+
+The **⋮** menu copies the URL, or the whole request as a ready-to-paste **cURL** command or `fetch`
+snippet.
+
+**Try in sandbox** opens the request as something you can edit: change the method, the URL, the
+query parameters, headers, cookies, auth, or the body, then Send and watch the real response come
+back. Handy for "does this break if the token is missing?" without touching your code.
+
+Prefer to look at it later? **Export** shares the currently-filtered list as JSON.
+
+## The Console tab
+
+Everything your app logs, on the device. Warnings sit on a yellow row, errors on a red one, and the
+toolbar keeps a running count of each so you can see at a glance whether anything went wrong while
+you weren't looking.
+
+<table>
+  <tr>
+    <td width="50%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/console-filters.png" width="260" alt="Level filter chips showing live counts" /></td>
+    <td width="50%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/console-autocomplete.png" width="260" alt="An expanded error stack and name suggestions at the prompt" /></td>
+  </tr>
+  <tr>
+    <td>Filter by level, with a live count on each chip.</td>
+    <td>Tap an error for its full stack. The prompt suggests names as you type.</td>
+  </tr>
+</table>
+
+- Each thing you logged gets its own line, so a message and the object next to it don't run
+  together. Objects and arrays start collapsed — tap to open them up, level by level.
+- Errors show their message on the row and the **full stack** when you tap it.
+- The same message logged over and over becomes **one row with a count**, so a chatty screen doesn't
+  bury everything else.
+- Filter by level (each chip carries a live count) or by source, or search the text of every message.
+- The newest output stays in view automatically, and stops following if you scroll back to read
+  something — with a button to jump back to the newest.
+- Copy any line with one tap.
+
+### Running an expression
+
+The `>` prompt at the bottom runs JavaScript on the device and shows you what came back. Your typed
+command appears with a `›`, the answer with a `‹`, and objects come back as the same explorable tree.
+Something that returns a promise shows as pending and fills in when it settles, so
+`fetch(...).then((r) => r.json())` works as you'd expect.
+
+- Names are **suggested as you type**, including the members of whatever object you're inside.
+- **Tap any command you ran earlier** to load it straight back into the prompt.
+- Two built-in helpers let you reach your app's own code in a development build:
+  `$modules('auth')` lists the files that are loaded, and `$m('src/stores/auth')` hands you one of
+  them.
+
+To reach your own objects by a short, stable name, pass them in:
+
+```ts
+createDevtoolsClient({
+  console: { context: { store, queryClient } },
+});
+```
+
+This is worth knowing about: your app's files are bundled as private closures, so nothing can reach
+an imported name on its own the way a browser console reaches a page's variables. Anything you want
+to poke at by name, hand over in `context`. It's also the only thing that works in a release build,
+where the file list above isn't available.
+
+The prompt is **off in release builds** by default, since it runs whatever is typed into it. Turn it
+on deliberately with `console: { repl: true }` if you want it there.
+
+## Capturing inside an in-app browser
+
+A `<WebView>` runs its own separate JavaScript, invisible to everything above, so it needs two props
+wired up:
 
 ```tsx
 import { WebView } from 'react-native-webview';
 import { devtools } from './devtools';
 
 <WebView
-  ref={devtools.getWebViewRef('my-webview')}
-  userAgent={devtools.getWebViewUserAgent()}
   source={{ uri: 'https://example.com' }}
   injectedJavaScriptBeforeContentLoaded={devtools.getWebViewInjectedJavaScriptBeforeContentLoaded(
     'my-webview'
   )}
-  onShouldStartLoadWithRequest={devtools.shouldAllowWebViewRequest}
   onMessage={(event) => devtools.handleWebViewMessage(event)}
 />;
 ```
 
-The script goes on `injectedJavaScriptBeforeContentLoaded`, not `injectedJavaScript` — the latter
-runs at document-end, after the page's own scripts have already fired their requests, so those
-escape both logging and throttling.
+Declare the name up front so a typo can't silently swallow everything:
 
-The other three props are only needed for network conditions (throttling / user-agent override):
-`ref` opens a channel to push a live throttle change into an already-loaded page, `userAgent`
-applies the override to the real HTTP header, and `onShouldStartLoadWithRequest` blocks navigation
-while Offline is selected. Note that a WebView can never be **fully** throttled from JS — only
-requests page JS makes via `fetch`/XHR/`sendBeacon` are interceptable, so subresources the
-WebView's native loader issues (`<img>`, `<script src>`, stylesheets, fonts, media) still go out.
+```ts
+export const devtools = createDevtoolsClient({
+  network: { webviewSources: ['my-webview'] },
+});
+```
 
-`"my-webview"` must be one of the names declared in `webviewSources` — this is enforced both at
-compile time (a TypeScript `const` type parameter) and at runtime (an allowlist filter), so a typo
-here is caught before it silently drops messages.
+That covers both the page's **requests and its console output** — rows show up tagged
+`WebView::[my-webview]` in either tab, and the Source chips can filter them apart from your app's
+own. TypeScript will reject a name you didn't declare.
+
+Use `injectedJavaScriptBeforeContentLoaded`, not `injectedJavaScript`: the latter runs after the
+page's own scripts have already fired, so their requests escape.
+
+Two optional extras, only needed if you want throttling to reach the page too: `ref={devtools.getWebViewRef('my-webview')}`
+lets a speed change reach an already-open page, `userAgent={devtools.getWebViewUserAgent()}` applies
+the browser override for real, and `onShouldStartLoadWithRequest={devtools.shouldAllowWebViewRequest}`
+blocks navigation while Offline is on. Note a page can never be _fully_ throttled — images,
+stylesheets and scripts the browser loads by itself still go out at full speed.
 
 ## Configuration reference
 
-`createDevtoolsClient(config?)`:
+`createDevtoolsClient(config?)` — every option is optional, and the defaults are what most apps
+want.
 
-| Option                          | Type       | Default     | Description                                                                                |
-| ------------------------------- | ---------- | ----------- | ------------------------------------------------------------------------------------------ |
-| `enabled`                       | `boolean`  | `true`      | Master switch. `false` makes `.init()` a no-op — no patching, no capture, no store writes. |
-| `network.includeFetch`          | `boolean`  | `true`      | Patch `globalThis.fetch`.                                                                  |
-| `network.includeXmlHttpRequest` | `boolean`  | `true`      | Patch `XMLHttpRequest` (covers XHR-based HTTP client libraries and raw XHR usage).         |
-| `network.webviewSources`        | `string[]` | `undefined` | Allowlist of WebView names permitted to report traffic into the shared log.                |
+| Option                          | Type                      | Default     | Description                                                                          |
+| ------------------------------- | ------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `enabled`                       | `boolean`                 | `true`      | Master switch. `false` makes `.init()` do nothing at all.                            |
+| `network.includeFetch`          | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                  |
+| `network.includeXmlHttpRequest` | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries. |
+| `network.webviewSources`        | `string[]`                | `undefined` | Names of in-app browser views allowed to report in.                                  |
+| `console.capture`               | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.      |
+| `console.repl`                  | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                    |
+| `console.context`               | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                    |
+
+## Leaving it in production
+
+`.init()` is the only switch that matters. Until it runs, nothing is patched and nothing is
+recorded — so shipping the code is safe, and you can decide at runtime:
+
+```ts
+devtools.init(); // or: if (__DEV__) devtools.init();
+```
+
+`createDevtoolsClient({ enabled: false })` does the same thing for call sites that always call
+`.init()`.
 
 ## Example app
 
-`example/` is a runnable Expo app demonstrating native fetch/XHR/third-party HTTP client requests
-and WebView capture side by side:
+`example/` is a runnable Expo app to try all of this against. Its Requests screen fires `fetch`,
+`XMLHttpRequest`, axios, uploads and an in-app browser page; its Console screen has a button for
+every kind of output worth testing — mixed arguments, circular references, class instances, errors,
+repeats, and a 600-message flood.
 
 ```sh
 cd example
@@ -134,14 +281,8 @@ bun run ios     # or: bun run android — full native build
 
 ## Roadmap
 
-See [`ROADMAP.md`](./ROADMAP.md) for what's implemented, the hard platform limits this design
-works around (e.g. no true timing waterfall for native fetch/XHR), and what's feasible but not yet
-built (initiator tracking, a Console tab, a Storage tab, and more).
-
-## Contributing
-
-See the repo-root [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) for setup, coding conventions, and
-the commit/PR workflow.
+See [`ROADMAP.md`](./ROADMAP.md) for what's built, what the platform genuinely can't do (and why
+this doesn't fake it), and what's still on the table.
 
 ## License
 
