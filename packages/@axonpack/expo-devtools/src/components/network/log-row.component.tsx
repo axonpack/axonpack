@@ -16,6 +16,7 @@ import {
 } from '../../utils/network/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resource-type.util';
 import { InfoBadge } from '../ui/info-badge.ui';
+import { JsonIcon } from '../ui/json-icon.ui';
 
 export function LogRow({
   entry,
@@ -49,12 +50,16 @@ export function LogRow({
       </View>
 
       <View style={styles.urlRow}>
-        <MaterialIcons
-          name={typeVisual.icon}
-          size={14}
-          color={typeVisual.color}
-          style={styles.typeIcon}
-        />
+        {typeVisual.kind === 'json' ? (
+          <JsonIcon size={14} color={typeVisual.color} />
+        ) : (
+          <MaterialIcons
+            name={typeVisual.icon}
+            size={14}
+            color={typeVisual.color}
+            style={styles.typeIcon}
+          />
+        )}
         <View style={styles.urlTextGroup}>
           {bigRows && (
             <Text style={styles.name} numberOfLines={1} selectable>
