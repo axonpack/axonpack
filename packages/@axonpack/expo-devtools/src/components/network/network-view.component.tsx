@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 8,
     backgroundColor: '#0000000D',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
