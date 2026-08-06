@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { COLORS } from '../../../../constants/colors.const';
+import { COLORS } from '../../constants/colors.const';
 
 export const treeStyles = StyleSheet.create({
   row: {

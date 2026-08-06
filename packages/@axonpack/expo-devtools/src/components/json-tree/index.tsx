@@ -8,14 +8,14 @@ import {
   formatCopyValue,
   isExpandable,
   type JsonValue,
-} from '../../../../utils/network/json-tree.util';
-import { ContextMenu, type ContextMenuItem } from '../../../ui/context-menu.ui';
+} from '../../utils/json-tree.util';
+import { ContextMenu, type ContextMenuItem } from '../ui/context-menu.ui';
 
 const ROOT_PATH = '$';
 
 type MenuState = { path: string; value: JsonValue; x: number; y: number };
 
-export function JsonTree({ value }: { value: JsonValue }) {
+export function JsonTree({ value, rootLabel }: { value: JsonValue; rootLabel?: string }) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set([ROOT_PATH]));
   const [menu, setMenu] = useState<MenuState | null>(null);
 
@@ -83,6 +83,7 @@ export function JsonTree({ value }: { value: JsonValue }) {
     <View>
       <JsonNode
         path={ROOT_PATH}
+        label={rootLabel}
         value={value}
         depth={0}
         expandedPaths={expandedPaths}
