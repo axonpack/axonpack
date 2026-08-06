@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react
 import { COLORS } from '../../constants/colors.const';
 import { getCompletions } from '../../services/console/complete-expression.service';
 import { runReplCommand } from '../../services/console/run-repl-command.service';
+import { normalizeExpressionInput } from '../../utils/console/normalize-expression.util';
 import { Chip } from '../ui/chip.ui';
 
 export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
@@ -51,7 +52,8 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
         <TextInput
           style={styles.input}
           value={source}
-          onChangeText={setSource}
+          // Normalized here rather than at evaluation, so what you see in the field is what runs.
+          onChangeText={(text) => setSource(normalizeExpressionInput(text))}
           onSubmitEditing={submit}
           placeholder="Run an expression"
           placeholderTextColor={COLORS.textSecondary}
