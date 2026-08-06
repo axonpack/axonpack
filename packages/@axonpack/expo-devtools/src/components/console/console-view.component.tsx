@@ -249,10 +249,6 @@ export function ConsoleView() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           inverted
-          // Deliberately no `maintainVisibleContentPosition`: it keeps history steady while you
-          // scroll back, but it does that by bumping the offset on every prepend, which both pushes
-          // you off the newest end and fires an `onScroll` that reads as "the user scrolled away".
-          // Tail-following matters more than a jolt while reading history.
           ListEmptyComponent={
             <Text style={styles.empty}>
               {entries.length === 0
