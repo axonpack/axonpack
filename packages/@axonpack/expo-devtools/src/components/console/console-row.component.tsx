@@ -6,6 +6,7 @@ import { ConsoleArgCell } from './console-arg-cell.component';
 import { COLORS } from '../../constants/colors.const';
 import { CONSOLE_LEVEL_VISUALS } from '../../constants/console/console-levels.const';
 import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
+import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
 import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
 export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
@@ -31,6 +32,11 @@ export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLo
       </View>
 
       <View style={styles.meta}>
+        {/* Only page output is labelled — tagging every native row would be noise in the common
+            case where there's no WebView at all. */}
+        {entry.source && entry.source !== NATIVE_CONSOLE_SOURCE && (
+          <Text style={styles.metaText}>{formatConsoleSource(entry.source)}</Text>
+        )}
         {entry.count > 1 && <Text style={styles.metaText}>×{entry.count}</Text>}
         <Text style={styles.metaText}>{new Date(entry.timestamp).toLocaleTimeString()}</Text>
         <CopyIconButton value={entry.text} />

@@ -15,6 +15,8 @@ export type ConsoleLogEntry = {
   timestamp: number;
   /** How many times in a row this exact message was logged (see `add`). */
   count: number;
+  /** `'native'` for the app's own context, or a WebView's declared name. */
+  source?: string;
 };
 
 type ConsoleLogEvents = {
@@ -70,7 +72,15 @@ export const consoleLogStore = {
     // echo collapsing while its result doesn't would read as a dropped command.
     const collapsible = entry.level !== 'input' && entry.level !== 'result';
     const newest = entries[0];
-    if (collapsible && newest && newest.level === entry.level && newest.text === entry.text) {
+    // `source` is part of the comparison so a page and the app logging the same text stay separate
+    // rows rather than collapsing into each other.
+    if (
+      collapsible &&
+      newest &&
+      newest.level === entry.level &&
+      newest.text === entry.text &&
+      newest.source === entry.source
+    ) {
       entries = [
         { ...newest, count: newest.count + 1, timestamp: entry.timestamp },
         ...entries.slice(1),

@@ -1,5 +1,9 @@
 import { configureRepl } from '../services/console/evaluate-expression.service';
 import { patchConsole } from '../services/console/patch-console.service';
+import {
+  getWebViewConsoleInjectedJavaScript,
+  handleWebViewConsoleMessage,
+} from '../services/console/webview-console-logger.service';
 import { patchFetch } from '../services/network/patch-fetch.service';
 import { patchXHR } from '../services/network/patch-xhr.service';
 import {
@@ -77,13 +81,23 @@ export function createDevtoolsClient<
       configureRepl(enableRepl, replContext);
     },
 
+    /**
+     * Network and console instrumentation for the page, concatenated — a consumer still sets one
+     * `injectedJavaScriptBeforeContentLoaded` prop and wires one `onMessage`. Each half returns a
+     * no-op when its capture is off, so the combined script is always safe to inject.
+     */
     getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
-      return getWebViewInjectedJavaScriptBeforeContentLoaded(source);
+      const scripts = [getWebViewInjectedJavaScriptBeforeContentLoaded(source)];
+      if (captureConsole) scripts.push(getWebViewConsoleInjectedJavaScript(source));
+      return scripts.join('\n');
     },
 
     shouldAllowWebViewRequest,
     handleWebViewMessage(event: WebViewMessageEventLike) {
-      return handleWebViewNetworkMessage(event, webviewSources);
+      // Each handler recognizes only its own marker and reports whether it took the message, so the
+      // console one is never asked about a network payload.
+      if (handleWebViewNetworkMessage(event, webviewSources)) return true;
+      return captureConsole && handleWebViewConsoleMessage(event, webviewSources);
     },
 
     getWebViewRef(source: TWebviewSources[number]) {

@@ -1,6 +1,7 @@
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { getConsoleArgsText, toConsoleArgs } from '../../utils/console/format-console-args.util';
+import { NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
 
 // Excludes the REPL's own `input`/`result` levels — those aren't methods on `console`.
 type PatchedLevel = Extract<ConsoleLogLevel, 'log' | 'info' | 'warn' | 'error' | 'debug'>;
@@ -37,6 +38,7 @@ export function patchConsole() {
           text: getConsoleArgsText(parts),
           timestamp: Date.now(),
           count: 1,
+          source: NATIVE_CONSOLE_SOURCE,
         });
       } catch {
         // Serializing an exotic value must never take down the app's own logging — drop the entry

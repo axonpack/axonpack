@@ -2,6 +2,7 @@ import { evaluateExpression } from './evaluate-expression.service';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { getConsoleArgsText, toConsoleArgs } from '../../utils/console/format-console-args.util';
+import { NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
 
 let commandCounter = 0;
 
@@ -15,7 +16,16 @@ function addEntry(level: ConsoleLogLevel, value: unknown): string {
   const parts = toConsoleArgs([value]);
   // Forced: a command the user just typed must show up even while capture is paused.
   consoleLogStore.add(
-    { id, level, parts, text: getConsoleArgsText(parts), timestamp: Date.now(), count: 1 },
+    {
+      id,
+      level,
+      parts,
+      text: getConsoleArgsText(parts),
+      timestamp: Date.now(),
+      count: 1,
+      // The prompt runs in the app's context, so it files under the same source as `patchConsole`.
+      source: NATIVE_CONSOLE_SOURCE,
+    },
     { force: true }
   );
   return id;

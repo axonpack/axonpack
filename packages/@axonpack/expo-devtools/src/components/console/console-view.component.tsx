@@ -25,6 +25,7 @@ import {
 import { isReplEnabled } from '../../services/console/evaluate-expression.service';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogEntry, ConsoleLogLevel } from '../../stores/console/console-log.store';
+import { formatConsoleSource } from '../../utils/console/formatters.util';
 import { animateNextLayout } from '../../utils/layout-animation.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
@@ -51,6 +52,7 @@ export function ConsoleView() {
 
   const [searchText, setSearchText] = useState('');
   const [activeLevel, setActiveLevel] = useState<ConsoleLogLevel | null>(null);
+  const [activeSource, setActiveSource] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
@@ -64,16 +66,27 @@ export function ConsoleView() {
     return counts;
   }, [entries]);
 
+  // Only worth showing the Source filter once a WebView has actually logged something — a
+  // native-only app would otherwise get a chip row with one permanently-selected option.
+  const sources = useMemo(() => {
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      if (entry.source) seen.add(entry.source);
+    }
+    return seen.size > 1 ? Array.from(seen) : [];
+  }, [entries]);
+
   const visibleEntries = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     const filtered = entries.filter((entry) => {
       if (activeLevel !== null && entry.level !== activeLevel) return false;
+      if (activeSource !== null && entry.source !== activeSource) return false;
       return query.length === 0 || entry.text.toLowerCase().includes(query);
     });
     // Left newest-first, the order the store keeps. The list is `inverted`, which both flips it to
     // read oldest-to-newest and anchors it to the newest end — so the tail follows itself.
     return filtered;
-  }, [entries, activeLevel, searchText]);
+  }, [entries, activeLevel, activeSource, searchText]);
 
   // In an inverted list the newest end is offset 0, not the content height.
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -166,6 +179,27 @@ export function ConsoleView() {
               />
             ))}
           </View>
+
+          {sources.length > 0 && (
+            <>
+              <Text style={styles.filterSectionLabel}>Source</Text>
+              <View style={styles.chipsRow}>
+                <Chip
+                  label="All"
+                  active={activeSource === null}
+                  onPress={() => setActiveSource(null)}
+                />
+                {sources.map((source) => (
+                  <Chip
+                    key={source}
+                    label={formatConsoleSource(source)}
+                    active={activeSource === source}
+                    onPress={() => setActiveSource(source)}
+                  />
+                ))}
+              </View>
+            </>
+          )}
         </View>
       )}
 
