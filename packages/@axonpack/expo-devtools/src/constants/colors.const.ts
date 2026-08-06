@@ -7,10 +7,16 @@ export const COLORS = {
   textPrimary: '#202124',
   textSecondary: '#5f6368',
   accent: '#1a73e8',
-  pending: '#5f6368',
+  // Amber rather than grey — grey matched textSecondary exactly, so an in-flight request read as
+  // muted body text instead of a distinct state.
+  pending: '#f9ab00',
   success: '#188038',
   error: '#d93025',
   warning: '#f9ab00',
+  // Row backgrounds for console warnings/errors — Chrome tints the whole line rather than only
+  // recoloring its text, which is what makes an error findable while scrolling past.
+  errorSurface: '#fce8e6',
+  warningSurface: '#fef7e0',
   keyAccent: '#d97706',
   // Matches Chrome DevTools' JS/JSON syntax highlighting (object key, string, number/boolean).
   jsonKey: '#881391',

@@ -84,11 +84,27 @@ import { WebView } from 'react-native-webview';
 import { devtools } from './devtools';
 
 <WebView
+  ref={devtools.getWebViewRef('my-webview')}
+  userAgent={devtools.getWebViewUserAgent()}
   source={{ uri: 'https://example.com' }}
-  injectedJavaScript={devtools.getWebViewInjectedScript('my-webview')}
+  injectedJavaScriptBeforeContentLoaded={devtools.getWebViewInjectedJavaScriptBeforeContentLoaded(
+    'my-webview'
+  )}
+  onShouldStartLoadWithRequest={devtools.shouldAllowWebViewRequest}
   onMessage={(event) => devtools.handleWebViewMessage(event)}
 />;
 ```
+
+The script goes on `injectedJavaScriptBeforeContentLoaded`, not `injectedJavaScript` — the latter
+runs at document-end, after the page's own scripts have already fired their requests, so those
+escape both logging and throttling.
+
+The other three props are only needed for network conditions (throttling / user-agent override):
+`ref` opens a channel to push a live throttle change into an already-loaded page, `userAgent`
+applies the override to the real HTTP header, and `onShouldStartLoadWithRequest` blocks navigation
+while Offline is selected. Note that a WebView can never be **fully** throttled from JS — only
+requests page JS makes via `fetch`/XHR/`sendBeacon` are interceptable, so subresources the
+WebView's native loader issues (`<img>`, `<script src>`, stylesheets, fonts, media) still go out.
 
 `"my-webview"` must be one of the names declared in `webviewSources` — this is enforced both at
 compile time (a TypeScript `const` type parameter) and at runtime (an allowlist filter), so a typo

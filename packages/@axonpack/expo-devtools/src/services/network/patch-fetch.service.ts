@@ -1,4 +1,11 @@
+import { networkConditionsStore } from '../../stores/network/network-conditions.store';
 import { networkLogStore } from '../../stores/network/network-log.store';
+import {
+  computeThrottleDelayMs,
+  delay,
+  remainingDelayMs,
+  withUserAgentHeader,
+} from '../../utils/network/network-conditions.util';
 
 let isPatched = false;
 let requestCounter = 0;
@@ -79,9 +86,16 @@ export function patchFetch() {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const id = nextRequestId();
     const startedAt = Date.now();
-    const requestHeadersSource =
+    const conditions = networkConditionsStore.resolve();
+    const requestHeaders = normalizeHeaders(
       init?.headers ??
-      (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined);
+        (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined)
+    );
+
+    const effectiveHeaders = conditions.userAgent
+      ? withUserAgentHeader(requestHeaders, conditions.userAgent)
+      : requestHeaders;
+    const effectiveInit = conditions.userAgent ? { ...init, headers: effectiveHeaders } : init;
 
     networkLogStore.add({
       id,
@@ -89,13 +103,26 @@ export function patchFetch() {
       url: resolveUrl(input),
       status: 'pending',
       requestBody: previewBody(init?.body),
-      requestHeaders: normalizeHeaders(requestHeadersSource),
+      requestHeaders: effectiveHeaders,
       startedAt,
       source: 'fetch',
+      conditions,
     });
 
+    if (conditions.offline) {
+      // Matches what a genuine connection failure throws, so app-level error handling that
+      // branches on the error type behaves the same as it would with the network really down.
+      const offlineError = new TypeError('Network request failed');
+      networkLogStore.update(id, {
+        status: 'error',
+        error: 'Network request failed (offline — simulated by devtools)',
+        duration: Date.now() - startedAt,
+      });
+      throw offlineError;
+    }
+
     try {
-      const response = await originalFetch(input, init);
+      const response = await originalFetch(input, effectiveInit);
 
       let responseBody: string | undefined;
       try {
@@ -105,6 +132,16 @@ export function patchFetch() {
       }
 
       const responseHeaders = headersFromResponse(response.headers);
+      const size = extractSize(responseHeaders, responseBody);
+
+      if (conditions.throttle) {
+        await delay(
+          remainingDelayMs(
+            computeThrottleDelayMs(size, conditions.throttle),
+            Date.now() - startedAt
+          )
+        );
+      }
 
       networkLogStore.update(id, {
         status: 'success',
@@ -113,7 +150,7 @@ export function patchFetch() {
         responseBody,
         responseHeaders,
         mimeType: extractMimeType(responseHeaders),
-        size: extractSize(responseHeaders, responseBody),
+        size,
         duration: Date.now() - startedAt,
       });
 

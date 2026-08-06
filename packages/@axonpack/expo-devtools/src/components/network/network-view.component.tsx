@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
+  ScrollView,
   SectionList,
   StyleSheet,
   Text,
@@ -14,6 +15,8 @@ import {
 import { DetailPanel } from './detail-panel';
 import { LogRow } from './log-row.component';
 import { OverviewStrip, type TimeRange } from './overview-strip.component';
+import { ThrottleSelector } from './throttle-selector.component';
+import { UserAgentSelector } from './user-agent-selector.component';
 import { COLORS } from '../../constants/colors.const';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
@@ -30,9 +33,8 @@ import type { ResourceType } from '../../utils/network/resource-type.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
-import { RecordToggleIcon } from '../ui/record-toggle-icon.ui';
+import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 import { SettingRow } from '../ui/setting-row.ui';
-import { Tooltip } from '../ui/tooltip.ui';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
 
@@ -61,11 +63,6 @@ export function NetworkView() {
   const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
-  const [recordToggleTooltipAnchor, setRecordToggleTooltipAnchor] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const suppressNextRecordTogglePress = useRef(false);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -156,35 +153,7 @@ export function NetworkView() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => {
-              if (suppressNextRecordTogglePress.current) {
-                suppressNextRecordTogglePress.current = false;
-                return;
-              }
-              networkLogStore.setPaused(!paused);
-            }}
-            onLongPress={(event) => {
-              suppressNextRecordTogglePress.current = true;
-              setRecordToggleTooltipAnchor({
-                x: event.nativeEvent.pageX,
-                y: event.nativeEvent.pageY,
-              });
-            }}
-            onPressOut={() => setRecordToggleTooltipAnchor(null)}
-            hitSlop={8}
-            style={[styles.recordToggle, paused && styles.recordToggleActive]}>
-            <RecordToggleIcon
-              size={18}
-              color={paused ? COLORS.textSecondary : COLORS.error}
-              shape={paused ? 'circle' : 'square'}
-            />
-          </TouchableOpacity>
-          <Tooltip
-            anchor={recordToggleTooltipAnchor}
-            label={paused ? 'Start recording' : 'Stop recording'}
-            onClose={() => setRecordToggleTooltipAnchor(null)}
-          />
+          <RecordToggleButton paused={paused} onToggle={() => networkLogStore.setPaused(!paused)} />
           <IconButton
             name="block"
             color={COLORS.textSecondary}
@@ -237,7 +206,7 @@ export function NetworkView() {
       </View>
 
       {openPanel === 'settings' && (
-        <View style={styles.panel}>
+        <ScrollView style={styles.scrollablePanel} contentContainerStyle={styles.panel}>
           <SettingRow label="Large request rows" value={bigRows} onValueChange={setBigRows} />
           <SettingRow
             label="Group by fetch client"
@@ -257,7 +226,9 @@ export function NetworkView() {
             value={stackedHeaders}
             onValueChange={setStackedHeaders}
           />
-        </View>
+          <ThrottleSelector />
+          <UserAgentSelector />
+        </ScrollView>
       )}
 
       {openPanel === 'filters' && (
@@ -280,27 +251,6 @@ export function NetworkView() {
             )}
             <Chip label="Invert" active={invertSearch} onPress={() => setInvertSearch((c) => !c)} />
           </View>
-
-          <TouchableOpacity onPress={toggleMoreFilters}>
-            <Text style={styles.moreFiltersToggle}>
-              {moreFiltersOpen ? 'Hide more filters' : 'More filters'}
-            </Text>
-          </TouchableOpacity>
-
-          {moreFiltersOpen && (
-            <View>
-              <SettingRow
-                label="Hide data URLs"
-                value={hideDataUrls}
-                onValueChange={setHideDataUrls}
-              />
-              <SettingRow
-                label="Hide failed requests"
-                value={hideFailed}
-                onValueChange={setHideFailed}
-              />
-            </View>
-          )}
 
           <Text style={styles.filterSectionLabel}>Type</Text>
           <View style={styles.chipsRow}>
@@ -355,6 +305,27 @@ export function NetworkView() {
                 ))}
               </View>
             </>
+          )}
+
+          <TouchableOpacity onPress={toggleMoreFilters}>
+            <Text style={styles.moreFiltersToggle}>
+              {moreFiltersOpen ? 'Hide more filters' : 'More filters'}
+            </Text>
+          </TouchableOpacity>
+
+          {moreFiltersOpen && (
+            <View>
+              <SettingRow
+                label="Hide data URLs"
+                value={hideDataUrls}
+                onValueChange={setHideDataUrls}
+              />
+              <SettingRow
+                label="Hide failed requests"
+                value={hideFailed}
+                onValueChange={setHideFailed}
+              />
+            </View>
           )}
         </View>
       )}
@@ -420,7 +391,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingHorizontal: 8,
     backgroundColor: '#0000000D',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
@@ -436,18 +407,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
     marginHorizontal: 6,
   },
-  recordToggle: {
-    padding: 4,
-    borderRadius: 8,
-  },
-  recordToggleActive: {
-    backgroundColor: COLORS.sectionTint,
-  },
   panel: {
     padding: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.background,
+  },
+  // The settings panel outgrew the screen once throttling and user-agent moved in — cap it so the
+  // request list underneath stays visible instead of being pushed off.
+  scrollablePanel: {
+    flexGrow: 0,
+    maxHeight: 320,
   },
   searchRow: {
     flexDirection: 'row',

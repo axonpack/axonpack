@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { AxonpackLogo } from './axonpack-logo.ui';
 import { IconButton } from './icon-button.ui';
 import { COLORS } from '../../constants/colors.const';
 
@@ -14,10 +15,13 @@ const SLIDE_OUT_MS = 180;
 export function BottomSheet({
   visible,
   onClose,
+  headerContent,
   children,
 }: {
   visible: boolean;
   onClose: () => void;
+  /** Fills the header row between the logo on the left and the close button on the right. */
+  headerContent?: ReactNode;
   children: ReactNode;
 }) {
   const [translateY] = useState(() => new Animated.Value(OFFSCREEN_Y));
@@ -59,11 +63,13 @@ export function BottomSheet({
         onPress={onClose}
       />
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
-        <View style={styles.header}>
+        <View style={styles.handleRow}>
           <View style={styles.handle} />
-          <View style={styles.closeButton}>
-            <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
-          </View>
+        </View>
+        <View style={styles.headerRow}>
+          <AxonpackLogo size={18} />
+          <View style={styles.headerContent}>{headerContent}</View>
+          <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
         </View>
         {children}
       </Animated.View>
@@ -90,11 +96,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 12,
   },
-  header: {
+  handleRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   handle: {
     width: 36,
@@ -102,9 +108,21 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: COLORS.border,
   },
-  closeButton: {
-    position: 'absolute',
-    right: 8,
-    top: 4,
+  // No vertical padding — headerContent sets the row's height itself, so a tab bar's active
+  // underline sits flush against the separator below instead of floating above it. minHeight
+  // keeps the logo and close button off the separator when there's no header content at all.
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 40,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

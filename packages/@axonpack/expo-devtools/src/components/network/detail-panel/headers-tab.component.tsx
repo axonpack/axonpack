@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { HeaderList } from './header-list.component';
+import { NetworkConditionsSection } from './network-conditions-section.component';
 import { rowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import {
@@ -25,6 +26,7 @@ export function HeadersTab({
 }) {
   return (
     <View>
+      {entry.conditions && <NetworkConditionsSection conditions={entry.conditions} />}
       <CollapsibleSection title="General">
         <View style={rowStyles.headerRow}>
           <Text style={rowStyles.headerListKey} selectable>

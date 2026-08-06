@@ -1,9 +1,22 @@
+import { configureRepl } from '../services/console/evaluate-expression.service';
+import { patchConsole } from '../services/console/patch-console.service';
+import {
+  getWebViewConsoleInjectedJavaScript,
+  handleWebViewConsoleMessage,
+} from '../services/console/webview-console-logger.service';
 import { patchFetch } from '../services/network/patch-fetch.service';
 import { patchXHR } from '../services/network/patch-xhr.service';
 import {
-  getWebViewInjectedScript,
+  getWebViewConditionsRef,
+  getWebViewUserAgent,
+  shouldAllowWebViewRequest,
+} from '../services/network/webview-conditions.service';
+import {
+  getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../services/network/webview-network-logger.service';
+import { consoleLogStore } from '../stores/console/console-log.store';
+import { networkConditionsStore } from '../stores/network/network-conditions.store';
 import { networkLogStore } from '../stores/network/network-log.store';
 
 type WebViewMessageEventLike = {
@@ -18,17 +31,26 @@ export type DevtoolsNetworkConfig<TWebviewSources extends readonly string[]> = {
   webviewSources?: TWebviewSources;
 };
 
-export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
+export type DevtoolsConsoleConfig = {
+  capture?: boolean;
   /**
-   * Master switch. When `false` (e.g. a production build), `init()` becomes a no-op: no
-   * fetch/XHR patching, no WebView instrumentation, and `networkLogStore` never records or
-   * emits. Defaults to `true` — the flag exists for callers who always call `init()`
-   * unconditionally and want a single option to disable capture instead of branching at the
-   * call site. Not calling `init()` at all has the same effect, since the store defaults to
-   * disabled.
+   * Show the `>` prompt in the Console tab. Defaults to `__DEV__` — it compiles and runs whatever
+   * is typed, so it stays out of release builds unless you opt in explicitly.
    */
+  repl?: boolean;
+  /**
+   * Extra names an expression at the prompt can use, e.g. `{ store, queryClient }`. Optional:
+   * globals and `$modules()`/`$m('path')` (Metro's dev-only module registry) work without it. Use
+   * it for short stable names, and for reaching app code at all in a release build, where that
+   * registry doesn't exist.
+   */
+  context?: Record<string, unknown>;
+};
+
+export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   enabled?: boolean;
   network?: DevtoolsNetworkConfig<TWebviewSources>;
+  console?: DevtoolsConsoleConfig;
 };
 
 export function createDevtoolsClient<
@@ -40,6 +62,11 @@ export function createDevtoolsClient<
     includeXmlHttpRequest = true,
     webviewSources,
   } = config?.network ?? {};
+  const {
+    capture: captureConsole = true,
+    repl: enableRepl = __DEV__,
+    context: replContext,
+  } = config?.console ?? {};
 
   return {
     init() {
@@ -47,13 +74,39 @@ export function createDevtoolsClient<
       networkLogStore.setEnabled(true);
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
+      // Enabled for the REPL too, not just capture — otherwise a `capture: false` app would run a
+      // command at the prompt and see nothing come back.
+      if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
+      if (captureConsole) patchConsole();
+      configureRepl(enableRepl, replContext);
     },
-    getWebViewInjectedScript(source: TWebviewSources[number]) {
-      return getWebViewInjectedScript(source);
+
+    /**
+     * Network and console instrumentation for the page, concatenated — a consumer still sets one
+     * `injectedJavaScriptBeforeContentLoaded` prop and wires one `onMessage`. Each half returns a
+     * no-op when its capture is off, so the combined script is always safe to inject.
+     */
+    getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
+      const scripts = [getWebViewInjectedJavaScriptBeforeContentLoaded(source)];
+      if (captureConsole) scripts.push(getWebViewConsoleInjectedJavaScript(source));
+      return scripts.join('\n');
     },
+
+    shouldAllowWebViewRequest,
     handleWebViewMessage(event: WebViewMessageEventLike) {
-      return handleWebViewNetworkMessage(event, webviewSources);
+      // Each handler recognizes only its own marker and reports whether it took the message, so the
+      // console one is never asked about a network payload.
+      if (handleWebViewNetworkMessage(event, webviewSources)) return true;
+      return captureConsole && handleWebViewConsoleMessage(event, webviewSources);
     },
+
+    getWebViewRef(source: TWebviewSources[number]) {
+      return getWebViewConditionsRef(source);
+    },
+
+    getWebViewUserAgent,
     networkLogStore,
+    networkConditionsStore,
+    consoleLogStore,
   };
 }

@@ -54,6 +54,12 @@ const styles = StyleSheet.create({
 });
 ```
 
+- **Docked bars are the one exception.** An input pinned to an edge of its panel — currently just
+  the Console tab's `>` prompt (`src/components/console/console-prompt.component.tsx`) — drops the
+  border, radius and outer margins and takes a single hairline separator on the edge it docks
+  against, spanning the full width. A rounded box floating against a panel edge reads as misaligned
+  chrome. Everything else below still applies: `padding: 0` on the `TextInput`, colors from
+  `COLORS`, `placeholderTextColor` of `COLORS.textSecondary`.
 - Border/radius/spacing live on the wrapping row, not the `TextInput` itself — the `TextInput`
   stays visually bare (`padding: 0`, no border) so the row is the only visible chrome.
 - Colors always come from `COLORS` (`src/constants/colors.const.ts`) — never hardcode hex values

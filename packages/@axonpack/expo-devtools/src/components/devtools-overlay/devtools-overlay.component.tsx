@@ -1,11 +1,10 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
-import { Animated, Dimensions, Modal, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Modal, PanResponder, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { DevtoolsPanel } from './devtools-panel.component';
 import { COLORS } from '../../constants/colors.const';
-import { NetworkView } from '../network/network-view.component';
-import { IconButton } from '../ui/icon-button.ui';
 
 const FAB_SIZE = 40;
 const EDGE_MARGIN = 16;
@@ -64,16 +63,7 @@ export function DevtoolsOverlay() {
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <SafeAreaProvider style={{ flex: 1, backgroundColor: COLORS.background }}>
           <SafeAreaView edges={['left', 'right', 'top']} style={styles.modal}>
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Devtools</Text>
-              <IconButton
-                name="close"
-                color={COLORS.textSecondary}
-                onPress={() => setOpen(false)}
-                hitSlop={12}
-              />
-            </View>
-            <NetworkView />
+            <DevtoolsPanel onClose={() => setOpen(false)} />
           </SafeAreaView>
         </SafeAreaProvider>
       </Modal>
@@ -102,20 +92,5 @@ const styles = StyleSheet.create({
   modal: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    textTransform: 'uppercase',
   },
 });
