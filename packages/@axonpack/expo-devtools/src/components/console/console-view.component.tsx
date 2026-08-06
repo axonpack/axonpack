@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type ListRenderItemInfo,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -33,6 +34,16 @@ import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 // How close to the end still counts as "following the tail". A few pixels of slack absorbs the
 // rounding you get from variable-height rows without needing an exact match.
 const NEAR_BOTTOM_SLACK = 40;
+
+// Defined at module scope, not inline on the FlatList: a fresh `renderItem` identity on every store
+// emit defeats `ConsoleRow`'s memoization, which is what a burst of logging needs most.
+function keyExtractor(entry: ConsoleLogEntry): string {
+  return entry.id;
+}
+
+function renderConsoleRow({ item }: ListRenderItemInfo<ConsoleLogEntry>) {
+  return <ConsoleRow entry={item} />;
+}
 
 export function ConsoleView() {
   const entries = useSyncExternalStore(consoleLogStore.subscribe, consoleLogStore.getSnapshot);
@@ -162,8 +173,12 @@ export function ConsoleView() {
         <FlatList
           ref={listRef}
           data={visibleEntries}
-          keyExtractor={(entry) => entry.id}
-          renderItem={({ item }) => <ConsoleRow entry={item} />}
+          keyExtractor={keyExtractor}
+          renderItem={renderConsoleRow}
+          // A row can hold a JSON tree, so the window is kept tighter than the default 21 screens.
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={9}
           contentContainerStyle={styles.listContent}
           contentInsetAdjustmentBehavior="never"
           onScroll={handleScroll}

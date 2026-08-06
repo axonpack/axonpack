@@ -1,4 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ConsoleArgCell } from './console-arg-cell.component';
@@ -7,7 +8,13 @@ import { CONSOLE_LEVEL_VISUALS } from '../../constants/console/console-levels.co
 import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
 import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
-export function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
+/**
+ * Memoized because every captured log replaces the store's array, which re-renders the list. Store
+ * entries are immutable — a row's `entry` only gets a new identity when that row actually changed —
+ * so a shallow compare keeps a burst of logging from re-rendering every mounted row (each of which
+ * can hold a JSON tree and an `Intl` time format).
+ */
+export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
   const visual = CONSOLE_LEVEL_VISUALS[entry.level];
 
   return (
@@ -39,7 +46,7 @@ export function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   // The hairline separator is the row's only border — argument cells carry no chrome of their own.
