@@ -5,8 +5,13 @@ import { devtools } from '../devtools';
 export function WebViewDemo() {
   return (
     <WebView
+      ref={devtools.getWebViewRef('test2')}
+      userAgent={devtools.getWebViewUserAgent()}
       source={{ uri: 'https://www.google.com' }}
-      injectedJavaScript={devtools.getWebViewInjectedScript('test2')}
+      injectedJavaScriptBeforeContentLoaded={devtools.getWebViewInjectedJavaScriptBeforeContentLoaded(
+        'test2'
+      )}
+      onShouldStartLoadWithRequest={devtools.shouldAllowWebViewRequest}
       onMessage={(event) => {
         devtools.handleWebViewMessage(event);
       }}

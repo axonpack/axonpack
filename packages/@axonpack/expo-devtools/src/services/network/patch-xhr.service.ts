@@ -1,7 +1,37 @@
+import type { ThrottleProfile } from '../../constants/network/throttle-presets.const';
+import { networkConditionsStore } from '../../stores/network/network-conditions.store';
 import { networkLogStore } from '../../stores/network/network-log.store';
+import {
+  computeThrottleDelayMs,
+  remainingDelayMs,
+} from '../../utils/network/network-conditions.util';
 
 let isPatched = false;
 let requestCounter = 0;
+
+type ThrottleState = {
+  profile: ThrottleProfile;
+  startedAt: number;
+  /** Absolute time the DONE transition should land, computed once so every event stays ordered. */
+  deliverAt?: number;
+};
+
+const throttleStates = new WeakMap<XMLHttpRequest, ThrottleState>();
+
+function estimateResponseSize(xhr: XMLHttpRequest): number | undefined {
+  try {
+    const contentLength = Number(xhr.getResponseHeader('content-length'));
+    if (!Number.isNaN(contentLength) && contentLength > 0) return contentLength;
+  } catch {
+    // getResponseHeader throws before headers are available — fall through to the body length.
+  }
+  try {
+    return typeof xhr.responseText === 'string' ? xhr.responseText.length : undefined;
+  } catch {
+    // responseText throws for a non-text responseType; size just stays unknown.
+    return undefined;
+  }
+}
 
 function nextRequestId(): string {
   requestCounter += 1;
@@ -40,6 +70,60 @@ function extractSize(
   return body?.length;
 }
 
+/**
+ * `setReadyState` is React Native's own single dispatch point for the terminal XHR events —
+ * `readystatechange`, then one of `load`/`error`/`timeout`/`abort`, then `loadend`. Deferring the
+ * DONE transition here throttles every listener at once and lets RN's dispatcher keep its own
+ * `this` semantics, instead of wrapping each listener individually.
+ *
+ * It isn't a standard DOM method, so this is a no-op on any runtime that lacks it — logging still
+ * works there, only XHR throttling is skipped.
+ */
+function patchSetReadyState() {
+  const proto = XMLHttpRequest.prototype as unknown as {
+    setReadyState?: (newState: number) => void;
+  };
+  const originalSetReadyState = proto.setReadyState;
+  if (typeof originalSetReadyState !== 'function') return;
+
+  proto.setReadyState = function (this: XMLHttpRequest, newState: number) {
+    const state = throttleStates.get(this);
+    if (!state || newState !== XMLHttpRequest.DONE) {
+      originalSetReadyState.call(this, newState);
+      return;
+    }
+
+    if (state.deliverAt === undefined) {
+      state.deliverAt =
+        state.startedAt + computeThrottleDelayMs(estimateResponseSize(this), state.profile);
+    }
+
+    const wait = remainingDelayMs(state.deliverAt, Date.now());
+    if (wait <= 0) {
+      originalSetReadyState.call(this, newState);
+      return;
+    }
+    setTimeout(() => originalSetReadyState.call(this, newState), wait);
+  };
+}
+
+/**
+ * Drives RN's own failure path without ever hitting the network: it sets the error flag, moves to
+ * DONE, and dispatches `error` + `loadend` exactly like a real connection failure would. Falls
+ * back to `abort()` on a runtime without it — a less accurate signal, but still a failed request.
+ */
+function failAsOffline(xhr: XMLHttpRequest) {
+  const internal = xhr as unknown as {
+    __didCompleteResponse?: (requestId: unknown, error: string, timeOutError: boolean) => void;
+    _requestId?: unknown;
+  };
+  if (typeof internal.__didCompleteResponse === 'function') {
+    internal.__didCompleteResponse(internal._requestId ?? null, 'Network request failed', false);
+    return;
+  }
+  xhr.abort();
+}
+
 export function patchXHR() {
   if (isPatched) return;
   isPatched = true;
@@ -47,6 +131,8 @@ export function patchXHR() {
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
   const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+
+  patchSetReadyState();
 
   XMLHttpRequest.prototype.open = function (
     this: XMLHttpRequest,
@@ -97,6 +183,21 @@ export function patchXHR() {
     };
     const id = xhr.__networkLogId ?? nextRequestId();
     const startedAt = Date.now();
+    const conditions = networkConditionsStore.resolve();
+
+    // Set before the log entry is built so the override shows up in the recorded request headers
+    // — the patched setRequestHeader above writes it into __networkLogHeaders on the way through.
+    if (conditions.userAgent) {
+      try {
+        this.setRequestHeader('User-Agent', conditions.userAgent);
+      } catch {
+        // Some runtimes reject User-Agent as a forbidden header; the request still goes out.
+      }
+    }
+
+    if (conditions.throttle) {
+      throttleStates.set(this, { profile: conditions.throttle, startedAt });
+    }
 
     networkLogStore.add({
       id,
@@ -107,6 +208,7 @@ export function patchXHR() {
       requestHeaders: xhr.__networkLogHeaders,
       startedAt,
       source: 'xhr',
+      conditions,
     });
 
     this.addEventListener('readystatechange', function onReadyStateChange() {
@@ -133,6 +235,11 @@ export function patchXHR() {
         duration: Date.now() - startedAt,
       });
     });
+
+    if (conditions.offline) {
+      failAsOffline(this);
+      return;
+    }
 
     return originalSend.call(this, body as XMLHttpRequestBodyInit | null);
   } as typeof XMLHttpRequest.prototype.send;

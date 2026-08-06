@@ -2,6 +2,7 @@ import { StyleSheet, TextInput } from 'react-native';
 
 import { AuthSection } from './auth-section.component';
 import { KeyValueTable } from './key-value-table.component';
+import { NetworkConditionsSection } from './network-conditions-section.component';
 import { sandboxStyles } from './shared.styles';
 import { COLORS } from '../../../constants/colors.const';
 import { buildCurlCommand } from '../../../utils/network/curl.util';
@@ -52,6 +53,7 @@ export function RequestPanel({
 
   return (
     <>
+      <NetworkConditionsSection />
       <AuthSection auth={auth} onChange={onChangeAuth} />
       <CollapsibleSection title="Query Parameters" count={paramRows.length - 1}>
         <KeyValueTable rows={paramRows} onChange={onChangeParamRows} />

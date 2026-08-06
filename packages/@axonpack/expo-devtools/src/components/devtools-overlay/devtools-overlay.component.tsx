@@ -5,6 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors.const';
 import { NetworkView } from '../network/network-view.component';
+import { AxonpackLogo } from '../ui/axonpack-logo.ui';
 import { IconButton } from '../ui/icon-button.ui';
 
 const FAB_SIZE = 40;
@@ -65,7 +66,10 @@ export function DevtoolsOverlay() {
         <SafeAreaProvider style={{ flex: 1, backgroundColor: COLORS.background }}>
           <SafeAreaView edges={['left', 'right', 'top']} style={styles.modal}>
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Devtools</Text>
+              <View style={styles.headerBrand}>
+                <AxonpackLogo size={20} />
+                <Text style={styles.headerTitle}>Devtools</Text>
+              </View>
               <IconButton
                 name="close"
                 color={COLORS.textSecondary}
@@ -111,6 +115,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+  },
+  headerBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerTitle: {
     fontSize: 13,

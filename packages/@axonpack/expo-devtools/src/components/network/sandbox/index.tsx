@@ -90,12 +90,15 @@ export function SandboxSheet({
   }
 
   return (
-    <BottomSheet visible={visible} onClose={onClose}>
-      <View style={styles.titleRow}>
-        <SparkleIcon size={14} />
-        <Text style={styles.title}>Sandbox</Text>
-      </View>
-
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      headerContent={
+        <View style={styles.titleRow}>
+          <SparkleIcon size={14} />
+          <Text style={styles.title}>Sandbox</Text>
+        </View>
+      }>
       <UrlBar url={url} onChangeUrl={setUrl} />
       <View style={styles.actionRow}>
         <MethodSelector method={method} onChange={setMethod} />
@@ -132,12 +135,13 @@ export function SandboxSheet({
 }
 
 const styles = StyleSheet.create({
+  // Horizontal padding comes from BottomSheet's header row; the vertical padding here is what
+  // gives that row its height, since the row itself sets none.
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingVertical: 10,
   },
   title: {
     fontSize: 13,
