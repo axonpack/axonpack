@@ -32,7 +32,9 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
     if (!canRun) return;
     // Ahead of the run so the rows it adds land while the list is already following the tail.
     onSubmit?.();
-    runReplCommand(source.trim());
+    // Handed over raw — `runReplCommand` normalizes and trims, so the echoed row and the code that
+    // runs can't drift apart.
+    runReplCommand(source);
     consolePromptStore.setDraft('');
   }
 
