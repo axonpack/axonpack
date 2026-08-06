@@ -39,9 +39,6 @@ Scope: this package specifically. For the wider `@axonpack/*` family (lite-stora
 1. **Initiator (call site)** — capture `new Error().stack` at request time in each patch to show what code triggered a request.
 2. **Cookies tab** — for WebView-sourced requests specifically, since real cookies exist there (not for native fetch/XHR, per the hard limits above).
 3. **WebView-only real timing breakdown** — a WebView page has the actual `PerformanceResourceTiming` API, so a DNS/connect/TTFB/download phase breakdown is genuinely possible there specifically, unlike native fetch/XHR.
-4. **Console REPL (run an expression on-device)** — possible, and in a dev build it needs no wiring from the consumer at all. Hermes deliberately excludes _local mode_ `eval()`, but global `eval` and `new Function(...)` work, so a typed expression runs against globals. Reaching the app's own modules is separately solvable: Metro's runtime sets `global.__r` unconditionally, and under `__DEV__` it also exposes `__r.getModules()` — a `Map` of module id → `{ verboseName, isInitialized, publicModule.exports }` — plus lookup by source path, `__r('src/stores/auth')`. That's enough to browse and grab any loaded module's exports from the REPL.
-
-   What that registry can't do: it's gone in a release build (opaque numeric ids, no `verboseName`, no `getModules`), it's undocumented Metro internals that can change between versions, `__r`-ing an _uninitialized_ module executes it (side effects), and it surfaces every node_modules internal alongside app code. So an optional `console: { context: { store, queryClient } }` compiled as `new Function(...Object.keys(context), 'return (' + source + ')')` is sugar — short stable names that also survive a release build — not a prerequisite. Either way it's arbitrary code execution shipped inside the app binary, so it stays opt-in.
 
 ## Beyond network: other tabs from the original plan
 
@@ -53,9 +50,15 @@ Object arguments are deep-copied into the tree's `JsonValue` shape at capture ti
 
 The view has record/clear/sort/filter matching the Network toolbar, level chips with counts, and warning/error counts in the toolbar.
 
+**Console REPL — built.** A `>` prompt sits directly under the toolbar (not pinned to the bottom: the list is newest-first, so a result appears right under the input, and a bottom-anchored field would sit behind the keyboard). Submitting echoes the source as an `input` row and writes the answer back as a `result` row, rendered through the same argument cells — so an object result is an inspectable tree, and a thrown error shows its stack. A promise lands as `Promise {<pending>}` and fills in when it settles. REPL rows are exempt from repeat-collapse and from the pause gate: a command you just typed always appears.
+
+Evaluation uses `new Function(...names, source)`, expression form first (`1 + 1` → 2) falling back to statement form (`const x = 1`). Not `eval` — Hermes deliberately excludes _local mode_ `eval()`, and there'd be nothing to gain from the indirect kind. Scope is globals plus injected names, because Metro compiles every module into a closure that no scope can reach into. Two names are always injected: `$modules(query?)` lists the source paths Metro has loaded and `$m(path)` returns a loaded module's exports, both read off `__r.getModules()`. Those are undocumented Metro internals and `__DEV__`-only, and `$m` deliberately skips modules that haven't initialized, since requiring one would execute it. `console: { context: { store, queryClient } }` adds your own names — optional, but the only thing that works in a release build.
+
+`repl` defaults to `__DEV__`. It compiles and runs whatever is typed, so it stays out of release builds unless a consumer opts in explicitly.
+
 Not built for console yet:
 
-- **REPL / expression evaluation** — see "Feasible, not yet built" above.
+- **REPL history / autocomplete** — no up-arrow recall, no completion of `$m(` paths, and a previous input row isn't tappable to re-run. Chrome's eager-evaluation preview is also absent.
 - **`%s`/`%d`/`%o` format specifiers** — a `console.log('n: %d', 5)` renders as `n: %d 5` rather than substituting.
 - **Call-site (which file logged this)** — same `new Error().stack` approach as the network initiator idea, and the same reason it's not on by default: capturing a stack on every log is expensive.
 - **Console entries in Export** — Export is still network-only.

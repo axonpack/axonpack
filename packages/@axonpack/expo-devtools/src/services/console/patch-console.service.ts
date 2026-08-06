@@ -2,7 +2,10 @@ import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { getConsoleArgsText, toConsoleArgs } from '../../utils/console/format-console-args.util';
 
-const LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
+// Excludes the REPL's own `input`/`result` levels — those aren't methods on `console`.
+type PatchedLevel = Extract<ConsoleLogLevel, 'log' | 'info' | 'warn' | 'error' | 'debug'>;
+
+const LEVELS: PatchedLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
 
 let isPatched = false;
 let entryCounter = 0;

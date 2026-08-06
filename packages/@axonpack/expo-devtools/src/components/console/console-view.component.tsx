@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { ConsolePrompt } from './console-prompt.component';
 import { ConsoleRow } from './console-row.component';
 import { COLORS } from '../../constants/colors.const';
 import {
@@ -9,6 +10,7 @@ import {
   CONSOLE_LEVEL_VISUALS,
   CONSOLE_LEVELS,
 } from '../../constants/console/console-levels.const';
+import { isReplEnabled } from '../../services/console/evaluate-expression.service';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
@@ -132,6 +134,11 @@ export function ConsoleView() {
           </View>
         </View>
       )}
+
+      {/* Above the list, not pinned below it: the list is newest-first, so a command's result
+          appears directly under the prompt — and a bottom-anchored input would sit behind the
+          on-screen keyboard. */}
+      {isReplEnabled() && <ConsolePrompt />}
 
       <FlatList
         data={visibleEntries}

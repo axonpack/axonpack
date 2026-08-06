@@ -2,7 +2,8 @@ import { EventEmitter } from 'expo';
 
 import type { ConsoleArg } from '../../utils/console/format-console-args.util';
 
-export type ConsoleLogLevel = 'log' | 'info' | 'warn' | 'error' | 'debug';
+/** `input`/`result` are the REPL's own echo and answer — they never come from a `console.*` call. */
+export type ConsoleLogLevel = 'log' | 'info' | 'warn' | 'error' | 'debug' | 'input' | 'result';
 
 export type ConsoleLogEntry = {
   id: string;
@@ -59,11 +60,17 @@ export const consoleLogStore = {
    * stacking up, the way a browser console does — one log inside a render or an interval otherwise
    * evicts everything else in the buffer within seconds.
    */
-  add(entry: ConsoleLogEntry) {
-    if (!enabled || paused) return;
+  add(entry: ConsoleLogEntry, options?: { force?: boolean }) {
+    if (!enabled) return;
+    // A command typed at the prompt is the user's own action — it has to appear even while capture
+    // is paused, otherwise submitting looks broken.
+    if (paused && !options?.force) return;
 
+    // REPL rows are exempt: running the same expression twice is two deliberate actions, and its
+    // echo collapsing while its result doesn't would read as a dropped command.
+    const collapsible = entry.level !== 'input' && entry.level !== 'result';
     const newest = entries[0];
-    if (newest && newest.level === entry.level && newest.text === entry.text) {
+    if (collapsible && newest && newest.level === entry.level && newest.text === entry.text) {
       entries = [
         { ...newest, count: newest.count + 1, timestamp: entry.timestamp },
         ...entries.slice(1),
@@ -71,6 +78,11 @@ export const consoleLogStore = {
     } else {
       entries = [entry, ...entries].slice(0, MAX_ENTRIES);
     }
+    emitter.emit('change');
+  },
+  /** Fills in a row after the fact — used when a REPL expression resolves a promise. */
+  update(id: string, patch: Partial<ConsoleLogEntry>) {
+    entries = entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
     emitter.emit('change');
   },
   clear() {

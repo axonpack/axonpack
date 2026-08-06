@@ -1,3 +1,4 @@
+import { configureRepl } from '../services/console/evaluate-expression.service';
 import { patchConsole } from '../services/console/patch-console.service';
 import { patchFetch } from '../services/network/patch-fetch.service';
 import { patchXHR } from '../services/network/patch-xhr.service';
@@ -28,6 +29,18 @@ export type DevtoolsNetworkConfig<TWebviewSources extends readonly string[]> = {
 
 export type DevtoolsConsoleConfig = {
   capture?: boolean;
+  /**
+   * Show the `>` prompt in the Console tab. Defaults to `__DEV__` — it compiles and runs whatever
+   * is typed, so it stays out of release builds unless you opt in explicitly.
+   */
+  repl?: boolean;
+  /**
+   * Extra names an expression at the prompt can use, e.g. `{ store, queryClient }`. Optional:
+   * globals and `$modules()`/`$m('path')` (Metro's dev-only module registry) work without it. Use
+   * it for short stable names, and for reaching app code at all in a release build, where that
+   * registry doesn't exist.
+   */
+  context?: Record<string, unknown>;
 };
 
 export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
@@ -45,7 +58,11 @@ export function createDevtoolsClient<
     includeXmlHttpRequest = true,
     webviewSources,
   } = config?.network ?? {};
-  const { capture: captureConsole = true } = config?.console ?? {};
+  const {
+    capture: captureConsole = true,
+    repl: enableRepl = __DEV__,
+    context: replContext,
+  } = config?.console ?? {};
 
   return {
     init() {
@@ -53,10 +70,11 @@ export function createDevtoolsClient<
       networkLogStore.setEnabled(true);
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
-      if (captureConsole) {
-        consoleLogStore.setEnabled(true);
-        patchConsole();
-      }
+      // Enabled for the REPL too, not just capture — otherwise a `capture: false` app would run a
+      // command at the prompt and see nothing come back.
+      if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
+      if (captureConsole) patchConsole();
+      configureRepl(enableRepl, replContext);
     },
 
     getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
