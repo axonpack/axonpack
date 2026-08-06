@@ -95,38 +95,41 @@ export function DetailPanel({
 
   return (
     <>
-      <BottomSheet visible={entry !== null} onClose={onClose}>
-        <View style={styles.tabBarRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.tabBar}
-            automaticallyAdjustKeyboardInsets
-            automaticallyAdjustsScrollIndicatorInsets
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            contentContainerStyle={styles.tabBarContent}>
-            {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
-              <TouchableOpacity
-                key={t.key}
-                onPress={() => setTab(t.key)}
-                style={[styles.tabButton, tab === t.key && styles.tabButtonActive]}>
-                <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>
-                  {t.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <IconButton
-            name="more-vert"
-            color={COLORS.textSecondary}
-            hitSlop={12}
-            onPress={(event) =>
-              setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })
-            }
-          />
-        </View>
-
+      <BottomSheet
+        visible={entry !== null}
+        onClose={onClose}
+        headerContent={
+          <View style={styles.tabBarRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.tabBar}
+              automaticallyAdjustKeyboardInsets
+              automaticallyAdjustsScrollIndicatorInsets
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              contentContainerStyle={styles.tabBarContent}>
+              {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
+                <TouchableOpacity
+                  key={t.key}
+                  onPress={() => setTab(t.key)}
+                  style={[styles.tabButton, tab === t.key && styles.tabButtonActive]}>
+                  <Text style={[styles.tabLabel, tab === t.key && styles.tabLabelActive]}>
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <IconButton
+              name="more-vert"
+              color={COLORS.textSecondary}
+              hitSlop={12}
+              onPress={(event) =>
+                setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })
+              }
+            />
+          </View>
+        }>
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
@@ -152,12 +155,11 @@ export function DetailPanel({
 }
 
 const styles = StyleSheet.create({
+  // Horizontal padding and the separator underneath both come from BottomSheet's header row now,
+  // so the line spans the full sheet instead of stopping at the logo and close button.
   tabBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
   },
   tabBar: {
     flex: 1,
