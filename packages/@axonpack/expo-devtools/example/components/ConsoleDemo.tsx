@@ -4,6 +4,11 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from './ActionButton';
 import { devtools } from '../devtools';
 
+// A plain string rather than JSX text — the quotes and `=>` would otherwise need HTML entities.
+const PROMPT_HINT =
+  "At the > prompt, try: appInfo · double(21) · $modules('components') · " +
+  "fetch('https://jsonplaceholder.typicode.com/todos/1').then(r => r.json())";
+
 class Session {
   id = 'sess_8f21';
   user = { id: 7, name: 'ada', roles: ['admin', 'billing'] };
@@ -193,6 +198,7 @@ export function ConsoleDemo() {
         Tap anything below, then open the bug FAB and switch to the Console tab. Every call also
         reaches Metro as usual.
       </Text>
+      <Text style={styles.intro}>{PROMPT_HINT}</Text>
       <Text style={styles.count}>{entries.length} entries in the store</Text>
 
       {ACTIONS.map((section) => (
