@@ -1,6 +1,6 @@
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogLevel } from '../../stores/console/console-log.store';
-import { formatConsoleArgs } from '../../utils/console/format-console-args.util';
+import { getConsoleArgsText, toConsoleArgs } from '../../utils/console/format-console-args.util';
 
 const LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
 
@@ -26,14 +26,14 @@ export function patchConsole() {
 
     console[level] = (...args: unknown[]) => {
       try {
-        const firstError = args.find((arg) => arg instanceof Error);
+        const parts = toConsoleArgs(args);
         consoleLogStore.add({
           id: nextEntryId(),
           level,
-          text: formatConsoleArgs(args),
+          parts,
+          text: getConsoleArgsText(parts),
           timestamp: Date.now(),
           count: 1,
-          stack: firstError?.stack,
         });
       } catch {
         // Serializing an exotic value must never take down the app's own logging — drop the entry

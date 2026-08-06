@@ -1,87 +1,70 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { ConsoleArgCell } from './console-arg-cell.component';
 import { COLORS } from '../../constants/colors.const';
 import { CONSOLE_LEVEL_VISUALS } from '../../constants/console/console-levels.const';
 import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
-
-const COLLAPSED_LINES = 4;
+import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
 export function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
-  const [expanded, setExpanded] = useState(false);
   const visual = CONSOLE_LEVEL_VISUALS[entry.level];
 
   return (
-    <TouchableOpacity
-      onPress={() => setExpanded((current) => !current)}
-      activeOpacity={0.7}
-      style={[styles.row, visual.surface ? { backgroundColor: visual.surface } : null]}>
-      <MaterialIcons name={visual.icon} size={14} color={visual.color} style={styles.icon} />
-
-      <View style={styles.body}>
-        <Text
-          style={[styles.text, entry.level === 'error' && { color: COLORS.error }]}
-          numberOfLines={expanded ? undefined : COLLAPSED_LINES}
-          selectable>
-          {entry.text}
-        </Text>
-        {expanded && entry.stack && (
-          <Text style={styles.stack} selectable>
-            {entry.stack}
-          </Text>
-        )}
+    <View style={[styles.row, visual.surface ? { backgroundColor: visual.surface } : null]}>
+      {/* Each argument owns its own interaction — the row itself is deliberately not tappable, so
+          a tap inside a JSON tree expands that node instead of being eaten by a parent touchable. */}
+      <View style={styles.main}>
+        <MaterialIcons name={visual.icon} size={14} color={visual.color} style={styles.icon} />
+        <View style={styles.body}>
+          {entry.parts.map((arg, index) => (
+            <ConsoleArgCell
+              key={`${entry.id}-${index}`}
+              arg={arg}
+              plainColor={entry.level === 'error' ? COLORS.error : undefined}
+            />
+          ))}
+        </View>
       </View>
 
-      {entry.count > 1 && <Text style={styles.count}>{entry.count}</Text>}
-      <Text style={styles.time}>{new Date(entry.timestamp).toLocaleTimeString()}</Text>
-    </TouchableOpacity>
+      <View style={styles.meta}>
+        {entry.count > 1 && <Text style={styles.metaText}>×{entry.count}</Text>}
+        <Text style={styles.metaText}>{new Date(entry.timestamp).toLocaleTimeString()}</Text>
+        <CopyIconButton value={entry.text} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // The hairline separator is the row's only border — argument cells carry no chrome of their own.
   row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     backgroundColor: COLORS.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+  },
+  main: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
   },
   icon: {
     marginTop: 1,
   },
   body: {
     flex: 1,
+    gap: 2,
   },
-  text: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    color: COLORS.textPrimary,
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
   },
-  stack: {
-    fontFamily: 'monospace',
+  metaText: {
     fontSize: 10,
     color: COLORS.textSecondary,
-    marginTop: 4,
-  },
-  count: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#ffffff',
-    backgroundColor: COLORS.textSecondary,
-    borderRadius: 8,
-    minWidth: 16,
-    textAlign: 'center',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    overflow: 'hidden',
-  },
-  time: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    marginTop: 2,
   },
 });

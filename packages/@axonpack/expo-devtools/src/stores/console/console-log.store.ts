@@ -1,17 +1,19 @@
 import { EventEmitter } from 'expo';
 
+import type { ConsoleArg } from '../../utils/console/format-console-args.util';
+
 export type ConsoleLogLevel = 'log' | 'info' | 'warn' | 'error' | 'debug';
 
 export type ConsoleLogEntry = {
   id: string;
   level: ConsoleLogLevel;
-  /** Every argument of the call, serialized and joined — what the row renders. */
+  /** One entry per `console.*` argument — the row renders each as its own cell. */
+  parts: ConsoleArg[];
+  /** Flattened `parts`, used for search and for the repeat-collapse comparison in `add`. */
   text: string;
   timestamp: number;
   /** How many times in a row this exact message was logged (see `add`). */
   count: number;
-  /** Stack of the first `Error` argument, when one was passed. */
-  stack?: string;
 };
 
 type ConsoleLogEvents = {

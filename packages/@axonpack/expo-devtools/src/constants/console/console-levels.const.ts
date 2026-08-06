@@ -20,8 +20,10 @@ export type ConsoleLevelVisual = {
   surface?: string;
 };
 
+// Chevrons are reserved for things that actually expand — the JSON tree's nodes and an Error's
+// stack. A plain log's bullet has to read as inert, so it's a dash rather than a `chevron-right`.
 export const CONSOLE_LEVEL_VISUALS: Record<ConsoleLogLevel, ConsoleLevelVisual> = {
-  log: { icon: 'chevron-right', color: COLORS.textSecondary },
+  log: { icon: 'remove', color: COLORS.border },
   info: { icon: 'info-outline', color: COLORS.accent },
   warn: { icon: 'warning-amber', color: COLORS.warning, surface: COLORS.warningSurface },
   error: { icon: 'error-outline', color: COLORS.error, surface: COLORS.errorSurface },

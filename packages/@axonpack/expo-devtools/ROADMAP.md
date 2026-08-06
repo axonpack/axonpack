@@ -47,7 +47,11 @@ Scope: this package specifically. For the wider `@axonpack/*` family (lite-stora
 
 From `docs/plan.md`'s description of `@axonpack/expo-devtools` ("on-device, prod-safe debug tool... network / storage / database / console inspector tabs... console ring-buffer capture... logger... draggable DEV FAB"), the console tab and the FAB now exist; the storage/database tabs don't.
 
-**Console tab — built.** `patchConsole` wraps `log`/`info`/`warn`/`error`/`debug` and forwards to whatever was already there, so React Native's own LogBox (which patches `console.error`/`warn` itself) keeps working. Entries land in `consoleLogStore`, the same disabled-until-`init()` ring buffer pattern as the network log, capped at 500 rather than 200 — console output arrives an order of magnitude faster than requests do. Consecutive identical messages collapse into one row with a count, the way a browser console does, so one log inside a render doesn't evict the buffer. Arguments are serialized by `formatConsoleArgs` (circular-safe, depth-capped at 4); an `Error` argument's stack is kept and shown when the row is expanded. The view has record/clear/sort/filter matching the Network toolbar, level chips with counts, and warning/error counts in the toolbar.
+**Console tab — built.** `patchConsole` wraps `log`/`info`/`warn`/`error`/`debug` and forwards to whatever was already there, so React Native's own LogBox (which patches `console.error`/`warn` itself) keeps working. Entries land in `consoleLogStore`, the same disabled-until-`init()` ring buffer pattern as the network log, capped at 500 rather than 200 — console output arrives an order of magnitude faster than requests do. Consecutive identical messages collapse into one row with a count, the way a browser console does, so one log inside a render doesn't evict the buffer. Each argument of a call becomes its own cell in the row rather than being flattened into one string: primitives render as tone-colored monospace text (long ones clamp to six lines with a Show more toggle), an `Error` renders its message with the stack behind a disclosure, and an object/array/`Map`/`Set`/class instance renders in the same inspectable, syntax-highlighted `JsonTree` the Network tab's Preview uses — tap a node to expand, long-press to copy. Every row also carries a `CopyIconButton` on the right that copies the whole flattened message.
+
+Object arguments are deep-copied into the tree's `JsonValue` shape at capture time (circular-safe, depth-capped at 6, a throwing getter becomes `[Threw]`) rather than held by reference. Holding references would pin 500 live app objects in the ring buffer and would make an expanded row show the object's state _now_ instead of when it was logged. The flattened `entry.text` is kept alongside for search and repeat-collapse.
+
+The view has record/clear/sort/filter matching the Network toolbar, level chips with counts, and warning/error counts in the toolbar.
 
 Not built for console yet:
 
@@ -55,6 +59,7 @@ Not built for console yet:
 - **`%s`/`%d`/`%o` format specifiers** — a `console.log('n: %d', 5)` renders as `n: %d 5` rather than substituting.
 - **Call-site (which file logged this)** — same `new Error().stack` approach as the network initiator idea, and the same reason it's not on by default: capturing a stack on every log is expensive.
 - **Console entries in Export** — Export is still network-only.
+- **`undefined`, functions and symbols nested inside a logged object** — the tree's `JsonValue` shape has no slot for them, so they snapshot to the strings `'undefined'` / `'ƒ name()'` / `'Symbol(x)'` and render quoted. Only affects nested values; as a top-level argument each still renders in its own untyped cell.
 
 Still missing entirely:
 
