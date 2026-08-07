@@ -1,0 +1,3 @@
+# Submodule with its own history and formatting — the root `format` task would otherwise
+# rewrite its files on every commit and leave the gitlink permanently dirty.
+marketing
