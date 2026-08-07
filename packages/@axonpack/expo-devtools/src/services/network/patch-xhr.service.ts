@@ -33,6 +33,45 @@ function estimateResponseSize(xhr: XMLHttpRequest): number | undefined {
   }
 }
 
+type ResponseBodySource = {
+  responseType: string;
+  responseText: string;
+  response: unknown;
+};
+
+function describeNonTextResponse(xhr: ResponseBodySource): string | undefined {
+  try {
+    const response: unknown = xhr.response;
+    if (response == null) return undefined;
+    if (typeof response === 'string') return response;
+    if (typeof Blob !== 'undefined' && response instanceof Blob) {
+      return `[Blob ${response.size} bytes${response.type ? `, ${response.type}` : ''}]`;
+    }
+    if (typeof ArrayBuffer !== 'undefined' && response instanceof ArrayBuffer) {
+      return `[ArrayBuffer ${response.byteLength} bytes]`;
+    }
+    if (typeof response === 'object') return JSON.stringify(response);
+    return String(response);
+  } catch {
+    return undefined;
+  }
+}
+
+function readResponseBody(xhr: ResponseBodySource): string | undefined {
+  let responseType: string | undefined;
+  try {
+    responseType = xhr.responseType;
+  } catch {
+    return undefined;
+  }
+  if (responseType !== '' && responseType !== 'text') return describeNonTextResponse(xhr);
+  try {
+    return typeof xhr.responseText === 'string' ? xhr.responseText : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function nextRequestId(): string {
   requestCounter += 1;
   return `xhr-${Date.now()}-${requestCounter}`;
@@ -180,6 +219,8 @@ export function patchXHR() {
       status: number;
       statusText: string;
       responseText: string;
+      responseType: string;
+      response: unknown;
     };
     const id = xhr.__networkLogId ?? nextRequestId();
     const startedAt = Date.now();
@@ -215,7 +256,7 @@ export function patchXHR() {
       if (xhr.readyState !== XMLHttpRequest.DONE) return;
 
       const isNetworkFailure = xhr.status === 0;
-      const responseBody = typeof xhr.responseText === 'string' ? xhr.responseText : undefined;
+      const responseBody = readResponseBody(xhr);
       let responseHeaders: Record<string, string> | undefined;
       try {
         responseHeaders = parseResponseHeaders(this.getAllResponseHeaders());

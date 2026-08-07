@@ -257,6 +257,41 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
         }
       }
 
+      function describeNonText(xhr) {
+        try {
+          var response = xhr.response;
+          if (response == null) return undefined;
+          if (typeof response === 'string') return response;
+          if (typeof Blob !== 'undefined' && response instanceof Blob) {
+            return '[Blob ' + response.size + ' bytes' + (response.type ? ', ' + response.type : '') + ']';
+          }
+          if (typeof ArrayBuffer !== 'undefined' && response instanceof ArrayBuffer) {
+            return '[ArrayBuffer ' + response.byteLength + ' bytes]';
+          }
+          if (typeof response === 'object') return JSON.stringify(response);
+          return String(response);
+        } catch (e) {
+          return undefined;
+        }
+      }
+
+      // responseText is a throwing getter whenever responseType is not '' or 'text' — reading it
+      // unguarded raises InvalidStateError inside the page, which would break the page's own XHR.
+      function readResponseBody(xhr) {
+        var responseType;
+        try {
+          responseType = xhr.responseType;
+        } catch (e) {
+          return undefined;
+        }
+        if (responseType && responseType !== 'text') return describeNonText(xhr);
+        try {
+          return typeof xhr.responseText === 'string' ? xhr.responseText : undefined;
+        } catch (e) {
+          return undefined;
+        }
+      }
+
       // Resolved once per request and cached, so every listener on the same dispatch computes the
       // same target and fires in registration order rather than drifting apart.
       function deliveryDelay(xhr) {
@@ -364,7 +399,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
         xhr.addEventListener('readystatechange', function () {
           if (xhr.readyState !== OriginalXHR.DONE) return;
           var isNetworkFailure = xhr.status === 0;
-          var responseBody = typeof xhr.responseText === 'string' ? xhr.responseText : undefined;
+          var responseBody = readResponseBody(xhr);
           var responseHeaders = {};
           try {
             var raw = xhr.getAllResponseHeaders() || '';
