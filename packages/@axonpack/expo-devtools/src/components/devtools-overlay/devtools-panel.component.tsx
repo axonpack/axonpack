@@ -1,12 +1,12 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
+import { PanelBrand } from './panel-brand.component';
 import { COLORS } from '../../constants/colors.const';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import { ConsoleView } from '../console/console-view.component';
 import { NetworkView } from '../network/network-view.component';
-import { AxonpackLogo } from '../ui/axonpack-logo.ui';
 import { IconButton } from '../ui/icon-button.ui';
 
 /**
@@ -40,10 +40,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
       style={styles.panel}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
-        <View style={styles.headerBrand}>
-          <AxonpackLogo size={20} />
-          <Text style={styles.headerTitle}>@axonpack/expo-devtools</Text>
-        </View>
+        <PanelBrand />
         <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
       </View>
 
@@ -73,18 +70,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
-  },
-  headerBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-    // textTransform: 'uppercase',
   },
   tabPanel: {
     flex: 1,

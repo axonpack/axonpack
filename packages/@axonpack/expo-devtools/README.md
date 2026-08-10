@@ -200,6 +200,25 @@ where the file list above isn't available.
 The prompt is **off in release builds** by default, since it runs whatever is typed into it. Turn it
 on deliberately with `console: { repl: true }` if you want it there.
 
+## Showing your own app in the header
+
+By default the panel header carries this package's name. Point it at your own app instead:
+
+```ts
+export const devtools = createDevtoolsClient({
+  name: 'Acme Delivery',
+  icon: require('./assets/icon.png'),
+});
+```
+
+Either field works on its own — pass just a name and you keep the default mark, pass just an icon and
+you keep the default title.
+
+Both have to be given explicitly. An app's installed launcher icon isn't reachable from JavaScript on
+iOS or Android, and the `icon` in your Expo config is a build-time path rather than something `Image`
+can load in a standalone build — so there's nothing dependable to detect. Passing the same
+`require(...)` your config uses is the one approach that works in every build.
+
 ## Capturing inside an in-app browser
 
 A `<WebView>` runs its own separate JavaScript, invisible to everything above, so it needs two props
@@ -222,7 +241,7 @@ Declare the name up front so a typo can't silently swallow everything:
 
 ```ts
 export const devtools = createDevtoolsClient({
-  network: { webviewSources: ['my-webview'] },
+  webviewSources: ['my-webview'],
 });
 ```
 
@@ -247,12 +266,16 @@ want.
 | Option                          | Type                      | Default     | Description                                                                          |
 | ------------------------------- | ------------------------- | ----------- | ------------------------------------------------------------------------------------ |
 | `enabled`                       | `boolean`                 | `true`      | Master switch. `false` makes `.init()` do nothing at all.                            |
+| `name`                          | `string`                  | `undefined` | Your app's name, shown in the panel header instead of this package's.                |
+| `icon`                          | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                |
+| `webviewSources`                | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for both tabs.                   |
 | `network.includeFetch`          | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                  |
 | `network.includeXmlHttpRequest` | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries. |
-| `network.webviewSources`        | `string[]`                | `undefined` | Names of in-app browser views allowed to report in.                                  |
+| `network.disabledByDefault`     | `boolean`                 | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture. |
 | `console.capture`               | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.      |
 | `console.repl`                  | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                    |
 | `console.context`               | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                    |
+| `console.disabledByDefault`     | `boolean`                 | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.       |
 
 ## Leaving it in production
 

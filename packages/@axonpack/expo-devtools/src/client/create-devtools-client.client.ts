@@ -1,3 +1,5 @@
+import type { ImageSourcePropType } from 'react-native';
+
 import { configureRepl } from '../services/console/evaluate-expression.service';
 import { patchConsole } from '../services/console/patch-console.service';
 import {
@@ -15,6 +17,7 @@ import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../services/network/webview-network-logger.service';
+import { appIdentityStore } from '../stores/app-identity.store';
 import { consoleLogStore } from '../stores/console/console-log.store';
 import { networkConditionsStore } from '../stores/network/network-conditions.store';
 import { networkLogStore } from '../stores/network/network-log.store';
@@ -25,10 +28,14 @@ type WebViewMessageEventLike = {
   };
 };
 
-export type DevtoolsNetworkConfig<TWebviewSources extends readonly string[]> = {
+export type DevtoolsNetworkConfig = {
   includeFetch?: boolean;
   includeXmlHttpRequest?: boolean;
-  webviewSources?: TWebviewSources;
+  /**
+   * Open the Network tab not recording. Instrumentation is still installed, so the record button in
+   * the tab's toolbar starts capture whenever you want it — nothing before that point is kept.
+   */
+  disabledByDefault?: boolean;
 };
 
 export type DevtoolsConsoleConfig = {
@@ -45,11 +52,27 @@ export type DevtoolsConsoleConfig = {
    * registry doesn't exist.
    */
   context?: Record<string, unknown>;
+  /** Open the Console tab not recording, the same as `network.disabledByDefault`. */
+  disabledByDefault?: boolean;
 };
 
 export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   enabled?: boolean;
-  network?: DevtoolsNetworkConfig<TWebviewSources>;
+  /**
+   * Your app's name and icon, shown in the panel header in place of this package's own. Both have to
+   * be passed explicitly: the installed launcher icon isn't reachable from JS, and `expoConfig.icon`
+   * is a build-time path rather than something `Image` can load in a standalone build.
+   */
+  name?: string;
+  /** Any `Image` source, e.g. `require('./assets/icon.png')`. */
+  icon?: ImageSourcePropType;
+  /**
+   * Names of the in-app browser views allowed to report in. Top-level rather than under `network`
+   * because both the network and console tabs capture from a declared WebView, and the allowlist
+   * has to be the same one for each.
+   */
+  webviewSources?: TWebviewSources;
+  network?: DevtoolsNetworkConfig;
   console?: DevtoolsConsoleConfig;
 };
 
@@ -57,26 +80,33 @@ export function createDevtoolsClient<
   const TWebviewSources extends readonly string[] = readonly string[],
 >(config?: DevtoolsClientConfig<TWebviewSources>) {
   const isEnabled = config?.enabled ?? true;
+  const appName = config?.name;
+  const appIcon = config?.icon;
+  const webviewSources = config?.webviewSources;
   const {
     includeFetch = true,
     includeXmlHttpRequest = true,
-    webviewSources,
+    disabledByDefault: networkStartsPaused = false,
   } = config?.network ?? {};
   const {
     capture: captureConsole = true,
     repl: enableRepl = __DEV__,
     context: replContext,
+    disabledByDefault: consoleStartsPaused = false,
   } = config?.console ?? {};
 
   return {
     init() {
       if (!isEnabled) return;
+      if (appName || appIcon) appIdentityStore.set({ name: appName, icon: appIcon });
       networkLogStore.setEnabled(true);
+      if (networkStartsPaused) networkLogStore.setPaused(true);
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
       // Enabled for the REPL too, not just capture — otherwise a `capture: false` app would run a
       // command at the prompt and see nothing come back.
       if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
+      if (consoleStartsPaused) consoleLogStore.setPaused(true);
       if (captureConsole) patchConsole();
       configureRepl(enableRepl, replContext);
     },
