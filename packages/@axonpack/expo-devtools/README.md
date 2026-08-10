@@ -1,8 +1,8 @@
 # @axonpack/expo-devtools
 
 Browser-style devtools that live **inside** your React Native or Expo app. Tap a floating button and
-you get a **Network** tab and a **Console** tab on the device itself — no desktop debugger, no cable,
-no native code.
+you get **Network**, **Console** and **Performance** tabs on the device itself — no desktop debugger,
+no cable, no native code.
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../../LICENSE)
@@ -26,6 +26,9 @@ to reproduce the moment you reach for a menu. This puts the tools where the bug 
 - **Try things out** — resend any request with different headers or a different body, or type a line
   of JavaScript and see what it returns.
 - **Pretend the network is bad** — switch to Slow 3G or go offline without touching your Wi-Fi.
+- **See what the app is costing** — JS heap, frame rate, and the moments the app froze long enough to
+  notice.
+- **Make it look like your app** — the panel header carries your own name and icon.
 - **Safe to ship** — nothing is captured until you switch it on, so leaving the code in a production
   build costs you nothing.
 
@@ -73,8 +76,9 @@ export default function App() {
 }
 ```
 
-That's everything. Drag the button anywhere on screen, tap it to open the panel, and both tabs are
-already recording.
+That's everything. Drag the button anywhere on screen, tap it to open the panel, and every tab is
+already recording. The panel reopens on whichever tab you last had open, for as long as the app is
+running.
 
 ## The Network tab
 
@@ -226,35 +230,22 @@ Live metrics on the device, no desktop profiler and no cable.
 - **JS heap** — how much the JavaScript engine has allocated, with a sparkline of the last two
   minutes so you can watch it climb while you use the app.
 - **JS thread FPS** — measured from a frame-delta loop, green at 50+, amber under that, red under 30.
-- **Startup** — the launch phases the platform reported: native init, runtime setup, bundle eval, and
-  the total.
+- **Startup** — native init, runtime setup, bundle eval and the total, when the platform reports them.
+  Many setups don't, and the section is hidden rather than shown full of dashes.
 - **Long tasks** — anything that blocked the JS thread past the threshold (50 ms by default), newest
   first, with when it happened and for how long. A "long task" is one stretch of JavaScript that ran
   without yielding, so nothing else on that thread could happen meanwhile: no touches, no timers, no
   animation driven from JS. At 60 fps a frame is 16.7 ms, so 50 ms is about three frames lost and
-  roughly where a tap starts to feel late; past ~200 ms it reads as a freeze. Tasks from before you
-  opened the panel are included, which is usually where the startup ones show up.
-
-- **User timing** — every `performance.mark()` and `performance.measure()` your own code makes. This
-  is the one metric here that can name the code responsible for a slow stretch, so it's the answer to
-  a long task you can't explain:
-
-  ```ts
-  performance.mark('checkout:start');
-  await buildCart();
-  performance.measure('checkout', 'checkout:start');
-  ```
-
-  Marks from before you opened the panel are included — the native timeline is read on startup, not
-  just watched from then on.
+  roughly where a tap starts to feel late; past ~200 ms it reads as a freeze.
 
 - **Interactions** — anything that took longer than 100 ms from the event to the next paint. Each row
   also shows how long your handler itself held the JS thread: a small handler under a large total
   means the interaction was stuck behind something else rather than being slow itself.
 
-The three lists share one view — pick which with the chips, since only one of them is ever the
-question you're asking. Recording works like the other tabs: a record button pauses and resumes, and
-a bin clears what's been collected.
+Both lists share one view — pick which with the chips. Recording works like the other tabs: a record
+button pauses and resumes, and a bin clears what's been collected. While it's paused nothing is measured at all — the instrumentation detaches rather than
+running and discarding — so leaving the tab switched off costs nothing. Switching it back on attaches
+fresh, and picks up whatever the platform still has buffered.
 
 ### What it deliberately doesn't show
 
@@ -277,9 +268,8 @@ know:
   tab says so rather than showing zeros.
 - **Long tasks name no culprit.** React Native's `PerformanceLongTaskTiming` returns a permanently
   empty `attribution` array — the web API's mechanism for reporting which code was responsible — so a
-  row can tell you a task blocked the thread for 180 ms starting 2.3 s after launch, but never that it
-  was your list render. Use it to find _when_ to look, then correlate against what the app was doing;
-  it won't point at a function for you.
+  row can tell you a task blocked the thread for 180 ms, but never that it was your list render. Use it
+  to find _when_ to look, then correlate against what the app was doing.
 
 ## Capturing inside an in-app browser
 
@@ -325,24 +315,23 @@ stylesheets and scripts the browser loads by itself still go out at full speed.
 `createDevtoolsClient(config?)` — every option is optional, and the defaults are what most apps
 want.
 
-| Option                               | Type                      | Default     | Description                                                                          |
-| ------------------------------------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------ |
-| `name`                               | `string`                  | `undefined` | Your app's name, shown in the panel header instead of this package's.                |
-| `icon`                               | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                |
-| `webviewSources`                     | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for both tabs.                   |
-| `network.includeFetch`               | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                  |
-| `network.includeXmlHttpRequest`      | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries. |
-| `network.disabledByDefault`          | `boolean`                 | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture. |
-| `console.capture`                    | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.      |
-| `console.repl`                       | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                    |
-| `console.context`                    | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                    |
-| `console.disabledByDefault`          | `boolean`                 | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.       |
-| `performance.sampleIntervalMs`       | `number`                  | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse. |
-| `performance.longTaskThresholdMs`    | `number`                  | `50`        | Only report tasks that blocked the JS thread at least this long.                     |
-| `performance.interactionThresholdMs` | `number`                  | `100`       | Only report interactions that took at least this long, event to next paint.          |
-| `performance.captureUserTiming`      | `boolean`                 | `true`      | Capture `performance.mark`/`measure` your own code makes.                            |
-| `performance.historySize`            | `number`                  | `120`       | How many heap samples and long tasks are kept.                                       |
-| `performance.disabledByDefault`      | `boolean`                 | `false`     | Open the Performance tab not recording.                                              |
+| Option                               | Type                      | Default     | Description                                                                           |
+| ------------------------------------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `name`                               | `string`                  | `undefined` | Your app's name, shown in the panel header instead of this package's.                 |
+| `icon`                               | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                 |
+| `webviewSources`                     | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs. |
+| `network.includeFetch`               | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                   |
+| `network.includeXmlHttpRequest`      | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries.  |
+| `network.disabledByDefault`          | `boolean`                 | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.  |
+| `console.capture`                    | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.       |
+| `console.repl`                       | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                     |
+| `console.context`                    | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
+| `console.disabledByDefault`          | `boolean`                 | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.        |
+| `performance.sampleIntervalMs`       | `number`                  | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.  |
+| `performance.longTaskThresholdMs`    | `number`                  | `50`        | Only report tasks that blocked the JS thread at least this long.                      |
+| `performance.interactionThresholdMs` | `number`                  | `100`       | Only report interactions that took at least this long, event to next paint.           |
+| `performance.historySize`            | `number`                  | `120`       | How many heap samples and long tasks are kept.                                        |
+| `performance.disabledByDefault`      | `boolean`                 | `false`     | Open the Performance tab not recording.                                               |
 
 ## Leaving it in production
 
@@ -360,7 +349,8 @@ Guarding the `.init()` call is the whole mechanism — there's no config flag th
 `example/` is a runnable Expo app to try all of this against. Its Requests screen fires `fetch`,
 `XMLHttpRequest`, axios, uploads and an in-app browser page; its Console screen has a button for
 every kind of output worth testing — mixed arguments, circular references, class instances, errors,
-repeats, and a 600-message flood.
+repeats, and a 600-message flood; its Performance screen blocks the JS thread for set durations, runs
+a deliberately slow press handler, and allocates memory you can retain or release.
 
 ```sh
 cd example

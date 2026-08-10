@@ -9,7 +9,6 @@
 - See the frame rate, so you can tell a slow screen from a slow network.
 - See how long your app took to start, broken into its stages.
 - **Long tasks** — a list of every moment the app froze for long enough to notice, with when it happened and for how long.
-- **User timing** — time your own code with a name you choose, and it appears here. This is the way to find out which part of a screen is the slow part.
 - **Interactions** — taps that took too long to respond, with the time your own code was responsible for shown separately.
 - The panel header now shows your app's own name and icon instead of the devtools' own, so it looks like part of your app.
 - Any tab can start switched off, for when you only want one of them recording.

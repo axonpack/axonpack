@@ -85,7 +85,7 @@ Request/response bodies are logged in full — no truncation, by design.
 ### Performance (`src/services/performance/`, `src/stores/performance/`)
 
 Pure JS, no native module — so it is bounded by what the RN web-performance APIs expose, and the tab
-states its own limits rather than faking past them. Four collectors feed one store
+states its own limits rather than faking past them. Collectors feed one store
 (`stores/performance/performance.store.ts`, same ring-buffer + `EventEmitter` shape as the network log):
 
 - `read-startup-timing.service.ts` — `performance.rnStartupTiming`, read once at `init()`. Probes
@@ -100,11 +100,20 @@ states its own limits rather than faking past them. Four collectors feed one sto
   `PerformanceObserver.supportedEntryTypes`, which is populated from what native actually implements
   and so varies by platform and RN version. Observed with `buffered: true`, because the startup long
   tasks are the interesting ones and they're long gone by the time the panel opens.
-- `fps-monitor.service.ts` — a `requestAnimationFrame` delta loop. **The one collector not started
-  from `init()`**: it keeps the JS thread awake for as long as it lives, so `PerformanceView` starts it
-  on mount and tears it down on unmount. This is also why the Performance panel is the only one _not_
-  kept mounted behind a hidden tab (`devtools-panel.component.tsx`) — the other two stay mounted to
-  preserve filters and scroll position, which would here mean a permanent rAF loop.
+- `fps-monitor.service.ts` — a `requestAnimationFrame` delta loop. **Not started by the collector
+  service at all**: it keeps the JS thread awake for as long as it lives, so `PerformanceView` starts
+  it on mount and tears it down on unmount. This is also why the Performance panel is the only one
+  _not_ kept mounted behind a hidden tab (`devtools-panel.component.tsx`) — the other two stay mounted
+  to preserve filters and scroll position, which would here mean a permanent rAF loop.
+
+`performance-collectors.service.ts` owns the lifecycle of the collectors above: it subscribes to the store
+and attaches or detaches every collector in step with the record button, rather than leaving them
+attached and filtering in `add*`. **This is load-bearing, not tidiness.** An observer registered while
+recording was paused delivered nothing after recording resumed, so `performance.disabledByDefault:
+true` followed by pressing record produced a permanently empty list while starting unpaused worked
+fine. Re-attaching on resume also re-reads the buffered native entries. The store's own `paused`
+checks stay as a second line of defence. `readStartupTiming` is exempt — a one-shot read of markers
+that never change, so it runs whether or not recording is on.
 
 Hermes reports no `jsHeapSizeLimit`, so there is deliberately no "% of limit" gauge. JS heap is not
 app memory (RSS), UI-thread jank is invisible to a JS rAF loop, and heap snapshots/flame charts come
