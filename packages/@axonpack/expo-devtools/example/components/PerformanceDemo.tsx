@@ -30,10 +30,7 @@ export function PerformanceDemo() {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Long tasks</Text>
-      <Text style={styles.hint}>
-        Each of these occupies the JS thread for the whole duration. Anything over the 50 ms
-        threshold lands in the Performance tab under Long tasks.
-      </Text>
+      <Text style={styles.hint}>Blocks the JS thread. Over 50 ms shows up under Long tasks.</Text>
       <View style={styles.row}>
         <ActionButton label="Block 60ms" onPress={() => blockThread(60)} />
         <ActionButton label="Block 150ms" onPress={() => blockThread(150)} />
@@ -49,10 +46,7 @@ export function PerformanceDemo() {
       </View>
 
       <Text style={styles.heading}>Interactions</Text>
-      <Text style={styles.hint}>
-        Blocking inside a press handler is what makes a tap feel slow — this is the row that shows
-        up under Interactions, with the handler time called out separately.
-      </Text>
+      <Text style={styles.hint}>A slow press handler. Shows up under Interactions.</Text>
       <View style={styles.row}>
         <ActionButton
           label="Slow tap handler (250ms)"
@@ -64,40 +58,8 @@ export function PerformanceDemo() {
         <Text style={styles.counter}>tapped {spins}×</Text>
       </View>
 
-      <Text style={styles.heading}>User timing</Text>
-      <Text style={styles.hint}>
-        Marks and measures your own code makes. Unlike a long task, these carry a name you chose, so
-        they can actually attribute where the time went.
-      </Text>
-      <View style={styles.row}>
-        <ActionButton
-          label="Mark + measure a span"
-          onPress={() => {
-            performance.mark('checkout:start');
-            blockThread(180);
-            performance.mark('checkout:end');
-            performance.measure('checkout', 'checkout:start', 'checkout:end');
-          }}
-        />
-        <ActionButton label="Single mark" onPress={() => performance.mark('button:pressed')} />
-        <ActionButton
-          label="Nested measures"
-          onPress={() => {
-            performance.mark('render:start');
-            blockThread(40);
-            performance.mark('layout:start');
-            blockThread(90);
-            performance.measure('layout', 'layout:start');
-            performance.measure('render', 'render:start');
-          }}
-        />
-      </View>
-
       <Text style={styles.heading}>JS heap</Text>
-      <Text style={styles.hint}>
-        The sparkline samples once a second, so give it a few seconds to move. Retained allocations
-        stay held until you release them.
-      </Text>
+      <Text style={styles.hint}>Sampled once a second, so give the graph a moment.</Text>
       <View style={styles.row}>
         <ActionButton
           label="Retain ~10MB"
@@ -115,8 +77,8 @@ export function PerformanceDemo() {
       </View>
 
       <Text style={styles.footnote}>
-        FPS only runs while the Performance tab is open, since the loop that measures it keeps the
-        JS thread awake. Leave the tab open and press a Block button to watch it dip.
+        FPS only measures while the Performance tab is open. Leave it open and press Block to watch
+        it dip.
       </Text>
     </ScrollView>
   );

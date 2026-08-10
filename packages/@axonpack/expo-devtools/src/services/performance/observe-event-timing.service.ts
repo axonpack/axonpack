@@ -24,26 +24,30 @@ type ObserverHost = {
 export function observeEventTiming(thresholdMs: number) {
   const Observer = (globalThis as unknown as { PerformanceObserver?: ObserverHost })
     .PerformanceObserver;
-  if (!Observer?.supportedEntryTypes?.includes('event')) return () => {};
+  if (!Observer?.supportedEntryTypes?.includes('event')) {
+    performanceStore.setSupport({ interactions: false });
+    return () => {};
+  }
 
   try {
     const observer = new Observer((list) => {
-      for (const entry of list.getEntries()) {
-        const { processingStart, processingEnd } = entry;
-        performanceStore.addInteraction({
-          name: entry.name,
-          startTime: entry.startTime,
-          duration: entry.duration,
+      performanceStore.addInteractions(
+        list.getEntries().map(({ name, startTime, duration, processingStart, processingEnd }) => ({
+          name,
+          startTime,
+          duration,
           processingDuration:
             processingStart !== undefined && processingEnd !== undefined
               ? processingEnd - processingStart
               : 0,
-        });
-      }
+        }))
+      );
     });
     observer.observe({ type: 'event', buffered: true, durationThreshold: thresholdMs });
+    performanceStore.setSupport({ interactions: true });
     return () => observer.disconnect();
   } catch {
+    performanceStore.setSupport({ interactions: false });
     return () => {};
   }
 }

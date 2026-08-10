@@ -1,18 +1,17 @@
+import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
 import type { InteractionEntry } from '../../stores/performance/performance.store';
 import { formatMs, getLongTaskColor } from '../../utils/performance/format-metrics.util';
 
-export function InteractionRow({ entry }: { entry: InteractionEntry }) {
+function InteractionRowBase({ entry }: { entry: InteractionEntry }) {
   return (
     <View style={styles.row}>
       <View style={[styles.marker, { backgroundColor: getLongTaskColor(entry.duration) }]} />
       <Text style={styles.name} numberOfLines={1}>
         {entry.name}
       </Text>
-      {/* Handler time vs total says where the wait went: a small handler under a large total means
-          the interaction queued behind something else rather than being slow itself. */}
       <Text style={styles.handler}>handler {formatMs(entry.processingDuration)}</Text>
       <Text style={[styles.duration, { color: getLongTaskColor(entry.duration) }]}>
         {formatMs(entry.duration)}
@@ -52,3 +51,6 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
 });
+
+/** Entries are immutable once recorded, so identity is a sufficient guard. */
+export const InteractionRow = memo(InteractionRowBase);

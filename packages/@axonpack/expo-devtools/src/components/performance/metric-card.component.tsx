@@ -10,16 +10,18 @@ export function MetricCard({
   children,
 }: {
   label: string;
-  value: string;
+  /** Omitted when the value is rendered by a child, e.g. an animated metric. */
+  value?: string;
   valueColor?: string;
-  /** Shown under the value — used to say why a metric is unavailable rather than leaving a dash. */
   hint?: string;
   children?: React.ReactNode;
 }) {
   return (
     <View style={styles.card}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, { color: valueColor }]}>{value}</Text>
+      {value !== undefined ? (
+        <Text style={[styles.value, { color: valueColor }]}>{value}</Text>
+      ) : null}
       {children}
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>

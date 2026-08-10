@@ -17,11 +17,7 @@ import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../services/network/webview-network-logger.service';
-import { observeEventTiming } from '../services/performance/observe-event-timing.service';
-import { observeLongTasks } from '../services/performance/observe-long-tasks.service';
-import { observeUserTiming } from '../services/performance/observe-user-timing.service';
-import { readStartupTiming } from '../services/performance/read-startup-timing.service';
-import { startMemorySampling } from '../services/performance/sample-memory.service';
+import { startPerformanceCollectors } from '../services/performance/performance-collectors.service';
 import { appIdentityStore } from '../stores/app-identity.store';
 import { consoleLogStore } from '../stores/console/console-log.store';
 import { networkConditionsStore } from '../stores/network/network-conditions.store';
@@ -75,11 +71,7 @@ export type DevtoolsPerformanceConfig = {
    * where a tap stops feeling immediate, so a lower value mostly records healthy interactions.
    */
   interactionThresholdMs?: number;
-  /** Capture `performance.mark`/`measure` the app makes itself. */
-  captureUserTiming?: boolean;
-  /** How many heap samples and long tasks are kept. */
   historySize?: number;
-  /** Open the Performance tab not recording, the same as `network.disabledByDefault`. */
   disabledByDefault?: boolean;
 };
 
@@ -87,11 +79,6 @@ export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   name?: string;
   /** Any `Image` source, e.g. `require('./assets/icon.png')`. */
   icon?: ImageSourcePropType;
-  /**
-   * Names of the in-app browser views allowed to report in. Top-level rather than under `network`
-   * because both the network and console tabs capture from a declared WebView, and the allowlist
-   * has to be the same one for each.
-   */
   webviewSources?: TWebviewSources;
   network?: DevtoolsNetworkConfig;
   console?: DevtoolsConsoleConfig;
@@ -119,7 +106,6 @@ export function createDevtoolsClient<
     sampleIntervalMs = 1000,
     longTaskThresholdMs = 50,
     interactionThresholdMs = 100,
-    captureUserTiming = false,
     historySize = 120,
     disabledByDefault: performanceStartsPaused = true,
   } = config?.performance ?? {};
@@ -140,15 +126,17 @@ export function createDevtoolsClient<
 
       performanceStore.setHistorySize(historySize);
       performanceStore.setEnabled(true);
+      // Set before the collectors start, so a `disabledByDefault` client attaches nothing at all
+      // rather than attaching and immediately detaching.
       if (performanceStartsPaused) performanceStore.setPaused(true);
-      // Read once — these are launch markers and never change while the app runs.
-      readStartupTiming();
-      // Both collectors are cheap and live for the process, so history survives the panel closing.
-      // The FPS monitor is the exception and starts from the view; see fps-monitor.service.ts.
-      startMemorySampling(sampleIntervalMs);
-      observeLongTasks(longTaskThresholdMs);
-      observeEventTiming(interactionThresholdMs);
-      if (captureUserTiming) observeUserTiming();
+      // Collectors attach and detach with the record button — see the service for why. They outlive
+      // the panel, so history survives it closing. The FPS monitor is the exception and starts from
+      // the view; see fps-monitor.service.ts.
+      startPerformanceCollectors({
+        sampleIntervalMs,
+        longTaskThresholdMs,
+        interactionThresholdMs,
+      });
     },
 
     /**

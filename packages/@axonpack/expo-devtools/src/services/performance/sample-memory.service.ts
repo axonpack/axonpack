@@ -17,10 +17,15 @@ export function startMemorySampling(intervalMs: number) {
   // `memory` is a getter that throws outright on a runtime with no implementation behind it (JSC,
   // V8), so even probing for it has to be guarded — not just reading it later.
   try {
-    if (!host?.memory) return () => {};
+    if (!host?.memory) {
+      performanceStore.setSupport({ memory: false });
+      return () => {};
+    }
   } catch {
+    performanceStore.setSupport({ memory: false });
     return () => {};
   }
+  performanceStore.setSupport({ memory: true });
 
   const read = () => {
     try {

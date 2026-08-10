@@ -15,40 +15,39 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export function StartupTimingSection({ startup }: { startup?: StartupTiming }) {
+  const hasAnyMarker =
+    startup !== undefined &&
+    (startup.startTime !== undefined ||
+      startup.endTime !== undefined ||
+      startup.initializeRuntimeStart !== undefined ||
+      startup.executeJavaScriptBundleEntryPointStart !== undefined);
+
+  if (!hasAnyMarker) return null;
+
   return (
     <CollapsibleSection title="Startup">
-      {startup ? (
-        <View style={styles.body}>
-          <Row label="Total" value={formatMs(diffMs(startup.startTime, startup.endTime))} />
-          <Row
-            label="Native init"
-            value={formatMs(diffMs(startup.startTime, startup.initializeRuntimeStart))}
-          />
-          <Row
-            label="Runtime setup"
-            value={formatMs(
-              diffMs(startup.initializeRuntimeStart, startup.executeJavaScriptBundleEntryPointStart)
-            )}
-          />
-          <Row
-            label="Bundle eval"
-            value={formatMs(
-              diffMs(startup.executeJavaScriptBundleEntryPointStart, startup.endTime)
-            )}
-          />
-          {/* Every field is nullable — the platform only fills them in if its native code reports
+      <View style={styles.body}>
+        <Row label="Total" value={formatMs(diffMs(startup.startTime, startup.endTime))} />
+        <Row
+          label="Native init"
+          value={formatMs(diffMs(startup.startTime, startup.initializeRuntimeStart))}
+        />
+        <Row
+          label="Runtime setup"
+          value={formatMs(
+            diffMs(startup.initializeRuntimeStart, startup.executeJavaScriptBundleEntryPointStart)
+          )}
+        />
+        <Row
+          label="Bundle eval"
+          value={formatMs(diffMs(startup.executeJavaScriptBundleEntryPointStart, startup.endTime))}
+        />
+        {/* Every field is nullable — the platform only fills them in if its native code reports
               them, so a dash means "not reported", not "zero". */}
-          <Text style={styles.note}>
-            A dash means the platform didn&apos;t report that marker. Phases are gaps between
-            markers, measured once at launch — they never change while the app runs.
-          </Text>
-        </View>
-      ) : (
         <Text style={styles.note}>
-          No startup timing reported. This needs the platform to implement
-          ReactMarker.setAppStartTime, which not every setup does.
+          Measured once at launch. A dash means the platform did not report that marker.
         </Text>
-      )}
+      </View>
     </CollapsibleSection>
   );
 }
