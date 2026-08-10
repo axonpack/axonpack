@@ -126,12 +126,9 @@ export function createDevtoolsClient<
 
       performanceStore.setHistorySize(historySize);
       performanceStore.setEnabled(true);
-      // Set before the collectors start, so a `disabledByDefault` client attaches nothing at all
-      // rather than attaching and immediately detaching.
+
       if (performanceStartsPaused) performanceStore.setPaused(true);
-      // Collectors attach and detach with the record button — see the service for why. They outlive
-      // the panel, so history survives it closing. The FPS monitor is the exception and starts from
-      // the view; see fps-monitor.service.ts.
+
       startPerformanceCollectors({
         sampleIntervalMs,
         longTaskThresholdMs,
@@ -139,11 +136,6 @@ export function createDevtoolsClient<
       });
     },
 
-    /**
-     * Network and console instrumentation for the page, concatenated — a consumer still sets one
-     * `injectedJavaScriptBeforeContentLoaded` prop and wires one `onMessage`. Each half returns a
-     * no-op when its capture is off, so the combined script is always safe to inject.
-     */
     getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
       const scripts = [getWebViewInjectedJavaScriptBeforeContentLoaded(source)];
       if (captureConsole) scripts.push(getWebViewConsoleInjectedJavaScript(source));
@@ -152,8 +144,6 @@ export function createDevtoolsClient<
 
     shouldAllowWebViewRequest,
     handleWebViewMessage(event: WebViewMessageEventLike) {
-      // Each handler recognizes only its own marker and reports whether it took the message, so the
-      // console one is never asked about a network payload.
       if (handleWebViewNetworkMessage(event, webviewSources)) return true;
       return captureConsole && handleWebViewConsoleMessage(event, webviewSources);
     },
