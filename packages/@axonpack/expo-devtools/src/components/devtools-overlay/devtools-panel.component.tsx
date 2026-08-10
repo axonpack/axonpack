@@ -7,6 +7,7 @@ import { COLORS } from '../../constants/colors.const';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import { ConsoleView } from '../console/console-view.component';
 import { NetworkView } from '../network/network-view.component';
+import { PerformanceView } from '../performance/performance-view.component';
 import { IconButton } from '../ui/icon-button.ui';
 
 /**
@@ -25,6 +26,19 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
     () => consoleEntries.filter((entry) => entry.level === 'error').length,
     [consoleEntries]
   );
+
+  const tabContent = useMemo(() => {
+    switch (tab) {
+      case 'network':
+        return <NetworkView />;
+      case 'console':
+        return <ConsoleView />;
+      case 'performance':
+        return <PerformanceView />;
+      default:
+        return null;
+    }
+  }, [tab]);
 
   return (
     /**
@@ -46,14 +60,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
 
       <DevtoolsTabBar tab={tab} onChange={setTab} badges={{ console: consoleErrorCount }} />
 
-      {/* Both views stay mounted and the inactive one is hidden, so switching tabs doesn't wipe the
-          filters, panels, and scroll position you set up on the other one. */}
-      <View style={[styles.tabPanel, tab !== 'network' && styles.hiddenTabPanel]}>
-        <NetworkView />
-      </View>
-      <View style={[styles.tabPanel, tab !== 'console' && styles.hiddenTabPanel]}>
-        <ConsoleView />
-      </View>
+      <View style={styles.tabPanel}>{tabContent}</View>
     </KeyboardAvoidingView>
   );
 }

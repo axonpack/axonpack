@@ -57,7 +57,6 @@ The public API is a single factory, deliberately **not** a React Provider/Contex
 
 ```ts
 const devtools = createDevtoolsClient({
-  enabled, // master switch; false makes init() a no-op
   name: "My App", // panel header identity — see below
   icon: require("./assets/icon.png"),
   webviewSources: ["my-webview"], // top-level: both tabs capture from a WebView
@@ -71,7 +70,7 @@ Everything is optional and the defaults suit most apps. The UI is mounted separa
 
 - `webviewSources` uses a TS 5 `const` type parameter, so the literal array flows into `getWebViewInjectedJavaScriptBeforeContentLoaded`/`handleWebViewMessage`'s parameter types — passing an undeclared name is a compile error, not just a lint warning. It doubles as a runtime allowlist: `handleWebViewNetworkMessage` silently drops messages whose `source` isn't in the list. It sits at the top level rather than under `network` because the console tab captures from a declared WebView too, and the allowlist has to be one list for both.
 - `name`/`icon` are top-level and must be passed explicitly — there is no way to detect them. A device's installed launcher icon isn't reachable from JS without native code, and `expoConfig.icon` is a build-time path string, not something `Image` can load in a standalone build. They reach the header through `stores/app-identity.store.ts` rather than a prop, because `DevtoolsOverlay` is mounted somewhere else in the tree and never sees the config object.
-- **Two independent gates, easily confused.** `enabled` is the master switch `init()` flips; there is no UI for it, and with it off nothing records anywhere (this is what makes shipping the code to production free). `paused` is what the record button in each tab's toolbar controls. `disabledByDefault` sets `paused`, not `enabled` — mapping it to `enabled` would leave a tab permanently dead, since nothing in the UI can turn that back on. REPL rows pass `{ force: true }` to `consoleLogStore.add` so the `>` prompt still answers while the console is paused.
+- **Two independent gates, easily confused.** Each store's internal `enabled` flag is what `init()` flips; there is no config option and no UI for it, and until `init()` runs nothing records anywhere (this is what makes shipping the code to production free — guard the `.init()` call and that's the whole mechanism). `paused` is what the record button in each tab's toolbar controls. `disabledByDefault` sets `paused`, not `enabled` — mapping it to `enabled` would leave a tab permanently dead, since nothing in the UI can turn that back on. REPL rows pass `{ force: true }` to `consoleLogStore.add` so the `>` prompt still answers while the console is paused.
 
 ### Network logging (`src/services/network/`, `src/stores/network/`)
 
@@ -82,6 +81,35 @@ Three independent interception paths feed one shared store (`stores/network/netw
 - `services/network/webview-network-logger.service.ts` — a `<WebView>` runs in a completely separate JS engine (WKWebView/Android WebView), invisible to both patches above. `getWebViewInjectedJavaScriptBeforeContentLoaded(name)` returns a JS string that patches fetch/XHR _inside the page_ and relays every request back via `postMessage`; `handleWebViewNetworkMessage(event, allowedSources)` (called through the client, not directly) parses that and writes into the same store. Relative URLs are resolved against `location.href` since real pages request plenty of relative paths.
 
 Request/response bodies are logged in full — no truncation, by design.
+
+### Performance (`src/services/performance/`, `src/stores/performance/`)
+
+Pure JS, no native module — so it is bounded by what the RN web-performance APIs expose, and the tab
+states its own limits rather than faking past them. Four collectors feed one store
+(`stores/performance/performance.store.ts`, same ring-buffer + `EventEmitter` shape as the network log):
+
+- `read-startup-timing.service.ts` — `performance.rnStartupTiming`, read once at `init()`. Probes
+  `reactNativeStartupTiming` too, since the getter was renamed across RN versions. All four fields
+  (`startTime`, `endTime`, `initializeRuntimeStart`, `executeJavaScriptBundleEntryPointStart`) are
+  nullable — the platform only fills them if its native code calls `ReactMarker.setAppStartTime`.
+- `sample-memory.service.ts` — `performance.memory`, polled on an interval (1s default). **Every read
+  crosses JSI** into Hermes (`hermes_allocatedBytes`/`hermes_heapSize`), so a fast interval would make
+  the profiler the slowdown it is measuring. `memory` is a _throwing getter_ on runtimes without an
+  implementation (JSC/V8), so even the capability probe is inside a `try`.
+- `observe-long-tasks.service.ts` — `PerformanceObserver` on `'longtask'`, gated on
+  `PerformanceObserver.supportedEntryTypes`, which is populated from what native actually implements
+  and so varies by platform and RN version. Observed with `buffered: true`, because the startup long
+  tasks are the interesting ones and they're long gone by the time the panel opens.
+- `fps-monitor.service.ts` — a `requestAnimationFrame` delta loop. **The one collector not started
+  from `init()`**: it keeps the JS thread awake for as long as it lives, so `PerformanceView` starts it
+  on mount and tears it down on unmount. This is also why the Performance panel is the only one _not_
+  kept mounted behind a hidden tab (`devtools-panel.component.tsx`) — the other two stay mounted to
+  preserve filters and scroll position, which would here mean a permanent rAF loop.
+
+Hermes reports no `jsHeapSizeLimit`, so there is deliberately no "% of limit" gauge. JS heap is not
+app memory (RSS), UI-thread jank is invisible to a JS rAF loop, and heap snapshots/flame charts come
+from the CDP `HeapProfiler`/`Profiler` domains over the inspector socket — all of which would need
+native code, and none of which this tab pretends to provide.
 
 ### Example app (`example/`)
 

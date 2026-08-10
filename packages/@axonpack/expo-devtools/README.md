@@ -219,6 +219,68 @@ iOS or Android, and the `icon` in your Expo config is a build-time path rather t
 can load in a standalone build — so there's nothing dependable to detect. Passing the same
 `require(...)` your config uses is the one approach that works in every build.
 
+## The Performance tab
+
+Live metrics on the device, no desktop profiler and no cable.
+
+- **JS heap** — how much the JavaScript engine has allocated, with a sparkline of the last two
+  minutes so you can watch it climb while you use the app.
+- **JS thread FPS** — measured from a frame-delta loop, green at 50+, amber under that, red under 30.
+- **Startup** — the launch phases the platform reported: native init, runtime setup, bundle eval, and
+  the total.
+- **Long tasks** — anything that blocked the JS thread past the threshold (50 ms by default), newest
+  first, with when it happened and for how long. A "long task" is one stretch of JavaScript that ran
+  without yielding, so nothing else on that thread could happen meanwhile: no touches, no timers, no
+  animation driven from JS. At 60 fps a frame is 16.7 ms, so 50 ms is about three frames lost and
+  roughly where a tap starts to feel late; past ~200 ms it reads as a freeze. Tasks from before you
+  opened the panel are included, which is usually where the startup ones show up.
+
+- **User timing** — every `performance.mark()` and `performance.measure()` your own code makes. This
+  is the one metric here that can name the code responsible for a slow stretch, so it's the answer to
+  a long task you can't explain:
+
+  ```ts
+  performance.mark('checkout:start');
+  await buildCart();
+  performance.measure('checkout', 'checkout:start');
+  ```
+
+  Marks from before you opened the panel are included — the native timeline is read on startup, not
+  just watched from then on.
+
+- **Interactions** — anything that took longer than 100 ms from the event to the next paint. Each row
+  also shows how long your handler itself held the JS thread: a small handler under a large total
+  means the interaction was stuck behind something else rather than being slow itself.
+
+The three lists share one view — pick which with the chips, since only one of them is ever the
+question you're asking. Recording works like the other tabs: a record button pauses and resumes, and
+a bin clears what's been collected.
+
+### What it deliberately doesn't show
+
+This tab is honest about the difference between what JavaScript can see and what you probably want to
+know:
+
+- **App memory is not JS heap.** "Memory" usually means the process footprint (RSS). That needs
+  native code — `task_vm_info` on iOS, `Debug.MemoryInfo` on Android — so it isn't here. The JS heap
+  is a real number, just a smaller one than you might assume.
+- **No "% of heap limit" gauge.** Hermes doesn't report a heap-size limit, so the denominator would
+  have to be invented.
+- **FPS is the JS thread only.** A janky native scroll or a heavy layout happens on the UI thread,
+  which a JavaScript loop is structurally blind to. A green number here does not prove the app feels
+  smooth.
+- **No heap snapshots or flame charts.** Those come from the CDP `HeapProfiler`/`Profiler` domains
+  over the inspector socket, driven from outside the app, and a multi-megabyte snapshot isn't
+  something you'd browse on a phone anyway.
+- **Some metrics depend on the platform.** Long tasks and startup markers only appear if the native
+  side implements them, which varies by platform and React Native version. When they're missing the
+  tab says so rather than showing zeros.
+- **Long tasks name no culprit.** React Native's `PerformanceLongTaskTiming` returns a permanently
+  empty `attribution` array — the web API's mechanism for reporting which code was responsible — so a
+  row can tell you a task blocked the thread for 180 ms starting 2.3 s after launch, but never that it
+  was your list render. Use it to find _when_ to look, then correlate against what the app was doing;
+  it won't point at a function for you.
+
 ## Capturing inside an in-app browser
 
 A `<WebView>` runs its own separate JavaScript, invisible to everything above, so it needs two props
@@ -263,19 +325,24 @@ stylesheets and scripts the browser loads by itself still go out at full speed.
 `createDevtoolsClient(config?)` — every option is optional, and the defaults are what most apps
 want.
 
-| Option                          | Type                      | Default     | Description                                                                          |
-| ------------------------------- | ------------------------- | ----------- | ------------------------------------------------------------------------------------ |
-| `enabled`                       | `boolean`                 | `true`      | Master switch. `false` makes `.init()` do nothing at all.                            |
-| `name`                          | `string`                  | `undefined` | Your app's name, shown in the panel header instead of this package's.                |
-| `icon`                          | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                |
-| `webviewSources`                | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for both tabs.                   |
-| `network.includeFetch`          | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                  |
-| `network.includeXmlHttpRequest` | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries. |
-| `network.disabledByDefault`     | `boolean`                 | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture. |
-| `console.capture`               | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.      |
-| `console.repl`                  | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                    |
-| `console.context`               | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                    |
-| `console.disabledByDefault`     | `boolean`                 | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.       |
+| Option                               | Type                      | Default     | Description                                                                          |
+| ------------------------------------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `name`                               | `string`                  | `undefined` | Your app's name, shown in the panel header instead of this package's.                |
+| `icon`                               | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                |
+| `webviewSources`                     | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for both tabs.                   |
+| `network.includeFetch`               | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                  |
+| `network.includeXmlHttpRequest`      | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries. |
+| `network.disabledByDefault`          | `boolean`                 | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture. |
+| `console.capture`                    | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.      |
+| `console.repl`                       | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                    |
+| `console.context`                    | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                    |
+| `console.disabledByDefault`          | `boolean`                 | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.       |
+| `performance.sampleIntervalMs`       | `number`                  | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse. |
+| `performance.longTaskThresholdMs`    | `number`                  | `50`        | Only report tasks that blocked the JS thread at least this long.                     |
+| `performance.interactionThresholdMs` | `number`                  | `100`       | Only report interactions that took at least this long, event to next paint.          |
+| `performance.captureUserTiming`      | `boolean`                 | `true`      | Capture `performance.mark`/`measure` your own code makes.                            |
+| `performance.historySize`            | `number`                  | `120`       | How many heap samples and long tasks are kept.                                       |
+| `performance.disabledByDefault`      | `boolean`                 | `false`     | Open the Performance tab not recording.                                              |
 
 ## Leaving it in production
 
@@ -286,8 +353,7 @@ recorded — so shipping the code is safe, and you can decide at runtime:
 devtools.init(); // or: if (__DEV__) devtools.init();
 ```
 
-`createDevtoolsClient({ enabled: false })` does the same thing for call sites that always call
-`.init()`.
+Guarding the `.init()` call is the whole mechanism — there's no config flag that does it for you.
 
 ## Example app
 

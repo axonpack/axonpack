@@ -17,10 +17,16 @@ import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../services/network/webview-network-logger.service';
+import { observeEventTiming } from '../services/performance/observe-event-timing.service';
+import { observeLongTasks } from '../services/performance/observe-long-tasks.service';
+import { observeUserTiming } from '../services/performance/observe-user-timing.service';
+import { readStartupTiming } from '../services/performance/read-startup-timing.service';
+import { startMemorySampling } from '../services/performance/sample-memory.service';
 import { appIdentityStore } from '../stores/app-identity.store';
 import { consoleLogStore } from '../stores/console/console-log.store';
 import { networkConditionsStore } from '../stores/network/network-conditions.store';
 import { networkLogStore } from '../stores/network/network-log.store';
+import { performanceStore } from '../stores/performance/performance.store';
 
 type WebViewMessageEventLike = {
   nativeEvent: {
@@ -56,13 +62,28 @@ export type DevtoolsConsoleConfig = {
   disabledByDefault?: boolean;
 };
 
-export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
-  enabled?: boolean;
+export type DevtoolsPerformanceConfig = {
   /**
-   * Your app's name and icon, shown in the panel header in place of this package's own. Both have to
-   * be passed explicitly: the installed launcher icon isn't reachable from JS, and `expoConfig.icon`
-   * is a build-time path rather than something `Image` can load in a standalone build.
+   * How often the JS heap is read. Each read crosses JSI into the engine, so this is deliberately
+   * coarse — sampling at animation rates would make the profiler the slowdown it is measuring.
    */
+  sampleIntervalMs?: number;
+  /** Only tasks blocking the JS thread for at least this long are reported. */
+  longTaskThresholdMs?: number;
+  /**
+   * Only interactions taking at least this long, event to next paint, are reported. 100ms is roughly
+   * where a tap stops feeling immediate, so a lower value mostly records healthy interactions.
+   */
+  interactionThresholdMs?: number;
+  /** Capture `performance.mark`/`measure` the app makes itself. */
+  captureUserTiming?: boolean;
+  /** How many heap samples and long tasks are kept. */
+  historySize?: number;
+  /** Open the Performance tab not recording, the same as `network.disabledByDefault`. */
+  disabledByDefault?: boolean;
+};
+
+export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   name?: string;
   /** Any `Image` source, e.g. `require('./assets/icon.png')`. */
   icon?: ImageSourcePropType;
@@ -74,12 +95,12 @@ export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   webviewSources?: TWebviewSources;
   network?: DevtoolsNetworkConfig;
   console?: DevtoolsConsoleConfig;
+  performance?: DevtoolsPerformanceConfig;
 };
 
 export function createDevtoolsClient<
   const TWebviewSources extends readonly string[] = readonly string[],
 >(config?: DevtoolsClientConfig<TWebviewSources>) {
-  const isEnabled = config?.enabled ?? true;
   const appName = config?.name;
   const appIcon = config?.icon;
   const webviewSources = config?.webviewSources;
@@ -94,10 +115,17 @@ export function createDevtoolsClient<
     context: replContext,
     disabledByDefault: consoleStartsPaused = false,
   } = config?.console ?? {};
+  const {
+    sampleIntervalMs = 1000,
+    longTaskThresholdMs = 50,
+    interactionThresholdMs = 100,
+    captureUserTiming = false,
+    historySize = 120,
+    disabledByDefault: performanceStartsPaused = true,
+  } = config?.performance ?? {};
 
   return {
     init() {
-      if (!isEnabled) return;
       if (appName || appIcon) appIdentityStore.set({ name: appName, icon: appIcon });
       networkLogStore.setEnabled(true);
       if (networkStartsPaused) networkLogStore.setPaused(true);
@@ -109,6 +137,18 @@ export function createDevtoolsClient<
       if (consoleStartsPaused) consoleLogStore.setPaused(true);
       if (captureConsole) patchConsole();
       configureRepl(enableRepl, replContext);
+
+      performanceStore.setHistorySize(historySize);
+      performanceStore.setEnabled(true);
+      if (performanceStartsPaused) performanceStore.setPaused(true);
+      // Read once — these are launch markers and never change while the app runs.
+      readStartupTiming();
+      // Both collectors are cheap and live for the process, so history survives the panel closing.
+      // The FPS monitor is the exception and starts from the view; see fps-monitor.service.ts.
+      startMemorySampling(sampleIntervalMs);
+      observeLongTasks(longTaskThresholdMs);
+      observeEventTiming(interactionThresholdMs);
+      if (captureUserTiming) observeUserTiming();
     },
 
     /**
