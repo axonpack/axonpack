@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
 import { PanelBrand } from './panel-brand.component';
 import { COLORS } from '../../constants/colors.const';
+import { devtoolsTabStore } from '../../stores/devtools-tab.store';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import { ConsoleView } from '../console/console-view.component';
 import { NetworkView } from '../network/network-view.component';
@@ -16,7 +17,8 @@ import { IconButton } from '../ui/icon-button.ui';
  * and a chatty app doesn't re-render the FAB on every log line.
  */
 export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<DevtoolsTab>('network');
+  // Seeded from the last close rather than reset to Network, so reopening lands where you left off.
+  const [tab, setTab] = useState<DevtoolsTab>(devtoolsTabStore.get);
   const consoleEntries = useSyncExternalStore(
     consoleLogStore.subscribe,
     consoleLogStore.getSnapshot
@@ -58,7 +60,14 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
       </View>
 
-      <DevtoolsTabBar tab={tab} onChange={setTab} badges={{ console: consoleErrorCount }} />
+      <DevtoolsTabBar
+        tab={tab}
+        onChange={(next) => {
+          setTab(next);
+          devtoolsTabStore.set(next);
+        }}
+        badges={{ console: consoleErrorCount }}
+      />
 
       <View style={styles.tabPanel}>{tabContent}</View>
     </KeyboardAvoidingView>
