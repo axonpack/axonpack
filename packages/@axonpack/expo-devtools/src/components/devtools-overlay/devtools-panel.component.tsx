@@ -1,12 +1,14 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
+import { PanelBrand } from './panel-brand.component';
 import { COLORS } from '../../constants/colors.const';
+import { devtoolsTabStore } from '../../stores/devtools-tab.store';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import { ConsoleView } from '../console/console-view.component';
 import { NetworkView } from '../network/network-view.component';
-import { AxonpackLogo } from '../ui/axonpack-logo.ui';
+import { PerformanceView } from '../performance/performance-view.component';
 import { IconButton } from '../ui/icon-button.ui';
 
 /**
@@ -15,7 +17,8 @@ import { IconButton } from '../ui/icon-button.ui';
  * and a chatty app doesn't re-render the FAB on every log line.
  */
 export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<DevtoolsTab>('network');
+  // Seeded from the last close rather than reset to Network, so reopening lands where you left off.
+  const [tab, setTab] = useState<DevtoolsTab>(devtoolsTabStore.get);
   const consoleEntries = useSyncExternalStore(
     consoleLogStore.subscribe,
     consoleLogStore.getSnapshot
@@ -25,6 +28,19 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
     () => consoleEntries.filter((entry) => entry.level === 'error').length,
     [consoleEntries]
   );
+
+  const tabContent = useMemo(() => {
+    switch (tab) {
+      case 'network':
+        return <NetworkView />;
+      case 'console':
+        return <ConsoleView />;
+      case 'performance':
+        return <PerformanceView />;
+      default:
+        return null;
+    }
+  }, [tab]);
 
   return (
     /**
@@ -40,23 +56,20 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
       style={styles.panel}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
-        <View style={styles.headerBrand}>
-          <AxonpackLogo size={20} />
-          <Text style={styles.headerTitle}>@axonpack/expo-devtools</Text>
-        </View>
+        <PanelBrand />
         <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
       </View>
 
-      <DevtoolsTabBar tab={tab} onChange={setTab} badges={{ console: consoleErrorCount }} />
+      <DevtoolsTabBar
+        tab={tab}
+        onChange={(next) => {
+          setTab(next);
+          devtoolsTabStore.set(next);
+        }}
+        badges={{ console: consoleErrorCount }}
+      />
 
-      {/* Both views stay mounted and the inactive one is hidden, so switching tabs doesn't wipe the
-          filters, panels, and scroll position you set up on the other one. */}
-      <View style={[styles.tabPanel, tab !== 'network' && styles.hiddenTabPanel]}>
-        <NetworkView />
-      </View>
-      <View style={[styles.tabPanel, tab !== 'console' && styles.hiddenTabPanel]}>
-        <ConsoleView />
-      </View>
+      <View style={styles.tabPanel}>{tabContent}</View>
     </KeyboardAvoidingView>
   );
 }
@@ -73,18 +86,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
-  },
-  headerBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-    // textTransform: 'uppercase',
   },
   tabPanel: {
     flex: 1,

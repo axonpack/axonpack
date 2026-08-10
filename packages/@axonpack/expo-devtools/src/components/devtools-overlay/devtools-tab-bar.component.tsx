@@ -4,11 +4,12 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../../constants/colors.const';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
-export type DevtoolsTab = 'network' | 'console';
+export type DevtoolsTab = 'network' | 'console' | 'performance';
 
 const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'network', label: 'Network', icon: 'swap-vert' },
   { key: 'console', label: 'Console', icon: 'terminal' },
+  { key: 'performance', label: 'Performance', icon: 'speed' },
 ];
 
 export function DevtoolsTabBar({
