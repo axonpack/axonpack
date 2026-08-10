@@ -7,8 +7,8 @@ import {
   RESOURCE_TYPE_ICONS,
 } from '../../constants/network/resource-type-icons.const';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
+import { formatSize } from '../../utils/format-bytes.util';
 import {
-  formatSize,
   formatSource,
   getDisplayNameWithQuery,
   getMethodColor,

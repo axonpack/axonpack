@@ -118,13 +118,6 @@ export function getMethodColor(method: string): string {
   }
 }
 
-export function formatSize(bytes: number | undefined): string {
-  if (bytes === undefined) return '–';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 /**
  * `entry.source` is 'fetch'/'xhr' for native requests, or the WebView's own name for anything
  * captured via the injected script (see webview-network-logger.service.ts) — the only way to
