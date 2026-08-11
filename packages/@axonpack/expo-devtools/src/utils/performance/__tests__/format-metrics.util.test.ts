@@ -4,7 +4,13 @@ import { diffMs, formatMs, getFpsColor, getLongTaskColor } from '../format-metri
 describe('formatMs', () => {
   it('marks an absent value rather than printing 0', () => {
     expect(formatMs(undefined)).toBe('–');
-    expect(formatMs(0)).toBe('0.00 ms');
+    expect(formatMs(0)).toBe('0 ms');
+  });
+
+  /** Two startup markers on the same instant differ by a rounding error, not by negative time. */
+  it('never prints a negative zero', () => {
+    expect(formatMs(-0.001)).toBe('0 ms');
+    expect(formatMs(-0.0001)).toBe('0 ms');
   });
 
   it('keeps sub-millisecond precision but rounds past 1ms', () => {
