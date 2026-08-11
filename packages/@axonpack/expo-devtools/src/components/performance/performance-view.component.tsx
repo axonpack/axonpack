@@ -81,25 +81,27 @@ export function PerformanceView() {
   return (
     <View style={styles.container}>
       <View style={styles.toolbar}>
+        {/* Same order and glyphs as the network and console toolbars: record, then clear, then a
+            divider before anything that opens a panel. */}
         <RecordToggleButton paused={paused} onToggle={() => performanceStore.setPaused(!paused)} />
-        <View style={styles.toolbarSpacer} />
+        <IconButton
+          name="block"
+          color={COLORS.textSecondary}
+          onPress={performanceStore.clear}
+          label="Clear recorded data"
+        />
+
+        <View style={styles.toolbarDivider} />
+
         <IconButton
           name="speed"
           color={limiterOpen ? COLORS.accent : COLORS.textSecondary}
           active={limiterOpen}
-          hitSlop={8}
           label="Limiter"
           onPress={() => {
             animateNextLayout();
             setLimiterOpen((current) => !current);
           }}
-        />
-        <IconButton
-          name="delete-outline"
-          color={COLORS.textSecondary}
-          onPress={() => performanceStore.clear()}
-          hitSlop={8}
-          label="Clear"
         />
       </View>
 
@@ -188,18 +190,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  // Matches the network and console headers: buttons grouped from the left, no gap prop — the icon
+  // buttons carry their own padding, and a spacer would push actions to opposite edges.
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
     backgroundColor: COLORS.toolbarBackground,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
-  toolbarSpacer: {
-    flex: 1,
+  toolbarDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 18,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 6,
   },
   selector: {
     flexDirection: 'row',
