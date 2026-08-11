@@ -30,10 +30,10 @@ import {
   RESOURCE_TYPES,
 } from '../../utils/network/resource-type.util';
 import type { ResourceType } from '../../utils/network/resource-type.util';
+import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
-import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 import { SettingRow } from '../ui/setting-row.ui';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
@@ -151,59 +151,53 @@ export function NetworkView() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerActions}>
-          <RecordToggleButton paused={paused} onToggle={() => networkLogStore.setPaused(!paused)} />
-          <IconButton
-            name="block"
-            color={COLORS.textSecondary}
-            onPress={networkLogStore.clear}
-            label="Clear log"
-          />
+      <DevtoolsToolbar
+        paused={paused}
+        onTogglePaused={() => networkLogStore.setPaused(!paused)}
+        onClear={networkLogStore.clear}
+        clearLabel="Clear log">
+        <ToolbarDivider />
 
-          <View style={styles.headerDivider} />
+        <IconButton
+          name={reversed ? 'arrow-upward' : 'arrow-downward'}
+          color={COLORS.textSecondary}
+          onPress={() => setReversed((c) => !c)}
+          label={reversed ? 'Show oldest first' : 'Show newest first'}
+        />
+        <IconButton
+          name="filter-list"
+          color={openPanel === 'filters' ? COLORS.accent : COLORS.textSecondary}
+          active={openPanel === 'filters'}
+          onPress={() => togglePanel('filters')}
+          label="Filter"
+        />
 
-          <IconButton
-            name={reversed ? 'arrow-upward' : 'arrow-downward'}
-            color={COLORS.textSecondary}
-            onPress={() => setReversed((c) => !c)}
-            label={reversed ? 'Show oldest first' : 'Show newest first'}
-          />
-          <IconButton
-            name="filter-list"
-            color={openPanel === 'filters' ? COLORS.accent : COLORS.textSecondary}
-            active={openPanel === 'filters'}
-            onPress={() => togglePanel('filters')}
-            label="Filter"
-          />
+        <ToolbarDivider />
 
-          <View style={styles.headerDivider} />
+        <IconButton
+          name={preserveLog ? 'bookmark' : 'bookmark-border'}
+          color={preserveLog ? COLORS.accent : COLORS.textSecondary}
+          active={preserveLog}
+          onPress={() => networkLogStore.setPreserveLog(!preserveLog)}
+          label="Preserve log"
+        />
 
-          <IconButton
-            name={preserveLog ? 'bookmark' : 'bookmark-border'}
-            color={preserveLog ? COLORS.accent : COLORS.textSecondary}
-            active={preserveLog}
-            onPress={() => networkLogStore.setPreserveLog(!preserveLog)}
-            label="Preserve log"
-          />
+        <ToolbarDivider />
 
-          <View style={styles.headerDivider} />
-
-          <IconButton
-            name="file-download"
-            color={COLORS.textSecondary}
-            onPress={() => exportNetworkLog(visibleLogs)}
-            label="Export"
-          />
-          <IconButton
-            name="settings"
-            color={openPanel === 'settings' ? COLORS.accent : COLORS.textSecondary}
-            active={openPanel === 'settings'}
-            onPress={() => togglePanel('settings')}
-            label="Settings"
-          />
-        </View>
-      </View>
+        <IconButton
+          name="file-download"
+          color={COLORS.textSecondary}
+          onPress={() => exportNetworkLog(visibleLogs)}
+          label="Export"
+        />
+        <IconButton
+          name="settings"
+          color={openPanel === 'settings' ? COLORS.accent : COLORS.textSecondary}
+          active={openPanel === 'settings'}
+          onPress={() => togglePanel('settings')}
+          label="Settings"
+        />
+      </DevtoolsToolbar>
 
       {openPanel === 'settings' && (
         <ScrollView style={styles.scrollablePanel} contentContainerStyle={styles.panel}>
@@ -387,25 +381,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingBottom: 24,
     flexGrow: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    backgroundColor: '#0000000D',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  headerDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 18,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 6,
   },
   panel: {
     padding: 12,

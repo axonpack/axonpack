@@ -18,10 +18,10 @@ import {
   type UserTimingEntry,
 } from '../../stores/performance/performance.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
-import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 
 type ListKey = 'longTasks' | 'userTiming' | 'interactions';
 
@@ -81,19 +81,12 @@ export function PerformanceView() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
-        {/* Same order and glyphs as the network and console toolbars: record, then clear, then a
-            divider before anything that opens a panel. */}
-        <RecordToggleButton paused={paused} onToggle={() => performanceStore.setPaused(!paused)} />
-        <IconButton
-          name="block"
-          color={COLORS.textSecondary}
-          onPress={performanceStore.clear}
-          label="Clear recorded data"
-        />
-
-        <View style={styles.toolbarDivider} />
-
+      <DevtoolsToolbar
+        paused={paused}
+        onTogglePaused={() => performanceStore.setPaused(!paused)}
+        onClear={performanceStore.clear}
+        clearLabel="Clear recorded data">
+        <ToolbarDivider />
         <IconButton
           name="speed"
           color={limiterOpen ? COLORS.accent : COLORS.textSecondary}
@@ -104,7 +97,7 @@ export function PerformanceView() {
             setLimiterOpen((current) => !current);
           }}
         />
-      </View>
+      </DevtoolsToolbar>
 
       {limiterOpen && <LimiterPanel />}
 
@@ -191,22 +184,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  // Matches the network and console headers: buttons grouped from the left, no gap prop — the icon
-  // buttons carry their own padding, and a spacer would push actions to opposite edges.
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    backgroundColor: COLORS.toolbarBackground,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  toolbarDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 18,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 6,
   },
   selector: {
     flexDirection: 'row',

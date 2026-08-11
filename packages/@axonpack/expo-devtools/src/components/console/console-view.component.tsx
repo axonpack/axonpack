@@ -26,10 +26,10 @@ import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogEntry, ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { formatConsoleSource } from '../../utils/console/formatters.util';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
-import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 
 // How close to the end still counts as "following the tail". A few pixels of slack absorbs the
 // rounding you get from variable-height rows without needing an exact match.
@@ -127,43 +127,37 @@ export function ConsoleView() {
     // Keyboard avoidance lives on `DevtoolsPanel`, not here — see the note there for why it has to
     // sit directly under the SafeAreaView.
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerActions}>
-          <RecordToggleButton paused={paused} onToggle={() => consoleLogStore.setPaused(!paused)} />
-          <IconButton
-            name="block"
-            color={COLORS.textSecondary}
-            onPress={consoleLogStore.clear}
-            label="Clear console"
-          />
-
-          <View style={styles.headerDivider} />
-
-          <IconButton
-            name="filter-list"
-            color={filtersOpen ? COLORS.accent : COLORS.textSecondary}
-            active={filtersOpen}
-            onPress={() => {
-              animateNextLayout();
-              setFiltersOpen((current) => !current);
-            }}
-            label="Filter"
-          />
-        </View>
-
-        <View style={styles.headerSummary}>
-          {(['warn', 'error'] as const).map((level) => {
-            const { icon, color } = CONSOLE_LEVEL_VISUALS[level];
-            if (!countsByLevel[level] || !icon) return null;
-            return (
-              <View key={level} style={styles.summaryItem}>
-                <MaterialIcons name={icon} size={13} color={color} />
-                <Text style={[styles.summaryCount, { color }]}>{countsByLevel[level]}</Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
+      <DevtoolsToolbar
+        paused={paused}
+        onTogglePaused={() => consoleLogStore.setPaused(!paused)}
+        onClear={consoleLogStore.clear}
+        clearLabel="Clear console"
+        trailing={
+          <View style={styles.headerSummary}>
+            {(['warn', 'error'] as const).map((level) => {
+              const { icon, color } = CONSOLE_LEVEL_VISUALS[level];
+              if (!countsByLevel[level] || !icon) return null;
+              return (
+                <View key={level} style={styles.summaryItem}>
+                  <MaterialIcons name={icon} size={13} color={color} />
+                  <Text style={[styles.summaryCount, { color }]}>{countsByLevel[level]}</Text>
+                </View>
+              );
+            })}
+          </View>
+        }>
+        <ToolbarDivider />
+        <IconButton
+          name="filter-list"
+          color={filtersOpen ? COLORS.accent : COLORS.textSecondary}
+          active={filtersOpen}
+          onPress={() => {
+            animateNextLayout();
+            setFiltersOpen((current) => !current);
+          }}
+          label="Filter"
+        />
+      </DevtoolsToolbar>
 
       {filtersOpen && (
         <View style={styles.panel}>
@@ -278,26 +272,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    backgroundColor: '#0000000D',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  headerDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 18,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 6,
   },
   headerSummary: {
     flexDirection: 'row',

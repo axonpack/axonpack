@@ -2,6 +2,8 @@
 export const COLORS = {
   background: '#ffffff',
   toolbarBackground: '#f3f3f3',
+  // The tab toolbars tint whatever is behind them rather than painting an opaque bar.
+  toolbarOverlay: '#0000000D',
   border: '#d0d0d0',
   sectionTint: '#eaf1fc',
   textPrimary: '#202124',
