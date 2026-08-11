@@ -15,15 +15,14 @@ describe('formatSize', () => {
   });
 
   /**
-   * App footprints sit in the 1–2.5GB band, where "1.5 GB" hides the hundreds of megabytes a reader is
-   * watching move. GB starts above it, where the numbers are device totals.
+   * App footprints sit just above a gigabyte, where one decimal of GB hides the hundreds of megabytes a
+   * reader is watching move. GB starts past the threshold, where the numbers are device totals.
    */
-  it('keeps the 1-2.5GB band in megabytes', () => {
+  it('keeps values just over a gigabyte in megabytes', () => {
     expect(formatSize(1024 ** 3)).toBe('1024.0 MB');
-    expect(formatSize(2 * 1024 ** 3)).toBe('2048.0 MB');
-    expect(formatSize(2.4 * 1024 ** 3)).toBe('2457.6 MB');
-    expect(formatSize(2.5 * 1024 ** 3)).toBe('2.5 GB');
-    expect(formatSize(3 * 1024 ** 3)).toBe('3.0 GB');
+    expect(formatSize(1.4 * 1024 ** 3)).toBe('1433.6 MB');
+    expect(formatSize(1.5 * 1024 ** 3)).toBe('1.5 GB');
+    expect(formatSize(2 * 1024 ** 3)).toBe('2.0 GB');
   });
 
   /** Device RAM and storage live at this scale — MB-only printed "8192.0 MB" for 8GB. */
