@@ -1,5 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
 import {
@@ -8,6 +9,7 @@ import {
 } from '../../constants/network/resource-type-icons.const';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import { formatSize } from '../../utils/format-bytes.util';
+import { buildEntryCopyMenuItems } from '../../utils/network/entry-menu-items.util';
 import {
   formatSource,
   getDisplayNameWithQuery,
@@ -15,6 +17,8 @@ import {
   getStatusColor,
 } from '../../utils/network/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resource-type.util';
+import { ContextMenu } from '../ui/context-menu.ui';
+import { IconButton } from '../ui/icon-button.ui';
 import { InfoBadge } from '../ui/info-badge.ui';
 import { JsonIcon } from '../ui/json-icon.ui';
 
@@ -28,27 +32,31 @@ export function LogRow({
   onPress: () => void;
 }) {
   const statusColor = getStatusColor(entry.status, entry.statusCode);
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
+
+  const openMenu = (event: GestureResponderEvent) => {
+    setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY });
+  };
+
   const methodColor = getMethodColor(entry.method);
   const resourceType = classifyResourceType(entry.mimeType);
   const typeVisual = getResponseTypeVisual(entry.mimeType);
 
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.row, bigRows && styles.rowBig]}>
+    <TouchableOpacity
+      onPress={onPress}
+      onLongPress={openMenu}
+      style={[styles.row, bigRows && styles.rowBig]}>
       <View style={styles.topRow}>
-        <Text style={[styles.method, { color: methodColor }]} selectable>
-          {entry.method}
-        </Text>
-        {/* Spelled out rather than "..." — the timing column shows "..." too while in flight, so
-            the two were indistinguishable at a glance. */}
-        <Text style={[styles.status, { color: statusColor }]} selectable>
+        <Text style={[styles.method, { color: methodColor }]}>{entry.method}</Text>
+        <Text style={[styles.status, { color: statusColor }]}>
           {entry.status === 'pending' ? 'PENDING' : (entry.statusCode ?? entry.error ?? '')}
         </Text>
-        <Text style={styles.timing} numberOfLines={1} selectable>
+        <Text style={styles.timing} numberOfLines={1}>
           {entry.duration !== undefined ? `${entry.duration}ms` : '–'} ·{' '}
           {new Date(entry.startedAt).toLocaleTimeString()}
         </Text>
       </View>
-
       <View style={styles.urlRow}>
         {typeVisual.kind === 'json' ? (
           <JsonIcon size={14} color={typeVisual.color} />
@@ -62,44 +70,59 @@ export function LogRow({
         )}
         <View style={styles.urlTextGroup}>
           {bigRows && (
-            <Text style={styles.name} numberOfLines={1} selectable>
+            <Text style={styles.name} numberOfLines={1}>
               {getDisplayNameWithQuery(entry.url)}
             </Text>
           )}
-          <Text
-            style={[styles.url, !bigRows && styles.urlPrimary]}
-            numberOfLines={bigRows ? 1 : 2}
-            selectable>
+          <Text style={[styles.url, !bigRows && styles.urlPrimary]} numberOfLines={bigRows ? 1 : 2}>
             {entry.url}
           </Text>
         </View>
       </View>
 
-      {bigRows && (
-        <View style={styles.badgeRow}>
-          <InfoBadge
-            icon={RESOURCE_TYPE_ICONS[resourceType]}
-            label={RESOURCE_TYPE_LABELS[resourceType]}
-          />
-          {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
-          <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
+      <View style={styles.bottomRow}>
+        <View style={styles.badges}>
+          {bigRows && (
+            <>
+              <InfoBadge
+                icon={RESOURCE_TYPE_ICONS[resourceType]}
+                label={RESOURCE_TYPE_LABELS[resourceType]}
+              />
+              {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
+              <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
+            </>
+          )}
         </View>
-      )}
+        <IconButton name="more-vert" color={COLORS.textSecondary} hitSlop={10} onPress={openMenu} />
+      </View>
+
+      <ContextMenu
+        anchor={menuAnchor}
+        items={buildEntryCopyMenuItems(entry)}
+        onClose={() => setMenuAnchor(null)}
+      />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
+    gap: 2,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    gap: 2,
     backgroundColor: COLORS.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
   rowBig: {
     paddingVertical: 10,
+  },
+  // The bottom line: badges take the spare width, so the menu button lands at the trailing edge and
+  // stays vertically centred against them whether any badges are showing or not.
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   topRow: {
     flexDirection: 'row',
@@ -145,10 +168,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textPrimary,
   },
-  badgeRow: {
+  badges: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 2,
   },
 });

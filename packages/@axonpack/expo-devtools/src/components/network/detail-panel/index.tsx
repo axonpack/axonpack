@@ -1,4 +1,3 @@
-import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -9,11 +8,7 @@ import { ResponseTab } from './response-tab.component';
 import { TimingTab } from './timing-tab.component';
 import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
-import { buildCurlCommand } from '../../../utils/network/curl.util';
-import {
-  buildFetchCommand,
-  buildNodeFetchCommand,
-} from '../../../utils/network/fetch-snippet.util';
+import { buildEntryCopyMenuItems } from '../../../utils/network/entry-menu-items.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
 import { ContextMenu, type ContextMenuItem } from '../../ui/context-menu.ui';
 import { IconButton } from '../../ui/icon-button.ui';
@@ -68,29 +63,7 @@ export function DetailPanel({
       icon: <SparkleIcon />,
       onPress: () => setSandboxOpen(true),
     },
-    { label: 'Copy URL', onPress: () => Clipboard.setStringAsync(active.url) },
-    { label: 'Copy as cURL', onPress: () => Clipboard.setStringAsync(buildCurlCommand(active)) },
-    { label: 'Copy as fetch', onPress: () => Clipboard.setStringAsync(buildFetchCommand(active)) },
-    {
-      label: 'Copy as fetch (Node.js)',
-      onPress: () => Clipboard.setStringAsync(buildNodeFetchCommand(active)),
-    },
-    ...(active.requestBody
-      ? [
-          {
-            label: 'Copy request payload',
-            onPress: () => Clipboard.setStringAsync(active.requestBody as string),
-          },
-        ]
-      : []),
-    ...(active.responseBody
-      ? [
-          {
-            label: 'Copy response',
-            onPress: () => Clipboard.setStringAsync(active.responseBody as string),
-          },
-        ]
-      : []),
+    ...buildEntryCopyMenuItems(active),
   ];
 
   return (
