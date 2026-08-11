@@ -10,11 +10,54 @@ import {
   getStatusText,
 } from '../../../utils/network/formatters.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
+import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 
 function formatStatus(entry: NetworkLogEntry): string {
   if (entry.statusCode === undefined) return entry.error ?? '(pending)';
   const statusText = getStatusText(entry.statusCode, entry.statusText);
   return statusText ? `${entry.statusCode} ${statusText}` : `${entry.statusCode}`;
+}
+
+function GeneralRow({
+  label,
+  value,
+  stacked,
+  children,
+}: {
+  label: string;
+  value: string;
+  stacked: boolean;
+  children?: React.ReactNode;
+}) {
+  const displayValue = children ?? (
+    <Text style={stacked ? rowStyles.stackedValue : rowStyles.headerValue} selectable>
+      {value}
+    </Text>
+  );
+
+  if (stacked) {
+    return (
+      <View style={rowStyles.stackedRow}>
+        <View style={rowStyles.stackedTopRow}>
+          <Text style={rowStyles.stackedKey} selectable>
+            {label}
+          </Text>
+          <CopyIconButton value={value} />
+        </View>
+        {displayValue}
+      </View>
+    );
+  }
+
+  return (
+    <View style={rowStyles.headerRow}>
+      <Text style={rowStyles.headerListKey} selectable>
+        {label}
+      </Text>
+      {displayValue}
+      <CopyIconButton value={value} />
+    </View>
+  );
 }
 
 export function HeadersTab({
@@ -28,26 +71,9 @@ export function HeadersTab({
     <View>
       {entry.conditions && <NetworkConditionsSection conditions={entry.conditions} />}
       <CollapsibleSection title="General">
-        <View style={rowStyles.headerRow}>
-          <Text style={rowStyles.headerListKey} selectable>
-            Request URL
-          </Text>
-          <Text style={rowStyles.headerValue} selectable>
-            {entry.url}
-          </Text>
-        </View>
-        <View style={rowStyles.headerRow}>
-          <Text style={rowStyles.headerListKey} selectable>
-            Request Method
-          </Text>
-          <Text style={rowStyles.headerValue} selectable>
-            {entry.method}
-          </Text>
-        </View>
-        <View style={rowStyles.headerRow}>
-          <Text style={rowStyles.headerListKey} selectable>
-            Status Code
-          </Text>
+        <GeneralRow label="Request URL" value={entry.url} stacked={stackedHeaders} />
+        <GeneralRow label="Request Method" value={entry.method} stacked={stackedHeaders} />
+        <GeneralRow label="Status Code" value={formatStatus(entry)} stacked={stackedHeaders}>
           <View style={styles.statusValue}>
             <View
               style={[
@@ -59,16 +85,9 @@ export function HeadersTab({
               {formatStatus(entry)}
             </Text>
           </View>
-        </View>
+        </GeneralRow>
         {entry.source && (
-          <View style={rowStyles.headerRow}>
-            <Text style={rowStyles.headerListKey} selectable>
-              Source
-            </Text>
-            <Text style={rowStyles.headerValue} selectable>
-              {formatSource(entry.source)}
-            </Text>
-          </View>
+          <GeneralRow label="Source" value={formatSource(entry.source)} stacked={stackedHeaders} />
         )}
       </CollapsibleSection>
       <HeaderList title="Request Headers" headers={entry.requestHeaders} stacked={stackedHeaders} />
