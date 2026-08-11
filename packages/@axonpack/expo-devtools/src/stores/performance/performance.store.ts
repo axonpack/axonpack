@@ -76,6 +76,25 @@ export type InteractionEntry = {
  * kept, and the spec hands the overflow count to the callback — without surfacing it, "6 long tasks"
  * silently means "6 of however many happened".
  */
+/**
+ * The app's real footprint and the device's RAM, from the native module. Distinct from `MemorySample`,
+ * which is the JS heap — the two differ by a large factor and conflating them is the most common way to
+ * misread a memory graph.
+ */
+export type SystemMemorySample = {
+  timestamp: number;
+  appBytes?: number;
+  totalBytes?: number;
+  /** Android reports system-wide free RAM; iOS reports what this process may still allocate. */
+  availableToAppBytes?: number;
+};
+
+/** Android only: iOS disk-space APIs are required-reason, so they aren't read. */
+export type StorageInfo = {
+  totalBytes?: number;
+  freeBytes?: number;
+};
+
 export type PerformanceDropped = {
   longTasks: number;
   interactions: number;
@@ -88,12 +107,16 @@ export type PerformanceDropped = {
  */
 export type PerformanceSupport = {
   memory: boolean;
+  /** The native module, which app memory and device RAM both need. */
+  systemMemory: boolean;
   longTasks: boolean;
   interactions: boolean;
 };
 
 export type PerformanceSnapshot = {
   memory: MemorySample[];
+  systemMemory: SystemMemorySample[];
+  storage?: StorageInfo;
   longTasks: LongTaskEntry[];
   userTiming: UserTimingEntry[];
   interactions: InteractionEntry[];
@@ -110,6 +133,8 @@ const DEFAULT_HISTORY_SIZE = 120;
 
 let historySize = DEFAULT_HISTORY_SIZE;
 let memory: MemorySample[] = [];
+let systemMemory: SystemMemorySample[] = [];
+let storage: StorageInfo | undefined;
 let longTasks: LongTaskEntry[] = [];
 let userTiming: UserTimingEntry[] = [];
 let interactions: InteractionEntry[] = [];
@@ -119,6 +144,7 @@ let startup: StartupTiming | undefined;
 let fps: number | undefined;
 let support: PerformanceSupport = {
   memory: false,
+  systemMemory: false,
   longTasks: false,
   interactions: false,
 };
@@ -130,6 +156,8 @@ const emitter = new EventEmitter<PerformanceEvents>();
 
 let snapshot: PerformanceSnapshot = {
   memory,
+  systemMemory,
+  storage,
   longTasks,
   userTiming,
   interactions,
@@ -161,7 +189,17 @@ function notify() {
  * pressing record has to see it take effect at once; only the high-frequency data path is throttled.
  */
 function publish(immediate = false) {
-  snapshot = { memory, longTasks, userTiming, interactions, startup, support, dropped };
+  snapshot = {
+    memory,
+    systemMemory,
+    storage,
+    longTasks,
+    userTiming,
+    interactions,
+    startup,
+    support,
+    dropped,
+  };
 
   if (immediate) {
     if (pendingNotify !== undefined) {
@@ -239,6 +277,17 @@ export const performanceStore = {
   setHistorySize(next: number) {
     historySize = Math.max(1, next);
   },
+  /** Read once at attach — free space changes too slowly to sample. */
+  setStorage(next: StorageInfo) {
+    if (!enabled) return;
+    storage = next;
+    publish(true);
+  },
+  addSystemMemorySample(sample: SystemMemorySample) {
+    if (!enabled || paused) return;
+    systemMemory = [...systemMemory, sample].slice(-historySize);
+    publish();
+  },
   addMemorySample(sample: MemorySample) {
     if (!enabled || paused) return;
     // Appended rather than prepended: the sparkline reads left-to-right as oldest-to-newest.
@@ -298,6 +347,7 @@ export const performanceStore = {
   },
   clear() {
     memory = [];
+    systemMemory = [];
     longTasks = [];
     userTiming = [];
     interactions = [];

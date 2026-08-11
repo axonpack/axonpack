@@ -229,6 +229,13 @@ Live metrics on the device, no desktop profiler and no cable.
 
 - **JS heap** — how much the JavaScript engine has allocated, with a sparkline of the last two
   minutes so you can watch it climb while you use the app.
+- **App memory** — the whole process footprint, which is what the OS holds against you and what a user
+  means by "memory". Routinely several times the JS heap, so the two are shown side by side rather than
+  letting one stand in for the other. Needs a development build.
+- **Device** — how much RAM the phone has, and how much this app may still allocate. On Android that's
+  system-wide free memory; on iOS it's what the process can still claim before being killed, which is the
+  figure that actually matters. Android also shows total, used and free storage. Needs a development
+  build.
 - **JS thread FPS** — measured from a frame-delta loop, green at 50+, amber under that, red under 30.
 - **Startup** — process start to first render, split into native startup, bundle eval, app setup and
   first render. Measured by this package's own native module, so it works even where the platform's own
@@ -285,9 +292,11 @@ you don't want the panel reachable in a release.
 This tab is honest about the difference between what JavaScript can see and what you probably want to
 know:
 
-- **App memory is not JS heap.** "Memory" usually means the process footprint (RSS). That needs
-  native code — `task_vm_info` on iOS, `Debug.MemoryInfo` on Android — so it isn't here. The JS heap
-  is a real number, just a smaller one than you might assume.
+- **Storage is Android-only.** Nothing here asks for a permission on either platform, and nothing makes
+  your App Store submission harder — which is why iOS storage is missing. `StatFs` on Android needs no
+  permission and no manifest entry, but iOS's `systemFreeSize` is one of Apple's required-reason APIs: no
+  prompt, but it obliges a privacy-manifest declaration at submission, and a library reading it risks
+  pushing that onto every app that embeds it.
 - **No "% of heap limit" gauge.** Hermes doesn't report a heap-size limit, so the denominator would
   have to be invented.
 - **FPS is the JS thread only.** A janky native scroll or a heavy layout happens on the UI thread,

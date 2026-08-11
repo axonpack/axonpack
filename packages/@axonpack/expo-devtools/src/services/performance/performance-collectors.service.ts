@@ -2,6 +2,7 @@ import { observeEventTiming } from './observe-event-timing.service';
 import { observeLongTasks } from './observe-long-tasks.service';
 import { readStartupTiming } from './read-startup-timing.service';
 import { startMemorySampling } from './sample-memory.service';
+import { startSystemMetricsSampling } from './sample-system-metrics.service';
 import { performanceStore } from '../../stores/performance/performance.store';
 
 export type CollectorOptions = {
@@ -20,6 +21,7 @@ function start(options: CollectorOptions) {
   running = true;
   stopFunctions = [
     startMemorySampling(options.sampleIntervalMs),
+    startSystemMetricsSampling(options.sampleIntervalMs),
     observeLongTasks(options.longTaskThresholdMs),
     observeEventTiming(options.interactionThresholdMs),
   ];

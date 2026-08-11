@@ -1,6 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
+import { AppMemoryCard } from './app-memory-card.component';
+import { DeviceSection } from './device-section.component';
 import { FpsCard } from './fps-card.component';
 import { HeapCard } from './heap-card.component';
 import { InteractionRow } from './interaction-row.component';
@@ -45,10 +47,8 @@ const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = 
   },
 };
 export function PerformanceView() {
-  const { longTasks, userTiming, interactions, startup, support, dropped } = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getSnapshot
-  );
+  const { longTasks, userTiming, interactions, startup, support, dropped, systemMemory, storage } =
+    useSyncExternalStore(performanceStore.subscribe, performanceStore.getSnapshot);
   const paused = useSyncExternalStore(performanceStore.subscribe, performanceStore.isPaused);
   const [list, setList] = useState<ListKey>('longTasks');
 
@@ -103,6 +103,7 @@ export function PerformanceView() {
           <View>
             <View style={styles.cards}>
               <HeapCard />
+              <AppMemoryCard />
               <FpsCard />
 
               <MetricCard
@@ -112,8 +113,12 @@ export function PerformanceView() {
               />
             </View>
 
+            <DeviceSection
+              latest={systemMemory.at(-1)}
+              storage={storage}
+              available={support.systemMemory}
+            />
             <StartupTimingSection startup={startup} />
-            {/* Sits under the readings it is meant to move, so cause and effect are on one screen. */}
             <LimiterSection />
 
             <View style={styles.selector}>

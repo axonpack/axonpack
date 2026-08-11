@@ -23,6 +23,23 @@ private func processStartEpochMs() -> Double? {
   return Double(started.tv_sec) * 1000 + Double(started.tv_usec) / 1000
 }
 
+/**
+ The app's real memory footprint — what iOS actually holds against you, and what a user means by
+ "memory". `phys_footprint` is the same number Xcode's memory gauge shows, and it is unrelated to the JS
+ heap the Performance tab reads from Hermes.
+ */
+private func appMemoryFootprintBytes() -> Double? {
+  var info = task_vm_info_data_t()
+  var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size) / 4
+  let result = withUnsafeMutablePointer(to: &info) {
+    $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+      task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+    }
+  }
+  guard result == KERN_SUCCESS else { return nil }
+  return Double(info.phys_footprint)
+}
+
 public class AxonpackDevtoolsModule: Module {
   /// Captured when the module is constructed, which happens during native startup.
   private let moduleInitEpochMs = Date().timeIntervalSince1970 * 1000
@@ -47,6 +64,30 @@ public class AxonpackDevtoolsModule: Module {
      Dispatched async so the call returns immediately and JS stays responsive while the UI freezes,
      which is the asymmetry being demonstrated.
      */
+    /**
+     iOS deliberately exposes less than Android here. There is no system-wide "free RAM" — the closest
+     honest number is `os_proc_available_memory()`, how much this process may still allocate before the
+     system kills it, which is the figure that actually matters to an app.
+     */
+    Function("getMemoryMetrics") { () -> [String: Double?] in
+      [
+        "appBytes": appMemoryFootprintBytes(),
+        "totalBytes": Double(ProcessInfo.processInfo.physicalMemory),
+        "availableToAppBytes": Double(os_proc_available_memory()),
+      ]
+    }
+
+    /**
+     There is deliberately no `getStorageMetrics` here.
+
+     `FileManager.attributesOfFileSystem` (`.systemSize`, `.systemFreeSize`) is one of Apple's
+     required-reason APIs. It needs no runtime permission and shows no prompt, but it obliges a
+     `PrivacyInfo.xcprivacy` declaration at submission — and shipping it in a library risks pushing that
+     obligation onto every app that embeds this package, for a number that is not about performance.
+
+     Android has no equivalent restriction, so storage is reported there and simply absent here.
+     */
+
     Function("blockMainThread") { (durationMs: Double) in
       DispatchQueue.main.async {
         let deadline = Date().addingTimeInterval(durationMs / 1000)
