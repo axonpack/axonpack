@@ -189,3 +189,45 @@ describe('performanceStore frame-rate peak', () => {
     expect(performanceStore.getFpsPeak()).toBe(90);
   });
 });
+
+describe('performanceStore frame-rate buckets', () => {
+  beforeEach(() => {
+    performanceStore.setEnabled(true);
+    performanceStore.setPaused(false);
+    performanceStore.clear();
+  });
+
+  /**
+   * The reported symptom: the line redrew with new values every tick instead of scrolling. A closed
+   * bucket must never change again, or every point on screen moves when one sample arrives.
+   */
+  it('freezes a bucket once it closes', () => {
+    for (let index = 0; index < 10; index += 1) performanceStore.setFps(60);
+    const [first] = performanceStore.getFpsSeries();
+
+    for (let index = 0; index < 10; index += 1) performanceStore.setFps(20);
+    expect(performanceStore.getFpsSeries()[0]).toBe(first);
+  });
+
+  it('shows the filling bucket as a provisional last point', () => {
+    performanceStore.setFps(55);
+    expect(performanceStore.getFpsSeries()).toEqual([55]);
+  });
+
+  it('takes the minimum of a bucket, so a stall survives', () => {
+    for (let index = 0; index < 9; index += 1) performanceStore.setFps(60);
+    performanceStore.setFps(9);
+    expect(performanceStore.getFpsSeries()).toEqual([9]);
+  });
+
+  it('appends one point per closed bucket', () => {
+    for (let index = 0; index < 30; index += 1) performanceStore.setFps(60);
+    expect(performanceStore.getFpsSeries()).toHaveLength(3);
+  });
+
+  it('returns a stable reference when nothing was added', () => {
+    performanceStore.setFps(60);
+    const first = performanceStore.getFpsSeries();
+    expect(performanceStore.getFpsSeries()).toBe(first);
+  });
+});

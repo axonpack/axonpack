@@ -5,7 +5,6 @@ import { COLORS } from '../../constants/colors.const';
 import { isUiFpsAvailable } from '../../services/performance/fps-monitor.service';
 import { performanceStore } from '../../stores/performance/performance.store';
 import { ageAxisLabels } from '../../utils/performance/age-labels.util';
-import { downsampleMin } from '../../utils/performance/downsample.util';
 import { getFpsColor } from '../../utils/performance/format-metrics.util';
 import { LineChart, type LineSeries } from '../ui/line-chart.ui';
 
@@ -16,10 +15,6 @@ import { LineChart, type LineSeries } from '../ui/line-chart.ui';
 const MIN_DOMAIN_MAX = 60;
 /** Breathing room above the peak, so the highest point doesn't sit flush against the top edge. */
 const HEADROOM = 5;
-/** 60 points over 600 samples: one per five seconds of the last five minutes. */
-const POINTS = 60;
-/** Matches the frame monitor's publish window, which is what one sample represents. */
-const FPS_WINDOW_MS = 500;
 
 /**
  * Both frame rates on one chart, which is the point: they share a unit and a scale, so putting them
@@ -33,13 +28,11 @@ const FPS_WINDOW_MS = 500;
 export function FpsChartCard() {
   const fps = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFps);
   const uiFps = useSyncExternalStore(performanceStore.subscribe, performanceStore.getUiFps);
-  const jsHistory = useSyncExternalStore(
+  // Bucketed by the store, so a point keeps its value while it is on screen and the plot scrolls.
+  const jsSeries = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFpsSeries);
+  const uiSeries = useSyncExternalStore(
     performanceStore.subscribe,
-    performanceStore.getFpsHistory
-  );
-  const uiHistory = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getUiFpsHistory
+    performanceStore.getUiFpsSeries
   );
 
   const peak = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFpsPeak);
@@ -52,15 +45,9 @@ export function FpsChartCard() {
   const domainMax = Math.max(MIN_DOMAIN_MAX, peak) + HEADROOM;
 
   const series: LineSeries[] = [
-    { label: 'JS thread', values: downsampleMin(jsHistory, POINTS), color: COLORS.accent },
-    ...(nativeAvailable && uiHistory.length > 1
-      ? [
-          {
-            label: 'Main thread',
-            values: downsampleMin(uiHistory, POINTS),
-            color: COLORS.keyAccent,
-          },
-        ]
+    { label: 'JS thread', values: jsSeries, color: COLORS.accent },
+    ...(nativeAvailable && uiSeries.length > 1
+      ? [{ label: 'Main thread', values: uiSeries, color: COLORS.keyAccent }]
       : []),
   ];
 
@@ -87,9 +74,15 @@ export function FpsChartCard() {
         <LineChart
           series={series}
           domainMax={domainMax}
+          pointCapacity={performanceStore.getFpsBucketCount()}
           // From the samples held, not the buffer's capacity: early on the chart covers seconds, not
           // minutes, and a fixed "5m ago" would overstate what is plotted.
-          xLabels={ageAxisLabels(Math.max(jsHistory.length, uiHistory.length), FPS_WINDOW_MS)}
+          // The window the plot is scaled for, not the samples held: the left edge is a fixed point in
+          // time now, and a partly filled buffer leaves that side empty rather than stretching into it.
+          xLabels={ageAxisLabels(
+            performanceStore.getFpsBucketCount(),
+            performanceStore.getFpsBucketMs()
+          )}
         />
       ) : (
         <Text style={styles.empty}>Collecting — the chart fills in as frames are counted.</Text>

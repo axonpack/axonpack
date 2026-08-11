@@ -37,6 +37,10 @@ export function MemoryChartCard() {
     performanceStore.subscribe,
     performanceStore.getSampleIntervalMs
   );
+  const capacity = useSyncExternalStore(
+    performanceStore.subscribe,
+    performanceStore.getHistorySize
+  );
 
   const heapSeries = memory
     .map((sample) => sample.usedJSHeapSize)
@@ -64,7 +68,8 @@ export function MemoryChartCard() {
         }
         values={heapSeries}
         peak={heapPeak}
-        xLabels={ageAxisLabels(heapSeries.length, intervalMs)}
+        capacity={capacity}
+        xLabels={ageAxisLabels(capacity, intervalMs)}
       />
 
       <View style={styles.divider} />
@@ -85,7 +90,8 @@ export function MemoryChartCard() {
         }
         values={appSeries}
         peak={appPeak}
-        xLabels={ageAxisLabels(appSeries.length, intervalMs)}
+        capacity={capacity}
+        xLabels={ageAxisLabels(capacity, intervalMs)}
       />
     </View>
   );
@@ -97,6 +103,7 @@ function Plot({
   caption,
   values,
   peak,
+  capacity,
   xLabels,
 }: {
   title: string;
@@ -104,6 +111,7 @@ function Plot({
   caption?: string;
   values: number[];
   peak: number;
+  capacity: number;
   xLabels: string[];
 }) {
   return (
@@ -118,6 +126,7 @@ function Plot({
           series={[{ label: title, values, color: COLORS.accent }]}
           domainMax={Math.max(1, peak * HEADROOM_FRACTION)}
           height={PLOT_HEIGHT}
+          pointCapacity={capacity}
           xLabels={xLabels}
           formatTick={(value) => formatSize(Math.round(value))}
         />

@@ -146,6 +146,47 @@ let uiFps: number | undefined;
 // Five minutes at the monitor's 500ms window. Held here rather than in the snapshot for the same reason
 // the scalars are: only the two frame-rate cards read it, and it changes twice a second.
 const FPS_HISTORY_SIZE = 600;
+/**
+ * Frame rates are aggregated into fixed buckets as they arrive, rather than downsampled at render time.
+ *
+ * Downsampling divided the whole retained series into N groups, so one new sample moved every group
+ * boundary and every plotted point could change value — the line was redrawn each tick instead of
+ * scrolling. A bucket closed here is never recomputed, so a point keeps its value for as long as it is
+ * on screen, and the plot advances by exactly one point every bucket.
+ */
+const FPS_BUCKET_SAMPLES = 10;
+const FPS_BUCKETS = 60;
+
+type BucketState = {
+  closed: number[];
+  /** The bucket still filling. Shown as a provisional last point so the right edge stays live. */
+  open?: number;
+  openCount: number;
+};
+
+function emptyBuckets(): BucketState {
+  return { closed: [], openCount: 0 };
+}
+
+/** Minimum, not average: a half-second stall is the signal, and averaging it away defeats the chart. */
+function pushBucketSample(state: BucketState, value: number): BucketState {
+  const open = state.open === undefined ? value : Math.min(state.open, value);
+  const openCount = state.openCount + 1;
+  if (openCount < FPS_BUCKET_SAMPLES) return { closed: state.closed, open, openCount };
+  return { closed: [...state.closed, open].slice(-FPS_BUCKETS), openCount: 0 };
+}
+
+function bucketSeries(state: BucketState): number[] {
+  return state.open === undefined ? state.closed : [...state.closed, state.open];
+}
+
+let fpsBucketState = emptyBuckets();
+let uiFpsBucketState = emptyBuckets();
+// Cached so `useSyncExternalStore` sees a stable reference between ticks that don't change the series.
+let fpsSeriesCache: number[] = [];
+let uiFpsSeriesCache: number[] = [];
+/** What one frame-rate sample represents; the monitor publishes on this window. */
+const FPS_WINDOW_HINT_MS = 500;
 let fpsHistory: number[] = [];
 let uiFpsHistory: number[] = [];
 // Monotonic within a session. The chart's scale is built from this rather than from the visible window, so
@@ -306,6 +347,19 @@ export const performanceStore = {
   getFpsHistory(): number[] {
     return fpsHistory;
   },
+  /** Bucketed for the chart: stable once closed, so the plot scrolls instead of redrawing. */
+  getFpsSeries(): number[] {
+    return fpsSeriesCache;
+  },
+  getUiFpsSeries(): number[] {
+    return uiFpsSeriesCache;
+  },
+  getFpsBucketCount(): number {
+    return FPS_BUCKETS;
+  },
+  getFpsBucketMs(): number {
+    return FPS_BUCKET_SAMPLES * FPS_WINDOW_HINT_MS;
+  },
   /** The highest frame rate seen since the last clear, across both threads. */
   /**
    * The confirmed peak, unless nothing in the retained window supports it — a spike that has since
@@ -355,6 +409,9 @@ export const performanceStore = {
   setSupport(next: Partial<PerformanceSupport>) {
     support = { ...support, ...next };
     publish(true);
+  },
+  getHistorySize(): number {
+    return historySize;
   },
   setHistorySize(next: number) {
     historySize = Math.max(1, next);
@@ -433,6 +490,8 @@ export const performanceStore = {
     fps = next;
     if (next !== undefined) {
       fpsHistory = [...fpsHistory, next].slice(-FPS_HISTORY_SIZE);
+      fpsBucketState = pushBucketSample(fpsBucketState, next);
+      fpsSeriesCache = bucketSeries(fpsBucketState);
       observePeak(next);
     }
     publish();
@@ -442,6 +501,8 @@ export const performanceStore = {
     uiFps = next;
     if (next !== undefined) {
       uiFpsHistory = [...uiFpsHistory, next].slice(-FPS_HISTORY_SIZE);
+      uiFpsBucketState = pushBucketSample(uiFpsBucketState, next);
+      uiFpsSeriesCache = bucketSeries(uiFpsBucketState);
       observePeak(next);
     }
     publish();
@@ -457,6 +518,10 @@ export const performanceStore = {
     uiFps = undefined;
     fpsHistory = [];
     uiFpsHistory = [];
+    fpsBucketState = emptyBuckets();
+    uiFpsBucketState = emptyBuckets();
+    fpsSeriesCache = [];
+    uiFpsSeriesCache = [];
     fpsPeak = 0;
     peakCandidate = 0;
     peakCandidateCount = 0;

@@ -33,6 +33,7 @@ export function LineChart({
   height = DEFAULT_HEIGHT,
   xLabels,
   formatTick,
+  pointCapacity,
 }: {
   series: LineSeries[];
   /**
@@ -49,6 +50,16 @@ export function LineChart({
   xLabels?: string[];
   /** Formats the y-axis ticks. Defaults to a rounded number, which is right for counts, not bytes. */
   formatTick?: (value: number) => string;
+  /**
+   * How many points the plot is scaled for, as opposed to how many it currently has.
+   *
+   * Without it the horizontal step was derived from the current length, so every new point made the
+   * step smaller and shifted every point already drawn — the plot rescaled instead of scrolling. Fixing
+   * the step to the full capacity means a point keeps its position from the moment it appears until it
+   * leaves on the left, and a partly filled buffer draws against the right edge with empty space behind
+   * it rather than stretching to fill.
+   */
+  pointCapacity?: number;
 }) {
   const [width, setWidth] = useState(0);
 
@@ -88,6 +99,7 @@ export function LineChart({
                   domainMax={domainMax}
                   width={width}
                   height={height}
+                  capacity={Math.max(2, pointCapacity ?? line.values.length)}
                 />
               ))
             : null}
@@ -129,16 +141,21 @@ function Segments({
   domainMax,
   width,
   height,
+  capacity,
 }: {
   values: number[];
   color: string;
   domainMax: number;
   width: number;
   height: number;
+  capacity: number;
 }) {
   if (values.length < 2) return null;
 
-  const step = width / (values.length - 1);
+  const step = width / (capacity - 1);
+  // Anchored to the right edge: the newest point is always at `width`, so older points hold the pixel
+  // position they were drawn at and simply march left as new ones arrive.
+  const xOf = (index: number) => width - (values.length - 1 - index) * step;
   const yOf = (value: number) => {
     const fraction = Math.min(1, Math.max(0, value / domainMax));
     // Inverted: a higher value sits closer to the top.
@@ -148,7 +165,7 @@ function Segments({
   return (
     <>
       {values.slice(0, -1).map((value, index) => {
-        const x1 = index * step;
+        const x1 = xOf(index);
         const y1 = yOf(value);
         const y2 = yOf(values[index + 1]);
         const dx = step;
