@@ -9,6 +9,7 @@ import android.os.Looper
 import android.os.Process
 import android.os.StatFs
 import android.os.SystemClock
+import android.view.Choreographer
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -19,6 +20,52 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * Optional on the JS side, so an app without a dev client keeps working — it just can't reach the
  * main thread.
  */
+/**
+ * Frames the *main* thread actually rendered. A `requestAnimationFrame` loop in JS cannot see this: the
+ * UI thread can be fully stalled while JS keeps ticking, which is the blind spot the FPS card warns
+ * about. `Choreographer` posts on the main looper, so it stops counting exactly when the UI stops
+ * drawing.
+ */
+private class UiFpsTracker : Choreographer.FrameCallback {
+  private var frames = 0
+  private var windowStartNanos = 0L
+  private var running = false
+
+  @Volatile
+  var fps: Double = -1.0
+    private set
+
+  /** Must be posted to the main looper — `Choreographer.getInstance()` is per-thread. */
+  fun start() {
+    Handler(Looper.getMainLooper()).post {
+      if (running) return@post
+      running = true
+      frames = 0
+      windowStartNanos = System.nanoTime()
+      Choreographer.getInstance().postFrameCallback(this)
+    }
+  }
+
+  fun stop() {
+    Handler(Looper.getMainLooper()).post {
+      running = false
+      fps = -1.0
+    }
+  }
+
+  override fun doFrame(frameTimeNanos: Long) {
+    if (!running) return
+    frames += 1
+    val elapsedSeconds = (frameTimeNanos - windowStartNanos) / 1_000_000_000.0
+    if (elapsedSeconds >= 0.5) {
+      fps = frames / elapsedSeconds
+      frames = 0
+      windowStartNanos = frameTimeNanos
+    }
+    Choreographer.getInstance().postFrameCallback(this)
+  }
+}
+
 class AxonpackDevtoolsModule : Module() {
   /** Captured when the module is constructed, which happens during native startup. */
   private val moduleInitEpochMs = System.currentTimeMillis().toDouble()
@@ -31,8 +78,17 @@ class AxonpackDevtoolsModule : Module() {
     (System.currentTimeMillis() - SystemClock.uptimeMillis() + Process.getStartUptimeMillis())
       .toDouble()
 
+  private val uiFps = UiFpsTracker()
+
   override fun definition() = ModuleDefinition {
     Name("AxonpackDevtools")
+
+    // Started and stopped by the view, not at init: a frame callback keeps the main thread busy for as
+    // long as it lives.
+    Function("startUiFpsTracking") { uiFps.start() }
+    Function("stopUiFpsTracking") { uiFps.stop() }
+    /** -1 until the first window closes, so "not measured" stays distinct from a real zero. */
+    Function("getUiFps") { uiFps.fps }
 
     /** Epoch milliseconds, so JS can line these up with its own `Date.now()` readings. */
     Function("getStartupTimestamps") {

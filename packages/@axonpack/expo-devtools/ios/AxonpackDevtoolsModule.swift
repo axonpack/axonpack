@@ -1,4 +1,43 @@
 import ExpoModulesCore
+import UIKit
+
+/**
+ Frames the *main* thread actually rendered. A `requestAnimationFrame` loop in JS cannot see this: the UI
+ thread can be fully stalled while JS keeps ticking happily, which is the blind spot the FPS card warns
+ about. `CADisplayLink` fires on the main runloop, so it stops counting exactly when the UI stops drawing.
+ */
+private final class UiFpsTracker: NSObject {
+  private var displayLink: CADisplayLink?
+  private var frames = 0
+  private var windowStart = CACurrentMediaTime()
+  private(set) var fps: Double = -1
+
+  func start() {
+    guard displayLink == nil else { return }
+    frames = 0
+    windowStart = CACurrentMediaTime()
+    let link = CADisplayLink(target: self, selector: #selector(tick))
+    link.add(to: .main, forMode: .common)
+    displayLink = link
+  }
+
+  func stop() {
+    displayLink?.invalidate()
+    displayLink = nil
+    fps = -1
+  }
+
+  @objc private func tick() {
+    frames += 1
+    let now = CACurrentMediaTime()
+    let elapsed = now - windowStart
+    if elapsed >= 0.5 {
+      fps = Double(frames) / elapsed
+      frames = 0
+      windowStart = now
+    }
+  }
+}
 
 /**
  The only native code in this package, and it exists to *cause* problems rather than measure them:
@@ -44,8 +83,17 @@ public class AxonpackDevtoolsModule: Module {
   /// Captured when the module is constructed, which happens during native startup.
   private let moduleInitEpochMs = Date().timeIntervalSince1970 * 1000
 
+  private let uiFps = UiFpsTracker()
+
   public func definition() -> ModuleDefinition {
     Name("AxonpackDevtools")
+
+    // Started and stopped by the view, not at init: a display link on the main runloop keeps the screen
+    // awake for as long as it lives.
+    Function("startUiFpsTracking") { self.uiFps.start() }
+    Function("stopUiFpsTracking") { self.uiFps.stop() }
+    /** -1 until the first window closes, so "not measured" stays distinct from a real zero. */
+    Function("getUiFps") { self.uiFps.fps }
 
     /**
      Epoch milliseconds, so JS can line these up with its own `Date.now()` readings. Returning a map

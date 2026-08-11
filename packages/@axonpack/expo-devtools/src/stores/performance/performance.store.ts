@@ -142,6 +142,16 @@ let startup: StartupTiming | undefined;
 // Kept out of the snapshot on purpose: it changes twice a second, and anything reading the snapshot
 // re-renders with it. `getFps` is a primitive selector so only the one leaf that wants it subscribes.
 let fps: number | undefined;
+let uiFps: number | undefined;
+// Five minutes at the monitor's 500ms window. Held here rather than in the snapshot for the same reason
+// the scalars are: only the two frame-rate cards read it, and it changes twice a second.
+const FPS_HISTORY_SIZE = 600;
+let fpsHistory: number[] = [];
+let uiFpsHistory: number[] = [];
+// Monotonic within a session. The chart's scale is built from this rather than from the visible window, so
+// it never shrinks: an axis that grows and shrinks with the buffer makes the line jitter and makes two
+// moments incomparable. Reset only by the bin.
+let fpsPeak = 0;
 let support: PerformanceSupport = {
   memory: false,
   systemMemory: false,
@@ -248,6 +258,20 @@ export const performanceStore = {
   getFps(): number | undefined {
     return fps;
   },
+  /** The main thread's frame rate, from the native module — invisible to a JS rAF loop. */
+  getUiFps(): number | undefined {
+    return uiFps;
+  },
+  getFpsHistory(): number[] {
+    return fpsHistory;
+  },
+  /** The highest frame rate seen since the last clear, across both threads. */
+  getFpsPeak(): number {
+    return fpsPeak;
+  },
+  getUiFpsHistory(): number[] {
+    return uiFpsHistory;
+  },
   /** Latest sample only — the leaf that renders the number doesn't need the whole series. */
   getLatestHeapUsed(): number | undefined {
     return memory.at(-1)?.usedJSHeapSize;
@@ -343,6 +367,19 @@ export const performanceStore = {
   setFps(next: number | undefined) {
     if (!enabled || paused) return;
     fps = next;
+    if (next !== undefined) {
+      fpsHistory = [...fpsHistory, next].slice(-FPS_HISTORY_SIZE);
+      if (next > fpsPeak) fpsPeak = next;
+    }
+    publish();
+  },
+  setUiFps(next: number | undefined) {
+    if (!enabled || paused) return;
+    uiFps = next;
+    if (next !== undefined) {
+      uiFpsHistory = [...uiFpsHistory, next].slice(-FPS_HISTORY_SIZE);
+      if (next > fpsPeak) fpsPeak = next;
+    }
     publish();
   },
   clear() {
@@ -353,6 +390,10 @@ export const performanceStore = {
     interactions = [];
     dropped = { longTasks: 0, interactions: 0 };
     fps = undefined;
+    uiFps = undefined;
+    fpsHistory = [];
+    uiFpsHistory = [];
+    fpsPeak = 0;
     publish(true);
   },
 };

@@ -15,13 +15,20 @@ export function Sparkline({
   values,
   height = DEFAULT_HEIGHT,
   color = COLORS.accent,
+  domainMax,
 }: {
   values: number[];
   height?: number;
   color?: string;
+  /**
+   * Fixes the top of the scale. Without it the series is scaled to its own maximum, which is right for
+   * an open-ended value like heap but wrong for anything with a known ceiling — a frame rate wobbling
+   * between 58 and 60 would otherwise be drawn as a cliff.
+   */
+  domainMax?: number;
 }) {
   const bars = values.slice(-MAX_BARS);
-  const max = Math.max(...bars, 1);
+  const max = domainMax ?? Math.max(...bars, 1);
 
   return (
     <View style={[styles.row, { height }]}>
@@ -33,7 +40,8 @@ export function Sparkline({
             {
               backgroundColor: color,
               // Floored so a non-zero sample never renders as nothing at all.
-              height: Math.max(1, (value / max) * height),
+              // Clamped: a device reporting above the nominal ceiling shouldn't overflow its own track.
+              height: Math.max(1, Math.min(1, value / max) * height),
             },
           ]}
         />

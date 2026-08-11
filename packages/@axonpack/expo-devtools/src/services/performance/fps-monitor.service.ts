@@ -1,4 +1,18 @@
+import { requireOptionalNativeModule } from 'expo';
+
 import { performanceStore } from '../../stores/performance/performance.store';
+
+type UiFpsNativeModule = {
+  startUiFpsTracking: () => void;
+  stopUiFpsTracking: () => void;
+  getUiFps: () => number;
+};
+
+const native = requireOptionalNativeModule<UiFpsNativeModule>('AxonpackDevtools');
+
+export function isUiFpsAvailable(): boolean {
+  return native != null;
+}
 
 const WINDOW_MS = 500;
 
@@ -27,18 +41,41 @@ export function startFpsMonitor() {
   };
   handle = requestAnimationFrame(tick);
 
+  // The main thread's own counter runs natively and is only read here, on the same schedule.
+  try {
+    native?.startUiFpsTracking();
+  } catch {
+    // Optional: without the native module only the JS figure is available.
+  }
+
   const interval = setInterval(() => {
     const now = Date.now();
     const elapsed = Math.max(1, now - windowStart);
     performanceStore.setFps(Math.round((frames * 1000) / elapsed));
     frames = 0;
     windowStart = now;
+
+    try {
+      const reported = native?.getUiFps();
+      // -1 is the tracker's "no window has closed yet", which is not a real zero.
+      if (reported !== undefined) {
+        performanceStore.setUiFps(reported < 0 ? undefined : Math.round(reported));
+      }
+    } catch {
+      // Ignore: the JS figure above is still valid.
+    }
   }, WINDOW_MS);
 
   return () => {
     stopped = true;
     clearInterval(interval);
     if (handle !== undefined) cancelAnimationFrame(handle);
+    try {
+      native?.stopUiFpsTracking();
+    } catch {
+      // Nothing to stop.
+    }
     performanceStore.setFps(undefined);
+    performanceStore.setUiFps(undefined);
   };
 }
