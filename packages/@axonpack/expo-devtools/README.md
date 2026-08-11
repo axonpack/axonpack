@@ -1,8 +1,8 @@
 # @axonpack/expo-devtools
 
 Browser-style devtools that live **inside** your React Native or Expo app. Tap a floating button and
-you get **Network**, **Console** and **Performance** tabs on the device itself — no desktop debugger,
-no cable, no native code.
+you get **Network**, **Console** and **Performance** tabs on the device itself — no desktop debugger and
+no cable.
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../../LICENSE)
@@ -230,22 +230,55 @@ Live metrics on the device, no desktop profiler and no cable.
 - **JS heap** — how much the JavaScript engine has allocated, with a sparkline of the last two
   minutes so you can watch it climb while you use the app.
 - **JS thread FPS** — measured from a frame-delta loop, green at 50+, amber under that, red under 30.
-- **Startup** — native init, runtime setup, bundle eval and the total, when the platform reports them.
-  Many setups don't, and the section is hidden rather than shown full of dashes.
+- **Startup** — process start to first render, split into native startup, bundle eval, app setup and
+  first render. Measured by this package's own native module, so it works even where the platform's own
+  markers are all null. Phase boundaries are this package's load points, not platform milestones, so they
+  shift a little with import order — and if the platform _does_ report its markers, they're shown
+  underneath as a second set.
 - **Long tasks** — anything that blocked the JS thread past the threshold (50 ms by default), newest
   first, with when it happened and for how long. A "long task" is one stretch of JavaScript that ran
   without yielding, so nothing else on that thread could happen meanwhile: no touches, no timers, no
   animation driven from JS. At 60 fps a frame is 16.7 ms, so 50 ms is about three frames lost and
   roughly where a tap starts to feel late; past ~200 ms it reads as a freeze.
 
+- **User timing** — timings you name yourself, following the
+  [W3C User Timing](https://www.w3.org/TR/user-timing/) signatures. The one metric here that can point
+  at a specific piece of code, so it's the answer to a long task you can't explain:
+
+  ```ts
+  devtools.mark('checkout');
+  await buildCart();
+  devtools.measure('checkout');
+  ```
+
+  `measure(name, startOrOptions?, endMark?)` takes a start mark name, or an options object with
+  `start`, `end`, `duration` and `detail` — the same shapes the spec defines. Calls are also forwarded
+  to the real `performance.mark`/`measure`, so the entries exist on the platform timeline too. Nothing
+  is _observed_ from that timeline, which is why React's own internal measures never appear here.
+
 - **Interactions** — anything that took longer than 100 ms from the event to the next paint. Each row
   also shows how long your handler itself held the JS thread: a small handler under a large total
-  means the interaction was stuck behind something else rather than being slow itself.
+  means the interaction was stuck behind something else rather than being slow itself. Durations come
+  rounded to the nearest 8 ms, and nothing under 16 ms is ever reported.
 
-Both lists share one view — pick which with the chips. Recording works like the other tabs: a record
+The three lists share one view — pick which with the chips. Recording works like the other tabs: a record
 button pauses and resumes, and a bin clears what's been collected. While it's paused nothing is measured at all — the instrumentation detaches rather than
 running and discarding — so leaving the tab switched off costs nothing. Switching it back on attaches
 fresh, and picks up whatever the platform still has buffered.
+
+### Limiter
+
+A section for breaking things on purpose, so the numbers above it can be trusted. Pick a thread, pick a
+duration — 100 ms to 3 s, or type your own — and block it:
+
+- **JavaScript** — shows up as a long task and drops the FPS reading. Works everywhere.
+- **Main (UI)** — freezes what you see and touch while the JS numbers stay perfectly healthy. That gap is
+  the blind spot the FPS card warns about, and this is how you see it for yourself. Needs a development
+  build.
+
+There's also a **Crash** button for either thread, which takes two taps. It isn't limited to development
+builds — like everything else here, it only exists at all once `.init()` has run, so guard that call if
+you don't want the panel reachable in a release.
 
 ### What it deliberately doesn't show
 
@@ -266,6 +299,9 @@ know:
 - **Some metrics depend on the platform.** Long tasks and startup markers only appear if the native
   side implements them, which varies by platform and React Native version. When they're missing the
   tab says so rather than showing zeros.
+- **Some entries never reach the list.** The platform keeps its own buffer and discards entries once it
+  overflows, telling us only how many went missing. When that happens the list says so rather than
+  presenting what survived as the whole picture.
 - **Long tasks name no culprit.** React Native's `PerformanceLongTaskTiming` returns a permanently
   empty `attribution` array — the web API's mechanism for reporting which code was responsible — so a
   row can tell you a task blocked the thread for 180 ms, but never that it was your list render. Use it

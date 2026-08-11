@@ -49,7 +49,7 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS 
 
 ## Architecture: `@axonpack/expo-devtools`
 
-Pure JS/TSX Expo module — no native iOS/Android code (removed; `expo-module.config.json` declares no native platforms). `package.json` `exports` uses an `expo-source` condition pointing Metro straight at `src/index.ts`, and a `default` condition pointing other consumers at the compiled `build/`.
+Almost entirely JS/TSX. There is exactly one native module — `ios/AxonpackDevtoolsModule.swift` and `android/.../AxonpackDevtoolsModule.kt`, declared in `expo-module.config.json` — and it does two things JS cannot: block/crash the **main** thread for the Limiter section, and report the real process start time (`sysctl` `kinfo_proc` on iOS, `Process.getStartUptimeMillis()` on Android) so the Startup section works where `performance.rnStartupTiming` returns all nulls. It is loaded with `requireOptionalNativeModule`, so an app in Expo Go still works and only those two buttons go dark. The crash paths are deliberately **not** gated on `__DEV__` — reaching them needs the panel, which needs `init()`, so the `.init()` guard is the single gate for everything in this package. `package.json` `files` therefore publishes `ios`, `android` and `expo-module.config.json` alongside `build`. `package.json` `exports` uses an `expo-source` condition pointing Metro straight at `src/index.ts`, and a `default` condition pointing other consumers at the compiled `build/`.
 
 ### Client pattern (`src/client/create-devtools-client.client.ts`)
 
