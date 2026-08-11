@@ -18,6 +18,14 @@ import {
   handleWebViewNetworkMessage,
 } from '../services/network/webview-network-logger.service';
 import { startPerformanceCollectors } from '../services/performance/performance-collectors.service';
+import {
+  clearRecordedMarks,
+  clearRecordedMeasures,
+  recordMark,
+  recordMeasure,
+  type MarkOptions,
+  type MeasureOptions,
+} from '../services/performance/user-timing.service';
 import { appIdentityStore } from '../stores/app-identity.store';
 import { consoleLogStore } from '../stores/console/console-log.store';
 import { networkConditionsStore } from '../stores/network/network-conditions.store';
@@ -140,6 +148,23 @@ export function createDevtoolsClient<
       const scripts = [getWebViewInjectedJavaScriptBeforeContentLoaded(source)];
       if (captureConsole) scripts.push(getWebViewConsoleInjectedJavaScript(source));
       return scripts.join('\n');
+    },
+
+    /**
+     * User Timing, following the W3C signatures. Recorded directly rather than observed: watching the
+     * global timeline also picks up React's internal measures, which bury the app's own marks.
+     */
+    mark(name: string, options?: MarkOptions) {
+      recordMark(name, options);
+    },
+    measure(name: string, startOrOptions?: string | MeasureOptions, endMark?: string) {
+      recordMeasure(name, startOrOptions, endMark);
+    },
+    clearMarks(name?: string) {
+      clearRecordedMarks(name);
+    },
+    clearMeasures(name?: string) {
+      clearRecordedMeasures(name);
     },
 
     shouldAllowWebViewRequest,

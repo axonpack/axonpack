@@ -25,10 +25,38 @@ export type LongTaskEntry = {
  * platform only fills them in if its native code calls `ReactMarker.setAppStartTime`.
  */
 export type StartupTiming = {
+  /**
+   * Platform-reported markers from `performance.rnStartupTiming`. Nullable individually, and absent
+   * entirely unless native calls `ReactMarker.setAppStartTime` — which many setups never do.
+   */
   startTime?: number;
   endTime?: number;
   initializeRuntimeStart?: number;
   executeJavaScriptBundleEntryPointStart?: number;
+  /**
+   * Measured by this package instead of reported by the platform, all epoch milliseconds so they are
+   * directly comparable. Present whenever the native module is installed, which is what makes the
+   * section useful on devices where the platform markers are all null.
+   */
+  processStart?: number;
+  nativeModuleInit?: number;
+  jsBundleEval?: number;
+  initCalled?: number;
+  firstRender?: number;
+};
+
+export type UserTimingEntry = {
+  id: string;
+  timestamp: number;
+  /** Matches the spec's `entryType`: a mark is a point, a measure is a span. */
+  kind: 'mark' | 'measure';
+  name: string;
+  /** Offset from the performance time origin, as the spec defines `startTime`. */
+  startTime: number;
+  /** Always 0 for a mark. A measure's duration may be negative — the spec allows it. */
+  duration: number;
+  /** The spec's arbitrary `detail` payload, rendered as text when present. */
+  detail?: string;
 };
 
 export type InteractionEntry = {
@@ -44,9 +72,19 @@ export type InteractionEntry = {
 };
 
 /**
- * Whether each collector actually attached. Every one of these depends on what the native side
- * implements, which varies by platform and RN version — without this an empty list is ambiguous
- * between "nothing happened" and "this device never reports it", which are opposite conclusions.
+ * Entries the platform discarded before we saw them. A `buffered` observer replays what the user agent
+ * kept, and the spec hands the overflow count to the callback — without surfacing it, "6 long tasks"
+ * silently means "6 of however many happened".
+ */
+export type PerformanceDropped = {
+  longTasks: number;
+  interactions: number;
+};
+
+/**
+ * Whether each collector actually attached. Each depends on what the native side implements, which
+ * varies by platform and RN version — without this an empty list is ambiguous between "nothing
+ * happened" and "this device never reports it", which are opposite conclusions.
  */
 export type PerformanceSupport = {
   memory: boolean;
@@ -57,9 +95,11 @@ export type PerformanceSupport = {
 export type PerformanceSnapshot = {
   memory: MemorySample[];
   longTasks: LongTaskEntry[];
+  userTiming: UserTimingEntry[];
   interactions: InteractionEntry[];
   startup?: StartupTiming;
   support: PerformanceSupport;
+  dropped: PerformanceDropped;
 };
 
 type PerformanceEvents = {
@@ -71,6 +111,7 @@ const DEFAULT_HISTORY_SIZE = 120;
 let historySize = DEFAULT_HISTORY_SIZE;
 let memory: MemorySample[] = [];
 let longTasks: LongTaskEntry[] = [];
+let userTiming: UserTimingEntry[] = [];
 let interactions: InteractionEntry[] = [];
 let startup: StartupTiming | undefined;
 // Kept out of the snapshot on purpose: it changes twice a second, and anything reading the snapshot
@@ -81,6 +122,7 @@ let support: PerformanceSupport = {
   longTasks: false,
   interactions: false,
 };
+let dropped: PerformanceDropped = { longTasks: 0, interactions: 0 };
 let paused = false;
 let enabled = false;
 
@@ -89,9 +131,11 @@ const emitter = new EventEmitter<PerformanceEvents>();
 let snapshot: PerformanceSnapshot = {
   memory,
   longTasks,
+  userTiming,
   interactions,
   startup,
   support,
+  dropped,
 };
 
 /**
@@ -117,7 +161,7 @@ function notify() {
  * pressing record has to see it take effect at once; only the high-frequency data path is throttled.
  */
 function publish(immediate = false) {
-  snapshot = { memory, longTasks, interactions, startup, support };
+  snapshot = { memory, longTasks, userTiming, interactions, startup, support, dropped };
 
   if (immediate) {
     if (pendingNotify !== undefined) {
@@ -146,6 +190,7 @@ function publish(immediate = false) {
 }
 
 let taskCounter = 0;
+let userTimingCounter = 0;
 let interactionCounter = 0;
 
 export const performanceStore = {
@@ -177,6 +222,15 @@ export const performanceStore = {
     paused = nextPaused;
     publish(true);
   },
+  /** Cumulative — the count arrives per callback and each one reports only its own overflow. */
+  addDropped(next: Partial<PerformanceDropped>) {
+    if (!enabled || paused) return;
+    dropped = {
+      longTasks: dropped.longTasks + (next.longTasks ?? 0),
+      interactions: dropped.interactions + (next.interactions ?? 0),
+    };
+    publish();
+  },
   /** Reported by each collector as it installs, so the UI can say why a list is empty. */
   setSupport(next: Partial<PerformanceSupport>) {
     support = { ...support, ...next };
@@ -206,6 +260,21 @@ export const performanceStore = {
     longTasks = [...additions.reverse(), ...longTasks].slice(0, historySize);
     publish();
   },
+  addUserTiming(entries: Omit<UserTimingEntry, 'id' | 'timestamp'>[]) {
+    if (!enabled || paused || entries.length === 0) return;
+    const now = Date.now();
+    const additions = entries.slice(-historySize).map((entry) => {
+      userTimingCounter += 1;
+      return { ...entry, id: `usertiming-${userTimingCounter}`, timestamp: now };
+    });
+    userTiming = [...additions.reverse(), ...userTiming].slice(0, historySize);
+    publish();
+  },
+  clearUserTiming(predicate?: (entry: UserTimingEntry) => boolean) {
+    if (predicate === undefined) userTiming = [];
+    else userTiming = userTiming.filter((entry) => !predicate(entry));
+    publish(true);
+  },
   addInteractions(entries: Omit<InteractionEntry, 'id' | 'timestamp'>[]) {
     if (!enabled || paused || entries.length === 0) return;
     const now = Date.now();
@@ -230,7 +299,9 @@ export const performanceStore = {
   clear() {
     memory = [];
     longTasks = [];
+    userTiming = [];
     interactions = [];
+    dropped = { longTasks: 0, interactions: 0 };
     fps = undefined;
     publish(true);
   },

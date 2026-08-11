@@ -15,4 +15,6 @@ export type {
   LongTaskEntry,
   MemorySample,
   StartupTiming,
+  UserTimingEntry,
 } from './stores/performance/performance.store';
+export type { MarkOptions, MeasureOptions } from './services/performance/user-timing.service';

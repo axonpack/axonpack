@@ -4,25 +4,30 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { FpsCard } from './fps-card.component';
 import { HeapCard } from './heap-card.component';
 import { InteractionRow } from './interaction-row.component';
+import { LimiterSection } from './limiter-section.component';
 import { LongTaskRow } from './long-task-row.component';
 import { MetricCard } from './metric-card.component';
 import { StartupTimingSection } from './startup-timing.component';
+import { UserTimingRow } from './user-timing-row.component';
 import { COLORS } from '../../constants/colors.const';
 import { startFpsMonitor } from '../../services/performance/fps-monitor.service';
 import {
   performanceStore,
   type InteractionEntry,
   type LongTaskEntry,
+  type UserTimingEntry,
 } from '../../stores/performance/performance.store';
 import { formatMs } from '../../utils/performance/format-metrics.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 
-type ListKey = 'longTasks' | 'interactions';
+type ListKey = 'longTasks' | 'userTiming' | 'interactions';
 
 type ListRow =
-  { key: 'longTasks'; entry: LongTaskEntry } | { key: 'interactions'; entry: InteractionEntry };
+  | { key: 'longTasks'; entry: LongTaskEntry }
+  | { key: 'userTiming'; entry: UserTimingEntry }
+  | { key: 'interactions'; entry: InteractionEntry };
 
 /** Empty means two opposite things — nothing happened, or this device never reports it. */
 const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = {
@@ -30,26 +35,23 @@ const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = 
     supported: 'Nothing has blocked the JS thread yet.',
     unsupported: 'Long tasks are not available on this device.',
   },
+  userTiming: {
+    supported: 'No marks yet. Call devtools.mark() and devtools.measure() in your code.',
+    unsupported: 'No marks yet. Call devtools.mark() and devtools.measure() in your code.',
+  },
   interactions: {
     supported: 'No slow interactions yet.',
     unsupported: 'Interaction timing is not available on this device.',
   },
 };
 export function PerformanceView() {
-  const { longTasks, interactions, startup, support } = useSyncExternalStore(
+  const { longTasks, userTiming, interactions, startup, support, dropped } = useSyncExternalStore(
     performanceStore.subscribe,
     performanceStore.getSnapshot
   );
   const paused = useSyncExternalStore(performanceStore.subscribe, performanceStore.isPaused);
-  // One list at a time rather than three stacked: nesting scrollables inside a scrollable breaks
-  // both of them, and only one of these is ever the question being asked.
   const [list, setList] = useState<ListKey>('longTasks');
 
-  /**
-   * The rAF loop lives here rather than in `init()` on purpose: it keeps the JS thread awake for as
-   * long as it runs. `DevtoolsPanel` unmounts this tab when you switch away, so it stops then — the
-   * other collectors are cheap and keep running, so their history survives the panel closing.
-   */
   useEffect(() => {
     if (paused) return;
     return startFpsMonitor();
@@ -60,12 +62,21 @@ export function PerformanceView() {
     undefined
   );
 
-  const listSupported = list === 'longTasks' ? support.longTasks : support.interactions;
+  const listSupported =
+    list === 'longTasks'
+      ? support.longTasks
+      : list === 'interactions'
+        ? support.interactions
+        : true;
+  const droppedForList =
+    list === 'longTasks' ? dropped.longTasks : list === 'interactions' ? dropped.interactions : 0;
 
   const rows: ListRow[] =
     list === 'longTasks'
       ? longTasks.map((entry) => ({ key: 'longTasks', entry }))
-      : interactions.map((entry) => ({ key: 'interactions', entry }));
+      : list === 'userTiming'
+        ? userTiming.map((entry) => ({ key: 'userTiming', entry }))
+        : interactions.map((entry) => ({ key: 'interactions', entry }));
 
   return (
     <View style={styles.container}>
@@ -85,6 +96,7 @@ export function PerformanceView() {
         keyExtractor={(row) => row.entry.id}
         renderItem={({ item }) => {
           if (item.key === 'longTasks') return <LongTaskRow entry={item.entry} />;
+          if (item.key === 'userTiming') return <UserTimingRow entry={item.entry} />;
           return <InteractionRow entry={item.entry} />;
         }}
         ListHeaderComponent={
@@ -101,12 +113,19 @@ export function PerformanceView() {
             </View>
 
             <StartupTimingSection startup={startup} />
+            {/* Sits under the readings it is meant to move, so cause and effect are on one screen. */}
+            <LimiterSection />
 
             <View style={styles.selector}>
               <Chip
                 label={`Long tasks ${longTasks.length}`}
                 active={list === 'longTasks'}
                 onPress={() => setList('longTasks')}
+              />
+              <Chip
+                label={`User timing ${userTiming.length}`}
+                active={list === 'userTiming'}
+                onPress={() => setList('userTiming')}
               />
               <Chip
                 label={`Interactions ${interactions.length}`}
@@ -117,7 +136,21 @@ export function PerformanceView() {
 
             {list === 'longTasks' && longTasks.length > 0 ? (
               <Text style={styles.listNote}>
-                Shows when the thread was blocked, not by what. React Native reports no attribution.
+                Shows when the thread was blocked, not by what. React Native reports no attribution
+                — wrap your own code in devtools.mark() and devtools.measure() to name it.
+              </Text>
+            ) : null}
+            {list === 'interactions' && interactions.length > 0 ? (
+              <Text style={styles.listNote}>
+                Durations are rounded to the nearest 8 ms, and anything under 16 ms is never
+                reported.
+              </Text>
+            ) : null}
+            {/* The platform discards entries once its own buffer overflows, and only tells us the
+                count — so this is the difference between "6 happened" and "6 of 40 survived". */}
+            {droppedForList > 0 ? (
+              <Text style={styles.listNote}>
+                {droppedForList} more happened before this list could keep them.
               </Text>
             ) : null}
           </View>

@@ -4,13 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../../constants/colors.const';
 import type { LongTaskEntry } from '../../stores/performance/performance.store';
 import { formatMs, getLongTaskColor } from '../../utils/performance/format-metrics.util';
+import { formatLongTaskName } from '../../utils/performance/long-task-name.util';
 
 function LongTaskRowBase({ entry }: { entry: LongTaskEntry }) {
   return (
     <View style={styles.row}>
       <View style={[styles.marker, { backgroundColor: getLongTaskColor(entry.duration) }]} />
       <Text style={styles.name} numberOfLines={1}>
-        {entry.name || 'unknown'}
+        {formatLongTaskName(entry.name)}
       </Text>
       <Text style={styles.at}>{new Date(entry.timestamp).toLocaleTimeString()}</Text>
       <Text style={[styles.duration, { color: getLongTaskColor(entry.duration) }]}>

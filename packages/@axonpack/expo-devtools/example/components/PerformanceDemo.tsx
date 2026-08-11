@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from './ActionButton';
+import { devtools } from '../devtools';
 
 /**
  * Busy-waits rather than sleeping: the Performance tab measures the JS thread being *occupied*, and
@@ -56,6 +57,29 @@ export function PerformanceDemo() {
           }}
         />
         <Text style={styles.counter}>tapped {spins}×</Text>
+      </View>
+
+      <Text style={styles.heading}>User timing</Text>
+      <Text style={styles.hint}>Timings you name yourself. Shows up under User timing.</Text>
+      <View style={styles.row}>
+        <ActionButton
+          label="Mark + measure (180ms)"
+          onPress={() => {
+            devtools.mark('checkout');
+            blockThread(180);
+            devtools.measure('checkout');
+          }}
+        />
+        <ActionButton
+          label="Measure with detail"
+          onPress={() => {
+            devtools.mark('cart', { detail: { items: 3 } });
+            blockThread(60);
+            devtools.measure('cart', { start: 'cart', detail: { items: 3 } });
+          }}
+        />
+        <ActionButton label="Single mark" onPress={() => devtools.mark('button:pressed')} />
+        <ActionButton label="Clear marks" onPress={() => devtools.clearMarks()} />
       </View>
 
       <Text style={styles.heading}>JS heap</Text>
