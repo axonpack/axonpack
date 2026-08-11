@@ -47,7 +47,9 @@ export function FpsChartCard() {
 
   // Built from the session peak, not the visible window, so the axis rises once for a 120Hz device and
   // then holds still. A scale that also fell would repaint every line on every sample.
-  const domainMax = Math.max(MIN_DOMAIN_MAX, peak + HEADROOM);
+  // Headroom is added after the floor, not inside it. With it inside, an unconfirmed peak of 0 gave
+  // max(60, 5) = 60, so a steady 60fps line sat flush against the top edge.
+  const domainMax = Math.max(MIN_DOMAIN_MAX, peak) + HEADROOM;
 
   const series: LineSeries[] = [
     { label: 'JS thread', values: downsampleMin(jsHistory, POINTS), color: COLORS.accent },
