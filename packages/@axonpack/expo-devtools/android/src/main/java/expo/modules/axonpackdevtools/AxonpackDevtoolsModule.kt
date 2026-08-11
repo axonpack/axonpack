@@ -1,0 +1,58 @@
+package expo.modules.axonpackdevtools
+
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
+import android.os.SystemClock
+import expo.modules.kotlin.modules.Module
+import expo.modules.kotlin.modules.ModuleDefinition
+
+/**
+ * The only native code in this package, and it exists to *cause* problems rather than measure them:
+ * the Limiter section needs to stall or kill the main thread, which JavaScript cannot reach.
+ *
+ * Optional on the JS side, so an app without a dev client keeps working — it just can't reach the
+ * main thread.
+ */
+class AxonpackDevtoolsModule : Module() {
+  /** Captured when the module is constructed, which happens during native startup. */
+  private val moduleInitEpochMs = System.currentTimeMillis().toDouble()
+
+  /**
+   * `getStartUptimeMillis` is on the uptime clock, so it's shifted onto the epoch to be comparable with
+   * `Date.now()` in JS. Requires API 24, which is this module's `minSdkVersion`.
+   */
+  private fun processStartEpochMs(): Double =
+    (System.currentTimeMillis() - SystemClock.uptimeMillis() + Process.getStartUptimeMillis())
+      .toDouble()
+
+  override fun definition() = ModuleDefinition {
+    Name("AxonpackDevtools")
+
+    /** Epoch milliseconds, so JS can line these up with its own `Date.now()` readings. */
+    Function("getStartupTimestamps") {
+      mapOf(
+        "processStartMs" to processStartEpochMs(),
+        "nativeModuleInitMs" to moduleInitEpochMs,
+      )
+    }
+
+    /**
+     * Busy-waits on the main looper. `Thread.sleep` would suspend and let the OS schedule other work,
+     * which is not what a blocked UI thread looks like — spinning is the accurate simulation. Posted
+     * rather than run inline so the call returns at once and JS stays responsive while the UI freezes.
+     */
+    Function("blockMainThread") { durationMs: Double ->
+      Handler(Looper.getMainLooper()).post {
+        val startedAt = System.currentTimeMillis()
+        while (System.currentTimeMillis() - startedAt < durationMs.toLong()) {
+          // Deliberately empty: occupy the thread rather than yield it.
+        }
+      }
+    }
+
+    Function("crashMainThread") { message: String ->
+      Handler(Looper.getMainLooper()).post { throw RuntimeException(message) }
+    }
+  }
+}

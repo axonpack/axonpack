@@ -1,10 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Animated, Dimensions, Modal, PanResponder, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevtoolsPanel } from './devtools-panel.component';
 import { COLORS } from '../../constants/colors.const';
+import { markFirstRender } from '../../services/performance/read-startup-timing.service';
 
 const FAB_SIZE = 40;
 const EDGE_MARGIN = 16;
@@ -21,6 +22,9 @@ function getInitialPosition(): { x: number; y: number } {
 }
 
 export function DevtoolsOverlay() {
+  // First mount of the overlay is the closest observable stand-in for the app's first render.
+  useEffect(markFirstRender, []);
+
   const [open, setOpen] = useState(false);
   const [pan] = useState(() => new Animated.ValueXY(getInitialPosition()));
 

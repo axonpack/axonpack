@@ -24,7 +24,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "files": [
-    "build"
+    "build",
+    "ios",
+    "android",
+    "expo-module.config.json"
   ],
   "main": "build/index.js",
   "types": "build/index.d.ts",

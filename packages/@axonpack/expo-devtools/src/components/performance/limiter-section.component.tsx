@@ -1,0 +1,210 @@
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { COLORS } from '../../constants/colors.const';
+import {
+  blockJsThread,
+  blockMainThread,
+  crashJsThread,
+  crashMainThread,
+  isMainThreadLimiterAvailable,
+} from '../../services/performance/limiter.service';
+import { Chip } from '../ui/chip.ui';
+import { CollapsibleSection } from '../ui/collapsible-section.ui';
+
+type Target = 'js' | 'main';
+
+const PRESETS = [100, 250, 500, 1000, 3000];
+
+/**
+ * Deliberately makes the app worse, so the rest of the tab can be trusted. A profiler that has never
+ * been pointed at a known-bad case is a profiler nobody has calibrated.
+ *
+ * The two targets are not interchangeable, and the difference is the point: blocking the JS thread
+ * shows up as a long task and drops the FPS reading, while blocking the main thread freezes what you
+ * see and touch while the JS numbers stay perfectly healthy — which is exactly the blind spot this tab
+ * warns about on the FPS card.
+ */
+export function LimiterSection() {
+  const [target, setTarget] = useState<Target>('js');
+  const [durationMs, setDurationMs] = useState(250);
+  const [customText, setCustomText] = useState('');
+  const [armed, setArmed] = useState(false);
+
+  const mainThreadAvailable = isMainThreadLimiterAvailable();
+  const targetAvailable = target === 'js' || mainThreadAvailable;
+
+  const block = () => {
+    if (target === 'main') blockMainThread(durationMs);
+    else blockJsThread(durationMs);
+  };
+
+  const crash = () => {
+    // Two taps, never one: this ends the process, and it sits next to buttons that merely stall it.
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    setArmed(false);
+    if (target === 'main') crashMainThread('Crashed from the axonpack devtools Limiter');
+    else crashJsThread('Crashed from the axonpack devtools Limiter');
+  };
+
+  return (
+    <CollapsibleSection title="Limiter">
+      <View style={styles.body}>
+        <Text style={styles.label}>Thread</Text>
+        <View style={styles.row}>
+          <Chip label="JavaScript" active={target === 'js'} onPress={() => setTarget('js')} />
+          <Chip label="Main (UI)" active={target === 'main'} onPress={() => setTarget('main')} />
+        </View>
+
+        <Text style={styles.label}>For</Text>
+        <View style={styles.row}>
+          {PRESETS.map((preset) => (
+            <Chip
+              key={preset}
+              label={preset >= 1000 ? `${preset / 1000}s` : `${preset}ms`}
+              active={durationMs === preset && customText.length === 0}
+              onPress={() => {
+                setCustomText('');
+                setDurationMs(preset);
+              }}
+            />
+          ))}
+          <View style={styles.customRow}>
+            <TextInput
+              style={styles.customInput}
+              value={customText}
+              onChangeText={(text) => {
+                const digitsOnly = text.replace(/[^0-9]/g, '');
+                setCustomText(digitsOnly);
+                const parsed = Number(digitsOnly);
+                if (digitsOnly.length > 0 && parsed > 0) setDurationMs(parsed);
+              }}
+              placeholder="Custom"
+              placeholderTextColor={COLORS.textSecondary}
+              keyboardType="number-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={styles.unit}>ms</Text>
+          </View>
+        </View>
+
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.button, !targetAvailable && styles.buttonDisabled]}
+            disabled={!targetAvailable}
+            onPress={block}>
+            <Text style={[styles.buttonLabel, !targetAvailable && styles.buttonLabelDisabled]}>
+              Block for {durationMs}ms
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.dangerButton, !targetAvailable && styles.buttonDisabled]}
+            disabled={!targetAvailable}
+            onPress={crash}>
+            <Text style={[styles.buttonLabel, styles.dangerLabel]}>
+              {armed ? 'Tap again to crash' : 'Crash'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {target === 'main' && !mainThreadAvailable ? (
+          <Text style={styles.note}>
+            Reaching the main thread needs the native module, so it needs a development build. The
+            JavaScript thread works anywhere.
+          </Text>
+        ) : (
+          <Text style={styles.note}>
+            {target === 'js'
+              ? 'Blocks JavaScript: shows up as a long task and drops the FPS reading.'
+              : 'Freezes what you see and touch. The JS numbers stay healthy, which is the blind spot.'}
+          </Text>
+        )}
+      </View>
+    </CollapsibleSection>
+  );
+}
+
+const styles = StyleSheet.create({
+  body: {
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  // Matches the canonical input row from INPUT_STYLES.md: border on the row, bare TextInput inside.
+  customRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+  },
+  customInput: {
+    minWidth: 52,
+    fontSize: 13,
+    color: COLORS.textPrimary,
+    padding: 0,
+  },
+  unit: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  button: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.accent,
+    backgroundColor: COLORS.sectionTint,
+  },
+  dangerButton: {
+    borderColor: COLORS.error,
+    backgroundColor: COLORS.errorSurface,
+  },
+  buttonDisabled: {
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.toolbarBackground,
+  },
+  buttonLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.accent,
+  },
+  dangerLabel: {
+    color: COLORS.error,
+  },
+  buttonLabelDisabled: {
+    color: COLORS.textSecondary,
+  },
+  note: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: COLORS.textSecondary,
+    marginTop: 6,
+  },
+});
