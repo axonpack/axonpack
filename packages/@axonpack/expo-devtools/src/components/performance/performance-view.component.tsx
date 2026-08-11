@@ -17,10 +17,11 @@ import {
   type LongTaskEntry,
   type UserTimingEntry,
 } from '../../stores/performance/performance.store';
+import { animateNextLayout } from '../../utils/layout-animation.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
+import { InsetPadding } from '../ui/inset-padding.ui';
 import { RecordToggleButton } from '../ui/record-toggle-button.ui';
-import { animateNextLayout } from '../../utils/layout-animation.util';
 
 type ListKey = 'longTasks' | 'userTiming' | 'interactions';
 
@@ -113,6 +114,8 @@ export function PerformanceView() {
           {/* Startup is measured once at launch, before recording could have been switched on, so it is
               the one section worth showing even here. */}
           <StartupTimingSection startup={startup} />
+          {/* Same as the other tabs: the last row otherwise sits under the home indicator. */}
+          <InsetPadding edge="bottom" />
         </ScrollView>
       ) : (
         <FlatList
@@ -179,6 +182,7 @@ export function PerformanceView() {
               {listSupported ? EMPTY_TEXT[list].supported : EMPTY_TEXT[list].unsupported}
             </Text>
           }
+          ListFooterComponent=<InsetPadding edge="bottom" />
         />
       )}
     </View>
