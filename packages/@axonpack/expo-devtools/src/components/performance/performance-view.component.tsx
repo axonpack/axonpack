@@ -1,14 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppMemoryCard } from './app-memory-card.component';
+import { AppSection } from './app-section.component';
 import { DeviceSection } from './device-section.component';
-import { FpsCard } from './fps-card.component';
-import { HeapCard } from './heap-card.component';
+import { IdleState } from './idle-state.component';
 import { InteractionRow } from './interaction-row.component';
-import { LimiterSection } from './limiter-section.component';
+import { LimiterPanel } from './limiter-panel.component';
 import { LongTaskRow } from './long-task-row.component';
-import { MetricCard } from './metric-card.component';
 import { StartupTimingSection } from './startup-timing.component';
 import { UserTimingRow } from './user-timing-row.component';
 import { COLORS } from '../../constants/colors.const';
@@ -19,10 +17,10 @@ import {
   type LongTaskEntry,
   type UserTimingEntry,
 } from '../../stores/performance/performance.store';
-import { formatMs } from '../../utils/performance/format-metrics.util';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { RecordToggleButton } from '../ui/record-toggle-button.ui';
+import { animateNextLayout } from '../../utils/layout-animation.util';
 
 type ListKey = 'longTasks' | 'userTiming' | 'interactions';
 
@@ -51,16 +49,12 @@ export function PerformanceView() {
     useSyncExternalStore(performanceStore.subscribe, performanceStore.getSnapshot);
   const paused = useSyncExternalStore(performanceStore.subscribe, performanceStore.isPaused);
   const [list, setList] = useState<ListKey>('longTasks');
+  const [limiterOpen, setLimiterOpen] = useState(false);
 
   useEffect(() => {
     if (paused) return;
     return startFpsMonitor();
   }, [paused]);
-
-  const worstInteraction = interactions.reduce<number | undefined>(
-    (worst, entry) => (worst === undefined || entry.duration > worst ? entry.duration : worst),
-    undefined
-  );
 
   const listSupported =
     list === 'longTasks'
@@ -70,6 +64,12 @@ export function PerformanceView() {
         : true;
   const droppedForList =
     list === 'longTasks' ? dropped.longTasks : list === 'interactions' ? dropped.interactions : 0;
+
+  // Paused *and* nothing collected yet: the tab has nothing to show and no history to preserve, so it
+  // explains itself instead of presenting a screen of dashes. Paused with data still shows the data —
+  // pausing freezes the readings, it doesn't discard them.
+  const neverRecorded =
+    longTasks.length === 0 && interactions.length === 0 && userTiming.length === 0;
 
   const rows: ListRow[] =
     list === 'longTasks'
@@ -84,88 +84,101 @@ export function PerformanceView() {
         <RecordToggleButton paused={paused} onToggle={() => performanceStore.setPaused(!paused)} />
         <View style={styles.toolbarSpacer} />
         <IconButton
+          name="speed"
+          color={limiterOpen ? COLORS.accent : COLORS.textSecondary}
+          active={limiterOpen}
+          hitSlop={8}
+          label="Limiter"
+          onPress={() => {
+            animateNextLayout();
+            setLimiterOpen((current) => !current);
+          }}
+        />
+        <IconButton
           name="delete-outline"
           color={COLORS.textSecondary}
           onPress={() => performanceStore.clear()}
           hitSlop={8}
+          label="Clear"
         />
       </View>
 
-      <FlatList
-        data={rows}
-        keyExtractor={(row) => row.entry.id}
-        renderItem={({ item }) => {
-          if (item.key === 'longTasks') return <LongTaskRow entry={item.entry} />;
-          if (item.key === 'userTiming') return <UserTimingRow entry={item.entry} />;
-          return <InteractionRow entry={item.entry} />;
-        }}
-        ListHeaderComponent={
-          <View>
-            <View style={styles.cards}>
-              <HeapCard />
-              <AppMemoryCard />
-              <FpsCard />
+      {limiterOpen && <LimiterPanel />}
 
-              <MetricCard
-                label="Worst interaction"
-                value={formatMs(worstInteraction)}
-                hint="Slowest event to next paint"
-              />
-            </View>
+      {paused && neverRecorded ? (
+        <ScrollView>
+          <IdleState />
+          {/* Startup is measured once at launch, before recording could have been switched on, so it is
+              the one section worth showing even here. */}
+          <StartupTimingSection startup={startup} />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={(row) => row.entry.id}
+          renderItem={({ item }) => {
+            if (item.key === 'longTasks') return <LongTaskRow entry={item.entry} />;
+            if (item.key === 'userTiming') return <UserTimingRow entry={item.entry} />;
+            return <InteractionRow entry={item.entry} />;
+          }}
+          ListHeaderComponent={
+            <View>
+              <AppSection />
 
-            <DeviceSection
-              latest={systemMemory.at(-1)}
-              storage={storage}
-              available={support.systemMemory}
-            />
-            <StartupTimingSection startup={startup} />
-            <LimiterSection />
+              <DeviceSection
+                latest={systemMemory.at(-1)}
+                storage={storage}
+                available={support.systemMemory}
+              />
+              <StartupTimingSection startup={startup} />
 
-            <View style={styles.selector}>
-              <Chip
-                label={`Long tasks ${longTasks.length}`}
-                active={list === 'longTasks'}
-                onPress={() => setList('longTasks')}
-              />
-              <Chip
-                label={`User timing ${userTiming.length}`}
-                active={list === 'userTiming'}
-                onPress={() => setList('userTiming')}
-              />
-              <Chip
-                label={`Interactions ${interactions.length}`}
-                active={list === 'interactions'}
-                onPress={() => setList('interactions')}
-              />
-            </View>
+              <View style={styles.selector}>
+                <Chip
+                  label={`Long tasks ${longTasks.length}`}
+                  active={list === 'longTasks'}
+                  onPress={() => setList('longTasks')}
+                />
+                <Chip
+                  label={`User timing ${userTiming.length}`}
+                  active={list === 'userTiming'}
+                  onPress={() => setList('userTiming')}
+                />
+                <Chip
+                  label={`Interactions ${interactions.length}`}
+                  active={list === 'interactions'}
+                  onPress={() => setList('interactions')}
+                />
+              </View>
 
-            {list === 'longTasks' && longTasks.length > 0 ? (
-              <Text style={styles.listNote}>
-                Shows when the thread was blocked, not by what. React Native reports no attribution
-                — wrap your own code in devtools.mark() and devtools.measure() to name it.
-              </Text>
-            ) : null}
-            {list === 'interactions' && interactions.length > 0 ? (
-              <Text style={styles.listNote}>
-                Durations are rounded to the nearest 8 ms, and anything under 16 ms is never
-                reported.
-              </Text>
-            ) : null}
-            {/* The platform discards entries once its own buffer overflows, and only tells us the
+              {list === 'longTasks' && longTasks.length > 0 ? (
+                <Text style={styles.listNote}>
+                  Shows when the thread was blocked, not by what. React Native reports no
+                  attribution — wrap your own code in devtools.mark() and devtools.measure() to name
+                  it.
+                </Text>
+              ) : null}
+              {list === 'interactions' && interactions.length > 0 ? (
+                <Text style={styles.listNote}>
+                  Durations are rounded to the nearest 8 ms, and anything under 16 ms is never
+                  reported.
+                </Text>
+              ) : null}
+              {/* The platform discards entries once its own buffer overflows, and only tells us the
                 count — so this is the difference between "6 happened" and "6 of 40 survived". */}
-            {droppedForList > 0 ? (
-              <Text style={styles.listNote}>
-                {droppedForList} more happened before this list could keep them.
-              </Text>
-            ) : null}
-          </View>
-        }
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {listSupported ? EMPTY_TEXT[list].supported : EMPTY_TEXT[list].unsupported}
-          </Text>
-        }
-      />
+              {droppedForList > 0 ? (
+                <Text style={styles.listNote}>
+                  {droppedForList} more happened before this list could keep them.
+                </Text>
+              ) : null}
+            </View>
+          }
+          ListEmptyComponent={
+            <Text style={styles.empty}>
+              {listSupported ? EMPTY_TEXT[list].supported : EMPTY_TEXT[list].unsupported}
+            </Text>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -187,12 +200,6 @@ const styles = StyleSheet.create({
   },
   toolbarSpacer: {
     flex: 1,
-  },
-  cards: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    padding: 10,
   },
   selector: {
     flexDirection: 'row',

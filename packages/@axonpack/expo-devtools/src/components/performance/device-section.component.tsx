@@ -4,24 +4,11 @@ import { COLORS } from '../../constants/colors.const';
 import type { StorageInfo, SystemMemorySample } from '../../stores/performance/performance.store';
 import { formatSize } from '../../utils/format-bytes.util';
 import { CollapsibleSection } from '../ui/collapsible-section.ui';
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
-  );
-}
-
-function percentOf(part?: number, whole?: number): string {
-  if (part === undefined || whole === undefined || whole <= 0) return '';
-  return ` (${Math.round((part / whole) * 100)}%)`;
-}
+import { UsageMeter } from '../ui/usage-meter.ui';
 
 /**
- * Device-level figures, which need the native module — the JS runtime has no idea how much RAM the phone
- * has. Hidden entirely when that module isn't installed, rather than showing a column of dashes.
+ * Two part-of-whole meters, which is what this data actually is — a row of numbers made the reader do the
+ * subtraction and the ratio in their head.
  *
  * Storage is Android-only, deliberately. `StatFs` there needs no permission and no manifest entry, but
  * iOS's `systemFreeSize` is one of Apple's required-reason APIs — no prompt, yet it obliges a privacy
@@ -42,7 +29,7 @@ export function DeviceSection({
     return (
       <CollapsibleSection title="Device">
         <View style={styles.body}>
-          <Text style={styles.rowLabel}>
+          <Text style={styles.note}>
             Device memory needs the native module, so it needs a development build. Everything else
             on this tab works without one.
           </Text>
@@ -51,40 +38,47 @@ export function DeviceSection({
     );
   }
 
-  const hasMemory = latest?.totalBytes !== undefined || latest?.appBytes !== undefined;
+  const totalMemory = latest?.totalBytes;
+  const availableMemory = latest?.availableToAppBytes;
+  const usedMemory =
+    totalMemory !== undefined && availableMemory !== undefined
+      ? totalMemory - availableMemory
+      : undefined;
+
   const usedStorage =
     storage?.totalBytes !== undefined && storage.freeBytes !== undefined
       ? storage.totalBytes - storage.freeBytes
       : undefined;
-  if (!hasMemory && storage === undefined) return null;
+
+  if (totalMemory === undefined && storage === undefined) return null;
 
   return (
     <CollapsibleSection title="Device">
       <View style={styles.body}>
-        <>
-          <Row label="Device RAM" value={formatSize(latest?.totalBytes)} />
-          {/* Android reports system-wide free RAM; iOS reports what this process may still allocate,
-                so the label has to describe the honest meaning rather than claim "free". */}
-          <Row
-            label="Available to this app"
-            value={`${formatSize(latest?.availableToAppBytes)}${percentOf(
-              latest?.availableToAppBytes,
-              latest?.totalBytes
-            )}`}
-          />
-        </>
+        <UsageMeter
+          label="Memory"
+          usedBytes={usedMemory}
+          totalBytes={totalMemory}
+          // Named rather than called "free": Android reports system-wide free memory here, iOS reports
+          // what this process may still claim before being killed.
+          caption={
+            availableMemory !== undefined
+              ? `${formatSize(availableMemory)} available to this app`
+              : undefined
+          }
+        />
+
         {storage !== undefined ? (
-          <>
-            <Row label="Storage" value={formatSize(storage.totalBytes)} />
-            <Row
-              label="Used"
-              value={`${formatSize(usedStorage)}${percentOf(usedStorage, storage.totalBytes)}`}
-            />
-            <Row label="Free" value={formatSize(storage.freeBytes)} />
-          </>
+          <UsageMeter
+            label="Storage"
+            usedBytes={usedStorage}
+            totalBytes={storage.totalBytes}
+            caption={
+              storage.freeBytes !== undefined ? `${formatSize(storage.freeBytes)} free` : undefined
+            }
+          />
         ) : (
-          // Says why rather than leaving a gap: on iOS this is a deliberate omission, not a failure.
-          <Text style={styles.rowLabel}>
+          <Text style={styles.note}>
             Storage isn&apos;t shown on iOS — reading it would oblige every app using this package
             to declare a disk-space reason at submission.
           </Text>
@@ -96,23 +90,14 @@ export function DeviceSection({
 
 const styles = StyleSheet.create({
   body: {
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingBottom: 8,
+    gap: 14,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  rowLabel: {
-    fontSize: 12,
+  note: {
+    fontSize: 11,
+    lineHeight: 15,
     color: COLORS.textSecondary,
-  },
-  rowValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    fontVariant: ['tabular-nums'],
   },
 });

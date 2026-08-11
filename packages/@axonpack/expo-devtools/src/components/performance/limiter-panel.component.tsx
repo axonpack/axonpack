@@ -10,7 +10,6 @@ import {
   isMainThreadLimiterAvailable,
 } from '../../services/performance/limiter.service';
 import { Chip } from '../ui/chip.ui';
-import { CollapsibleSection } from '../ui/collapsible-section.ui';
 
 type Target = 'js' | 'main';
 
@@ -25,7 +24,7 @@ const PRESETS = [100, 250, 500, 1000, 3000];
  * see and touch while the JS numbers stay perfectly healthy — which is exactly the blind spot this tab
  * warns about on the FPS card.
  */
-export function LimiterSection() {
+export function LimiterPanel() {
   const [target, setTarget] = useState<Target>('js');
   const [durationMs, setDurationMs] = useState(250);
   const [customText, setCustomText] = useState('');
@@ -51,89 +50,91 @@ export function LimiterSection() {
   };
 
   return (
-    <CollapsibleSection title="Limiter">
-      <View style={styles.body}>
-        <Text style={styles.label}>Thread</Text>
-        <View style={styles.row}>
-          <Chip label="JavaScript" active={target === 'js'} onPress={() => setTarget('js')} />
-          <Chip label="Main (UI)" active={target === 'main'} onPress={() => setTarget('main')} />
-        </View>
-
-        <Text style={styles.label}>For</Text>
-        <View style={styles.row}>
-          {PRESETS.map((preset) => (
-            <Chip
-              key={preset}
-              label={preset >= 1000 ? `${preset / 1000}s` : `${preset}ms`}
-              active={durationMs === preset && customText.length === 0}
-              onPress={() => {
-                setCustomText('');
-                setDurationMs(preset);
-              }}
-            />
-          ))}
-          <View style={styles.customRow}>
-            <TextInput
-              style={styles.customInput}
-              value={customText}
-              onChangeText={(text) => {
-                const digitsOnly = text.replace(/[^0-9]/g, '');
-                setCustomText(digitsOnly);
-                const parsed = Number(digitsOnly);
-                if (digitsOnly.length > 0 && parsed > 0) setDurationMs(parsed);
-              }}
-              placeholder="Custom"
-              placeholderTextColor={COLORS.textSecondary}
-              keyboardType="number-pad"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <Text style={styles.unit}>ms</Text>
-          </View>
-        </View>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.button, !targetAvailable && styles.buttonDisabled]}
-            disabled={!targetAvailable}
-            onPress={block}>
-            <Text style={[styles.buttonLabel, !targetAvailable && styles.buttonLabelDisabled]}>
-              Block for {durationMs}ms
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.dangerButton, !targetAvailable && styles.buttonDisabled]}
-            disabled={!targetAvailable}
-            onPress={crash}>
-            <Text style={[styles.buttonLabel, styles.dangerLabel]}>
-              {armed ? 'Tap again to crash' : 'Crash'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {target === 'main' && !mainThreadAvailable ? (
-          <Text style={styles.note}>
-            Reaching the main thread needs the native module, so it needs a development build. The
-            JavaScript thread works anywhere.
-          </Text>
-        ) : (
-          <Text style={styles.note}>
-            {target === 'js'
-              ? 'Blocks JavaScript: shows up as a long task and drops the FPS reading.'
-              : 'Freezes what you see and touch. The JS numbers stay healthy, which is the blind spot.'}
-          </Text>
-        )}
+    <View style={styles.panel}>
+      <Text style={styles.label}>Thread</Text>
+      <View style={styles.row}>
+        <Chip label="JavaScript" active={target === 'js'} onPress={() => setTarget('js')} />
+        <Chip label="Main (UI)" active={target === 'main'} onPress={() => setTarget('main')} />
       </View>
-    </CollapsibleSection>
+
+      <Text style={styles.label}>For</Text>
+      <View style={styles.row}>
+        {PRESETS.map((preset) => (
+          <Chip
+            key={preset}
+            label={preset >= 1000 ? `${preset / 1000}s` : `${preset}ms`}
+            active={durationMs === preset && customText.length === 0}
+            onPress={() => {
+              setCustomText('');
+              setDurationMs(preset);
+            }}
+          />
+        ))}
+        <View style={styles.customRow}>
+          <TextInput
+            style={styles.customInput}
+            value={customText}
+            onChangeText={(text) => {
+              const digitsOnly = text.replace(/[^0-9]/g, '');
+              setCustomText(digitsOnly);
+              const parsed = Number(digitsOnly);
+              if (digitsOnly.length > 0 && parsed > 0) setDurationMs(parsed);
+            }}
+            placeholder="Custom"
+            placeholderTextColor={COLORS.textSecondary}
+            keyboardType="number-pad"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.unit}>ms</Text>
+        </View>
+      </View>
+
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[styles.button, !targetAvailable && styles.buttonDisabled]}
+          disabled={!targetAvailable}
+          onPress={block}>
+          <Text style={[styles.buttonLabel, !targetAvailable && styles.buttonLabelDisabled]}>
+            Block for {durationMs}ms
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.dangerButton, !targetAvailable && styles.buttonDisabled]}
+          disabled={!targetAvailable}
+          onPress={crash}>
+          <Text style={[styles.buttonLabel, styles.dangerLabel]}>
+            {armed ? 'Tap again to crash' : 'Crash'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {target === 'main' && !mainThreadAvailable ? (
+        <Text style={styles.note}>
+          Reaching the main thread needs the native module, so it needs a development build. The
+          JavaScript thread works anywhere.
+        </Text>
+      ) : (
+        <Text style={styles.note}>
+          {target === 'js'
+            ? 'Blocks JavaScript: shows up as a long task and drops the FPS reading.'
+            : 'Freezes what you see and touch. The JS numbers stay healthy, which is the blind spot.'}
+        </Text>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
+  // Same shape as the network view's settings panel: it expands in place under the toolbar rather than
+  // floating over the readings it is meant to move.
+  panel: {
     gap: 6,
-    paddingHorizontal: 10,
-    paddingBottom: 10,
+    padding: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
   label: {
     fontSize: 11,

@@ -29,24 +29,31 @@ export function MetricCard({
 }
 
 const styles = StyleSheet.create({
+  // Softer radius and more air than the surrounding chrome: these are the tab's headline figures, and a
+  // tile that reads as a panel row buries them.
   card: {
     flex: 1,
-    minWidth: 140,
-    gap: 4,
-    padding: 10,
+    minWidth: 148,
+    gap: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
-    borderRadius: 6,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
   },
   label: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
     color: COLORS.textSecondary,
     textTransform: 'uppercase',
   },
   value: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
+    // Tabular figures so a changing number doesn't shuffle its own width twice a second.
+    fontVariant: ['tabular-nums'],
   },
   hint: {
     fontSize: 11,
