@@ -32,6 +32,7 @@ export function LineChart({
   domainMax,
   height = DEFAULT_HEIGHT,
   xLabels,
+  formatTick,
 }: {
   series: LineSeries[];
   /**
@@ -46,6 +47,8 @@ export function LineChart({
    * the caller knows what the spacing means — a point here is a bucket of samples, not a clock reading.
    */
   xLabels?: string[];
+  /** Formats the y-axis ticks. Defaults to a rounded number, which is right for counts, not bytes. */
+  formatTick?: (value: number) => string;
 }) {
   const [width, setWidth] = useState(0);
 
@@ -66,7 +69,7 @@ export function LineChart({
         <View style={[styles.axis, { height }]}>
           {ticks.map((tick) => (
             <Text key={tick} style={[styles.tickLabel, { top: yOfTick(tick) - LABEL_OFFSET }]}>
-              {Math.round(tick)}
+              {formatTick ? formatTick(tick) : Math.round(tick)}
             </Text>
           ))}
         </View>

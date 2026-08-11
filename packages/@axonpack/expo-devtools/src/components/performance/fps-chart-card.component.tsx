@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../../constants/colors.const';
 import { isUiFpsAvailable } from '../../services/performance/fps-monitor.service';
 import { performanceStore } from '../../stores/performance/performance.store';
+import { ageAxisLabels } from '../../utils/performance/age-labels.util';
 import { downsampleMin } from '../../utils/performance/downsample.util';
 import { getFpsColor } from '../../utils/performance/format-metrics.util';
 import { LineChart, type LineSeries } from '../ui/line-chart.ui';
@@ -17,6 +18,8 @@ const MIN_DOMAIN_MAX = 60;
 const HEADROOM = 5;
 /** 60 points over 600 samples: one per five seconds of the last five minutes. */
 const POINTS = 60;
+/** Matches the frame monitor's publish window, which is what one sample represents. */
+const FPS_WINDOW_MS = 500;
 
 /**
  * Both frame rates on one chart, which is the point: they share a unit and a scale, so putting them
@@ -79,7 +82,13 @@ export function FpsChartCard() {
       </View>
 
       {hasPlot ? (
-        <LineChart series={series} domainMax={domainMax} xLabels={['5m ago', '2.5m', 'now']} />
+        <LineChart
+          series={series}
+          domainMax={domainMax}
+          // From the samples held, not the buffer's capacity: early on the chart covers seconds, not
+          // minutes, and a fixed "5m ago" would overstate what is plotted.
+          xLabels={ageAxisLabels(Math.max(jsHistory.length, uiHistory.length), FPS_WINDOW_MS)}
+        />
       ) : (
         <Text style={styles.empty}>Collecting — the chart fills in as frames are counted.</Text>
       )}

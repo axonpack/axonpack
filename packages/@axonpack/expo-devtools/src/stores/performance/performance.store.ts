@@ -152,6 +152,12 @@ let uiFpsHistory: number[] = [];
 // it never shrinks: an axis that grows and shrinks with the buffer makes the line jitter and makes two
 // moments incomparable. Reset only by the bin.
 let fpsPeak = 0;
+// Peaks for the memory charts, monotonic for the same reason as the frame rate's: an axis that shrinks as
+// samples age out makes the line jitter and makes two moments incomparable.
+let heapPeak = 0;
+let appMemoryPeak = 0;
+// Recorded by the sampler so a chart can say how far back its left edge reaches, instead of assuming.
+let sampleIntervalMs = 1000;
 let support: PerformanceSupport = {
   memory: false,
   systemMemory: false,
@@ -269,6 +275,18 @@ export const performanceStore = {
   getFpsPeak(): number {
     return fpsPeak;
   },
+  getHeapPeak(): number {
+    return heapPeak;
+  },
+  getAppMemoryPeak(): number {
+    return appMemoryPeak;
+  },
+  getSampleIntervalMs(): number {
+    return sampleIntervalMs;
+  },
+  setSampleIntervalMs(next: number) {
+    sampleIntervalMs = next;
+  },
   getUiFpsHistory(): number[] {
     return uiFpsHistory;
   },
@@ -310,12 +328,18 @@ export const performanceStore = {
   addSystemMemorySample(sample: SystemMemorySample) {
     if (!enabled || paused) return;
     systemMemory = [...systemMemory, sample].slice(-historySize);
+    if (sample.appBytes !== undefined && sample.appBytes > appMemoryPeak) {
+      appMemoryPeak = sample.appBytes;
+    }
     publish();
   },
   addMemorySample(sample: MemorySample) {
     if (!enabled || paused) return;
-    // Appended rather than prepended: the sparkline reads left-to-right as oldest-to-newest.
+    // Appended rather than prepended: the chart reads left-to-right as oldest-to-newest.
     memory = [...memory, sample].slice(-historySize);
+    if (sample.usedJSHeapSize !== undefined && sample.usedJSHeapSize > heapPeak) {
+      heapPeak = sample.usedJSHeapSize;
+    }
     publish();
   },
   /**
@@ -394,6 +418,8 @@ export const performanceStore = {
     fpsHistory = [];
     uiFpsHistory = [];
     fpsPeak = 0;
+    heapPeak = 0;
+    appMemoryPeak = 0;
     publish(true);
   },
 };

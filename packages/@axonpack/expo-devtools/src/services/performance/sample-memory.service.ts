@@ -41,6 +41,7 @@ export function startMemorySampling(intervalMs: number) {
     }
   };
 
+  performanceStore.setSampleIntervalMs(intervalMs);
   const timer = setInterval(read, intervalMs);
   read();
   return () => clearInterval(timer);

@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
-import { AppMemoryCard } from './app-memory-card.component';
 import { FpsChartCard } from './fps-chart-card.component';
-import { HeapCard } from './heap-card.component';
+import { MemoryChartCard } from './memory-chart-card.component';
 import { InteractionCard } from './interaction-card.component';
 import { CollapsibleSection } from '../ui/collapsible-section.ui';
 
@@ -11,16 +10,16 @@ import { CollapsibleSection } from '../ui/collapsible-section.ui';
  * subscription, so a once-a-second sample or a twice-a-second frame count re-renders one tile rather than
  * the whole tab and its entry list.
  *
- * JS heap sits next to app memory because the two are routinely read as interchangeable and are not. The
- * frame rates share one chart for the same reason — the gap between them is the reading that matters.
+ * The memory card stacks the JS heap above the app's footprint as small multiples, because they are the
+ * same unit at wildly different magnitudes. The frame rates share one chart instead, because they share a
+ * scale as well as a unit — and there the gap between the lines is the reading that matters.
  */
 export function AppSection() {
   return (
     <CollapsibleSection title="App">
       <View style={styles.grid}>
-        <HeapCard />
-        <AppMemoryCard />
         <InteractionCard />
+        <MemoryChartCard />
         <FpsChartCard />
       </View>
     </CollapsibleSection>
