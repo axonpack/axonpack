@@ -132,3 +132,60 @@ describe('performanceStore batching', () => {
     performanceStore.setHistorySize(120);
   });
 });
+
+describe('performanceStore frame-rate peak', () => {
+  beforeEach(() => {
+    performanceStore.setEnabled(true);
+    performanceStore.setPaused(false);
+    performanceStore.clear();
+  });
+
+  /** The reported glitch: one 1005fps reading became the chart's ceiling and flattened everything. */
+  it('ignores a lone spike', () => {
+    performanceStore.setFps(60);
+    performanceStore.setFps(1005);
+    performanceStore.setFps(60);
+    expect(performanceStore.getFpsPeak()).toBe(60);
+  });
+
+  it('raises the peak once a high holds for three samples', () => {
+    for (let index = 0; index < 3; index += 1) performanceStore.setFps(120);
+    expect(performanceStore.getFpsPeak()).toBe(120);
+  });
+
+  /**
+   * Zero means "nothing confirmed", which is the safe answer: the chart's own floor takes over, so an
+   * unconfirmed spike renders clipped instead of flattening every real reading beneath it.
+   */
+  it('needs the run to be unbroken', () => {
+    performanceStore.setFps(120);
+    performanceStore.setFps(120);
+    performanceStore.setFps(60);
+    performanceStore.setFps(120);
+    expect(performanceStore.getFpsPeak()).toBe(0);
+  });
+
+  it('accepts a run that drifts slightly rather than repeating exactly', () => {
+    performanceStore.setFps(118);
+    performanceStore.setFps(120);
+    performanceStore.setFps(119);
+    expect(performanceStore.getFpsPeak()).toBe(118);
+  });
+
+  /**
+   * A confirmed peak that has since scrolled out of the buffer shouldn't hold the axis up forever. The
+   * frame-rate history has its own fixed cap, independent of `historySize`, so this fills that buffer.
+   */
+  it('falls back to the window maximum when nothing supports the peak', () => {
+    for (let index = 0; index < 3; index += 1) performanceStore.setFps(120);
+    expect(performanceStore.getFpsPeak()).toBe(120);
+
+    for (let index = 0; index < 600; index += 1) performanceStore.setFps(60);
+    expect(performanceStore.getFpsPeak()).toBe(60);
+  });
+
+  it('counts both threads towards the same peak', () => {
+    for (let index = 0; index < 3; index += 1) performanceStore.setUiFps(90);
+    expect(performanceStore.getFpsPeak()).toBe(90);
+  });
+});

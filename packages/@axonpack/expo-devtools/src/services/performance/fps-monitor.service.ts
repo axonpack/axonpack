@@ -15,6 +15,12 @@ export function isUiFpsAvailable(): boolean {
 }
 
 const WINDOW_MS = 500;
+/**
+ * A window this much shorter than intended is discarded rather than published. `setInterval` fires
+ * early after the JS thread has been stalled, and dividing a frame count by a 1ms window produced
+ * readings like 1005fps — a number no display can show, which then became the chart's ceiling.
+ */
+const MIN_WINDOW_MS = WINDOW_MS / 2;
 
 /**
  * Counts frames with `requestAnimationFrame` but publishes from a `setInterval`, so a window always
@@ -50,7 +56,8 @@ export function startFpsMonitor() {
 
   const interval = setInterval(() => {
     const now = Date.now();
-    const elapsed = Math.max(1, now - windowStart);
+    const elapsed = now - windowStart;
+    if (elapsed < MIN_WINDOW_MS) return;
     performanceStore.setFps(Math.round((frames * 1000) / elapsed));
     frames = 0;
     windowStart = now;

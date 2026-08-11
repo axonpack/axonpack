@@ -152,6 +152,15 @@ let uiFpsHistory: number[] = [];
 // it never shrinks: an axis that grows and shrinks with the buffer makes the line jitter and makes two
 // moments incomparable. Reset only by the bin.
 let fpsPeak = 0;
+/**
+ * A new high has to be seen this many times in a row before it becomes the chart's ceiling. One bad
+ * sample used to raise the axis permanently and squash every real reading into the bottom of the plot.
+ */
+const PEAK_CONFIRMATIONS = 3;
+/** Within this much of the candidate still counts as confirming it. */
+const PEAK_TOLERANCE = 0.95;
+let peakCandidate = 0;
+let peakCandidateCount = 0;
 // Peaks for the memory charts, monotonic for the same reason as the frame rate's: an axis that shrinks as
 // samples age out makes the line jitter and makes two moments incomparable.
 let heapPeak = 0;
@@ -194,6 +203,32 @@ let snapshot: PerformanceSnapshot = {
 const MIN_NOTIFY_INTERVAL_MS = 250;
 let lastNotifyAt = 0;
 let pendingNotify: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * Raises the peak only once a new high has held. A run is broken by any sample that drops back below the
+ * candidate, so a lone spike never lands — it needs company.
+ */
+function observePeak(value: number) {
+  if (value <= fpsPeak) {
+    peakCandidate = 0;
+    peakCandidateCount = 0;
+    return;
+  }
+
+  if (peakCandidateCount > 0 && value >= peakCandidate * PEAK_TOLERANCE) {
+    peakCandidateCount += 1;
+  } else {
+    peakCandidate = value;
+    peakCandidateCount = 1;
+  }
+
+  if (peakCandidateCount >= PEAK_CONFIRMATIONS) {
+    // The candidate, not the highest of the run: the lowest confirmed value is the defensible one.
+    fpsPeak = peakCandidate;
+    peakCandidate = 0;
+    peakCandidateCount = 0;
+  }
+}
 
 function notify() {
   lastNotifyAt = Date.now();
@@ -272,8 +307,13 @@ export const performanceStore = {
     return fpsHistory;
   },
   /** The highest frame rate seen since the last clear, across both threads. */
+  /**
+   * The confirmed peak, unless nothing in the retained window supports it — a spike that has since
+   * aged out shouldn't hold the axis up forever, so the window's own maximum takes over.
+   */
   getFpsPeak(): number {
-    return fpsPeak;
+    const windowMax = Math.max(0, ...fpsHistory, ...uiFpsHistory);
+    return fpsPeak <= windowMax ? fpsPeak : windowMax;
   },
   getHeapPeak(): number {
     return heapPeak;
@@ -393,7 +433,7 @@ export const performanceStore = {
     fps = next;
     if (next !== undefined) {
       fpsHistory = [...fpsHistory, next].slice(-FPS_HISTORY_SIZE);
-      if (next > fpsPeak) fpsPeak = next;
+      observePeak(next);
     }
     publish();
   },
@@ -402,7 +442,7 @@ export const performanceStore = {
     uiFps = next;
     if (next !== undefined) {
       uiFpsHistory = [...uiFpsHistory, next].slice(-FPS_HISTORY_SIZE);
-      if (next > fpsPeak) fpsPeak = next;
+      observePeak(next);
     }
     publish();
   },
@@ -418,6 +458,8 @@ export const performanceStore = {
     fpsHistory = [];
     uiFpsHistory = [];
     fpsPeak = 0;
+    peakCandidate = 0;
+    peakCandidateCount = 0;
     heapPeak = 0;
     appMemoryPeak = 0;
     publish(true);
