@@ -24,7 +24,7 @@ const HEADROOM_FRACTION = 1.1;
  * stops moving once the app has shown how much it uses.
  */
 export function MemoryChartCard() {
-  const { memory, systemMemory } = useSyncExternalStore(
+  const { memory, systemMemory, support } = useSyncExternalStore(
     performanceStore.subscribe,
     performanceStore.getSnapshot
   );
@@ -52,10 +52,15 @@ export function MemoryChartCard() {
       <Plot
         title="JS Heap"
         latest={memory.at(-1)?.usedJSHeapSize}
+        // Three distinct reasons a series can be empty, and they call for opposite actions: the engine
+        // never reports it, nothing has been sampled yet, or it is reporting fine. Collapsing them into
+        // one message is how a caption starts lying.
         caption={
-          memory.at(-1)?.totalJSHeapSize !== undefined
-            ? `of ${formatSize(memory.at(-1)?.totalJSHeapSize)} allocated`
-            : undefined
+          !support.memory
+            ? 'Not available on this JS engine'
+            : memory.at(-1)?.totalJSHeapSize !== undefined
+              ? `of ${formatSize(memory.at(-1)?.totalJSHeapSize)} allocated`
+              : 'Waiting for the first sample'
         }
         values={heapSeries}
         peak={heapPeak}
@@ -67,8 +72,16 @@ export function MemoryChartCard() {
       <Plot
         title="App memory"
         latest={systemMemory.at(-1)?.appBytes}
+        // Parallel to the heap's caption: a fact about this number, not a lesson about what it means.
+        // Two plots labelled separately already carry the heap-versus-process distinction.
         caption={
-          appSeries.length === 0 ? 'Needs a development build' : 'Whole process, not just the heap'
+          !support.systemMemory
+            ? 'Needs a development build'
+            : appSeries.length === 0
+              ? 'Waiting for the first sample'
+              : systemMemory.at(-1)?.totalBytes !== undefined
+                ? `of ${formatSize(systemMemory.at(-1)?.totalBytes)} on this device`
+                : undefined
         }
         values={appSeries}
         peak={appPeak}
