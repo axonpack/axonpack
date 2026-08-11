@@ -30,8 +30,7 @@ export function DeviceSection({
       <CollapsibleSection title="Device">
         <View style={styles.body}>
           <Text style={styles.note}>
-            Device memory needs the native module, so it needs a development build. Everything else
-            on this tab works without one.
+            Needs a dev build. The rest of this tab works without one.
           </Text>
         </View>
       </CollapsibleSection>
@@ -79,8 +78,8 @@ export function DeviceSection({
           />
         ) : (
           <Text style={styles.note}>
-            Storage isn&apos;t shown on iOS — reading it would oblige every app using this package
-            to declare a disk-space reason at submission.
+            Storage is Android only. On iOS, reading it would make your App Store submission declare
+            a disk-space reason.
           </Text>
         )}
       </View>

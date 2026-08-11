@@ -9,8 +9,8 @@ export function NetworkConditionsSection() {
   return (
     <CollapsibleSection title="Network Conditions">
       <Text style={styles.note}>
-        Send goes through the same patched fetch as the rest of the app, so these are the app-wide
-        settings — changing them here changes them everywhere, not just for this request.
+        These are shared with the whole app. Changing them here affects every request, not just this
+        one.
       </Text>
       <ThrottleSelector />
       <UserAgentSelector />

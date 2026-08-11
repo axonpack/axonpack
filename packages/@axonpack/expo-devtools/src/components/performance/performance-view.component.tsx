@@ -34,15 +34,15 @@ type ListRow =
 const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = {
   longTasks: {
     supported: 'Nothing has blocked the JS thread yet.',
-    unsupported: 'Long tasks are not available on this device.',
+    unsupported: 'This device doesn&apos;t report long tasks.',
   },
   userTiming: {
-    supported: 'No marks yet. Call devtools.mark() and devtools.measure() in your code.',
-    unsupported: 'No marks yet. Call devtools.mark() and devtools.measure() in your code.',
+    supported: 'No marks yet. Add devtools.mark() and devtools.measure() to your code.',
+    unsupported: 'No marks yet. Add devtools.mark() and devtools.measure() to your code.',
   },
   interactions: {
     supported: 'No slow interactions yet.',
-    unsupported: 'Interaction timing is not available on this device.',
+    unsupported: 'This device doesn&apos;t report interaction timing.',
   },
 };
 export function PerformanceView() {
@@ -157,22 +157,20 @@ export function PerformanceView() {
 
               {list === 'longTasks' && longTasks.length > 0 ? (
                 <Text style={styles.listNote}>
-                  Shows when the thread was blocked, not by what. React Native reports no
-                  attribution — wrap your own code in devtools.mark() and devtools.measure() to name
-                  it.
+                  These show when the thread was stuck, not what stuck it. Wrap your own code in
+                  devtools.mark() and devtools.measure() to find out.
                 </Text>
               ) : null}
               {list === 'interactions' && interactions.length > 0 ? (
                 <Text style={styles.listNote}>
-                  Durations are rounded to the nearest 8 ms, and anything under 16 ms is never
-                  reported.
+                  Times are rounded to 8 ms, and anything under 16 ms isn&apos;t reported.
                 </Text>
               ) : null}
               {/* The platform discards entries once its own buffer overflows, and only tells us the
                 count — so this is the difference between "6 happened" and "6 of 40 survived". */}
               {droppedForList > 0 ? (
                 <Text style={styles.listNote}>
-                  {droppedForList} more happened before this list could keep them.
+                  {droppedForList} more happened before this list started keeping them.
                 </Text>
               ) : null}
             </View>

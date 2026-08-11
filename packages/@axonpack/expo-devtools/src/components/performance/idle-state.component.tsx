@@ -6,10 +6,10 @@ import { isUiFpsAvailable } from '../../services/performance/fps-monitor.service
 import { performanceStore } from '../../stores/performance/performance.store';
 
 const COLLECTS = [
-  'Frame rate — the JS thread, and the main thread it can hide problems behind',
-  'Memory — the JS heap and the whole app footprint, which differ by a lot',
-  'Long tasks — every moment the JS thread was blocked long enough to notice',
-  'Interactions — taps that took too long to reach the screen',
+  'Frame rate, for both the JS and main threads',
+  'Memory, both the JS heap and the whole app',
+  'Long tasks — when the JS thread got stuck',
+  'Slow taps',
 ];
 
 /**
@@ -29,8 +29,7 @@ export function IdleState() {
 
       <Text style={styles.title}>Not recording</Text>
       <Text style={styles.lede}>
-        Nothing is being measured yet. Recording costs a little performance itself, so it stays off
-        until you ask for it.
+        Measuring has a small cost, so it&apos;s off until you turn it on.
       </Text>
 
       <View style={styles.list}>
@@ -48,11 +47,8 @@ export function IdleState() {
       </TouchableOpacity>
 
       <Text style={styles.footnote}>
-        Or press the record button in the toolbar. Startup timing is already measured — it happens
-        once at launch, before anything here could be switched on.
-        {isUiFpsAvailable()
-          ? ''
-          : ' Main-thread frame rate and device memory need a development build.'}
+        Startup timing is already below — that one is captured at launch.
+        {isUiFpsAvailable() ? '' : ' Main-thread FPS and device memory need a dev build.'}
       </Text>
     </View>
   );

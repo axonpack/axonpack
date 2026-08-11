@@ -69,8 +69,8 @@ export function StartupTimingSection({ startup }: { startup?: StartupTiming }) {
               value={formatMs(diffMs(measured.initCalled, measured.firstRender))}
             />
             <Text style={styles.note}>
-              Measured from process start to the first render, once at launch. Phase boundaries are
-              this package&apos;s own load points, so they shift with import order.
+              Process start to first render, measured once at launch. The phase boundaries are where
+              this package loads, so they move a little with your import order.
             </Text>
           </>
         ) : null}

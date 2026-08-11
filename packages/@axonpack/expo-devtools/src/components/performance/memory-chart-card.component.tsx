@@ -57,7 +57,7 @@ export function MemoryChartCard() {
         // one message is how a caption starts lying.
         caption={
           !support.memory
-            ? 'Not available on this JS engine'
+            ? 'This JS engine doesn&apos;t report it'
             : memory.at(-1)?.totalJSHeapSize !== undefined
               ? `of ${formatSize(memory.at(-1)?.totalJSHeapSize)} allocated`
               : 'Waiting for the first sample'
@@ -76,7 +76,7 @@ export function MemoryChartCard() {
         // Two plots labelled separately already carry the heap-versus-process distinction.
         caption={
           !support.systemMemory
-            ? 'Needs a development build'
+            ? 'Needs a dev build'
             : appSeries.length === 0
               ? 'Waiting for the first sample'
               : systemMemory.at(-1)?.totalBytes !== undefined

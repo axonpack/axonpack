@@ -45,8 +45,8 @@ export function LimiterPanel() {
       return;
     }
     setArmed(false);
-    if (target === 'main') crashMainThread('Crashed from the axonpack devtools Limiter');
-    else crashJsThread('Crashed from the axonpack devtools Limiter');
+    if (target === 'main') crashMainThread('Crash from the devtools Limiter');
+    else crashJsThread('Crash from the devtools Limiter');
   };
 
   return (
@@ -112,14 +112,13 @@ export function LimiterPanel() {
 
       {target === 'main' && !mainThreadAvailable ? (
         <Text style={styles.note}>
-          Reaching the main thread needs the native module, so it needs a development build. The
-          JavaScript thread works anywhere.
+          Blocking the main thread needs a dev build. The JS thread works anywhere.
         </Text>
       ) : (
         <Text style={styles.note}>
           {target === 'js'
-            ? 'Blocks JavaScript: shows up as a long task and drops the FPS reading.'
-            : 'Freezes what you see and touch. The JS numbers stay healthy, which is the blind spot.'}
+            ? 'Shows up as a long task and drops the JS frame rate.'
+            : 'Freezes the screen. Watch the JS numbers stay fine while it does.'}
         </Text>
       )}
     </View>
