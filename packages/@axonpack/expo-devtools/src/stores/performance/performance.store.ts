@@ -231,6 +231,7 @@ let snapshot: PerformanceSnapshot = {
   support,
   dropped,
 };
+let snapshotStale = false;
 
 /**
  * At most one notification per this interval. Without a ceiling the tab feeds itself: rendering the
@@ -280,19 +281,7 @@ function notify() {
  * `immediate` is for control changes — pausing, clearing, support flags. Those are rare, and a user
  * pressing record has to see it take effect at once; only the high-frequency data path is throttled.
  */
-function publish(immediate = false) {
-  snapshot = {
-    memory,
-    systemMemory,
-    storage,
-    longTasks,
-    userTiming,
-    interactions,
-    startup,
-    support,
-    dropped,
-  };
-
+function scheduleNotify(immediate = false) {
   if (immediate) {
     if (pendingNotify !== undefined) {
       clearTimeout(pendingNotify);
@@ -319,12 +308,44 @@ function publish(immediate = false) {
   }
 }
 
+/**
+ * Marks the snapshot stale rather than rebuilding it, so a change to snapshot data still reaches every
+ * subscriber but the object is only allocated if someone reads it.
+ */
+function publish(immediate = false) {
+  snapshotStale = true;
+  scheduleNotify(immediate);
+}
+
 let taskCounter = 0;
 let userTimingCounter = 0;
 let interactionCounter = 0;
 
 export const performanceStore = {
+  /**
+   * Rebuilt on demand, and only when something in it actually changed.
+   *
+   * `useSyncExternalStore` re-renders on identity, so eagerly rebuilding this on every notification made
+   * every consumer re-render twice a second for data that hadn't moved — the frame-rate readings live
+   * outside the snapshot, but publishing one used to replace it anyway. That cost most in
+   * `PerformanceView`, which owns the entry list: re-rendering it rebuilds the header's charts and every
+   * visible row.
+   */
   getSnapshot(): PerformanceSnapshot {
+    if (snapshotStale) {
+      snapshot = {
+        memory,
+        systemMemory,
+        storage,
+        longTasks,
+        userTiming,
+        interactions,
+        startup,
+        support,
+        dropped,
+      };
+      snapshotStale = false;
+    }
     return snapshot;
   },
   subscribe(listener: () => void) {
@@ -485,6 +506,11 @@ export const performanceStore = {
     startup = next;
     publish();
   },
+  /**
+   * Notifies without invalidating the snapshot: frame rates are read through their own getters, and
+   * twice a second is often enough that replacing the snapshot here re-rendered the whole entry list
+   * for data it never reads.
+   */
   setFps(next: number | undefined) {
     if (!enabled || paused) return;
     fps = next;
@@ -494,7 +520,7 @@ export const performanceStore = {
       fpsSeriesCache = bucketSeries(fpsBucketState);
       observePeak(next);
     }
-    publish();
+    scheduleNotify();
   },
   setUiFps(next: number | undefined) {
     if (!enabled || paused) return;
@@ -505,7 +531,7 @@ export const performanceStore = {
       uiFpsSeriesCache = bucketSeries(uiFpsBucketState);
       observePeak(next);
     }
-    publish();
+    scheduleNotify();
   },
   clear() {
     memory = [];

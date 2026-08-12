@@ -133,6 +133,37 @@ describe('performanceStore batching', () => {
   });
 });
 
+describe('performanceStore snapshot identity', () => {
+  beforeEach(() => {
+    performanceStore.setEnabled(true);
+    performanceStore.setPaused(false);
+    performanceStore.clear();
+  });
+
+  /**
+   * `useSyncExternalStore` re-renders on identity alone, and `PerformanceView` owns the entry list — so a
+   * snapshot replaced by a reading the snapshot doesn't contain rebuilt the header's charts and every
+   * visible row twice a second for nothing.
+   */
+  it('keeps one snapshot object across frame-rate readings', () => {
+    const before = performanceStore.getSnapshot();
+    performanceStore.setFps(60);
+    performanceStore.setUiFps(58);
+    expect(performanceStore.getSnapshot()).toBe(before);
+  });
+
+  it('replaces it when data it does carry changes', () => {
+    const before = performanceStore.getSnapshot();
+    addTask('a');
+    expect(performanceStore.getSnapshot()).not.toBe(before);
+  });
+
+  it('still reports the frame rate it was given', () => {
+    performanceStore.setFps(42);
+    expect(performanceStore.getFps()).toBe(42);
+  });
+});
+
 describe('performanceStore frame-rate peak', () => {
   beforeEach(() => {
     performanceStore.setEnabled(true);
