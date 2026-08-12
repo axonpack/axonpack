@@ -10,14 +10,6 @@ export function formatMs(value: number | undefined): string {
   return `${(value / 1000).toFixed(2)} s`;
 }
 
-/** 60 is the assumed target: anything at or above reads healthy, a third below it reads broken. */
-export function getFpsColor(fps: number | undefined): string {
-  if (fps === undefined) return COLORS.textSecondary;
-  if (fps >= 50) return COLORS.success;
-  if (fps >= 30) return COLORS.warning;
-  return COLORS.error;
-}
-
 /** Chrome treats anything over 50ms as a long task; past ~200ms a user perceives it as a freeze. */
 export function getLongTaskColor(duration: number): string {
   if (duration >= 200) return COLORS.error;

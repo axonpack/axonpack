@@ -5,7 +5,6 @@ import { COLORS } from '../../constants/colors.const';
 import { isUiFpsAvailable } from '../../services/performance/fps-monitor.service';
 import { performanceStore } from '../../stores/performance/performance.store';
 import { ageAxisLabels } from '../../utils/performance/age-labels.util';
-import { getFpsColor } from '../../utils/performance/format-metrics.util';
 import { LineChart, type LineSeries } from '../ui/line-chart.ui';
 
 /**
@@ -93,8 +92,12 @@ export function FpsChartCard() {
 
 /**
  * A dot plus a name beside every value: the legend and the direct label are the same element, so identity
- * never rests on the line colour alone. The number wears a text token graded by health; the dot carries
- * the series identity.
+ * never rests on the line colour alone.
+ *
+ * All three — dot, number, line — wear the one series colour. Grading the number by health instead put a
+ * reading in a hue its own line never uses, and the amber of a 30–49fps warning is within a shade of the
+ * main-thread series, so a slow JS figure read as if it belonged to the other line. Health is legible
+ * from the plot against its axis; which series a number belongs to is not recoverable any other way.
  */
 function Reading({
   label,
@@ -107,11 +110,14 @@ function Reading({
   color: string;
   available: boolean;
 }) {
+  const hasReading = available && value !== undefined;
+
   return (
     <View style={styles.reading}>
       <View style={[styles.dot, { backgroundColor: color }]} />
       <Text style={styles.readingLabel}>{label}</Text>
-      <Text style={[styles.readingValue, { color: getFpsColor(value) }]}>
+      {/* An absent reading stays muted — it isn't a measurement, so it doesn't claim a series colour. */}
+      <Text style={[styles.readingValue, { color: hasReading ? color : COLORS.textSecondary }]}>
         {available ? (value !== undefined ? value : '–') : 'dev build'}
       </Text>
     </View>

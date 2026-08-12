@@ -1,5 +1,5 @@
 import { COLORS } from '../../../constants/colors.const';
-import { diffMs, formatMs, getFpsColor, getLongTaskColor } from '../format-metrics.util';
+import { diffMs, formatMs, getLongTaskColor } from '../format-metrics.util';
 
 describe('formatMs', () => {
   it('marks an absent value rather than printing 0', () => {
@@ -43,18 +43,6 @@ describe('diffMs', () => {
 });
 
 describe('threshold colors', () => {
-  it('grades fps against a 60fps target', () => {
-    expect(getFpsColor(60)).toBe(COLORS.success);
-    expect(getFpsColor(50)).toBe(COLORS.success);
-    expect(getFpsColor(49)).toBe(COLORS.warning);
-    expect(getFpsColor(30)).toBe(COLORS.warning);
-    expect(getFpsColor(29)).toBe(COLORS.error);
-  });
-
-  it('is muted for an unknown fps rather than alarming', () => {
-    expect(getFpsColor(undefined)).toBe(COLORS.textSecondary);
-  });
-
   it('escalates long tasks at the perceptible thresholds', () => {
     expect(getLongTaskColor(60)).toBe(COLORS.textSecondary);
     expect(getLongTaskColor(100)).toBe(COLORS.warning);
