@@ -1,12 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppSection } from './app-section.component';
-import { DeviceSection } from './device-section.component';
 import { IdleState } from './idle-state.component';
 import { InteractionRow } from './interaction-row.component';
 import { LimiterPanel } from './limiter-panel.component';
 import { LongTaskRow } from './long-task-row.component';
+import { ResourcesSection } from './resources-section.component';
 import { StartupTimingSection } from './startup-timing.component';
 import { UserTimingRow } from './user-timing-row.component';
 import { COLORS } from '../../constants/colors.const';
@@ -46,8 +45,10 @@ const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = 
   },
 };
 export function PerformanceView() {
-  const { longTasks, userTiming, interactions, startup, support, dropped, systemMemory, storage } =
-    useSyncExternalStore(performanceStore.subscribe, performanceStore.getSnapshot);
+  const { longTasks, userTiming, interactions, startup, support, dropped } = useSyncExternalStore(
+    performanceStore.subscribe,
+    performanceStore.getSnapshot
+  );
   const paused = useSyncExternalStore(performanceStore.subscribe, performanceStore.isPaused);
   const [list, setList] = useState<ListKey>('longTasks');
   const [limiterOpen, setLimiterOpen] = useState(false);
@@ -121,13 +122,7 @@ export function PerformanceView() {
           }}
           ListHeaderComponent={
             <View>
-              <AppSection />
-
-              <DeviceSection
-                latest={systemMemory.at(-1)}
-                storage={storage}
-                available={support.systemMemory}
-              />
+              <ResourcesSection />
               <StartupTimingSection startup={startup} />
 
               <View style={styles.selector}>

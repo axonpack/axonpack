@@ -6,12 +6,17 @@ import { performanceStore } from '../../stores/performance/performance.store';
 import { formatSize } from '../../utils/format-bytes.util';
 import { ageAxisLabels } from '../../utils/performance/age-labels.util';
 import { LineChart } from '../ui/line-chart.ui';
+import { UsageMeter } from '../ui/usage-meter.ui';
 
 const PLOT_HEIGHT = 52;
 /** Breathing room above the peak, so the highest point isn't flush against the top edge. */
 const HEADROOM_FRACTION = 1.1;
 
 /**
+ * Every memory reading in one card, narrowing outwards: the JS heap inside the process, the process on the
+ * device. The device row used to live in the Device section, which meant answering "how much of the phone
+ * is this app using" needed two places on screen at once.
+ *
  * Two charts, not one with two lines.
  *
  * The JS heap and the app's footprint are the same unit but nowhere near the same magnitude — a heap of
@@ -22,6 +27,9 @@ const HEADROOM_FRACTION = 1.1;
  *
  * Each scale runs from zero to its own monotonic session peak, so height means absolute bytes and the axis
  * stops moving once the app has shown how much it uses.
+ *
+ * Device memory is a meter rather than a third plot: total RAM doesn't move, so what matters is the share
+ * taken, and that is a part-of-whole reading — not a shape over time.
  */
 export function MemoryChartCard() {
   const { memory, systemMemory, support } = useSyncExternalStore(
@@ -49,6 +57,13 @@ export function MemoryChartCard() {
     .map((sample) => sample.appBytes)
     .filter((value): value is number => value !== undefined);
 
+  const totalDeviceMemory = systemMemory.at(-1)?.totalBytes;
+  const availableDeviceMemory = systemMemory.at(-1)?.availableToAppBytes;
+  const usedDeviceMemory =
+    totalDeviceMemory !== undefined && availableDeviceMemory !== undefined
+      ? totalDeviceMemory - availableDeviceMemory
+      : undefined;
+
   return (
     <View style={styles.card}>
       <Text style={styles.label}>Memory</Text>
@@ -56,9 +71,6 @@ export function MemoryChartCard() {
       <Plot
         title="JS Heap"
         latest={memory.at(-1)?.usedJSHeapSize}
-        // Three distinct reasons a series can be empty, and they call for opposite actions: the engine
-        // never reports it, nothing has been sampled yet, or it is reporting fine. Collapsing them into
-        // one message is how a caption starts lying.
         caption={
           !support.memory
             ? 'This JS engine doesn&apos;t report it'
@@ -77,22 +89,35 @@ export function MemoryChartCard() {
       <Plot
         title="App memory"
         latest={systemMemory.at(-1)?.appBytes}
-        // Parallel to the heap's caption: a fact about this number, not a lesson about what it means.
-        // Two plots labelled separately already carry the heap-versus-process distinction.
         caption={
           !support.systemMemory
             ? 'Needs a dev build'
             : appSeries.length === 0
               ? 'Waiting for the first sample'
-              : systemMemory.at(-1)?.totalBytes !== undefined
-                ? `of ${formatSize(systemMemory.at(-1)?.totalBytes)} on this device`
-                : undefined
+              : undefined
         }
         values={appSeries}
         peak={appPeak}
         capacity={capacity}
         xLabels={ageAxisLabels(capacity, intervalMs)}
       />
+
+      {support.systemMemory && (
+        <>
+          <View style={styles.divider} />
+
+          <UsageMeter
+            label="Device memory"
+            usedBytes={usedDeviceMemory}
+            totalBytes={totalDeviceMemory}
+            caption={
+              availableDeviceMemory !== undefined
+                ? `${formatSize(availableDeviceMemory)} available to this app`
+                : undefined
+            }
+          />
+        </>
+      )}
     </View>
   );
 }
