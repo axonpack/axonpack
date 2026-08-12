@@ -5,8 +5,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ConsoleArgCell } from './console-arg-cell.component';
 import { COLORS } from '../../constants/colors.const';
 import { CONSOLE_LEVEL_VISUALS } from '../../constants/console/console-levels.const';
-import { consolePromptStore } from '../../stores/console/console-prompt.store';
 import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
+import { consolePromptStore } from '../../stores/console/console-prompt.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
 import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
@@ -96,8 +96,6 @@ const styles = StyleSheet.create({
     width: 14,
     marginTop: 1,
   },
-  // One argument per line. Chrome flows them inline, but a phone's width doesn't hold a string and
-  // an object side by side often enough for that to be worth the wrapping it causes.
   body: {
     flex: 1,
     gap: 2,
