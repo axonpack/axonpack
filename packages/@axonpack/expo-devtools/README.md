@@ -230,13 +230,18 @@ Live metrics on the device, no desktop profiler and no cable.
 - **JS heap** — how much the JavaScript engine has allocated, with a sparkline of the last two
   minutes so you can watch it climb while you use the app.
 - **App memory** — the whole process footprint, which is what the OS holds against you and what a user
-  means by "memory". Routinely several times the JS heap, so the two are shown side by side rather than
-  letting one stand in for the other. Needs a development build.
-- **Device** — how much RAM the phone has, and how much this app may still allocate. On Android that's
-  system-wide free memory; on iOS it's what the process can still claim before being killed, which is the
-  figure that actually matters. Android also shows total, used and free storage. Needs a development
-  build.
-- **JS thread FPS** — measured from a frame-delta loop, green at 50+, amber under that, red under 30.
+  means by "memory". Routinely several times the JS heap, so the two are stacked as separate plots rather
+  than letting one stand in for the other. Needs a development build.
+- **Device memory** — how much RAM the phone has, and how much this app may still allocate, as a meter
+  directly under the app's own footprint: the figure above is the numerator, this is the denominator. On
+  Android the available side is system-wide free memory; on iOS it's what the process can still claim
+  before being killed, which is the figure that actually matters. Needs a development build.
+- **Storage** — total, used and free space on the data partition. Android only, for the App Store reason
+  below. Needs a development build.
+- **Frame rate** — the JS thread from a frame-delta loop, and the main thread from a native display-link
+  counter, on one chart. Both readings and both lines wear the same colour per thread, and the gap between
+  them is the reading that matters: a healthy JS line above a collapsed main-thread line is an app that
+  feels frozen while every JS metric says it's fine. The main-thread figure needs a development build.
 - **Startup** — process start to first render, split into native startup, bundle eval, app setup and
   first render. Measured by this package's own native module, so it works even where the platform's own
   markers are all null. Phase boundaries are this package's load points, not platform milestones, so they
