@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 import {
   blockJsThread,
   blockMainThread,
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    minHeight: TOUCH_TARGET.min,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 6,
@@ -176,7 +177,8 @@ const styles = StyleSheet.create({
   },
   button: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: TOUCH_TARGET.min,
+    justifyContent: 'center',
     borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.accent,

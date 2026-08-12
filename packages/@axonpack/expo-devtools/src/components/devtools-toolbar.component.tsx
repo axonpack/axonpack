@@ -66,10 +66,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
+  // Tighter than it looks like it wants to be, because the Network tab's seven buttons at
+  // `TOUCH_TARGET.compact` plus three dividers have to fit a 320dp screen without clipping. Widen the
+  // buttons or add an eighth and this row needs to start scrolling instead.
   divider: {
     width: StyleSheet.hairlineWidth,
     height: 18,
     backgroundColor: COLORS.border,
-    marginHorizontal: 6,
+    marginHorizontal: 4,
   },
 });

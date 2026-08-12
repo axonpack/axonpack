@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { isUiFpsAvailable } from '../../services/performance/fps-monitor.service';
 import { performanceStore } from '../../stores/performance/performance.store';
 
@@ -42,7 +43,7 @@ export function IdleState() {
       </View>
 
       <TouchableOpacity style={styles.button} onPress={() => performanceStore.setPaused(false)}>
-        <MaterialIcons name="fiber-manual-record" size={16} color={COLORS.background} />
+        <MaterialIcons name="fiber-manual-record" size={18} color={COLORS.background} />
         <Text style={styles.buttonLabel}>Start recording</Text>
       </TouchableOpacity>
 
@@ -108,10 +109,11 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     marginTop: 8,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    minHeight: TOUCH_TARGET.min,
     borderRadius: 8,
     backgroundColor: COLORS.accent,
   },

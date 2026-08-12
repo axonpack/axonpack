@@ -18,6 +18,7 @@ import { OverviewStrip, type TimeRange } from './overview-strip.component';
 import { ThrottleSelector } from './throttle-selector.component';
 import { UserAgentSelector } from './user-agent-selector.component';
 import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
@@ -239,7 +240,10 @@ export function NetworkView() {
               autoCorrect={false}
             />
             {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => setSearchText('')}
+                hitSlop={HIT_SLOP.dense}
+                style={styles.searchClear}>
                 <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
               </TouchableOpacity>
             )}
@@ -399,10 +403,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    minHeight: TOUCH_TARGET.min,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 6,
+  },
+  // Dense rather than full-size, so the glyph stays centred in the field instead of stretching it; the
+  // row's own 44dp height is what makes the slop above reachable on Android.
+  searchClear: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchInput: {
     flex: 1,

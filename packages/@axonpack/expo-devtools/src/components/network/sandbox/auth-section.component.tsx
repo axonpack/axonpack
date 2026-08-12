@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 
 import { sandboxStyles } from './shared.styles';
 import { COLORS } from '../../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { AuthConfig, AuthType } from '../../../utils/network/sandbox.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 
@@ -40,10 +41,13 @@ function SecretField({
         autoCapitalize="none"
         autoCorrect={false}
       />
-      <TouchableOpacity onPress={() => setRevealed((prev) => !prev)} hitSlop={8}>
+      <TouchableOpacity
+        onPress={() => setRevealed((prev) => !prev)}
+        hitSlop={HIT_SLOP.dense}
+        style={sandboxStyles.rowAction}>
         <MaterialIcons
           name={revealed ? 'visibility-off' : 'visibility'}
-          size={16}
+          size={18}
           color={COLORS.textSecondary}
         />
       </TouchableOpacity>
@@ -62,7 +66,11 @@ export function AuthSection({
     <CollapsibleSection title="Authentication">
       <View style={styles.typeTabs}>
         {AUTH_TYPES.map((t) => (
-          <TouchableOpacity key={t.value} onPress={() => onChange({ ...auth, type: t.value })}>
+          <TouchableOpacity
+            key={t.value}
+            onPress={() => onChange({ ...auth, type: t.value })}
+            hitSlop={HIT_SLOP.default}
+            style={styles.typeTabButton}>
             <Text style={[styles.typeTab, auth.type === t.value && styles.typeTabActive]}>
               {t.label}
             </Text>
@@ -93,7 +101,10 @@ export function AuthSection({
               autoCorrect={false}
             />
             {auth.apiKeyName !== '' && (
-              <TouchableOpacity onPress={() => onChange({ ...auth, apiKeyName: '' })} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => onChange({ ...auth, apiKeyName: '' })}
+                hitSlop={HIT_SLOP.dense}
+                style={sandboxStyles.rowAction}>
                 <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
               </TouchableOpacity>
             )}
@@ -115,6 +126,10 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 8,
   },
+  typeTabButton: {
+    minHeight: TOUCH_TARGET.row,
+    justifyContent: 'center',
+  },
   typeTab: {
     fontSize: 12,
     fontWeight: '600',
@@ -131,6 +146,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    minHeight: TOUCH_TARGET.min,
     paddingVertical: 6,
   },
   fieldLabel: {

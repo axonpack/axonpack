@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import {
   USER_AGENT_PRESET_IDS,
   USER_AGENT_PRESET_LABELS,
@@ -53,7 +54,8 @@ export function UserAgentSelector() {
           {customUserAgent.length > 0 && (
             <TouchableOpacity
               onPress={() => networkConditionsStore.setCustomUserAgent('')}
-              hitSlop={8}>
+              hitSlop={HIT_SLOP.dense}
+              style={styles.clear}>
               <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
             </TouchableOpacity>
           )}
@@ -91,10 +93,17 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 8,
     paddingHorizontal: 10,
+    minHeight: TOUCH_TARGET.min,
     paddingVertical: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 6,
+  },
+  clear: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,

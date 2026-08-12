@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
 export type DevtoolsTab = 'network' | 'console' | 'performance';
@@ -35,7 +36,7 @@ export function DevtoolsTabBar({
             style={[styles.tab, active && styles.tabActive]}>
             <MaterialIcons
               name={icon}
-              size={14}
+              size={16}
               color={active ? COLORS.accent : COLORS.textSecondary}
             />
             <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    minHeight: TOUCH_TARGET.min,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },

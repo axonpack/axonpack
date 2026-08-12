@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import { getCompletions } from '../../services/console/complete-expression.service';
 import { runReplCommand } from '../../services/console/run-repl-command.service';
 import { consolePromptStore } from '../../stores/console/console-prompt.store';
@@ -83,14 +84,21 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
           blurOnSubmit={false}
         />
         {source.length > 0 && (
-          <TouchableOpacity onPress={() => consolePromptStore.setDraft('')} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => consolePromptStore.setDraft('')}
+            hitSlop={HIT_SLOP.dense}
+            style={styles.action}>
             <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={submit} hitSlop={8} disabled={!canRun}>
+        <TouchableOpacity
+          onPress={submit}
+          hitSlop={HIT_SLOP.dense}
+          disabled={!canRun}
+          style={styles.action}>
           <MaterialIcons
             name="play-arrow"
-            size={18}
+            size={20}
             color={canRun ? COLORS.accent : COLORS.border}
           />
         </TouchableOpacity>
@@ -118,7 +126,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    minHeight: TOUCH_TARGET.min,
+  },
+  // Sized to the docked row rather than to 44, which would make the prompt taller than the keyboard's
+  // own accessory bar; the row's height plus the slop above is what carries the target.
+  action: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,

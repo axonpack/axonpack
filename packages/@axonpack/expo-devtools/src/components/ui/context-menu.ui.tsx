@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 
 export type ContextMenuItem = {
   label: string;
@@ -70,7 +71,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   item: {
-    paddingVertical: 10,
+    minHeight: TOUCH_TARGET.row,
+    justifyContent: 'center',
     paddingHorizontal: 14,
   },
   itemRow: {

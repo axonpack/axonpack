@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { animateNextLayout } from '../../utils/layout-animation.util';
 
 export function ErrorArgCell({ text, stack }: { text: string; stack?: string }) {
@@ -27,7 +28,7 @@ export function ErrorArgCell({ text, stack }: { text: string; stack?: string }) 
         }}>
         <MaterialIcons
           name="arrow-drop-down"
-          size={16}
+          size={18}
           color={COLORS.error}
           style={!expanded && styles.iconCollapsed}
         />
@@ -47,6 +48,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 2,
+    minHeight: TOUCH_TARGET.dense,
   },
   // Fills the row beside the disclosure triangle so a long message wraps rather than overflowing.
   message: {

@@ -48,7 +48,7 @@ export function JsonNode({
           {expandable && (
             <MaterialIcons
               name={expanded ? 'expand-more' : 'chevron-right'}
-              size={14}
+              size={16}
               color={COLORS.textSecondary}
             />
           )}

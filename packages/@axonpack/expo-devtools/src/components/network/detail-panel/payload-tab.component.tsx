@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { rowStyles } from './shared.styles';
 import { COLORS } from '../../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import type { JsonValue } from '../../../utils/json-tree.util';
 import { JsonTree } from '../../json-tree';
@@ -36,7 +37,10 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
       headerRight={
         <View style={styles.headerRight}>
           {parsed !== undefined && (
-            <TouchableOpacity onPress={() => setViewSource((prev) => !prev)} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => setViewSource((prev) => !prev)}
+              hitSlop={HIT_SLOP.default}
+              style={styles.toggleButton}>
               <Text style={styles.toggle}>{showSource ? 'View parsed' : 'View source'}</Text>
             </TouchableOpacity>
           )}
@@ -57,6 +61,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  toggleButton: {
+    minHeight: TOUCH_TARGET.row,
+    justifyContent: 'center',
   },
   toggle: {
     fontSize: 12,

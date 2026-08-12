@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { StyleSheet, TouchableOpacity, type GestureResponderEvent } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
 import { RecordToggleIcon } from './record-toggle-icon.ui';
 import { Tooltip } from './tooltip.ui';
 import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 
 /**
  * Start/stop capture, shared by the Network and Console tabs. Same long-press tooltip behaviour as
@@ -35,13 +36,15 @@ export function RecordToggleButton({
           setTooltipAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY });
         }}
         onPressOut={() => setTooltipAnchor(null)}
-        hitSlop={8}
-        style={[styles.button, paused && styles.buttonActive]}>
-        <RecordToggleIcon
-          size={18}
-          color={paused ? COLORS.textSecondary : COLORS.error}
-          shape={paused ? 'circle' : 'square'}
-        />
+        hitSlop={HIT_SLOP.default}
+        style={styles.touchTarget}>
+        <View style={[styles.glyph, paused && styles.glyphActive]}>
+          <RecordToggleIcon
+            size={18}
+            color={paused ? COLORS.textSecondary : COLORS.error}
+            shape={paused ? 'circle' : 'square'}
+          />
+        </View>
       </TouchableOpacity>
       <Tooltip
         anchor={tooltipAnchor}
@@ -53,11 +56,18 @@ export function RecordToggleButton({
 }
 
 const styles = StyleSheet.create({
-  button: {
+  // Matches `IconButton` exactly, so the toolbar's first two buttons are the same size as the rest.
+  touchTarget: {
+    minWidth: TOUCH_TARGET.compact,
+    minHeight: TOUCH_TARGET.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glyph: {
     padding: 4,
     borderRadius: 8,
   },
-  buttonActive: {
+  glyphActive: {
     backgroundColor: COLORS.sectionTint,
   },
 });

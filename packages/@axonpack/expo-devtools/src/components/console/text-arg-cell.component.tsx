@@ -65,9 +65,12 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 12,
   },
+  // "Show more" is the only affordance on a clamped cell, so it gets vertical padding of its own rather
+  // than the 2dp that let it sit flush against the text it expands.
   toggle: {
     marginTop: 2,
-    fontSize: 11,
+    paddingVertical: 6,
+    fontSize: 12,
     fontWeight: '600',
     color: COLORS.accent,
   },

@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 
 export function SettingRow({
   label,
@@ -16,7 +17,7 @@ export function SettingRow({
     <TouchableOpacity style={styles.settingRow} onPress={() => onValueChange(!value)}>
       <MaterialIcons
         name={value ? 'check-box' : 'check-box-outline-blank'}
-        size={18}
+        size={20}
         color={value ? COLORS.accent : COLORS.textSecondary}
       />
       <Text style={styles.settingLabel}>{label}</Text>
@@ -29,6 +30,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    minHeight: TOUCH_TARGET.row,
     paddingVertical: 6,
   },
   settingLabel: {

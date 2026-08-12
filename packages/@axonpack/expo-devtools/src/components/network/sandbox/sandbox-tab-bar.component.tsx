@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../../constants/colors.const';
+import { TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { SandboxTab } from '../../../utils/network/sandbox.util';
 
 export function SandboxTabBar({
@@ -39,8 +40,9 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
+    minHeight: TOUCH_TARGET.min,
     alignItems: 'center',
+    justifyContent: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },

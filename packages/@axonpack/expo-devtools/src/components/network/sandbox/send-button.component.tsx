@@ -1,6 +1,7 @@
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import { COLORS } from '../../../constants/colors.const';
+import { TOUCH_TARGET } from '../../../constants/metrics.const';
 
 export function SendButton({ sending, onPress }: { sending: boolean; onPress: () => void }) {
   return (
@@ -19,7 +20,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.textPrimary,
     borderRadius: 6,
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    minHeight: TOUCH_TARGET.min,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
     color: '#ffffff',

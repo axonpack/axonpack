@@ -3,6 +3,7 @@ import { TextInput, TouchableOpacity, View } from 'react-native';
 
 import { sandboxStyles } from './shared.styles';
 import { COLORS } from '../../../constants/colors.const';
+import { HIT_SLOP } from '../../../constants/metrics.const';
 import { ensureTrailingBlankRow, type KeyValueRow } from '../../../utils/network/sandbox.util';
 
 /** Editable rows for headers/query params/cookies — always keeps one trailing blank row so
@@ -32,10 +33,11 @@ export function KeyValueTable({
           <View key={row.id} style={sandboxStyles.row}>
             <TouchableOpacity
               onPress={() => updateRow(row.id, { enabled: !row.enabled })}
-              hitSlop={8}>
+              hitSlop={HIT_SLOP.dense}
+              style={sandboxStyles.rowAction}>
               <MaterialIcons
                 name={row.enabled ? 'check-box' : 'check-box-outline-blank'}
-                size={18}
+                size={20}
                 color={row.enabled ? COLORS.accent : COLORS.textSecondary}
               />
             </TouchableOpacity>
@@ -58,7 +60,10 @@ export function KeyValueTable({
               autoCorrect={false}
             />
             {!isBlank && (
-              <TouchableOpacity onPress={() => removeRow(row.id)} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => removeRow(row.id)}
+                hitSlop={HIT_SLOP.dense}
+                style={sandboxStyles.rowAction}>
                 <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
               </TouchableOpacity>
             )}

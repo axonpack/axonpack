@@ -7,6 +7,7 @@ import { PreviewTab } from './preview-tab.component';
 import { ResponseTab } from './response-tab.component';
 import { TimingTab } from './timing-tab.component';
 import { COLORS } from '../../../constants/colors.const';
+import { TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import { buildEntryCopyMenuItems } from '../../../utils/network/entry-menu-items.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
@@ -141,9 +142,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   tabButton: {
-    paddingVertical: 10,
+    minHeight: TOUCH_TARGET.min,
     paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },

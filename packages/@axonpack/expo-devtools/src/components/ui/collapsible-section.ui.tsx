@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { animateNextLayout } from '../../utils/layout-animation.util';
 
 export function CollapsibleSection({
@@ -30,7 +31,7 @@ export function CollapsibleSection({
         }}>
         <MaterialIcons
           name="arrow-drop-down"
-          size={18}
+          size={20}
           color={COLORS.textSecondary}
           style={!expanded && styles.iconCollapsed}
         />
@@ -58,6 +59,7 @@ const styles = StyleSheet.create({
     // then reapplies it via paddingHorizontal to keep the title's inset unchanged.
     marginHorizontal: -12,
     paddingHorizontal: 12,
+    minHeight: TOUCH_TARGET.row,
     paddingVertical: 6,
   },
   iconCollapsed: {
