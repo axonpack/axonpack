@@ -219,6 +219,38 @@ describe('performanceStore frame-rate peak', () => {
     for (let index = 0; index < 3; index += 1) performanceStore.setUiFps(90);
     expect(performanceStore.getFpsPeak()).toBe(90);
   });
+
+  /**
+   * The reported glitch: both threads report on the same tick, so the calls alternate. A shared run let
+   * the JS reading — at or below the peak, which is the normal case at 60 against a 90Hz main thread —
+   * reset the main thread's run every other call, so its rising readings never confirmed anything.
+   */
+  it('confirms one thread while the other sits at the ceiling', () => {
+    for (let index = 0; index < 3; index += 1) performanceStore.setFps(60);
+    expect(performanceStore.getFpsPeak()).toBe(60);
+
+    performanceStore.setFps(60);
+    performanceStore.setUiFps(78);
+    performanceStore.setFps(60);
+    performanceStore.setUiFps(84);
+    performanceStore.setFps(60);
+    performanceStore.setUiFps(90);
+
+    // The first of the confirming run, so the ceiling trails the readings by one confirmation.
+    expect(performanceStore.getFpsPeak()).toBe(78);
+  });
+
+  it('keeps one thread run separate from the other', () => {
+    for (let index = 0; index < 3; index += 1) performanceStore.setFps(60);
+
+    performanceStore.setUiFps(90);
+    performanceStore.setUiFps(90);
+    // A different thread's lower reading must not count towards, or break, this run.
+    performanceStore.setFps(60);
+    performanceStore.setUiFps(90);
+
+    expect(performanceStore.getFpsPeak()).toBe(90);
+  });
 });
 
 describe('performanceStore frame-rate buckets', () => {

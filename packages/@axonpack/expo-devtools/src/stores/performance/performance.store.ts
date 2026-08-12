@@ -200,8 +200,19 @@ let fpsPeak = 0;
 const PEAK_CONFIRMATIONS = 3;
 /** Within this much of the candidate still counts as confirming it. */
 const PEAK_TOLERANCE = 0.95;
-let peakCandidate = 0;
-let peakCandidateCount = 0;
+
+/**
+ * One run per thread, not one shared between them.
+ *
+ * Both threads report on the same 500ms tick, so `setFps` and `setUiFps` alternate. With a single run,
+ * the JS reading — normally pinned at 60 while the main thread runs at 90 or 120 — landed on the
+ * `value <= fpsPeak` branch every other call and wiped the main thread's half-built run. Its rising
+ * readings could then never reach three in a row, so the ceiling stayed put and the line drew clamped
+ * along the top edge. The confirmed peak itself is still shared: the two lines share one axis.
+ */
+type PeakRun = { candidate: number; count: number };
+const jsPeakRun: PeakRun = { candidate: 0, count: 0 };
+const uiPeakRun: PeakRun = { candidate: 0, count: 0 };
 // Peaks for the memory charts, monotonic for the same reason as the frame rate's: an axis that shrinks as
 // samples age out makes the line jitter and makes two moments incomparable.
 let heapPeak = 0;
@@ -250,25 +261,26 @@ let pendingNotify: ReturnType<typeof setTimeout> | undefined;
  * Raises the peak only once a new high has held. A run is broken by any sample that drops back below the
  * candidate, so a lone spike never lands — it needs company.
  */
-function observePeak(value: number) {
+function observePeak(run: PeakRun, value: number) {
   if (value <= fpsPeak) {
-    peakCandidate = 0;
-    peakCandidateCount = 0;
+    run.candidate = 0;
+    run.count = 0;
     return;
   }
 
-  if (peakCandidateCount > 0 && value >= peakCandidate * PEAK_TOLERANCE) {
-    peakCandidateCount += 1;
+  if (run.count > 0 && value >= run.candidate * PEAK_TOLERANCE) {
+    run.count += 1;
   } else {
-    peakCandidate = value;
-    peakCandidateCount = 1;
+    run.candidate = value;
+    run.count = 1;
   }
 
-  if (peakCandidateCount >= PEAK_CONFIRMATIONS) {
-    // The candidate, not the highest of the run: the lowest confirmed value is the defensible one.
-    fpsPeak = peakCandidate;
-    peakCandidate = 0;
-    peakCandidateCount = 0;
+  if (run.count >= PEAK_CONFIRMATIONS) {
+    // The candidate, not the highest of the run: the lowest confirmed value is the defensible one. A
+    // rising run therefore lifts the ceiling in steps, one confirmation behind the readings.
+    fpsPeak = run.candidate;
+    run.candidate = 0;
+    run.count = 0;
   }
 }
 
@@ -361,14 +373,12 @@ export const performanceStore = {
   getFps(): number | undefined {
     return fps;
   },
-  /** The main thread's frame rate, from the native module — invisible to a JS rAF loop. */
   getUiFps(): number | undefined {
     return uiFps;
   },
   getFpsHistory(): number[] {
     return fpsHistory;
   },
-  /** Bucketed for the chart: stable once closed, so the plot scrolls instead of redrawing. */
   getFpsSeries(): number[] {
     return fpsSeriesCache;
   },
@@ -381,11 +391,6 @@ export const performanceStore = {
   getFpsBucketMs(): number {
     return FPS_BUCKET_SAMPLES * FPS_WINDOW_HINT_MS;
   },
-  /** The highest frame rate seen since the last clear, across both threads. */
-  /**
-   * The confirmed peak, unless nothing in the retained window supports it — a spike that has since
-   * aged out shouldn't hold the axis up forever, so the window's own maximum takes over.
-   */
   getFpsPeak(): number {
     const windowMax = Math.max(0, ...fpsHistory, ...uiFpsHistory);
     return fpsPeak <= windowMax ? fpsPeak : windowMax;
@@ -405,7 +410,6 @@ export const performanceStore = {
   getUiFpsHistory(): number[] {
     return uiFpsHistory;
   },
-  /** Latest sample only — the leaf that renders the number doesn't need the whole series. */
   getLatestHeapUsed(): number | undefined {
     return memory.at(-1)?.usedJSHeapSize;
   },
@@ -417,7 +421,6 @@ export const performanceStore = {
     paused = nextPaused;
     publish(true);
   },
-  /** Cumulative — the count arrives per callback and each one reports only its own overflow. */
   addDropped(next: Partial<PerformanceDropped>) {
     if (!enabled || paused) return;
     dropped = {
@@ -426,7 +429,6 @@ export const performanceStore = {
     };
     publish();
   },
-  /** Reported by each collector as it installs, so the UI can say why a list is empty. */
   setSupport(next: Partial<PerformanceSupport>) {
     support = { ...support, ...next };
     publish(true);
@@ -437,7 +439,6 @@ export const performanceStore = {
   setHistorySize(next: number) {
     historySize = Math.max(1, next);
   },
-  /** Read once at attach — free space changes too slowly to sample. */
   setStorage(next: StorageInfo) {
     if (!enabled) return;
     storage = next;
@@ -453,18 +454,13 @@ export const performanceStore = {
   },
   addMemorySample(sample: MemorySample) {
     if (!enabled || paused) return;
-    // Appended rather than prepended: the chart reads left-to-right as oldest-to-newest.
     memory = [...memory, sample].slice(-historySize);
     if (sample.usedJSHeapSize !== undefined && sample.usedJSHeapSize > heapPeak) {
       heapPeak = sample.usedJSHeapSize;
     }
     publish();
   },
-  /**
-   * Batched, not one call per entry: every collector receives entries in groups (an observer
-   * callback, or the whole native buffer on attach), and publishing per entry meant a full re-render
-   * of the list for each one.
-   */
+
   addLongTasks(entries: Omit<LongTaskEntry, 'id' | 'timestamp'>[]) {
     if (!enabled || paused || entries.length === 0) return;
     const now = Date.now();
@@ -500,17 +496,11 @@ export const performanceStore = {
     interactions = [...additions.reverse(), ...interactions].slice(0, historySize);
     publish();
   },
-  /** Read once at startup, so it isn't gated on `paused` the way sampled data is. */
   setStartup(next: StartupTiming) {
     if (!enabled) return;
     startup = next;
     publish();
   },
-  /**
-   * Notifies without invalidating the snapshot: frame rates are read through their own getters, and
-   * twice a second is often enough that replacing the snapshot here re-rendered the whole entry list
-   * for data it never reads.
-   */
   setFps(next: number | undefined) {
     if (!enabled || paused) return;
     fps = next;
@@ -518,7 +508,7 @@ export const performanceStore = {
       fpsHistory = [...fpsHistory, next].slice(-FPS_HISTORY_SIZE);
       fpsBucketState = pushBucketSample(fpsBucketState, next);
       fpsSeriesCache = bucketSeries(fpsBucketState);
-      observePeak(next);
+      observePeak(jsPeakRun, next);
     }
     scheduleNotify();
   },
@@ -529,7 +519,7 @@ export const performanceStore = {
       uiFpsHistory = [...uiFpsHistory, next].slice(-FPS_HISTORY_SIZE);
       uiFpsBucketState = pushBucketSample(uiFpsBucketState, next);
       uiFpsSeriesCache = bucketSeries(uiFpsBucketState);
-      observePeak(next);
+      observePeak(uiPeakRun, next);
     }
     scheduleNotify();
   },
@@ -549,8 +539,10 @@ export const performanceStore = {
     fpsSeriesCache = [];
     uiFpsSeriesCache = [];
     fpsPeak = 0;
-    peakCandidate = 0;
-    peakCandidateCount = 0;
+    jsPeakRun.candidate = 0;
+    jsPeakRun.count = 0;
+    uiPeakRun.candidate = 0;
+    uiPeakRun.count = 0;
     heapPeak = 0;
     appMemoryPeak = 0;
     publish(true);
