@@ -53,4 +53,10 @@ const styles = StyleSheet.create({
   },
 });
 
-export const LongTaskRow = memo(LongTaskRowBase);
+/**
+ * Re-renders only when the row is a different entry.
+ *
+ * `entry` is this component's only prop, and the store never patches a recorded entry — it prepends and
+ * trims. So any field that could differ belongs to a different entry, which the id already tells us.
+ */
+export const LongTaskRow = memo(LongTaskRowBase, (prev, next) => prev.entry.id === next.entry.id);

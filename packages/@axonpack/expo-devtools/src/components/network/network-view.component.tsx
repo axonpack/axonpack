@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   ScrollView,
@@ -38,6 +38,10 @@ import { InsetPadding } from '../ui/inset-padding.ui';
 import { SettingRow } from '../ui/setting-row.ui';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
+
+function keyExtractor(entry: NetworkLogEntry): string {
+  return entry.id;
+}
 
 export function NetworkView() {
   const { width } = useWindowDimensions();
@@ -139,16 +143,14 @@ export function NetworkView() {
     setMoreFiltersOpen((current) => !current);
   }
 
-  function renderRow(entry: NetworkLogEntry) {
-    return (
-      <LogRow
-        key={entry.id}
-        entry={entry}
-        bigRows={bigRows}
-        onPress={() => setSelectedEntry(entry)}
-      />
-    );
-  }
+  // Held across renders, and LogRow hands the entry back rather than being closed over — so all 200 rows
+  // share one callback and the row's `memo` actually holds. Rebuilt only when the row size changes.
+  const renderRow = useCallback(
+    ({ item }: { item: NetworkLogEntry }) => (
+      <LogRow entry={item} bigRows={bigRows} onPress={setSelectedEntry} />
+    ),
+    [bigRows]
+  );
 
   return (
     <View style={styles.container}>
@@ -339,8 +341,8 @@ export function NetworkView() {
       {groupByFetchClient ? (
         <SectionList
           sections={sections}
-          keyExtractor={(entry) => entry.id}
-          renderItem={({ item }) => renderRow(item)}
+          keyExtractor={keyExtractor}
+          renderItem={renderRow}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader} selectable>
               {formatSource(section.title)} ({section.data.length})
@@ -354,8 +356,8 @@ export function NetworkView() {
       ) : (
         <FlatList
           data={visibleLogs}
-          keyExtractor={(entry) => entry.id}
-          renderItem={({ item }) => renderRow(item)}
+          keyExtractor={keyExtractor}
+          renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           contentInsetAdjustmentBehavior="never"
           ListEmptyComponent={

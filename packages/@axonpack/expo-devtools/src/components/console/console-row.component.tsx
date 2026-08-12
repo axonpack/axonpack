@@ -10,7 +10,7 @@ import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
 import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
-export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLogEntry }) {
+function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
   const visual = CONSOLE_LEVEL_VISUALS[entry.level];
   // Only the REPL's own echo is replayable — there's no source text behind a captured log.
   const recallable = entry.level === 'input';
@@ -56,7 +56,28 @@ export const ConsoleRow = memo(function ConsoleRow({ entry }: { entry: ConsoleLo
       {content}
     </TouchableOpacity>
   );
-});
+}
+
+/**
+ * Unlike the performance rows, a console entry really is patched in place of its predecessor: `add`
+ * collapses a repeat by replacing the newest entry with a higher `count` and a newer `timestamp`, and a
+ * REPL result replaces the pending row's `parts` and `text`. Both have to re-render, which is why this
+ * lists fields rather than trusting the id.
+ *
+ * `entry` is the only prop, and every field of it is read — `text` by the copy button and by recall — so
+ * anything added to `ConsoleLogEntry` that the row uses needs a line here too.
+ */
+export const ConsoleRow = memo(
+  ConsoleRowBase,
+  (prev, next) =>
+    prev.entry.id === next.entry.id &&
+    prev.entry.count === next.entry.count &&
+    prev.entry.timestamp === next.entry.timestamp &&
+    prev.entry.parts === next.entry.parts &&
+    prev.entry.text === next.entry.text &&
+    prev.entry.level === next.entry.level &&
+    prev.entry.source === next.entry.source
+);
 
 const styles = StyleSheet.create({
   row: {

@@ -1,5 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ListRenderItemInfo,
+} from 'react-native';
 
 import { IdleState } from './idle-state.component';
 import { InteractionRow } from './interaction-row.component';
@@ -44,6 +51,19 @@ const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = 
     unsupported: 'This device doesn&apos;t report interaction timing.',
   },
 };
+// Module scope, not inline on the FlatList: the same reason the console tab does it — a fresh
+// `renderItem` identity on every store emit defeats the rows' own memoization, and all three of these
+// rows are memoized.
+function keyExtractor(row: ListRow): string {
+  return row.entry.id;
+}
+
+function renderRow({ item }: ListRenderItemInfo<ListRow>) {
+  if (item.key === 'longTasks') return <LongTaskRow entry={item.entry} />;
+  if (item.key === 'userTiming') return <UserTimingRow entry={item.entry} />;
+  return <InteractionRow entry={item.entry} />;
+}
+
 export function PerformanceView() {
   const { longTasks, userTiming, interactions, startup, support, dropped } = useSyncExternalStore(
     performanceStore.subscribe,
@@ -114,12 +134,8 @@ export function PerformanceView() {
       ) : (
         <FlatList
           data={rows}
-          keyExtractor={(row) => row.entry.id}
-          renderItem={({ item }) => {
-            if (item.key === 'longTasks') return <LongTaskRow entry={item.entry} />;
-            if (item.key === 'userTiming') return <UserTimingRow entry={item.entry} />;
-            return <InteractionRow entry={item.entry} />;
-          }}
+          keyExtractor={keyExtractor}
+          renderItem={renderRow}
           ListHeaderComponent={
             <View>
               <ResourcesSection />

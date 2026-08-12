@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
 import { COLORS } from '../../constants/colors.const';
@@ -22,14 +22,15 @@ import { IconButton } from '../ui/icon-button.ui';
 import { InfoBadge } from '../ui/info-badge.ui';
 import { JsonIcon } from '../ui/json-icon.ui';
 
-export function LogRow({
+function LogRowBase({
   entry,
   bigRows,
   onPress,
 }: {
   entry: NetworkLogEntry;
   bigRows: boolean;
-  onPress: () => void;
+  /** Takes the entry back rather than closing over it, so the list can pass one stable callback. */
+  onPress: (entry: NetworkLogEntry) => void;
 }) {
   const statusColor = getStatusColor(entry.status, entry.statusCode);
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
@@ -44,7 +45,7 @@ export function LogRow({
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={() => onPress(entry)}
       onLongPress={openMenu}
       style={[styles.row, bigRows && styles.rowBig]}>
       <View style={styles.topRow}>
@@ -175,3 +176,38 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 });
+
+/**
+ * The log holds up to 200 of these, each composing badges, icons and a context menu, so the comparison
+ * below names every field the row depends on. Two groups, and the second is the one that bites:
+ *
+ * - **Rendered** — what you can see on the row. Getting one wrong shows visibly stale data.
+ * - **Copied** — the request/response payloads `buildEntryCopyMenuItems` turns into cURL, a fetch
+ *   snippet and raw-body actions. Nothing on the row displays them, so omitting one here would fail
+ *   *silently*: the row would look right and copy the body of an earlier state of the request.
+ *
+ * `responseHeaders` is deliberately absent — neither group reads it, so a patch carrying only headers
+ * correctly skips this row. Adding a field to the row or to the copy menu means adding it here.
+ */
+export const LogRow = memo(
+  LogRowBase,
+  (prev, next) =>
+    prev.bigRows === next.bigRows &&
+    prev.onPress === next.onPress &&
+    prev.entry.id === next.entry.id &&
+    // Rendered.
+    prev.entry.method === next.entry.method &&
+    prev.entry.url === next.entry.url &&
+    prev.entry.status === next.entry.status &&
+    prev.entry.statusCode === next.entry.statusCode &&
+    prev.entry.error === next.entry.error &&
+    prev.entry.duration === next.entry.duration &&
+    prev.entry.startedAt === next.entry.startedAt &&
+    prev.entry.size === next.entry.size &&
+    prev.entry.mimeType === next.entry.mimeType &&
+    prev.entry.source === next.entry.source &&
+    // Copied by the context menu.
+    prev.entry.requestBody === next.entry.requestBody &&
+    prev.entry.responseBody === next.entry.responseBody &&
+    prev.entry.requestHeaders === next.entry.requestHeaders
+);
