@@ -27,7 +27,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>io.github.axonpack.bruin.devtoolexample</string>
+				<string>io.github.axonpack.bruin2.devtoolexample</string>
 			</array>
 		</dict>
 	</array>

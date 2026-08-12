@@ -8,10 +8,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "io.github.axonpack.bruin.devtoolexample"
+      "bundleIdentifier": "io.github.axonpack.bruin2.devtoolexample"
     },
     "android": {
-      "package": "io.github.axonpack.bruin.devtoolexample",
+      "package": "io.github.axonpack.bruin2.devtoolexample",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -22,6 +22,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bb1e6423-6f5f-4400-86fb-7572ed0a1650"
+      }
     }
   }
 }
