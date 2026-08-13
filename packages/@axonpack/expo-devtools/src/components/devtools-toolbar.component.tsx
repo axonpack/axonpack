@@ -61,6 +61,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    flexShrink: 1,
   },
 
   divider: {

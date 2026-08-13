@@ -13,9 +13,16 @@ const COLLECTS = [
   'Slow taps',
 ];
 
-export function IdleState() {
+export function IdleState({ startupBelow = true }: { startupBelow?: boolean }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
+  const footnote = [
+    startupBelow ? 'Startup timing is already below — that one is captured at launch.' : undefined,
+    isUiFpsAvailable() ? undefined : 'Main-thread FPS and device memory need a dev build.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <View style={styles.container}>
       <View style={styles.badge}>
@@ -41,10 +48,7 @@ export function IdleState() {
         <Text style={styles.buttonLabel}>Start recording</Text>
       </TouchableOpacity>
 
-      <Text style={styles.footnote}>
-        Startup timing is already below — that one is captured at launch.
-        {isUiFpsAvailable() ? '' : ' Main-thread FPS and device memory need a dev build.'}
-      </Text>
+      {footnote ? <Text style={styles.footnote}>{footnote}</Text> : null}
     </View>
   );
 }

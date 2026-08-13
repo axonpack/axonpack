@@ -1,100 +1,34 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import {
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type ListRenderItemInfo,
-} from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { EntryList } from './entry-list.component';
 import { IdleState } from './idle-state.component';
-import { InteractionRow } from './interaction-row.component';
 import { LimiterPanel } from './limiter-panel.component';
-import { LongTaskRow } from './long-task-row.component';
 import { ResourcesSection } from './resources-section.component';
+import { SectionChips, type PerformanceSection } from './section-chips.component';
 import { StartupTimingSection } from './startup-timing.component';
-import { UserTimingRow } from './user-timing-row.component';
 import { startFpsMonitor } from '../../services/performance/fps-monitor.service';
-import {
-  performanceStore,
-  type InteractionEntry,
-  type LongTaskEntry,
-  type UserTimingEntry,
-} from '../../stores/performance/performance.store';
-import { animateNextLayout } from '../../utils/layout-animation.util';
-import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
+import { performanceStore } from '../../stores/performance/performance.store';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
-import { Chip } from '../ui/chip.ui';
-import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
-
-type ListKey = 'longTasks' | 'userTiming' | 'interactions';
-
-type ListRow =
-  | { key: 'longTasks'; entry: LongTaskEntry }
-  | { key: 'userTiming'; entry: UserTimingEntry }
-  | { key: 'interactions'; entry: InteractionEntry };
-
-const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = {
-  longTasks: {
-    supported: 'Nothing has blocked the JS thread yet.',
-    unsupported: 'This device doesn&apos;t report long tasks.',
-  },
-  userTiming: {
-    supported: 'No marks yet. Add devtools.mark() and devtools.measure() to your code.',
-    unsupported: 'No marks yet. Add devtools.mark() and devtools.measure() to your code.',
-  },
-  interactions: {
-    supported: 'No slow interactions yet.',
-    unsupported: 'This device doesn&apos;t report interaction timing.',
-  },
-};
-
-function keyExtractor(row: ListRow): string {
-  return row.entry.id;
-}
-
-function renderRow({ item }: ListRenderItemInfo<ListRow>) {
-  if (item.key === 'longTasks') return <LongTaskRow entry={item.entry} />;
-  if (item.key === 'userTiming') return <UserTimingRow entry={item.entry} />;
-  return <InteractionRow entry={item.entry} />;
-}
 
 export function PerformanceView() {
   const styles = useStyles();
-  const COLORS = useThemeColors();
-  const { longTasks, userTiming, interactions, startup, support, dropped } = useSyncExternalStore(
+  const { longTasks, userTiming, interactions, startup } = useSyncExternalStore(
     performanceStore.subscribe,
     performanceStore.getSnapshot
   );
   const paused = useSyncExternalStore(performanceStore.subscribe, performanceStore.isPaused);
-  const [list, setList] = useState<ListKey>('longTasks');
-  const [limiterOpen, setLimiterOpen] = useState(false);
+  const [section, setSection] = useState<PerformanceSection>('statistics');
 
   useEffect(() => {
     if (paused) return;
     return startFpsMonitor();
   }, [paused]);
 
-  const listSupported =
-    list === 'longTasks'
-      ? support.longTasks
-      : list === 'interactions'
-        ? support.interactions
-        : true;
-  const droppedForList =
-    list === 'longTasks' ? dropped.longTasks : list === 'interactions' ? dropped.interactions : 0;
-
   const neverRecorded =
     longTasks.length === 0 && interactions.length === 0 && userTiming.length === 0;
-
-  const rows: ListRow[] =
-    list === 'longTasks'
-      ? longTasks.map((entry) => ({ key: 'longTasks', entry }))
-      : list === 'userTiming'
-        ? userTiming.map((entry) => ({ key: 'userTiming', entry }))
-        : interactions.map((entry) => ({ key: 'interactions', entry }));
 
   return (
     <View style={styles.container}>
@@ -104,82 +38,30 @@ export function PerformanceView() {
         onClear={performanceStore.clear}
         clearLabel="Clear recorded data">
         <ToolbarDivider />
-        <IconButton
-          name="speed"
-          color={limiterOpen ? COLORS.accent : COLORS.textSecondary}
-          active={limiterOpen}
-          label="Limiter"
-          onPress={() => {
-            animateNextLayout();
-            setLimiterOpen((current) => !current);
+        <SectionChips
+          section={section}
+          onChange={setSection}
+          counts={{
+            longTasks: longTasks.length,
+            userTiming: userTiming.length,
+            interactions: interactions.length,
           }}
         />
       </DevtoolsToolbar>
 
-      {limiterOpen && <LimiterPanel />}
-
-      {paused && neverRecorded ? (
+      {section === 'statistics' ? (
         <ScrollView>
-          <IdleState />
-          {}
+          {paused && neverRecorded ? <IdleState /> : <ResourcesSection />}
           <StartupTimingSection startup={startup} />
-          {}
+          <InsetPadding edge="bottom" />
+        </ScrollView>
+      ) : section === 'limiter' ? (
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <LimiterPanel />
           <InsetPadding edge="bottom" />
         </ScrollView>
       ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={keyExtractor}
-          renderItem={renderRow}
-          ListHeaderComponent={
-            <View>
-              <ResourcesSection />
-              <StartupTimingSection startup={startup} />
-
-              <View style={styles.selector}>
-                <Chip
-                  label={`Long tasks ${longTasks.length}`}
-                  active={list === 'longTasks'}
-                  onPress={() => setList('longTasks')}
-                />
-                <Chip
-                  label={`User timing ${userTiming.length}`}
-                  active={list === 'userTiming'}
-                  onPress={() => setList('userTiming')}
-                />
-                <Chip
-                  label={`Interactions ${interactions.length}`}
-                  active={list === 'interactions'}
-                  onPress={() => setList('interactions')}
-                />
-              </View>
-
-              {list === 'longTasks' && longTasks.length > 0 ? (
-                <Text style={styles.listNote}>
-                  These show when the thread was stuck, not what stuck it. Wrap your own code in
-                  devtools.mark() and devtools.measure() to find out.
-                </Text>
-              ) : null}
-              {list === 'interactions' && interactions.length > 0 ? (
-                <Text style={styles.listNote}>
-                  Times are rounded to 8 ms, and anything under 16 ms isn&apos;t reported.
-                </Text>
-              ) : null}
-              {}
-              {droppedForList > 0 ? (
-                <Text style={styles.listNote}>
-                  {droppedForList} more happened before this list started keeping them.
-                </Text>
-              ) : null}
-            </View>
-          }
-          ListEmptyComponent={
-            <Text style={styles.empty}>
-              {listSupported ? EMPTY_TEXT[list].supported : EMPTY_TEXT[list].unsupported}
-            </Text>
-          }
-          ListFooterComponent=<InsetPadding edge="bottom" />
-        />
+        <EntryList list={section} />
       )}
     </View>
   );
@@ -189,28 +71,5 @@ const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
-  selector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: COLORS.sectionTint,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  listNote: {
-    fontSize: 11,
-    lineHeight: 15,
-    color: COLORS.textSecondary,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  empty: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: COLORS.textSecondary,
-    padding: 14,
   },
 }));
