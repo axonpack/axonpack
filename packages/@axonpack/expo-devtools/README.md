@@ -437,7 +437,7 @@ want.
 | `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
 | `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.        |
 | `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.  |
-| `performance.longTaskThresholdMs`    | `number`                      | `50`        | Only report tasks that blocked the JS thread at least this long.                      |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only report tasks that blocked the JS thread at least this long.                      |
 | `performance.interactionThresholdMs` | `number`                      | `100`       | Only report interactions that took at least this long, event to next paint.           |
 | `performance.historySize`            | `number`                      | `120`       | How many heap samples and long tasks are kept.                                        |
 | `performance.disabledByDefault`      | `boolean`                     | `false`     | Open the Performance tab not recording.                                               |

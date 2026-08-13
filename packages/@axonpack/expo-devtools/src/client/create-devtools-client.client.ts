@@ -84,7 +84,7 @@ export function createDevtoolsClient<
   } = config?.console ?? {};
   const {
     sampleIntervalMs = 1000,
-    longTaskThresholdMs = 50,
+    longTaskThresholdMs = 150,
     interactionThresholdMs = 100,
     historySize = 120,
     disabledByDefault: performanceStartsPaused = true,
