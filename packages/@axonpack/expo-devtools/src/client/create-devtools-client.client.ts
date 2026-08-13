@@ -84,8 +84,10 @@ export type DevtoolsPerformanceConfig = {
 };
 
 export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
-  name?: string;
-  /** Any `Image` source, e.g. `require('./assets/icon.png')`. */
+  /**
+   * Shown in the panel header, in place of this package's own mark. Any `Image` source, e.g.
+   * `require('./assets/icon.png')`.
+   */
   icon?: ImageSourcePropType;
   webviewSources?: TWebviewSources;
   network?: DevtoolsNetworkConfig;
@@ -96,7 +98,6 @@ export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
 export function createDevtoolsClient<
   const TWebviewSources extends readonly string[] = readonly string[],
 >(config?: DevtoolsClientConfig<TWebviewSources>) {
-  const appName = config?.name;
   const appIcon = config?.icon;
   const webviewSources = config?.webviewSources;
   const {
@@ -120,7 +121,7 @@ export function createDevtoolsClient<
 
   return {
     init() {
-      if (appName || appIcon) appIdentityStore.set({ name: appName, icon: appIcon });
+      if (appIcon) appIdentityStore.set({ icon: appIcon });
       networkLogStore.setEnabled(true);
       if (networkStartsPaused) networkLogStore.setPaused(true);
       if (includeFetch) patchFetch();

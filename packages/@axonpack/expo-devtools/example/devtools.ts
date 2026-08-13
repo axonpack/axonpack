@@ -1,7 +1,6 @@
 import { createDevtoolsClient } from '@axonpack/expo-devtools';
 
 export const devtools = createDevtoolsClient({
-  name: 'Devtools Example',
   icon: require('./assets/icon.png'),
   webviewSources: ['example-webview', 'test2'],
   network: {

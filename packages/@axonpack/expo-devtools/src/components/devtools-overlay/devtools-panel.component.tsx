@@ -2,10 +2,10 @@ import { useMemo, useState, useSyncExternalStore } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
-import { PanelBrand } from './panel-brand.component';
+import { PanelAppIcon } from './panel-app-icon.component';
 import { COLORS } from '../../constants/colors.const';
-import { devtoolsTabStore } from '../../stores/devtools-tab.store';
 import { consoleLogStore } from '../../stores/console/console-log.store';
+import { devtoolsTabStore } from '../../stores/devtools-tab.store';
 import { ConsoleView } from '../console/console-view.component';
 import { NetworkView } from '../network/network-view.component';
 import { PerformanceView } from '../performance/performance-view.component';
@@ -55,19 +55,20 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
     <KeyboardAvoidingView
       style={styles.panel}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {/* One row, not two: the app icon, the tabs, and the close button. A separate title row above the
+          tabs spent a whole row of a phone screen on branding. */}
       <View style={styles.header}>
-        <PanelBrand />
+        <PanelAppIcon />
+        <DevtoolsTabBar
+          tab={tab}
+          onChange={(next) => {
+            setTab(next);
+            devtoolsTabStore.set(next);
+          }}
+          badges={{ console: consoleErrorCount }}
+        />
         <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
       </View>
-
-      <DevtoolsTabBar
-        tab={tab}
-        onChange={(next) => {
-          setTab(next);
-          devtoolsTabStore.set(next);
-        }}
-        badges={{ console: consoleErrorCount }}
-      />
 
       <View style={styles.tabPanel}>{tabContent}</View>
     </KeyboardAvoidingView>
@@ -78,12 +79,14 @@ const styles = StyleSheet.create({
   panel: {
     flex: 1,
   },
+  // Vertical padding comes from the tabs' own 44dp minimum rather than from here, so the row is exactly
+  // as tall as the thing you have to hit.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: COLORS.toolbarBackground,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },

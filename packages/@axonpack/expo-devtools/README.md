@@ -28,7 +28,7 @@ to reproduce the moment you reach for a menu. This puts the tools where the bug 
 - **Pretend the network is bad** — switch to Slow 3G or go offline without touching your Wi-Fi.
 - **See what the app is costing** — JS heap, frame rate, and the moments the app froze long enough to
   notice.
-- **Make it look like your app** — the panel header carries your own name and icon.
+- **Make it look like your app** — the panel header carries your own icon.
 - **Safe to ship** — nothing is captured until you switch it on, so leaving the code in a production
   build costs you nothing.
 
@@ -241,22 +241,22 @@ on deliberately with `console: { repl: true }` if you want it there.
 
 ## Showing your own app in the header
 
-By default the panel header carries this package's name. Point it at your own app instead:
+The header is one row: your app's icon, the tabs, and the close button. By default the icon is this
+package's mark — point it at your own instead:
 
 ```ts
 export const devtools = createDevtoolsClient({
-  name: 'Acme Delivery',
   icon: require('./assets/icon.png'),
 });
 ```
 
-Either field works on its own — pass just a name and you keep the default mark, pass just an icon and
-you keep the default title.
-
-Both have to be given explicitly. An app's installed launcher icon isn't reachable from JavaScript on
+It has to be given explicitly. An app's installed launcher icon isn't reachable from JavaScript on
 iOS or Android, and the `icon` in your Expo config is a build-time path rather than something `Image`
 can load in a standalone build — so there's nothing dependable to detect. Passing the same
 `require(...)` your config uses is the one approach that works in every build.
+
+There's no app name option. The tabs live in that row now, and a title competing with three of them for
+a phone's width left too little room for either.
 
 ## The Performance tab
 
@@ -402,7 +402,6 @@ want.
 
 | Option                               | Type                      | Default     | Description                                                                           |
 | ------------------------------------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `name`                               | `string`                  | `undefined` | Your app's name, shown in the panel header instead of this package's.                 |
 | `icon`                               | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                 |
 | `webviewSources`                     | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs. |
 | `network.includeFetch`               | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                   |

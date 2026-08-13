@@ -2,7 +2,6 @@ import { EventEmitter } from 'expo';
 import type { ImageSourcePropType } from 'react-native';
 
 export type AppIdentity = {
-  name?: string;
   icon?: ImageSourcePropType;
 };
 
@@ -14,7 +13,8 @@ let identity: AppIdentity = {};
 const emitter = new EventEmitter<AppIdentityEvents>();
 
 /**
- * The host app's own name and icon, shown in the panel header in place of this package's branding.
+ * The host app's own icon, shown in the panel header in place of this package's mark. There was a `name`
+ * here too; the header is the tab bar now, and a title had nowhere left to go.
  *
  * A store rather than a `DevtoolsOverlay` prop because the values arrive through
  * `createDevtoolsClient`, which a consumer calls from its own module — the overlay is mounted
