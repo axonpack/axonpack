@@ -76,9 +76,54 @@ export default function App() {
 }
 ```
 
-That's everything. Drag the button anywhere on screen, tap it to open the panel, and every tab is
-already recording. The panel reopens on whichever tab you last had open, for as long as the app is
-running.
+That's everything. Drag the button anywhere on screen, tap it to open the panel, and the Network and
+Console tabs are already recording. (Performance starts paused — measuring costs something — so press
+its record button when you want it.) The panel reopens on whichever tab you last had open, for as
+long as the app is running.
+
+Every control, section and field is written up in [`REFERENCE.md`](./REFERENCE.md).
+
+### With Expo Router
+
+Expo Router owns the entry point, so there's no `index.ts` of your own to start it from. The root
+layout is the right place: call `init()` at **module scope**, not inside the component, so the
+patches are installed before the first screen renders.
+
+```tsx
+// app/_layout.tsx
+import { Stack } from 'expo-router';
+import { DevtoolsOverlay } from '@axonpack/expo-devtools';
+import { devtools } from '../devtools';
+
+devtools.init();
+
+export default function RootLayout() {
+  return (
+    <>
+      <Stack />
+      <DevtoolsOverlay />
+    </>
+  );
+}
+```
+
+Mounting the overlay in the root layout puts the button on every route, and it opens as a modal over
+whatever screen you're on — including inside a Tabs or Drawer layout. Only the root layout needs it;
+adding it to a nested layout as well would give you two buttons.
+
+To start even earlier — which makes the startup breakdown's _App setup_ phase truer, and catches
+requests fired during module evaluation — take over the entry point:
+
+```js
+// index.js
+import './devtools-init'; // a module whose only job is `devtools.init()`
+import 'expo-router/entry';
+```
+
+```json
+// package.json
+{ "main": "index.js" }
+```
 
 ### The launcher button
 
@@ -265,7 +310,7 @@ Pick which one it opens with, and add your own:
 
 ```ts
 export const devtools = createDevtoolsClient({
-  theme: 'midnight',
+  defaultTheme: 'midnight',
   themes: {
     midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
   },
@@ -274,7 +319,7 @@ export const devtools = createDevtoolsClient({
 
 A theme names a `base` to inherit from — any of the seven — and overrides only the tokens it cares about,
 so a one-colour change is a one-line entry rather than a copy of all 21 that rots whenever a token is
-added. Reuse a built-in's id as your own name and you replace it. A `theme` naming something that was never registered is
+added. Reuse a built-in's id as your own name and you replace it. A `defaultTheme` naming something that was never registered is
 ignored rather than leaving the panel unstyled.
 
 The choice lives in memory for the session, like the tab you last had open — persisting it would mean
@@ -284,7 +329,20 @@ The full token list is the `Palette` type, exported from the package root.
 
 ## The Performance tab
 
-Live metrics on the device, no desktop profiler and no cable.
+Live metrics on the device, no desktop profiler and no cable. The toolbar carries the record and
+clear buttons, then a chip per section — and only the section you're looking at is mounted, so the
+charts aren't re-rendering behind a list you're reading:
+
+```
+[⏺] [⊘] │ (Statistics) (User timing) (Interactions) (Long tasks) (Limiter)
+```
+
+Unlike the other two tabs, this one **starts paused**, because measuring isn't free. While it's
+paused nothing is measured at all — the instrumentation detaches rather than running and
+discarding — so leaving it off costs nothing. Pressing record attaches everything fresh and picks up
+whatever the platform still has buffered.
+
+### Statistics
 
 - **JS heap** — how much the JavaScript engine has allocated, with a sparkline of the last two
   minutes so you can watch it climb while you use the app.
@@ -306,11 +364,8 @@ Live metrics on the device, no desktop profiler and no cable.
   markers are all null. Phase boundaries are this package's load points, not platform milestones, so they
   shift a little with import order — and if the platform _does_ report its markers, they're shown
   underneath as a second set.
-- **Long tasks** — anything that blocked the JS thread past the threshold (50 ms by default), newest
-  first, with when it happened and for how long. A "long task" is one stretch of JavaScript that ran
-  without yielding, so nothing else on that thread could happen meanwhile: no touches, no timers, no
-  animation driven from JS. At 60 fps a frame is 16.7 ms, so 50 ms is about three frames lost and
-  roughly where a tap starts to feel late; past ~200 ms it reads as a freeze.
+
+### The three lists
 
 - **User timing** — timings you name yourself, following the
   [W3C User Timing](https://www.w3.org/TR/user-timing/) signatures. The one metric here that can point
@@ -332,15 +387,17 @@ Live metrics on the device, no desktop profiler and no cable.
   means the interaction was stuck behind something else rather than being slow itself. Durations come
   rounded to the nearest 8 ms, and nothing under 16 ms is ever reported.
 
-The three lists share one view — pick which with the chips. Recording works like the other tabs: a record
-button pauses and resumes, and a bin clears what's been collected. While it's paused nothing is measured at all — the instrumentation detaches rather than
-running and discarding — so leaving the tab switched off costs nothing. Switching it back on attaches
-fresh, and picks up whatever the platform still has buffered.
+- **Long tasks** — anything that blocked the JS thread past the threshold (150 ms by default), newest
+  first, with when it happened and for how long. A "long task" is one stretch of JavaScript that ran
+  without yielding, so nothing else on that thread could happen meanwhile: no touches, no timers, no
+  animation driven from JS. At 60 fps a frame is 16.7 ms, so 150 ms is about nine frames lost; past
+  ~200 ms it reads as a freeze. Drop `performance.longTaskThresholdMs` to 50 if you want to see the
+  smaller ones too.
 
 ### Limiter
 
-A section for breaking things on purpose, so the numbers above it can be trusted. Pick a thread, pick a
-duration — 100 ms to 3 s, or type your own — and block it:
+The last chip: breaking things on purpose, so the numbers in the other sections can be trusted. Pick a
+thread, pick a duration — 100 ms to 3 s, or type your own — and block it:
 
 - **JavaScript** — shows up as a long task and drops the FPS reading. Works everywhere.
 - **Main (UI)** — freezes what you see and touch while the JS numbers stay perfectly healthy. That gap is
@@ -426,7 +483,7 @@ want.
 
 | Option                               | Type                          | Default     | Description                                                                           |
 | ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `theme`                              | `string`                      | `'light'`   | Which theme the panel opens with — a built-in or one of yours.                        |
+| `defaultTheme`                       | `string`                      | `'light'`   | Which theme the panel opens with — a built-in or one of yours.                        |
 | `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
 | `webviewSources`                     | `string[]`                    | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs. |
 | `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                   |
@@ -439,8 +496,11 @@ want.
 | `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.  |
 | `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only report tasks that blocked the JS thread at least this long.                      |
 | `performance.interactionThresholdMs` | `number`                      | `100`       | Only report interactions that took at least this long, event to next paint.           |
-| `performance.historySize`            | `number`                      | `120`       | How many heap samples and long tasks are kept.                                        |
-| `performance.disabledByDefault`      | `boolean`                     | `false`     | Open the Performance tab not recording.                                               |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.          |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab not recording. On by default — measuring costs something.    |
+
+Every field of every panel, and the rest of the API — the client's methods, the overlay's props, the
+theme tokens, the exported types — is in [`REFERENCE.md`](./REFERENCE.md).
 
 ## Leaving it in production
 

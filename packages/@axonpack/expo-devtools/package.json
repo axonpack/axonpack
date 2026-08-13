@@ -27,7 +27,8 @@
     "build",
     "ios",
     "android",
-    "expo-module.config.json"
+    "expo-module.config.json",
+    "REFERENCE.md"
   ],
   "main": "build/index.js",
   "types": "build/index.d.ts",
