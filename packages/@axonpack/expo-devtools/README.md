@@ -80,6 +80,41 @@ That's everything. Drag the button anywhere on screen, tap it to open the panel,
 already recording. The panel reopens on whichever tab you last had open, for as long as the app is
 running.
 
+### The launcher button
+
+Nothing has to be configured: `<DevtoolsOverlay />` on its own gives you the bug glyph on a blue circle.
+Everything about its appearance is a prop, since that's where you mount it.
+
+To use your own icon, pass a component. It renders inside the button, which is already drawn for you, so
+it gets the resolved `size` and nothing about colour:
+
+```tsx
+<DevtoolsOverlay
+  iconComponent={({ size }) => <MyLogo width={size} height={size} />}
+  size={56} // diameter in dp, default 44
+  color="#111827" // button fill
+/>
+```
+
+| Prop            | Default     | What it does                                                                       |
+| --------------- | ----------- | ---------------------------------------------------------------------------------- |
+| `iconComponent` | –           | Renders in place of the built-in glyph. Given the resolved `size`; colour is yours |
+| `size`          | `44`        | Diameter of the button, in dp                                                      |
+| `color`         | accent blue | Button fill                                                                        |
+| `iconColor`     | white       | The built-in glyph only — an `iconComponent` colours itself                        |
+
+An image is the same shape as anything else:
+
+```tsx
+iconComponent={({ size }) => (
+  <Image source={require('./assets/icon.png')} style={{ width: size, height: size }} />
+)}
+```
+
+A `size` under 44 still gets a 44dp touch area through `hitSlop`, so a small button stays as easy to hit
+as it looks — and however big you make it, the drag stays inside the screen. Note that `color` and the
+default glyph have to work together: a pale button needs `iconColor` set, or the white glyph vanishes into it.
+
 ## The Network tab
 
 Every request lands as a row: the method, the status, how long it took, and when. Underneath, the

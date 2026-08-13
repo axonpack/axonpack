@@ -25,7 +25,7 @@ export default function App() {
         {tab === 'requests' ? <RequestsScreen /> : null}
         {tab === 'console' ? <ConsoleDemo /> : null}
         {tab === 'performance' ? <PerformanceDemo /> : null}
-        <DevtoolsOverlay />
+        <DevtoolsOverlay size={52} color="#ffffff" iconColor="#1a73e8" />
         <StatusBar style="auto" />
       </SafeAreaView>
     </SafeAreaProvider>
