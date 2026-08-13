@@ -9,7 +9,7 @@ import type { JsonValue } from '../../../utils/json-tree.util';
 import { JsonTree } from '../../json-tree';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
-import { ShareIconButton } from '../../ui/share-icon-button.ui';
+import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 
 // Attempted regardless of the request's content-type, same rationale as the Preview tab.
 function parseJson(body: string | undefined): JsonValue | undefined {
@@ -44,7 +44,7 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
               <Text style={styles.toggle}>{showSource ? 'View parsed' : 'View source'}</Text>
             </TouchableOpacity>
           )}
-          <ShareIconButton value={entry.requestBody} />
+          <CopyIconButton value={entry.requestBody} />
         </View>
       }>
       {showSource ? (

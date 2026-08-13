@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { rowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
-import { ShareIconButton } from '../../ui/share-icon-button.ui';
+import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 import { ResponseBodyPreview } from '../response-body-preview.component';
 
 export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
@@ -10,7 +10,7 @@ export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
     <View style={rowStyles.section}>
       {entry.responseBody && (
         <View style={styles.toolbar}>
-          <ShareIconButton value={entry.responseBody} />
+          <CopyIconButton value={entry.responseBody} />
         </View>
       )}
       <ResponseBodyPreview

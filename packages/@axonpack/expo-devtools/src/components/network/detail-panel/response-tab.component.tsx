@@ -2,8 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { rowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
+import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
-import { ShareIconButton } from '../../ui/share-icon-button.ui';
 
 export function ResponseTab({ entry }: { entry: NetworkLogEntry }) {
   if (!entry.responseBody) {
@@ -17,7 +17,7 @@ export function ResponseTab({ entry }: { entry: NetworkLogEntry }) {
   return (
     <View style={rowStyles.section}>
       <View style={styles.toolbar}>
-        <ShareIconButton value={entry.responseBody} />
+        <CopyIconButton value={entry.responseBody} />
       </View>
       <ReadOnlyTextInput value={entry.responseBody} style={rowStyles.monospace} />
     </View>

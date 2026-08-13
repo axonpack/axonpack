@@ -181,7 +181,7 @@ snippet.
 query parameters, headers, cookies, auth, or the body, then Send and watch the real response come
 back. Handy for "does this break if the token is missing?" without touching your code.
 
-Prefer to look at it later? **Export** shares the currently-filtered list as JSON.
+Prefer to look at it later? **Copy log as JSON** puts the currently-filtered list on the clipboard.
 
 ## The Console tab
 

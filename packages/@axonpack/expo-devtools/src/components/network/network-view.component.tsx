@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   ScrollView,
@@ -22,7 +22,7 @@ import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
-import { exportNetworkLog } from '../../utils/network/export-network-log.util';
+import { copyNetworkLog } from '../../utils/network/copy-network-log.util';
 import { matchesQuery } from '../../utils/network/filter-entries.util';
 import { formatSource } from '../../utils/network/formatters.util';
 import {
@@ -143,6 +143,20 @@ export function NetworkView() {
     setMoreFiltersOpen((current) => !current);
   }
 
+  const [logCopied, setLogCopied] = useState(false);
+  const logCopiedTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(logCopiedTimeout.current), []);
+
+  // The share sheet used to be its own acknowledgement; a clipboard write is silent, so the button
+  // reports back itself. Same 1.2s flash as CopyIconButton, which is the copy affordance everywhere else.
+  async function copyLog() {
+    await copyNetworkLog(visibleLogs);
+    setLogCopied(true);
+    clearTimeout(logCopiedTimeout.current);
+    logCopiedTimeout.current = setTimeout(() => setLogCopied(false), 1200);
+  }
+
   // Held across renders, and LogRow hands the entry back rather than being closed over — so all 200 rows
   // share one callback and the row's `memo` actually holds. Rebuilt only when the row size changes.
   const renderRow = useCallback(
@@ -188,10 +202,10 @@ export function NetworkView() {
         <ToolbarDivider />
 
         <IconButton
-          name="file-download"
-          color={COLORS.textSecondary}
-          onPress={() => exportNetworkLog(visibleLogs)}
-          label="Export"
+          name={logCopied ? 'check' : 'content-copy'}
+          color={logCopied ? COLORS.success : COLORS.textSecondary}
+          onPress={copyLog}
+          label={logCopied ? 'Copied' : 'Copy log as JSON'}
         />
         <IconButton
           name="settings"
