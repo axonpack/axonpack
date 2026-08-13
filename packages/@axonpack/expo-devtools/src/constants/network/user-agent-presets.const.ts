@@ -20,11 +20,6 @@ export const USER_AGENT_PRESET_LABELS: Record<UserAgentPresetId, string> = {
   custom: 'Custom',
 };
 
-/**
- * A short curated list rather than an exhaustive device catalog — these cover the cases worth
- * testing against server-side UA sniffing. `default` (no override) and `custom` (free text)
- * intentionally have no fixed value.
- */
 export const USER_AGENT_PRESET_VALUES: Partial<Record<UserAgentPresetId, string>> = {
   'ios-safari':
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',

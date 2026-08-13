@@ -1,12 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState, useEffect, type ComponentType } from 'react';
-import { Animated, Dimensions, Modal, PanResponder, StyleSheet } from 'react-native';
+import { Animated, Dimensions, Modal, PanResponder } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevtoolsPanel } from './devtools-panel.component';
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { markFirstRender } from '../../services/performance/read-startup-timing.service';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 const DEFAULT_SIZE = 44;
 const EDGE_MARGIN = 16;
@@ -32,9 +32,13 @@ function getInitialPosition(size: number): { x: number; y: number } {
 export function DevtoolsOverlay({
   iconComponent: IconComponent,
   size = DEFAULT_SIZE,
-  color = COLORS.accent,
+  color,
   iconColor = '#ffffff',
 }: DevtoolsOverlayProps = {}) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
+
+  const fill = color ?? COLORS.accent;
   useEffect(markFirstRender, []);
 
   const [open, setOpen] = useState(false);
@@ -80,7 +84,7 @@ export function DevtoolsOverlay({
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: color,
+            backgroundColor: fill,
             transform: [{ translateX: pan.x }, { translateY: pan.y }],
           },
         ]}
@@ -104,7 +108,7 @@ export function DevtoolsOverlay({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   fab: {
     position: 'absolute',
     left: 0,
@@ -122,4 +126,4 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-});
+}));

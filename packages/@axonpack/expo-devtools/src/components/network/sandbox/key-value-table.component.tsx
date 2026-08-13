@@ -1,13 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { TextInput, TouchableOpacity, View } from 'react-native';
 
-import { sandboxStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useSandboxStyles } from './shared.styles';
 import { HIT_SLOP } from '../../../constants/metrics.const';
 import { ensureTrailingBlankRow, type KeyValueRow } from '../../../utils/network/sandbox.util';
+import { useThemeColors } from '../../../utils/themed-styles.util';
 
-/** Editable rows for headers/query params/cookies — always keeps one trailing blank row so
- * there's somewhere to start typing the next entry, Postman/Scalar-style. */
 export function KeyValueTable({
   rows,
   onChange,
@@ -15,6 +13,8 @@ export function KeyValueTable({
   rows: KeyValueRow[];
   onChange: (rows: KeyValueRow[]) => void;
 }) {
+  const sandboxStyles = useSandboxStyles();
+  const COLORS = useThemeColors();
   function updateRow(id: string, patch: Partial<KeyValueRow>) {
     onChange(
       ensureTrailingBlankRow(rows.map((row) => (row.id === id ? { ...row, ...patch } : row)))

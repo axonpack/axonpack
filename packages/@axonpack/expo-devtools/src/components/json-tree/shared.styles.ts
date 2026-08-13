@@ -1,11 +1,7 @@
-import { StyleSheet } from 'react-native';
-
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 
-export const treeStyles = StyleSheet.create({
-  // The row is the expand/collapse target, so it takes the dense floor rather than the full 44 — a tree
-  // is read far more than it is tapped, and 44dp per line would double the height of every payload.
+export const useTreeStyles = makeThemedStyles((COLORS) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -40,4 +36,4 @@ export const treeStyles = StyleSheet.create({
   nullValue: {
     color: COLORS.textSecondary,
   },
-});
+}));

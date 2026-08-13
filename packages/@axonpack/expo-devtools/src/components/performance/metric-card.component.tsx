@@ -1,26 +1,29 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 export function MetricCard({
   label,
   value,
-  valueColor = COLORS.textPrimary,
+  valueColor,
   hint,
   children,
 }: {
   label: string;
-  /** Omitted when the value is rendered by a child, e.g. an animated metric. */
+
   value?: string;
+
   valueColor?: string;
   hint?: string;
   children?: React.ReactNode;
 }) {
+  const COLORS = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={styles.card}>
       <Text style={styles.label}>{label}</Text>
       {value !== undefined ? (
-        <Text style={[styles.value, { color: valueColor }]}>{value}</Text>
+        <Text style={[styles.value, { color: valueColor ?? COLORS.textPrimary }]}>{value}</Text>
       ) : null}
       {children}
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
@@ -28,9 +31,7 @@ export function MetricCard({
   );
 }
 
-const styles = StyleSheet.create({
-  // Softer radius and more air than the surrounding chrome: these are the tab's headline figures, and a
-  // tile that reads as a panel row buries them.
+const useStyles = makeThemedStyles((COLORS) => ({
   card: {
     flex: 1,
     minWidth: 148,
@@ -52,11 +53,10 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 22,
     fontWeight: '700',
-    // Tabular figures so a changing number doesn't shuffle its own width twice a second.
     fontVariant: ['tabular-nums'],
   },
   hint: {
     fontSize: 11,
     color: COLORS.textSecondary,
   },
-});
+}));

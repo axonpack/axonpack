@@ -8,36 +8,21 @@ export type MemorySample = {
 
 export type LongTaskEntry = {
   id: string;
-  /**
-   * Wall clock, recorded on insert. `startTime` is an offset from the performance time origin, which
-   * on a device that has been up for days reads as "464670 s" and tells a reader nothing.
-   */
+
   timestamp: number;
   name: string;
-  /** ms the JS thread was blocked. */
+
   duration: number;
-  /** ms since the performance time origin. */
+
   startTime: number;
 };
 
-/**
- * All four fields come straight from `performance.rnStartupTiming` and any of them can be null — the
- * platform only fills them in if its native code calls `ReactMarker.setAppStartTime`.
- */
 export type StartupTiming = {
-  /**
-   * Platform-reported markers from `performance.rnStartupTiming`. Nullable individually, and absent
-   * entirely unless native calls `ReactMarker.setAppStartTime` — which many setups never do.
-   */
   startTime?: number;
   endTime?: number;
   initializeRuntimeStart?: number;
   executeJavaScriptBundleEntryPointStart?: number;
-  /**
-   * Measured by this package instead of reported by the platform, all epoch milliseconds so they are
-   * directly comparable. Present whenever the native module is installed, which is what makes the
-   * section useful on devices where the platform markers are all null.
-   */
+
   processStart?: number;
   nativeModuleInit?: number;
   jsBundleEval?: number;
@@ -48,48 +33,37 @@ export type StartupTiming = {
 export type UserTimingEntry = {
   id: string;
   timestamp: number;
-  /** Matches the spec's `entryType`: a mark is a point, a measure is a span. */
+
   kind: 'mark' | 'measure';
   name: string;
-  /** Offset from the performance time origin, as the spec defines `startTime`. */
+
   startTime: number;
-  /** Always 0 for a mark. A measure's duration may be negative — the spec allows it. */
+
   duration: number;
-  /** The spec's arbitrary `detail` payload, rendered as text when present. */
+
   detail?: string;
 };
 
 export type InteractionEntry = {
   id: string;
   timestamp: number;
-  /** The event type, e.g. `touchstart`, `click`. */
+
   name: string;
   startTime: number;
-  /** Event to next paint — what the user actually waited. */
+
   duration: number;
-  /** How long the handler itself held the JS thread, a subset of `duration`. */
+
   processingDuration: number;
 };
 
-/**
- * Entries the platform discarded before we saw them. A `buffered` observer replays what the user agent
- * kept, and the spec hands the overflow count to the callback — without surfacing it, "6 long tasks"
- * silently means "6 of however many happened".
- */
-/**
- * The app's real footprint and the device's RAM, from the native module. Distinct from `MemorySample`,
- * which is the JS heap — the two differ by a large factor and conflating them is the most common way to
- * misread a memory graph.
- */
 export type SystemMemorySample = {
   timestamp: number;
   appBytes?: number;
   totalBytes?: number;
-  /** Android reports system-wide free RAM; iOS reports what this process may still allocate. */
+
   availableToAppBytes?: number;
 };
 
-/** Android only: iOS disk-space APIs are required-reason, so they aren't read. */
 export type StorageInfo = {
   totalBytes?: number;
   freeBytes?: number;
@@ -100,14 +74,9 @@ export type PerformanceDropped = {
   interactions: number;
 };
 
-/**
- * Whether each collector actually attached. Each depends on what the native side implements, which
- * varies by platform and RN version — without this an empty list is ambiguous between "nothing
- * happened" and "this device never reports it", which are opposite conclusions.
- */
 export type PerformanceSupport = {
   memory: boolean;
-  /** The native module, which app memory and device RAM both need. */
+
   systemMemory: boolean;
   longTasks: boolean;
   interactions: boolean;
@@ -139,27 +108,18 @@ let longTasks: LongTaskEntry[] = [];
 let userTiming: UserTimingEntry[] = [];
 let interactions: InteractionEntry[] = [];
 let startup: StartupTiming | undefined;
-// Kept out of the snapshot on purpose: it changes twice a second, and anything reading the snapshot
-// re-renders with it. `getFps` is a primitive selector so only the one leaf that wants it subscribes.
+
 let fps: number | undefined;
 let uiFps: number | undefined;
-// Five minutes at the monitor's 500ms window. Held here rather than in the snapshot for the same reason
-// the scalars are: only the two frame-rate cards read it, and it changes twice a second.
+
 const FPS_HISTORY_SIZE = 600;
-/**
- * Frame rates are aggregated into fixed buckets as they arrive, rather than downsampled at render time.
- *
- * Downsampling divided the whole retained series into N groups, so one new sample moved every group
- * boundary and every plotted point could change value — the line was redrawn each tick instead of
- * scrolling. A bucket closed here is never recomputed, so a point keeps its value for as long as it is
- * on screen, and the plot advances by exactly one point every bucket.
- */
+
 const FPS_BUCKET_SAMPLES = 10;
 const FPS_BUCKETS = 60;
 
 type BucketState = {
   closed: number[];
-  /** The bucket still filling. Shown as a provisional last point so the right edge stays live. */
+
   open?: number;
   openCount: number;
 };
@@ -168,7 +128,6 @@ function emptyBuckets(): BucketState {
   return { closed: [], openCount: 0 };
 }
 
-/** Minimum, not average: a half-second stall is the signal, and averaging it away defeats the chart. */
 function pushBucketSample(state: BucketState, value: number): BucketState {
   const open = state.open === undefined ? value : Math.min(state.open, value);
   const openCount = state.openCount + 1;
@@ -182,42 +141,27 @@ function bucketSeries(state: BucketState): number[] {
 
 let fpsBucketState = emptyBuckets();
 let uiFpsBucketState = emptyBuckets();
-// Cached so `useSyncExternalStore` sees a stable reference between ticks that don't change the series.
+
 let fpsSeriesCache: number[] = [];
 let uiFpsSeriesCache: number[] = [];
-/** What one frame-rate sample represents; the monitor publishes on this window. */
+
 const FPS_WINDOW_HINT_MS = 500;
 let fpsHistory: number[] = [];
 let uiFpsHistory: number[] = [];
-// Monotonic within a session. The chart's scale is built from this rather than from the visible window, so
-// it never shrinks: an axis that grows and shrinks with the buffer makes the line jitter and makes two
-// moments incomparable. Reset only by the bin.
+
 let fpsPeak = 0;
-/**
- * A new high has to be seen this many times in a row before it becomes the chart's ceiling. One bad
- * sample used to raise the axis permanently and squash every real reading into the bottom of the plot.
- */
+
 const PEAK_CONFIRMATIONS = 3;
-/** Within this much of the candidate still counts as confirming it. */
+
 const PEAK_TOLERANCE = 0.95;
 
-/**
- * One run per thread, not one shared between them.
- *
- * Both threads report on the same 500ms tick, so `setFps` and `setUiFps` alternate. With a single run,
- * the JS reading — normally pinned at 60 while the main thread runs at 90 or 120 — landed on the
- * `value <= fpsPeak` branch every other call and wiped the main thread's half-built run. Its rising
- * readings could then never reach three in a row, so the ceiling stayed put and the line drew clamped
- * along the top edge. The confirmed peak itself is still shared: the two lines share one axis.
- */
 type PeakRun = { candidate: number; count: number };
 const jsPeakRun: PeakRun = { candidate: 0, count: 0 };
 const uiPeakRun: PeakRun = { candidate: 0, count: 0 };
-// Peaks for the memory charts, monotonic for the same reason as the frame rate's: an axis that shrinks as
-// samples age out makes the line jitter and makes two moments incomparable.
+
 let heapPeak = 0;
 let appMemoryPeak = 0;
-// Recorded by the sampler so a chart can say how far back its left edge reaches, instead of assuming.
+
 let sampleIntervalMs = 1000;
 let support: PerformanceSupport = {
   memory: false,
@@ -244,23 +188,10 @@ let snapshot: PerformanceSnapshot = {
 };
 let snapshotStale = false;
 
-/**
- * At most one notification per this interval. Without a ceiling the tab feeds itself: rendering the
- * list is work that can exceed the long-task threshold, which records another entry, which notifies,
- * which renders again. Recording our own render is indistinguishable from a real long task, so the
- * loop has to be broken by bounding the notification rate rather than by filtering entries.
- *
- * Leading edge fires immediately, so a single user action still lands at once; a burst coalesces into
- * one trailing notification.
- */
 const MIN_NOTIFY_INTERVAL_MS = 250;
 let lastNotifyAt = 0;
 let pendingNotify: ReturnType<typeof setTimeout> | undefined;
 
-/**
- * Raises the peak only once a new high has held. A run is broken by any sample that drops back below the
- * candidate, so a lone spike never lands — it needs company.
- */
 function observePeak(run: PeakRun, value: number) {
   if (value <= fpsPeak) {
     run.candidate = 0;
@@ -276,8 +207,6 @@ function observePeak(run: PeakRun, value: number) {
   }
 
   if (run.count >= PEAK_CONFIRMATIONS) {
-    // The candidate, not the highest of the run: the lowest confirmed value is the defensible one. A
-    // rising run therefore lifts the ceiling in steps, one confirmation behind the readings.
     fpsPeak = run.candidate;
     run.candidate = 0;
     run.count = 0;
@@ -289,10 +218,6 @@ function notify() {
   emitter.emit('change');
 }
 
-/**
- * `immediate` is for control changes — pausing, clearing, support flags. Those are rare, and a user
- * pressing record has to see it take effect at once; only the high-frequency data path is throttled.
- */
 function scheduleNotify(immediate = false) {
   if (immediate) {
     if (pendingNotify !== undefined) {
@@ -320,10 +245,6 @@ function scheduleNotify(immediate = false) {
   }
 }
 
-/**
- * Marks the snapshot stale rather than rebuilding it, so a change to snapshot data still reaches every
- * subscriber but the object is only allocated if someone reads it.
- */
 function publish(immediate = false) {
   snapshotStale = true;
   scheduleNotify(immediate);
@@ -334,15 +255,6 @@ let userTimingCounter = 0;
 let interactionCounter = 0;
 
 export const performanceStore = {
-  /**
-   * Rebuilt on demand, and only when something in it actually changed.
-   *
-   * `useSyncExternalStore` re-renders on identity, so eagerly rebuilding this on every notification made
-   * every consumer re-render twice a second for data that hadn't moved — the frame-rate readings live
-   * outside the snapshot, but publishing one used to replace it anyway. That cost most in
-   * `PerformanceView`, which owns the entry list: re-rendering it rebuilds the header's charts and every
-   * visible row.
-   */
   getSnapshot(): PerformanceSnapshot {
     if (snapshotStale) {
       snapshot = {
@@ -460,7 +372,6 @@ export const performanceStore = {
     }
     publish();
   },
-
   addLongTasks(entries: Omit<LongTaskEntry, 'id' | 'timestamp'>[]) {
     if (!enabled || paused || entries.length === 0) return;
     const now = Date.now();

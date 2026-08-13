@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   ScrollView,
@@ -17,12 +17,11 @@ import { LogRow } from './log-row.component';
 import { OverviewStrip, type TimeRange } from './overview-strip.component';
 import { ThrottleSelector } from './throttle-selector.component';
 import { UserAgentSelector } from './user-agent-selector.component';
-import { COLORS } from '../../constants/colors.const';
 import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
-import { copyNetworkLog } from '../../utils/network/copy-network-log.util';
+import { exportNetworkLog } from '../../utils/network/export-network-log.util';
 import { matchesQuery } from '../../utils/network/filter-entries.util';
 import { formatSource } from '../../utils/network/formatters.util';
 import {
@@ -31,6 +30,7 @@ import {
   RESOURCE_TYPES,
 } from '../../utils/network/resource-type.util';
 import type { ResourceType } from '../../utils/network/resource-type.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
@@ -44,6 +44,8 @@ function keyExtractor(entry: NetworkLogEntry): string {
 }
 
 export function NetworkView() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const { width } = useWindowDimensions();
   const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getSnapshot);
   const paused = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.isPaused);
@@ -83,8 +85,6 @@ export function NetworkView() {
     return Array.from(seen);
   }, [logs]);
 
-  // Excludes the overview's time-range filter so the histogram itself always shows the full
-  // timeline — selecting a bucket narrows the list below without the strip rescaling under you.
   const overviewLogs = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return logs.filter((entry) => {
@@ -143,22 +143,6 @@ export function NetworkView() {
     setMoreFiltersOpen((current) => !current);
   }
 
-  const [logCopied, setLogCopied] = useState(false);
-  const logCopiedTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => () => clearTimeout(logCopiedTimeout.current), []);
-
-  // The share sheet used to be its own acknowledgement; a clipboard write is silent, so the button
-  // reports back itself. Same 1.2s flash as CopyIconButton, which is the copy affordance everywhere else.
-  async function copyLog() {
-    await copyNetworkLog(visibleLogs);
-    setLogCopied(true);
-    clearTimeout(logCopiedTimeout.current);
-    logCopiedTimeout.current = setTimeout(() => setLogCopied(false), 1200);
-  }
-
-  // Held across renders, and LogRow hands the entry back rather than being closed over — so all 200 rows
-  // share one callback and the row's `memo` actually holds. Rebuilt only when the row size changes.
   const renderRow = useCallback(
     ({ item }: { item: NetworkLogEntry }) => (
       <LogRow entry={item} bigRows={bigRows} onPress={setSelectedEntry} />
@@ -202,10 +186,10 @@ export function NetworkView() {
         <ToolbarDivider />
 
         <IconButton
-          name={logCopied ? 'check' : 'content-copy'}
-          color={logCopied ? COLORS.success : COLORS.textSecondary}
-          onPress={copyLog}
-          label={logCopied ? 'Copied' : 'Copy log as JSON'}
+          name="file-download"
+          color={COLORS.textSecondary}
+          onPress={() => exportNetworkLog(visibleLogs)}
+          label="Export"
         />
         <IconButton
           name="settings"
@@ -392,7 +376,7 @@ export function NetworkView() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -408,8 +392,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.background,
   },
-  // The settings panel outgrew the screen once throttling and user-agent moved in — cap it so the
-  // request list underneath stays visible instead of being pushed off.
+
   scrollablePanel: {
     flexGrow: 0,
     maxHeight: 320,
@@ -424,8 +407,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 6,
   },
-  // Dense rather than full-size, so the glyph stays centred in the field instead of stretching it; the
-  // row's own 44dp height is what makes the slop above reachable on Android.
+
   searchClear: {
     width: TOUCH_TARGET.dense,
     height: TOUCH_TARGET.dense,
@@ -470,4 +452,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 40,
   },
-});
+}));

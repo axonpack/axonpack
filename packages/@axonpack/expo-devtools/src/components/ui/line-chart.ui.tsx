@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 
 const STROKE = 2;
 const DEFAULT_HEIGHT = 64;
 const AXIS_WIDTH = 26;
-/** Half the label's line height, so a tick sits centred on its own gridline rather than below it. */
+
 const LABEL_OFFSET = 6;
 
 export type LineSeries = {
@@ -15,18 +15,6 @@ export type LineSeries = {
   color: string;
 };
 
-/**
- * A multi-series line chart built from rotated Views — one per segment — so this needs no SVG or charting
- * dependency. `react-native-svg` would draw smoother joins, but it is a native dependency, and this
- * package earns its keep by installing without one.
- *
- * The domain is fixed by the caller, never derived from the data: a frame rate wobbling between 58 and 60
- * scaled to its own range reads as a catastrophe. Height therefore means absolute value.
- *
- * Two rules from the visualization guidance shape this: a single axis (both series here share a unit, so
- * they legitimately share one scale — this is not a dual-axis chart), and identity never carried by
- * colour alone, which is why the caller pairs it with direct labels.
- */
 export function LineChart({
   series,
   domainMax,
@@ -36,31 +24,17 @@ export function LineChart({
   pointCapacity,
 }: {
   series: LineSeries[];
-  /**
-   * The top of the scale, supplied rather than derived. Deriving it here from the visible window would
-   * make the axis rescale as data enters and leaves the buffer, so the line would jitter and two moments
-   * could not be compared. The caller owns that policy.
-   */
+
   domainMax: number;
   height?: number;
-  /**
-   * Left-to-right ticks for the horizontal axis, oldest first. Supplied rather than derived, because only
-   * the caller knows what the spacing means — a point here is a bucket of samples, not a clock reading.
-   */
+
   xLabels?: string[];
-  /** Formats the y-axis ticks. Defaults to a rounded number, which is right for counts, not bytes. */
+
   formatTick?: (value: number) => string;
-  /**
-   * How many points the plot is scaled for, as opposed to how many it currently has.
-   *
-   * Without it the horizontal step was derived from the current length, so every new point made the
-   * step smaller and shifted every point already drawn — the plot rescaled instead of scrolling. Fixing
-   * the step to the full capacity means a point keeps its position from the moment it appears until it
-   * leaves on the left, and a partly filled buffer draws against the right edge with empty space behind
-   * it rather than stretching to fill.
-   */
+
   pointCapacity?: number;
 }) {
+  const styles = useStyles();
   const [width, setWidth] = useState(0);
 
   const onLayout = (event: LayoutChangeEvent) => {
@@ -68,15 +42,13 @@ export function LineChart({
     if (next !== width) setWidth(next);
   };
 
-  // Three is enough to read a value off: the ceiling, the midpoint and the floor. More gridlines would
-  // compete with the data for attention without telling you anything the midpoint doesn't.
   const ticks = [domainMax, domainMax / 2, 0];
   const yOfTick = (value: number) => height - (value / domainMax) * height;
 
   return (
     <View>
       <View style={styles.row}>
-        {/* Labelled axis, so a line's height is a number rather than a vibe. */}
+        {}
         <View style={[styles.axis, { height }]}>
           {ticks.map((tick) => (
             <Text key={tick} style={[styles.tickLabel, { top: yOfTick(tick) - LABEL_OFFSET }]}>
@@ -111,6 +83,7 @@ export function LineChart({
 }
 
 function Axes({ xLabels }: { xLabels: string[] }) {
+  const styles = useStyles();
   return (
     <View style={styles.xAxis}>
       {xLabels.map((label, index) => (
@@ -119,7 +92,6 @@ function Axes({ xLabels }: { xLabels: string[] }) {
           style={[
             styles.tickLabel,
             styles.xTickLabel,
-            // The end labels hug their edges so they mark the actual span rather than floating inside it.
             index === 0 && styles.xTickFirst,
             index === xLabels.length - 1 && styles.xTickLast,
           ]}>
@@ -130,11 +102,6 @@ function Axes({ xLabels }: { xLabels: string[] }) {
   );
 }
 
-/**
- * Each segment is a 2px View rotated to the angle between two points. Rotation happens about the View's
- * centre, so the left edge is offset by half the difference between the segment's length and its
- * horizontal span — without that correction every segment drifts right of where it belongs.
- */
 function Segments({
   values,
   color,
@@ -150,15 +117,15 @@ function Segments({
   height: number;
   capacity: number;
 }) {
+  const styles = useStyles();
   if (values.length < 2) return null;
 
   const step = width / (capacity - 1);
-  // Anchored to the right edge: the newest point is always at `width`, so older points hold the pixel
-  // position they were drawn at and simply march left as new ones arrive.
+
   const xOf = (index: number) => width - (values.length - 1 - index) * step;
   const yOf = (value: number) => {
     const fraction = Math.min(1, Math.max(0, value / domainMax));
-    // Inverted: a higher value sits closer to the top.
+
     return height - fraction * height;
   };
 
@@ -193,7 +160,7 @@ function Segments({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -210,7 +177,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontVariant: ['tabular-nums'],
   },
-  // Offset by the y-axis gutter so the horizontal ticks line up with the plot, not with the labels.
   xAxis: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -233,7 +199,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  // Recessive on purpose: a reference the eye can find, not a feature competing with the lines.
   gridline: {
     position: 'absolute',
     left: 0,
@@ -244,7 +209,6 @@ const styles = StyleSheet.create({
   segment: {
     position: 'absolute',
     height: STROKE,
-    // Rounded ends so joins read as a continuous stroke rather than a chain of tiles.
     borderRadius: STROKE / 2,
   },
-});
+}));

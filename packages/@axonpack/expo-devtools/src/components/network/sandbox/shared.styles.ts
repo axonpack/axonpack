@@ -1,9 +1,9 @@
 import { StyleSheet } from 'react-native';
 
-import { COLORS } from '../../../constants/colors.const';
 import { TOUCH_TARGET } from '../../../constants/metrics.const';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 
-export const sandboxStyles = StyleSheet.create({
+export const useSandboxStyles = makeThemedStyles((COLORS) => ({
   section: {
     marginBottom: 4,
   },
@@ -16,7 +16,6 @@ export const sandboxStyles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
-  // Bordered/tinted box so a key or value field visibly reads as editable, not static text.
   fieldBox: {
     fontSize: 13,
     minHeight: TOUCH_TARGET.dense,
@@ -28,8 +27,7 @@ export const sandboxStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  // The checkbox and the remove button: dense boxes inside a 44dp row, so both are square and centred
-  // rather than being exactly as big as their glyph.
+
   rowAction: {
     width: TOUCH_TARGET.dense,
     height: TOUCH_TARGET.dense,
@@ -58,4 +56,4 @@ export const sandboxStyles = StyleSheet.create({
     fontStyle: 'italic',
     paddingVertical: 8,
   },
-});
+}));

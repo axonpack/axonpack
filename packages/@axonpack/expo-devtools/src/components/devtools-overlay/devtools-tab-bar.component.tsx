@@ -1,8 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, TouchableOpacity } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
 export type DevtoolsTab = 'network' | 'console' | 'performance';
@@ -20,15 +20,12 @@ export function DevtoolsTabBar({
 }: {
   tab: DevtoolsTab;
   onChange: (tab: DevtoolsTab) => void;
-  /** Count shown on a tab that isn't currently open — how an error logged elsewhere gets noticed. */
+
   badges?: Partial<Record<DevtoolsTab, number>>;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
-    /**
-     * Scrolls rather than shrinks. It shares the header row with the app icon and the close button now,
-     * so on a narrow screen — or once a tab carries a badge — the labels would otherwise be squeezed or
-     * clipped. `flexGrow` on the content keeps three tabs left-aligned instead of stretched.
-     */
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -58,9 +55,7 @@ export function DevtoolsTabBar({
   );
 }
 
-const styles = StyleSheet.create({
-  // No background or bottom border of its own any more: the header row it sits in owns both, and a second
-  // border under the tabs read as two stacked bars.
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     flex: 1,
   },
@@ -100,4 +95,4 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     overflow: 'hidden',
   },
-});
+}));

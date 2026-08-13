@@ -1,20 +1,19 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 
 export type ContextMenuItem = {
   label: string;
   onPress: () => void;
-  /** Rendered before the label, e.g. SparkleIcon to flag a novel/featured item. */
+
   icon?: ReactNode;
 };
 
 const MENU_WIDTH = 230;
 const EDGE_MARGIN = 8;
 
-/** A long-press action menu — RN has no right-click, so this is the mobile equivalent. */
 export function ContextMenu({
   anchor,
   items,
@@ -24,6 +23,7 @@ export function ContextMenu({
   items: ContextMenuItem[];
   onClose: () => void;
 }) {
+  const styles = useStyles();
   const { width, height } = useWindowDimensions();
 
   if (!anchor) return null;
@@ -55,7 +55,7 @@ export function ContextMenu({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   menu: {
     position: 'absolute',
     width: MENU_WIDTH,
@@ -84,4 +84,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textPrimary,
   },
-});
+}));

@@ -50,12 +50,10 @@ describe('user timing, per W3C User Timing', () => {
     expect(measures()[0]).toMatchObject({ startTime: 200, duration: 100 });
   });
 
-  /** The spec makes this a TypeError, because the three values can contradict each other. */
   it('rejects start, end and duration together', () => {
     expect(() => recordMeasure('bad', { start: 1, end: 2, duration: 3 })).toThrow(TypeError);
   });
 
-  /** The spec permits it, and silently clamping to 0 would hide a mis-ordered pair of marks. */
   it('keeps a negative duration rather than clamping it', () => {
     recordMeasure('reversed', { start: 500, end: 200 });
     expect(measures()[0]?.duration).toBe(-300);

@@ -28,7 +28,7 @@ to reproduce the moment you reach for a menu. This puts the tools where the bug 
 - **Pretend the network is bad** — switch to Slow 3G or go offline without touching your Wi-Fi.
 - **See what the app is costing** — JS heap, frame rate, and the moments the app froze long enough to
   notice.
-- **Make it look like your app** — the panel header carries your own icon.
+- **Seven themes, or your own** — Dracula, Nord, Monokai, One Dark and Solarized alongside light and dark, switchable from the panel header.
 - **Safe to ship** — nothing is captured until you switch it on, so leaving the code in a production
   build costs you nothing.
 
@@ -181,7 +181,12 @@ snippet.
 query parameters, headers, cookies, auth, or the body, then Send and watch the real response come
 back. Handy for "does this break if the token is missing?" without touching your code.
 
-Prefer to look at it later? **Copy log as JSON** puts the currently-filtered list on the clipboard.
+Prefer to look at it later? **Export** opens the OS share sheet with the currently-filtered list as JSON,
+named `network-log-<timestamp>.json` — mail it to yourself, drop it in Slack, paste it into a bug report.
+
+It uses React Native's own `Share` and nothing else, so there is no filesystem involved and no extra
+dependency: on iOS the JSON also rides along as a `data:` URL, which is what lets the sheet offer Files
+and Mail an attachment; on Android, where `Share` carries text only, you get the JSON itself.
 
 ## The Console tab
 
@@ -239,24 +244,43 @@ where the file list above isn't available.
 The prompt is **off in release builds** by default, since it runs whatever is typed into it. Turn it
 on deliberately with `console: { repl: true }` if you want it there.
 
-## Showing your own app in the header
+## Themes
 
-The header is one row: your app's icon, the tabs, and the close button. By default the icon is this
-package's mark — point it at your own instead:
+The header is one row: the tabs, a palette button, then close. The button lists every theme and switches
+the panel immediately. Seven ship with it:
+
+| Id                |                                                       |
+| ----------------- | ----------------------------------------------------- |
+| `light`           | Chrome DevTools' light Network tab — the default      |
+| `dark`            | Chrome DevTools' own dark theme                       |
+| `dracula`         | [Dracula](https://draculatheme.com)                   |
+| `nord`            | [Nord](https://www.nordtheme.com)                     |
+| `monokai`         | Monokai, as in TextMate and Sublime                   |
+| `one-dark`        | One Dark, from Atom                                   |
+| `solarized-light` | Solarized Light — the second of the two light options |
+
+Each is the project's published colours mapped onto this panel's tokens, not an approximation.
+
+Pick which one it opens with, and add your own:
 
 ```ts
 export const devtools = createDevtoolsClient({
-  icon: require('./assets/icon.png'),
+  theme: 'midnight',
+  themes: {
+    midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
+  },
 });
 ```
 
-It has to be given explicitly. An app's installed launcher icon isn't reachable from JavaScript on
-iOS or Android, and the `icon` in your Expo config is a build-time path rather than something `Image`
-can load in a standalone build — so there's nothing dependable to detect. Passing the same
-`require(...)` your config uses is the one approach that works in every build.
+A theme names a `base` to inherit from — any of the seven — and overrides only the tokens it cares about,
+so a one-colour change is a one-line entry rather than a copy of all 21 that rots whenever a token is
+added. Reuse a built-in's id as your own name and you replace it. A `theme` naming something that was never registered is
+ignored rather than leaving the panel unstyled.
 
-There's no app name option. The tabs live in that row now, and a title competing with three of them for
-a phone's width left too little room for either.
+The choice lives in memory for the session, like the tab you last had open — persisting it would mean
+taking a storage dependency for a devtools colour scheme.
+
+The full token list is the `Palette` type, exported from the package root.
 
 ## The Performance tab
 
@@ -400,22 +424,23 @@ stylesheets and scripts the browser loads by itself still go out at full speed.
 `createDevtoolsClient(config?)` — every option is optional, and the defaults are what most apps
 want.
 
-| Option                               | Type                      | Default     | Description                                                                           |
-| ------------------------------------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `icon`                               | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                 |
-| `webviewSources`                     | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs. |
-| `network.includeFetch`               | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                   |
-| `network.includeXmlHttpRequest`      | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries.  |
-| `network.disabledByDefault`          | `boolean`                 | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.  |
-| `console.capture`                    | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.       |
-| `console.repl`                       | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                     |
-| `console.context`                    | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
-| `console.disabledByDefault`          | `boolean`                 | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.        |
-| `performance.sampleIntervalMs`       | `number`                  | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.  |
-| `performance.longTaskThresholdMs`    | `number`                  | `50`        | Only report tasks that blocked the JS thread at least this long.                      |
-| `performance.interactionThresholdMs` | `number`                  | `100`       | Only report interactions that took at least this long, event to next paint.           |
-| `performance.historySize`            | `number`                  | `120`       | How many heap samples and long tasks are kept.                                        |
-| `performance.disabledByDefault`      | `boolean`                 | `false`     | Open the Performance tab not recording.                                               |
+| Option                               | Type                          | Default     | Description                                                                           |
+| ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `theme`                              | `string`                      | `'light'`   | Which theme the panel opens with — a built-in or one of yours.                        |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
+| `webviewSources`                     | `string[]`                    | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs. |
+| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                   |
+| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries.  |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.  |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.       |
+| `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                     |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.        |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.  |
+| `performance.longTaskThresholdMs`    | `number`                      | `50`        | Only report tasks that blocked the JS thread at least this long.                      |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only report interactions that took at least this long, event to next paint.           |
+| `performance.historySize`            | `number`                      | `120`       | How many heap samples and long tasks are kept.                                        |
+| `performance.disabledByDefault`      | `boolean`                     | `false`     | Open the Performance tab not recording.                                               |
 
 ## Leaving it in production
 

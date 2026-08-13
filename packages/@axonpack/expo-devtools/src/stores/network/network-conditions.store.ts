@@ -11,19 +11,13 @@ import {
   type UserAgentPresetId,
 } from '../../constants/network/user-agent-presets.const';
 
-/**
- * What the patches actually act on — the selected presets flattened into their effective values.
- * Also stamped onto each log entry, so a request's detail panel reports the conditions that were
- * active when it ran rather than whatever is selected now.
- */
 export type ResolvedNetworkConditions = {
   offline: boolean;
-  /** `null` when throttling is off. */
+
   throttle: ThrottleProfile | null;
-  /** `null` when no override is active. */
+
   userAgent: string | null;
-  // The selected preset ids come along so the detail panel can name what was active ("Slow 3G")
-  // instead of only showing the raw numbers it resolved to.
+
   throttleId: ThrottlePresetId;
   userAgentId: UserAgentPresetId;
 };
@@ -61,9 +55,6 @@ function buildResolved(): ResolvedNetworkConditions {
   };
 }
 
-// Rebuilt only when a setter actually changes something, never per request. `resolve()` is read on
-// every single fetch/XHR call, and it doubles as the `useSyncExternalStore` snapshot — both of
-// which need a stable reference rather than a freshly allocated object each time.
 let resolved: ResolvedNetworkConditions = buildResolved();
 
 function commit() {

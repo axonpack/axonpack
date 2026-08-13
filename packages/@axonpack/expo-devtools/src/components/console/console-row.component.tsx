@@ -3,15 +3,17 @@ import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ConsoleArgCell } from './console-arg-cell.component';
-import { COLORS } from '../../constants/colors.const';
-import { CONSOLE_LEVEL_VISUALS } from '../../constants/console/console-levels.const';
+import { consoleLevelVisuals } from '../../constants/console/console-levels.const';
 import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
 import { consolePromptStore } from '../../stores/console/console-prompt.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
 function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
-  const visual = CONSOLE_LEVEL_VISUALS[entry.level];
+  const styles = useStyles();
+  const COLORS = useThemeColors();
+  const visual = consoleLevelVisuals(COLORS)[entry.level];
   const recallable = entry.level === 'input';
 
   const content = (
@@ -66,7 +68,7 @@ export const ConsoleRow = memo(
     prev.entry.source === next.entry.source
 );
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -97,4 +99,4 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: COLORS.textSecondary,
   },
-});
+}));

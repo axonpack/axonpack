@@ -20,7 +20,6 @@ export function ResourcesSection() {
 }
 
 const styles = StyleSheet.create({
-  // Two per row at typical widths, wrapping to one on narrow screens — the cards carry a minWidth.
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

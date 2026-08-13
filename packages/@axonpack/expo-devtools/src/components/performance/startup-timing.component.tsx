@@ -1,11 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import type { StartupTiming } from '../../stores/performance/performance.store';
 import { diffMs, formatMs } from '../../utils/performance/format-metrics.util';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 import { CollapsibleSection } from '../ui/collapsible-section.ui';
 
 function Row({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -14,20 +15,8 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-/**
- * Two independent sources, shown in order of usefulness.
- *
- * The platform's own markers (`performance.rnStartupTiming`) only exist if native code calls
- * `ReactMarker.setAppStartTime`, and on many setups every field is null — which made this section four
- * dashes and a paragraph explaining them. The measured phases come from this package's own native
- * module instead, so they are present whenever it is installed.
- *
- * They are labelled as what they are. "Native startup" ends when *our* module is constructed, which
- * depends on autolinking order, and "Bundle eval" ends when *our* JS is evaluated, which depends on
- * import order. Neither is a platform milestone, and pretending otherwise would be the same dishonesty
- * as showing a fabricated waterfall.
- */
 export function StartupTimingSection({ startup }: { startup?: StartupTiming }) {
+  const styles = useStyles();
   const measured =
     startup?.processStart !== undefined && startup.firstRender !== undefined ? startup : undefined;
 
@@ -40,7 +29,6 @@ export function StartupTimingSection({ startup }: { startup?: StartupTiming }) {
       ? startup
       : undefined;
 
-  // Nothing to say at all: no native module and no platform markers.
   if (measured === undefined && platform === undefined) return null;
 
   return (
@@ -108,7 +96,7 @@ export function StartupTimingSection({ startup }: { startup?: StartupTiming }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   body: {
     gap: 4,
     paddingHorizontal: 10,
@@ -142,4 +130,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
   },
-});
+}));

@@ -1,16 +1,11 @@
 import { useRef, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
+import { TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
 import { RecordToggleIcon } from './record-toggle-icon.ui';
 import { Tooltip } from './tooltip.ui';
-import { COLORS } from '../../constants/colors.const';
 import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
-/**
- * Start/stop capture, shared by the Network and Console tabs. Same long-press tooltip behaviour as
- * `IconButton`, but it can't reuse that component — the glyph is `RecordToggleIcon`, not a
- * MaterialIcon.
- */
 export function RecordToggleButton({
   paused,
   onToggle,
@@ -18,6 +13,8 @@ export function RecordToggleButton({
   paused: boolean;
   onToggle: () => void;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number } | null>(null);
   const suppressNextPress = useRef(false);
 
@@ -55,8 +52,7 @@ export function RecordToggleButton({
   );
 }
 
-const styles = StyleSheet.create({
-  // Matches `IconButton` exactly, so the toolbar's first two buttons are the same size as the rest.
+const useStyles = makeThemedStyles((COLORS) => ({
   touchTarget: {
     minWidth: TOUCH_TARGET.compact,
     minHeight: TOUCH_TARGET.min,
@@ -70,4 +66,4 @@ const styles = StyleSheet.create({
   glyphActive: {
     backgroundColor: COLORS.sectionTint,
   },
-});
+}));

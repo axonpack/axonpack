@@ -1,8 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 export function SettingRow({
   label,
@@ -13,6 +13,8 @@ export function SettingRow({
   value: boolean;
   onValueChange: (next: boolean) => void;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
     <TouchableOpacity style={styles.settingRow} onPress={() => onValueChange(!value)}>
       <MaterialIcons
@@ -25,7 +27,7 @@ export function SettingRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -37,4 +39,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textPrimary,
   },
-});
+}));

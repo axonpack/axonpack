@@ -1,8 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Pressable, Text, View } from 'react-native';
 
-import { treeStyles } from './shared.styles';
-import { COLORS } from '../../constants/colors.const';
+import { useTreeStyles } from './shared.styles';
 import {
   ARRAY_CHUNK_SIZE,
   buildPreview,
@@ -11,6 +10,7 @@ import {
   isPlainObject,
   type JsonValue,
 } from '../../utils/json-tree.util';
+import { useThemeColors } from '../../utils/themed-styles.util';
 
 const INDENT_PER_DEPTH = 14;
 
@@ -33,6 +33,8 @@ export function JsonNode({
   onToggle: (path: string) => void;
   onLongPress: (path: string, value: JsonValue, x: number, y: number) => void;
 }) {
+  const treeStyles = useTreeStyles();
+  const COLORS = useThemeColors();
   const expandable = isExpandable(value);
   const expanded = expandable && expandedPaths.has(path);
 
@@ -74,6 +76,7 @@ export function JsonNode({
 }
 
 function ValuePreview({ value }: { value: JsonValue }) {
+  const treeStyles = useTreeStyles();
   if (isExpandable(value)) {
     return <Text style={treeStyles.punctuation}>{buildPreview(value)}</Text>;
   }
@@ -142,8 +145,6 @@ function JsonChildren({
   }
 
   if (isPlainObject(value)) {
-    // Chrome alphabetizes the expanded property list, even though the inline preview above
-    // keeps the object's original key order.
     const sortedEntries = Object.entries(value).sort(([a], [b]) => a.localeCompare(b));
     return (
       <>

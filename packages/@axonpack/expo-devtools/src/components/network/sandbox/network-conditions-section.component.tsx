@@ -1,11 +1,12 @@
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 
-import { COLORS } from '../../../constants/colors.const';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ThrottleSelector } from '../throttle-selector.component';
 import { UserAgentSelector } from '../user-agent-selector.component';
 
 export function NetworkConditionsSection() {
+  const styles = useStyles();
   return (
     <CollapsibleSection title="Network Conditions">
       <Text style={styles.note}>
@@ -18,10 +19,10 @@ export function NetworkConditionsSection() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   note: {
     fontSize: 11,
     color: COLORS.textSecondary,
     marginTop: 8,
   },
-});
+}));

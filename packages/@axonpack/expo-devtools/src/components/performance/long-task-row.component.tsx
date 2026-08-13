@@ -1,27 +1,31 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import type { LongTaskEntry } from '../../stores/performance/performance.store';
 import { formatMs, getLongTaskColor } from '../../utils/performance/format-metrics.util';
 import { formatLongTaskName } from '../../utils/performance/long-task-name.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 function LongTaskRowBase({ entry }: { entry: LongTaskEntry }) {
+  const COLORS = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={styles.row}>
-      <View style={[styles.marker, { backgroundColor: getLongTaskColor(entry.duration) }]} />
+      <View
+        style={[styles.marker, { backgroundColor: getLongTaskColor(entry.duration, COLORS) }]}
+      />
       <Text style={styles.name} numberOfLines={1}>
         {formatLongTaskName(entry.name)}
       </Text>
       <Text style={styles.at}>{new Date(entry.timestamp).toLocaleTimeString()}</Text>
-      <Text style={[styles.duration, { color: getLongTaskColor(entry.duration) }]}>
+      <Text style={[styles.duration, { color: getLongTaskColor(entry.duration, COLORS) }]}>
         {formatMs(entry.duration)}
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -51,12 +55,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
-});
+}));
 
-/**
- * Re-renders only when the row is a different entry.
- *
- * `entry` is this component's only prop, and the store never patches a recorded entry — it prepends and
- * trims. So any field that could differ belongs to a different entry, which the id already tells us.
- */
 export const LongTaskRow = memo(LongTaskRowBase, (prev, next) => prev.entry.id === next.entry.id);

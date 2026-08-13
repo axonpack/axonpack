@@ -25,19 +25,8 @@ type ObserverHost = {
   };
 };
 
-/**
- * Event Timing clamps the threshold to `max(16, value)`, so anything lower is silently raised. Clamped
- * here too, so the configured number means what it says.
- */
 const MIN_DURATION_THRESHOLD_MS = 16;
 
-/**
- * How long an interaction took from the user's point of view. `duration` is event-to-next-paint —
- * the wait they actually felt — while `processingStart`/`processingEnd` bound the handler itself, so
- * the gap between the two says whether the delay was your handler or the queue in front of it.
- *
- * `duration` is rounded to the nearest 8ms by spec, so these numbers are coarser than they look.
- */
 export function observeEventTiming(thresholdMs: number) {
   const Observer = (globalThis as unknown as { PerformanceObserver?: ObserverHost })
     .PerformanceObserver;
@@ -77,9 +66,7 @@ export function observeEventTiming(thresholdMs: number) {
     return () => {
       try {
         record(observer.takeRecords());
-      } catch {
-        // takeRecords is optional on older runtimes.
-      }
+      } catch {}
       observer.disconnect();
     };
   } catch {

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import {
   blockJsThread,
@@ -10,22 +9,16 @@ import {
   crashMainThread,
   isMainThreadLimiterAvailable,
 } from '../../services/performance/limiter.service';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { Chip } from '../ui/chip.ui';
 
 type Target = 'js' | 'main';
 
 const PRESETS = [100, 250, 500, 1000, 3000];
 
-/**
- * Deliberately makes the app worse, so the rest of the tab can be trusted. A profiler that has never
- * been pointed at a known-bad case is a profiler nobody has calibrated.
- *
- * The two targets are not interchangeable, and the difference is the point: blocking the JS thread
- * shows up as a long task and drops the FPS reading, while blocking the main thread freezes what you
- * see and touch while the JS numbers stay perfectly healthy — which is exactly the blind spot this tab
- * warns about on the FPS card.
- */
 export function LimiterPanel() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [target, setTarget] = useState<Target>('js');
   const [durationMs, setDurationMs] = useState(250);
   const [customText, setCustomText] = useState('');
@@ -40,7 +33,6 @@ export function LimiterPanel() {
   };
 
   const crash = () => {
-    // Two taps, never one: this ends the process, and it sits next to buttons that merely stall it.
     if (!armed) {
       setArmed(true);
       return;
@@ -126,9 +118,7 @@ export function LimiterPanel() {
   );
 }
 
-const styles = StyleSheet.create({
-  // Same shape as the network view's settings panel: it expands in place under the toolbar rather than
-  // floating over the readings it is meant to move.
+const useStyles = makeThemedStyles((COLORS) => ({
   panel: {
     gap: 6,
     padding: 12,
@@ -149,7 +139,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  // Matches the canonical input row from INPUT_STYLES.md: border on the row, bare TextInput inside.
   customRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -209,4 +198,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 6,
   },
-});
+}));

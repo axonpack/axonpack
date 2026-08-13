@@ -58,10 +58,6 @@ describe('observeLongTasks across pause and resume', () => {
     expect(performanceStore.getSnapshot().longTasks).toHaveLength(1);
   });
 
-  /**
-   * The reported bug: starting paused (`performance.disabledByDefault`) and then pressing record
-   * left the list permanently empty, while starting unpaused worked.
-   */
   it('records entries after starting paused and then resuming', () => {
     performanceStore.setPaused(true);
     observeLongTasks(50);
@@ -81,10 +77,6 @@ describe('observeLongTasks across pause and resume', () => {
     expect(performanceStore.getSnapshot().support.longTasks).toBe(true);
   });
 
-  /**
-   * Long Tasks fixes its threshold at 50ms and ignores `durationThreshold`, so filtering has to happen
-   * on our side or a higher setting silently does nothing.
-   */
   it('does not pass durationThreshold, which the spec ignores for longtask', () => {
     observeLongTasks(50);
     expect(observeCalls[0]).toEqual({ type: 'longtask', buffered: true });

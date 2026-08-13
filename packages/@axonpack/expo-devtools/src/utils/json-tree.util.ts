@@ -13,7 +13,6 @@ export function isExpandable(
   return Array.isArray(value) || isPlainObject(value);
 }
 
-/** Chrome groups long arrays into ranges (e.g. `[0 … 99]`) instead of one giant flat list. */
 export function chunkArrayRange(length: number): [number, number][] {
   const chunks: [number, number][] = [];
   for (let start = 0; start < length; start += ARRAY_CHUNK_SIZE) {
@@ -22,7 +21,6 @@ export function chunkArrayRange(length: number): [number, number][] {
   return chunks;
 }
 
-// Chrome shows this many entries inline before truncating with `,…` — matches its own preview.
 const PREVIEW_MAX_ENTRIES = 4;
 const PREVIEW_MAX_LENGTH = 80;
 
@@ -33,11 +31,6 @@ function previewOf(value: JsonValue): string {
   return String(value);
 }
 
-/**
- * Chrome's inline object/array preview — shown on the header line whether collapsed or
- * expanded, in the object's original (unsorted) key order, truncated to a handful of entries.
- * Nested objects/arrays only get a shallow `{…}`/`[…]` placeholder, not a further-nested preview.
- */
 export function buildPreview(value: JsonValue[] | { [key: string]: JsonValue }): string {
   const isArray = Array.isArray(value);
   let shown;
@@ -56,7 +49,6 @@ export function buildPreview(value: JsonValue[] | { [key: string]: JsonValue }):
     : `{${joinedText.slice(0, PREVIEW_MAX_LENGTH)}${suffix}}`;
 }
 
-/** Every descendant path under `path` that's itself expandable (object/array/chunk group). */
 export function collectExpandablePaths(path: string, value: JsonValue): string[] {
   if (!isExpandable(value)) return [];
   const paths = [path];

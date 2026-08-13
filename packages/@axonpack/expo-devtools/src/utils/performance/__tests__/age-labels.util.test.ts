@@ -9,7 +9,6 @@ describe('ageAxisLabels', () => {
     expect(ageAxisLabels(30, 1000)).toEqual(['30s ago', '15s', 'now']);
   });
 
-  /** A fixed label would claim five minutes while only seconds of data exist. */
   it('describes the samples held, not the buffer capacity', () => {
     expect(ageAxisLabels(20, 500)[0]).toBe('10s ago');
   });

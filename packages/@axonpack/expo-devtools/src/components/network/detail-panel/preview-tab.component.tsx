@@ -1,11 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 
-import { rowStyles } from './shared.styles';
+import { useRowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 import { ResponseBodyPreview } from '../response-body-preview.component';
 
 export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
+  const rowStyles = useRowStyles();
   return (
     <View style={rowStyles.section}>
       {entry.responseBody && (

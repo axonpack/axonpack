@@ -1,12 +1,6 @@
 import { networkLogStore } from '../../../stores/network/network-log.store';
 import { patchXHR } from '../patch-xhr.service';
 
-/**
- * Mimics React Native's XMLHttpRequest, where `responseText` is a *throwing getter* for any
- * `responseType` other than '' or 'text'. A `typeof` check can't guard it — the throw happens during
- * property access — which is the bug this file exists to keep fixed. RN's own fetch polyfill sets
- * `responseType = 'blob'` on every request, so an unguarded read broke every fetch call.
- */
 class FakeXHR {
   static readonly DONE = 4;
   readyState = FakeXHR.DONE;
@@ -40,7 +34,6 @@ class FakeXHR {
   }
   abort() {}
 
-  /** Drives the terminal transition the patch listens for. */
   finish() {
     for (const listener of this.#listeners) listener.call(this);
   }
@@ -60,7 +53,7 @@ describe('patchXHR response body reads', () => {
   const original = globalThis.XMLHttpRequest;
 
   beforeAll(() => {
-    // @ts-expect-error — deliberately swapping in a stand-in for the real class.
+    // @ts-expect-error deliberately swapping in a stand-in for the real class
     globalThis.XMLHttpRequest = FakeXHR;
     patchXHR();
     networkLogStore.setEnabled(true);

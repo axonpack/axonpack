@@ -2,11 +2,6 @@ import { requireOptionalNativeModule } from 'expo';
 
 import { performanceStore, type StartupTiming } from '../../stores/performance/performance.store';
 
-/**
- * Captured at module evaluation, i.e. while the JS bundle is still being executed. Its accuracy depends
- * on where this package sits in the import graph — it is "when devtools loaded", not "when the bundle
- * started" — which is why the UI labels the phase rather than claiming a platform milestone.
- */
 const JS_BUNDLE_EVAL_MS = Date.now();
 
 type StartupNativeModule = {
@@ -26,7 +21,6 @@ type PlatformStartupHost = {
 let initCalledMs: number | undefined;
 let firstRenderMs: number | undefined;
 
-/** The platform getter was renamed across RN versions, so both names are probed. */
 function readPlatformMarkers(): Partial<StartupTiming> {
   const host = globalThis.performance as unknown as PlatformStartupHost | undefined;
   if (!host) return {};
@@ -41,7 +35,6 @@ function readPlatformMarkers(): Partial<StartupTiming> {
         raw.executeJavaScriptBundleEntryPointStart ?? undefined,
     };
   } catch {
-    // No native Performance module at all.
     return {};
   }
 }
@@ -74,11 +67,6 @@ export function readStartupTiming() {
   publish();
 }
 
-/**
- * Called from `DevtoolsOverlay`'s first mount. It's the closest thing this package can observe to the
- * app's first render — the overlay mounts with the app's tree — and it's the only endpoint that makes
- * the total a duration a user would recognise.
- */
 export function markFirstRender() {
   if (firstRenderMs !== undefined) return;
   firstRenderMs = Date.now();

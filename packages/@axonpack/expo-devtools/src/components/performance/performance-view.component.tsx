@@ -15,7 +15,6 @@ import { LongTaskRow } from './long-task-row.component';
 import { ResourcesSection } from './resources-section.component';
 import { StartupTimingSection } from './startup-timing.component';
 import { UserTimingRow } from './user-timing-row.component';
-import { COLORS } from '../../constants/colors.const';
 import { startFpsMonitor } from '../../services/performance/fps-monitor.service';
 import {
   performanceStore,
@@ -24,6 +23,7 @@ import {
   type UserTimingEntry,
 } from '../../stores/performance/performance.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
@@ -36,7 +36,6 @@ type ListRow =
   | { key: 'userTiming'; entry: UserTimingEntry }
   | { key: 'interactions'; entry: InteractionEntry };
 
-/** Empty means two opposite things — nothing happened, or this device never reports it. */
 const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = {
   longTasks: {
     supported: 'Nothing has blocked the JS thread yet.',
@@ -51,9 +50,7 @@ const EMPTY_TEXT: Record<ListKey, { supported: string; unsupported: string }> = 
     unsupported: 'This device doesn&apos;t report interaction timing.',
   },
 };
-// Module scope, not inline on the FlatList: the same reason the console tab does it — a fresh
-// `renderItem` identity on every store emit defeats the rows' own memoization, and all three of these
-// rows are memoized.
+
 function keyExtractor(row: ListRow): string {
   return row.entry.id;
 }
@@ -65,6 +62,8 @@ function renderRow({ item }: ListRenderItemInfo<ListRow>) {
 }
 
 export function PerformanceView() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const { longTasks, userTiming, interactions, startup, support, dropped } = useSyncExternalStore(
     performanceStore.subscribe,
     performanceStore.getSnapshot
@@ -87,9 +86,6 @@ export function PerformanceView() {
   const droppedForList =
     list === 'longTasks' ? dropped.longTasks : list === 'interactions' ? dropped.interactions : 0;
 
-  // Paused *and* nothing collected yet: the tab has nothing to show and no history to preserve, so it
-  // explains itself instead of presenting a screen of dashes. Paused with data still shows the data —
-  // pausing freezes the readings, it doesn't discard them.
   const neverRecorded =
     longTasks.length === 0 && interactions.length === 0 && userTiming.length === 0;
 
@@ -125,10 +121,9 @@ export function PerformanceView() {
       {paused && neverRecorded ? (
         <ScrollView>
           <IdleState />
-          {/* Startup is measured once at launch, before recording could have been switched on, so it is
-              the one section worth showing even here. */}
+          {}
           <StartupTimingSection startup={startup} />
-          {/* Same as the other tabs: the last row otherwise sits under the home indicator. */}
+          {}
           <InsetPadding edge="bottom" />
         </ScrollView>
       ) : (
@@ -170,8 +165,7 @@ export function PerformanceView() {
                   Times are rounded to 8 ms, and anything under 16 ms isn&apos;t reported.
                 </Text>
               ) : null}
-              {/* The platform discards entries once its own buffer overflows, and only tells us the
-                count — so this is the difference between "6 happened" and "6 of 40 survived". */}
+              {}
               {droppedForList > 0 ? (
                 <Text style={styles.listNote}>
                   {droppedForList} more happened before this list started keeping them.
@@ -191,7 +185,7 @@ export function PerformanceView() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -219,4 +213,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     padding: 14,
   },
-});
+}));

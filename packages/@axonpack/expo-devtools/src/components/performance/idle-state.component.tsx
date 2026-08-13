@@ -1,10 +1,10 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { isUiFpsAvailable } from '../../services/performance/fps-monitor.service';
 import { performanceStore } from '../../stores/performance/performance.store';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 const COLLECTS = [
   'Frame rate, for both the JS and main threads',
@@ -13,15 +13,9 @@ const COLLECTS = [
   'Slow taps',
 ];
 
-/**
- * What the tab shows before anything has been recorded.
- *
- * The Performance tab starts paused by default, so this is the first thing most people see — and a screen
- * of dashes and empty lists reads as broken rather than as waiting. Measuring is not free (a frame counter
- * has to keep the thread awake, and each heap read crosses into the engine), which is the honest reason it
- * doesn't just start itself, so this says that rather than hiding it.
- */
 export function IdleState() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
     <View style={styles.container}>
       <View style={styles.badge}>
@@ -55,7 +49,7 @@ export function IdleState() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     alignItems: 'center',
     gap: 10,
@@ -82,7 +76,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: COLORS.textSecondary,
   },
-  // Left-aligned deliberately: centred body copy is hard to scan once it runs to more than a line.
   list: {
     alignSelf: 'stretch',
     gap: 7,
@@ -128,4 +121,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: COLORS.textSecondary,
   },
-});
+}));

@@ -12,7 +12,7 @@ let requestCounter = 0;
 type ThrottleState = {
   profile: ThrottleProfile;
   startedAt: number;
-  /** Absolute time the DONE transition should land, computed once so every event stays ordered. */
+
   deliverAt?: number;
 };
 
@@ -22,13 +22,10 @@ function estimateResponseSize(xhr: XMLHttpRequest): number | undefined {
   try {
     const contentLength = Number(xhr.getResponseHeader('content-length'));
     if (!Number.isNaN(contentLength) && contentLength > 0) return contentLength;
-  } catch {
-    // getResponseHeader throws before headers are available — fall through to the body length.
-  }
+  } catch {}
   try {
     return typeof xhr.responseText === 'string' ? xhr.responseText.length : undefined;
   } catch {
-    // responseText throws for a non-text responseType; size just stays unknown.
     return undefined;
   }
 }
@@ -109,15 +106,6 @@ function extractSize(
   return body?.length;
 }
 
-/**
- * `setReadyState` is React Native's own single dispatch point for the terminal XHR events —
- * `readystatechange`, then one of `load`/`error`/`timeout`/`abort`, then `loadend`. Deferring the
- * DONE transition here throttles every listener at once and lets RN's dispatcher keep its own
- * `this` semantics, instead of wrapping each listener individually.
- *
- * It isn't a standard DOM method, so this is a no-op on any runtime that lacks it — logging still
- * works there, only XHR throttling is skipped.
- */
 function patchSetReadyState() {
   const proto = XMLHttpRequest.prototype as unknown as {
     setReadyState?: (newState: number) => void;
@@ -146,11 +134,6 @@ function patchSetReadyState() {
   };
 }
 
-/**
- * Drives RN's own failure path without ever hitting the network: it sets the error flag, moves to
- * DONE, and dispatches `error` + `loadend` exactly like a real connection failure would. Falls
- * back to `abort()` on a runtime without it — a less accurate signal, but still a failed request.
- */
 function failAsOffline(xhr: XMLHttpRequest) {
   const internal = xhr as unknown as {
     __didCompleteResponse?: (requestId: unknown, error: string, timeOutError: boolean) => void;
@@ -226,14 +209,10 @@ export function patchXHR() {
     const startedAt = Date.now();
     const conditions = networkConditionsStore.resolve();
 
-    // Set before the log entry is built so the override shows up in the recorded request headers
-    // — the patched setRequestHeader above writes it into __networkLogHeaders on the way through.
     if (conditions.userAgent) {
       try {
         this.setRequestHeader('User-Agent', conditions.userAgent);
-      } catch {
-        // Some runtimes reject User-Agent as a forbidden header; the request still goes out.
-      }
+      } catch {}
     }
 
     if (conditions.throttle) {

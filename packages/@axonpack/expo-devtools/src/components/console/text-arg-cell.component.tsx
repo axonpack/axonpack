@@ -1,21 +1,20 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import type { Palette } from '../../constants/theme.const';
 import type { ConsoleArgTone } from '../../utils/console/format-console-args.util';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 const CLAMP_LINES = 6;
-// Clamping is decided from the text itself rather than from `onTextLayout`, which reports only the
-// visible lines once `numberOfLines` is set and so can't tell you whether it clipped anything.
+
 const CLAMP_MIN_LENGTH = 300;
 
-const TONE_COLORS: Record<ConsoleArgTone, string> = {
-  plain: COLORS.textPrimary,
-  number: COLORS.jsonNumber,
-  boolean: COLORS.jsonNumber,
-  muted: COLORS.textSecondary,
-};
+function toneColor(tone: ConsoleArgTone, COLORS: Palette): string {
+  if (tone === 'number' || tone === 'boolean') return COLORS.jsonNumber;
+  if (tone === 'muted') return COLORS.textSecondary;
+  return COLORS.textPrimary;
+}
 
 export function TextArgCell({
   text,
@@ -25,12 +24,14 @@ export function TextArgCell({
 }: {
   text: string;
   tone: ConsoleArgTone;
-  /** Overrides the `plain` tone only — an error-level row prints its message in red. */
+
   plainColor?: string;
   selectable?: boolean;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState(false);
-  const color = tone === 'plain' ? (plainColor ?? TONE_COLORS.plain) : TONE_COLORS[tone];
+  const color = tone === 'plain' ? (plainColor ?? COLORS.textPrimary) : toneColor(tone, COLORS);
   const clampable = text.length > CLAMP_MIN_LENGTH || text.split('\n').length > CLAMP_LINES;
 
   if (!clampable) {
@@ -54,19 +55,18 @@ export function TextArgCell({
         selectable={selectable}>
         {text}
       </Text>
-      {/* Its own tap target — a `selectable` Text above can swallow the press on iOS. */}
+      {}
       <Text style={styles.toggle}>{expanded ? 'Show less' : 'Show more'}</Text>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   text: {
     fontFamily: 'monospace',
     fontSize: 12,
   },
-  // "Show more" is the only affordance on a clamped cell, so it gets vertical padding of its own rather
-  // than the 2dp that let it sit flush against the text it expands.
+
   toggle: {
     marginTop: 2,
     paddingVertical: 6,
@@ -74,4 +74,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.accent,
   },
-});
+}));

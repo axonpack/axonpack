@@ -8,7 +8,7 @@ type SystemNativeModule = {
     totalBytes?: number | null;
     availableToAppBytes?: number | null;
   };
-  /** Android only — see the Swift module for why iOS omits it. Hence the optional call below. */
+
   getStorageMetrics?: () => { totalBytes?: number | null; freeBytes?: number | null };
 };
 
@@ -18,14 +18,7 @@ export function isSystemMetricsAvailable(): boolean {
   return native != null;
 }
 
-/**
- * The app's real footprint and the device's RAM, which the JS heap reading cannot stand in for — Hermes
- * reports its own heap, typically a small fraction of what the process actually holds. This is the
- * number a user means by "memory", and reading it needs native code on both platforms.
- */
 export function startSystemMetricsSampling(intervalMs: number) {
-  // Reported either way, so the cards can say "needs a development build" instead of showing a dash
-  // that looks identical to "not measured yet".
   performanceStore.setSupport({ systemMemory: native != null });
   if (native == null) return () => {};
 
@@ -37,9 +30,7 @@ export function startSystemMetricsSampling(intervalMs: number) {
         freeBytes: storage.freeBytes ?? undefined,
       });
     }
-  } catch {
-    // Storage is a nice-to-have; the memory sampling below is the part that matters.
-  }
+  } catch {}
 
   const read = () => {
     try {

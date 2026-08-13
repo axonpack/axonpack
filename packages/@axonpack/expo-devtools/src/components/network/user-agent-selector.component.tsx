@@ -2,7 +2,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import {
   USER_AGENT_PRESET_IDS,
@@ -10,9 +9,12 @@ import {
   USER_AGENT_PRESET_VALUES,
 } from '../../constants/network/user-agent-presets.const';
 import { networkConditionsStore } from '../../stores/network/network-conditions.store';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { Chip } from '../ui/chip.ui';
 
 export function UserAgentSelector() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const userAgentId = useSyncExternalStore(
     networkConditionsStore.subscribe,
     networkConditionsStore.getUserAgentId
@@ -71,7 +73,7 @@ export function UserAgentSelector() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   section: {
     marginTop: 12,
   },
@@ -116,4 +118,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 6,
   },
-});
+}));

@@ -1,4 +1,4 @@
-import { COLORS } from '../../../constants/colors.const';
+import { LIGHT_PALETTE as COLORS } from '../../../constants/theme.const';
 import { diffMs, formatMs, getLongTaskColor } from '../format-metrics.util';
 
 describe('formatMs', () => {
@@ -7,7 +7,6 @@ describe('formatMs', () => {
     expect(formatMs(0)).toBe('0 ms');
   });
 
-  /** Two startup markers on the same instant differ by a rounding error, not by negative time. */
   it('never prints a negative zero', () => {
     expect(formatMs(-0.001)).toBe('0 ms');
     expect(formatMs(-0.0001)).toBe('0 ms');
@@ -26,7 +25,6 @@ describe('formatMs', () => {
 });
 
 describe('diffMs', () => {
-  // Startup markers are individually nullable, so a missing one must not read as a zero-length phase.
   it('returns undefined when either end is missing', () => {
     expect(diffMs(undefined, 100)).toBeUndefined();
     expect(diffMs(100, undefined)).toBeUndefined();
@@ -44,8 +42,8 @@ describe('diffMs', () => {
 
 describe('threshold colors', () => {
   it('escalates long tasks at the perceptible thresholds', () => {
-    expect(getLongTaskColor(60)).toBe(COLORS.textSecondary);
-    expect(getLongTaskColor(100)).toBe(COLORS.warning);
-    expect(getLongTaskColor(200)).toBe(COLORS.error);
+    expect(getLongTaskColor(60, COLORS)).toBe(COLORS.textSecondary);
+    expect(getLongTaskColor(100, COLORS)).toBe(COLORS.warning);
+    expect(getLongTaskColor(200, COLORS)).toBe(COLORS.error);
   });
 });

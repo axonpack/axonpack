@@ -4,11 +4,6 @@ import { performanceStore } from '../../stores/performance/performance.store';
 import { formatMs } from '../../utils/performance/format-metrics.util';
 import { MetricCard } from './metric-card.component';
 
-/**
- * Worst as the headline, average underneath. The worst case is what a user remembers, but on its own a
- * single 3-second outlier reads as if the app is always that bad — the average is the context that stops
- * one bad tap from defining the picture.
- */
 export function InteractionCard() {
   const { interactions } = useSyncExternalStore(
     performanceStore.subscribe,

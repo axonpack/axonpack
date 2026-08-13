@@ -1,7 +1,10 @@
 import { createDevtoolsClient } from '@axonpack/expo-devtools';
 
 export const devtools = createDevtoolsClient({
-  icon: require('./assets/icon.png'),
+  defaultTheme: 'dark',
+  themes: {
+    midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
+  },
   webviewSources: ['example-webview', 'test2'],
   network: {
     disabledByDefault: false,
@@ -10,8 +13,6 @@ export const devtools = createDevtoolsClient({
   },
   console: {
     disabledByDefault: false,
-    // Names the `>` prompt can reach directly. Globals and `$modules()`/`$m('path')` work without
-    // this — it's here to demo the shape a real app would use for its store or query client.
     context: {
       appInfo: { name: 'devtools-example', platform: 'expo', tabs: ['requests', 'console'] },
       double: (value: number) => value * 2,

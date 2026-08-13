@@ -22,7 +22,7 @@ export function JsonTree({
 }: {
   value: JsonValue;
   rootLabel?: string;
-  /** Console rows pass `false` — an argument starts as a one-line `{…}` preview, like Chrome. */
+
   defaultExpanded?: boolean;
 }) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() =>

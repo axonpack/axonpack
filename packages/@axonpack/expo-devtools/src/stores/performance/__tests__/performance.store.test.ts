@@ -53,10 +53,6 @@ describe('performanceStore batching', () => {
     performanceStore.clear();
   });
 
-  /**
-   * Rendering the list is itself work that can exceed the long-task threshold, so an unbounded
-   * notification rate lets the tab record its own renders forever. These two tests pin the ceiling.
-   */
   it('coalesces a batch into a single notification', () => {
     jest.useFakeTimers();
     try {
@@ -91,7 +87,6 @@ describe('performanceStore batching', () => {
         notifications += 1;
       });
 
-      // 50 arrivals inside one window — what a runaway feedback loop looks like.
       for (let index = 0; index < 50; index += 1) {
         performanceStore.addLongTasks([{ name: `task-${index}`, duration: 60, startTime: index }]);
         jest.advanceTimersByTime(4);
@@ -140,11 +135,6 @@ describe('performanceStore snapshot identity', () => {
     performanceStore.clear();
   });
 
-  /**
-   * `useSyncExternalStore` re-renders on identity alone, and `PerformanceView` owns the entry list — so a
-   * snapshot replaced by a reading the snapshot doesn't contain rebuilt the header's charts and every
-   * visible row twice a second for nothing.
-   */
   it('keeps one snapshot object across frame-rate readings', () => {
     const before = performanceStore.getSnapshot();
     performanceStore.setFps(60);
@@ -171,7 +161,6 @@ describe('performanceStore frame-rate peak', () => {
     performanceStore.clear();
   });
 
-  /** The reported glitch: one 1005fps reading became the chart's ceiling and flattened everything. */
   it('ignores a lone spike', () => {
     performanceStore.setFps(60);
     performanceStore.setFps(1005);
@@ -184,10 +173,6 @@ describe('performanceStore frame-rate peak', () => {
     expect(performanceStore.getFpsPeak()).toBe(120);
   });
 
-  /**
-   * Zero means "nothing confirmed", which is the safe answer: the chart's own floor takes over, so an
-   * unconfirmed spike renders clipped instead of flattening every real reading beneath it.
-   */
   it('needs the run to be unbroken', () => {
     performanceStore.setFps(120);
     performanceStore.setFps(120);
@@ -203,10 +188,6 @@ describe('performanceStore frame-rate peak', () => {
     expect(performanceStore.getFpsPeak()).toBe(118);
   });
 
-  /**
-   * A confirmed peak that has since scrolled out of the buffer shouldn't hold the axis up forever. The
-   * frame-rate history has its own fixed cap, independent of `historySize`, so this fills that buffer.
-   */
   it('falls back to the window maximum when nothing supports the peak', () => {
     for (let index = 0; index < 3; index += 1) performanceStore.setFps(120);
     expect(performanceStore.getFpsPeak()).toBe(120);
@@ -220,11 +201,6 @@ describe('performanceStore frame-rate peak', () => {
     expect(performanceStore.getFpsPeak()).toBe(90);
   });
 
-  /**
-   * The reported glitch: both threads report on the same tick, so the calls alternate. A shared run let
-   * the JS reading — at or below the peak, which is the normal case at 60 against a 90Hz main thread —
-   * reset the main thread's run every other call, so its rising readings never confirmed anything.
-   */
   it('confirms one thread while the other sits at the ceiling', () => {
     for (let index = 0; index < 3; index += 1) performanceStore.setFps(60);
     expect(performanceStore.getFpsPeak()).toBe(60);
@@ -236,7 +212,6 @@ describe('performanceStore frame-rate peak', () => {
     performanceStore.setFps(60);
     performanceStore.setUiFps(90);
 
-    // The first of the confirming run, so the ceiling trails the readings by one confirmation.
     expect(performanceStore.getFpsPeak()).toBe(78);
   });
 
@@ -245,7 +220,7 @@ describe('performanceStore frame-rate peak', () => {
 
     performanceStore.setUiFps(90);
     performanceStore.setUiFps(90);
-    // A different thread's lower reading must not count towards, or break, this run.
+
     performanceStore.setFps(60);
     performanceStore.setUiFps(90);
 
@@ -260,10 +235,6 @@ describe('performanceStore frame-rate buckets', () => {
     performanceStore.clear();
   });
 
-  /**
-   * The reported symptom: the line redrew with new values every tick instead of scrolling. A closed
-   * bucket must never change again, or every point on screen moves when one sample arrives.
-   */
   it('freezes a bucket once it closes', () => {
     for (let index = 0; index < 10; index += 1) performanceStore.setFps(60);
     const [first] = performanceStore.getFpsSeries();

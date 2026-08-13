@@ -1,33 +1,22 @@
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { isUiFpsAvailable } from '../../services/performance/fps-monitor.service';
 import { performanceStore } from '../../stores/performance/performance.store';
 import { ageAxisLabels } from '../../utils/performance/age-labels.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { LineChart, type LineSeries } from '../ui/line-chart.ui';
 
-/**
- * A floor for the scale, so a run that never cleared 30fps still draws in the lower half where it
- * belongs rather than filling the chart and looking flawless.
- */
 const MIN_DOMAIN_MAX = 60;
-/** Breathing room above the peak, so the highest point doesn't sit flush against the top edge. */
+
 const HEADROOM = 5;
 
-/**
- * Both frame rates on one chart, which is the point: they share a unit and a scale, so putting them
- * together is legitimate — and the gap between them is the reading that matters. A healthy JS line above a
- * collapsed native line is an app that feels frozen while every JS metric says it is fine.
- *
- * Colours were checked with the palette validator rather than chosen by eye: accent against key-accent
- * separates by ΔE 30 under protanopia, well clear of the floor. Identity is still not left to colour —
- * each series carries a direct label.
- */
 export function FpsChartCard() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const fps = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFps);
   const uiFps = useSyncExternalStore(performanceStore.subscribe, performanceStore.getUiFps);
-  // Bucketed by the store, so a point keeps its value while it is on screen and the plot scrolls.
+
   const jsSeries = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFpsSeries);
   const uiSeries = useSyncExternalStore(
     performanceStore.subscribe,
@@ -37,10 +26,6 @@ export function FpsChartCard() {
   const peak = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFpsPeak);
   const nativeAvailable = isUiFpsAvailable();
 
-  // Built from the session peak, not the visible window, so the axis rises once for a 120Hz device and
-  // then holds still. A scale that also fell would repaint every line on every sample.
-  // Headroom is added after the floor, not inside it. With it inside, an unconfirmed peak of 0 gave
-  // max(60, 5) = 60, so a steady 60fps line sat flush against the top edge.
   const domainMax = Math.max(MIN_DOMAIN_MAX, peak) + HEADROOM;
 
   const series: LineSeries[] = [
@@ -74,10 +59,7 @@ export function FpsChartCard() {
           series={series}
           domainMax={domainMax}
           pointCapacity={performanceStore.getFpsBucketCount()}
-          // From the samples held, not the buffer's capacity: early on the chart covers seconds, not
-          // minutes, and a fixed "5m ago" would overstate what is plotted.
-          // The window the plot is scaled for, not the samples held: the left edge is a fixed point in
-          // time now, and a partly filled buffer leaves that side empty rather than stretching into it.
+
           xLabels={ageAxisLabels(
             performanceStore.getFpsBucketCount(),
             performanceStore.getFpsBucketMs()
@@ -90,15 +72,6 @@ export function FpsChartCard() {
   );
 }
 
-/**
- * A dot plus a name beside every value: the legend and the direct label are the same element, so identity
- * never rests on the line colour alone.
- *
- * All three — dot, number, line — wear the one series colour. Grading the number by health instead put a
- * reading in a hue its own line never uses, and the amber of a 30–49fps warning is within a shade of the
- * main-thread series, so a slow JS figure read as if it belonged to the other line. Health is legible
- * from the plot against its axis; which series a number belongs to is not recoverable any other way.
- */
 function Reading({
   label,
   value,
@@ -110,13 +83,15 @@ function Reading({
   color: string;
   available: boolean;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const hasReading = available && value !== undefined;
 
   return (
     <View style={styles.reading}>
       <View style={[styles.dot, { backgroundColor: color }]} />
       <Text style={styles.readingLabel}>{label}</Text>
-      {/* An absent reading stays muted — it isn't a measurement, so it doesn't claim a series colour. */}
+      {}
       <Text style={[styles.readingValue, { color: hasReading ? color : COLORS.textSecondary }]}>
         {available ? (value !== undefined ? value : '–') : 'dev build'}
       </Text>
@@ -124,9 +99,8 @@ function Reading({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   card: {
-    // Spans the grid rather than sharing a row: a chart squeezed to half width stops being readable.
     width: '100%',
     gap: 8,
     paddingHorizontal: 12,
@@ -180,4 +154,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
   },
-});
+}));

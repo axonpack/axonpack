@@ -1,11 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { sandboxStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useSandboxStyles } from './shared.styles';
 import { HIT_SLOP, TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { AuthConfig, AuthType } from '../../../utils/network/sandbox.util';
+import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 
 const AUTH_TYPES: { value: AuthType; label: string }[] = [
@@ -14,7 +14,6 @@ const AUTH_TYPES: { value: AuthType; label: string }[] = [
   { value: 'apikey', label: 'apikey' },
 ];
 
-/** A field whose value can be hidden behind dots (like a password field), toggled via an eye icon. */
 function SecretField({
   label,
   value,
@@ -26,6 +25,9 @@ function SecretField({
   onChangeText: (text: string) => void;
   placeholder?: string;
 }) {
+  const sandboxStyles = useSandboxStyles();
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [revealed, setRevealed] = useState(false);
 
   return (
@@ -62,6 +64,9 @@ export function AuthSection({
   auth: AuthConfig;
   onChange: (auth: AuthConfig) => void;
 }) {
+  const sandboxStyles = useSandboxStyles();
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
     <CollapsibleSection title="Authentication">
       <View style={styles.typeTabs}>
@@ -120,7 +125,7 @@ export function AuthSection({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   typeTabs: {
     flexDirection: 'row',
     gap: 16,
@@ -158,4 +163,4 @@ const styles = StyleSheet.create({
   fieldInput: {
     flex: 1,
   },
-});
+}));

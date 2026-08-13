@@ -1,10 +1,10 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRef, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
+import { TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
 import { Tooltip } from './tooltip.ui';
-import { COLORS } from '../../constants/colors.const';
 import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 
 export type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
@@ -21,9 +21,10 @@ export function IconButton({
   onPress: (event: GestureResponderEvent) => void;
   hitSlop?: number;
   active?: boolean;
-  /** Shown as a long-press tooltip — the icon alone carries no visible text. */
+
   label?: string;
 }) {
+  const styles = useStyles();
   const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number } | null>(null);
   const suppressNextPress = useRef(false);
 
@@ -48,8 +49,7 @@ export function IconButton({
         onPressOut={label ? () => setTooltipAnchor(null) : undefined}
         hitSlop={hitSlop}
         style={styles.touchTarget}>
-        {/* The tint stays on this inner pill rather than the touch box, so growing the target to a
-            thumb's size didn't turn the active state into a 36×44 slab. */}
+        {}
         <View style={[styles.glyph, active && styles.glyphActive]}>
           <MaterialIcons name={name} size={19} color={color} />
         </View>
@@ -61,7 +61,7 @@ export function IconButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   touchTarget: {
     minWidth: TOUCH_TARGET.compact,
     minHeight: TOUCH_TARGET.min,
@@ -75,4 +75,4 @@ const styles = StyleSheet.create({
   glyphActive: {
     backgroundColor: COLORS.sectionTint,
   },
-});
+}));

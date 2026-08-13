@@ -2,11 +2,13 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import type { UserTimingEntry } from '../../stores/performance/performance.store';
 import { formatMs } from '../../utils/performance/format-metrics.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 function UserTimingRowBase({ entry }: { entry: UserTimingEntry }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const isMark = entry.kind === 'mark';
 
   return (
@@ -25,13 +27,13 @@ function UserTimingRowBase({ entry }: { entry: UserTimingEntry }) {
         </Text>
       ) : null}
       <Text style={styles.at}>{new Date(entry.timestamp).toLocaleTimeString()}</Text>
-      {/* A mark is a point in time, so a "0 ms" duration would read as a suspiciously fast span. */}
+      {}
       <Text style={styles.duration}>{isMark ? '—' : formatMs(entry.duration)}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -57,14 +59,8 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontVariant: ['tabular-nums'],
   },
-});
+}));
 
-/**
- * Re-renders only when the row is a different entry.
- *
- * `entry` is this component's only prop, and the store never patches a recorded entry — it prepends and
- * trims. So any field that could differ belongs to a different entry, which the id already tells us.
- */
 export const UserTimingRow = memo(
   UserTimingRowBase,
   (prev, next) => prev.entry.id === next.entry.id

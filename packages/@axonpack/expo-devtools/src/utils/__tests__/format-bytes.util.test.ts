@@ -14,10 +14,6 @@ describe('formatSize', () => {
     expect(formatSize(1024 ** 4)).toBe('1.0 TB');
   });
 
-  /**
-   * App footprints sit just above a gigabyte, where one decimal of GB hides the hundreds of megabytes a
-   * reader is watching move. GB starts past the threshold, where the numbers are device totals.
-   */
   it('keeps values just over a gigabyte in megabytes', () => {
     expect(formatSize(1024 ** 3)).toBe('1024.0 MB');
     expect(formatSize(1.4 * 1024 ** 3)).toBe('1433.6 MB');
@@ -25,7 +21,6 @@ describe('formatSize', () => {
     expect(formatSize(2 * 1024 ** 3)).toBe('2.0 GB');
   });
 
-  /** Device RAM and storage live at this scale — MB-only printed "8192.0 MB" for 8GB. */
   it('reads device-scale values in GB and TB', () => {
     expect(formatSize(8 * 1024 ** 3)).toBe('8.0 GB');
     expect(formatSize(256 * 1024 ** 3)).toBe('256.0 GB');

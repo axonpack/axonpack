@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { HeadersTab } from './headers-tab.component';
 import { PayloadTab } from './payload-tab.component';
 import { PreviewTab } from './preview-tab.component';
 import { ResponseTab } from './response-tab.component';
 import { TimingTab } from './timing-tab.component';
-import { COLORS } from '../../../constants/colors.const';
 import { TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import { buildEntryCopyMenuItems } from '../../../utils/network/entry-menu-items.util';
+import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
 import { ContextMenu, type ContextMenuItem } from '../../ui/context-menu.ui';
 import { IconButton } from '../../ui/icon-button.ui';
@@ -36,14 +36,14 @@ export function DetailPanel({
   onClose: () => void;
   stackedHeaders: boolean;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [tab, setTab] = useState<Tab>('headers');
   const [renderedEntry, setRenderedEntry] = useState<NetworkLogEntry | null>(null);
   const [prevEntry, setPrevEntry] = useState<NetworkLogEntry | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const [sandboxOpen, setSandboxOpen] = useState(false);
 
-  // Adjust state during render when `entry` changes, rather than mirroring it via an effect
-  // (see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
   if (entry !== prevEntry) {
     setPrevEntry(entry);
     if (entry) {
@@ -53,8 +53,6 @@ export function DetailPanel({
     }
   }
 
-  // Keeps rendering the last entry while BottomSheet plays its close animation, rather than
-  // the content disappearing the instant `entry` goes null.
   const active = entry ?? renderedEntry;
   if (!active) return null;
 
@@ -128,9 +126,7 @@ export function DetailPanel({
   );
 }
 
-const styles = StyleSheet.create({
-  // Horizontal padding and the separator underneath both come from BottomSheet's header row now,
-  // so the line spans the full sheet instead of stopping at the logo and close button.
+const useStyles = makeThemedStyles((COLORS) => ({
   tabBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -167,4 +163,4 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingBottom: 24,
   },
-});
+}));

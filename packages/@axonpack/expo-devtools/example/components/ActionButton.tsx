@@ -1,6 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
-/** Compact pill, so a screen with two dozen demo actions still fits in a couple of scrolls. */
 export function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.button} onPress={onPress}>

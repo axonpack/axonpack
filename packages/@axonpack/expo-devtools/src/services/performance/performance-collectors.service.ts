@@ -12,8 +12,7 @@ export type CollectorOptions = {
 };
 
 let stopFunctions: (() => void)[] = [];
-// Guards re-entrancy: the collectors report their support as they attach, which publishes a store
-// change, which calls the listener below again while `stopFunctions` is still being built.
+
 let running = false;
 
 function start(options: CollectorOptions) {
@@ -34,19 +33,6 @@ function stop() {
   stopFunctions = [];
 }
 
-/**
- * Attaches and detaches every collector in step with the record button, instead of leaving them
- * attached and filtering in the store.
- *
- * This is deliberate, and it fixes a real bug: an observer registered while recording was paused
- * delivered nothing once recording resumed, so `disabledByDefault: true` produced a permanently
- * empty list while starting unpaused worked. Binding the lifecycle to the toggle means pressing
- * record attaches a fresh observer, which also re-reads the buffered native entries. It costs
- * nothing while paused, which is a better outcome than sampling and discarding.
- *
- * Startup timing is exempt — it is a one-shot read of markers that never change, so it happens
- * whether or not recording is on.
- */
 export function startPerformanceCollectors(options: CollectorOptions) {
   readStartupTiming();
 

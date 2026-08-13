@@ -5,7 +5,6 @@ describe('downsampleMin', () => {
     expect(downsampleMin([60, 58, 59], 60)).toEqual([60, 58, 59]);
   });
 
-  /** The whole point: a single half-second stall must survive being collapsed into one bar. */
   it('keeps a dip that averaging would erase', () => {
     const healthy = Array.from({ length: 10 }, () => 60);
     const withStall = [...healthy.slice(0, 5), 8, ...healthy.slice(6)];

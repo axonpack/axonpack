@@ -2,7 +2,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import {
   getResponseTypeVisual,
   RESOURCE_TYPE_ICONS,
@@ -17,6 +16,7 @@ import {
   getStatusColor,
 } from '../../utils/network/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resource-type.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { ContextMenu } from '../ui/context-menu.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InfoBadge } from '../ui/info-badge.ui';
@@ -29,19 +29,21 @@ function LogRowBase({
 }: {
   entry: NetworkLogEntry;
   bigRows: boolean;
-  /** Takes the entry back rather than closing over it, so the list can pass one stable callback. */
+
   onPress: (entry: NetworkLogEntry) => void;
 }) {
-  const statusColor = getStatusColor(entry.status, entry.statusCode);
+  const styles = useStyles();
+  const COLORS = useThemeColors();
+  const statusColor = getStatusColor(entry.status, entry.statusCode, COLORS);
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
 
   const openMenu = (event: GestureResponderEvent) => {
     setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY });
   };
 
-  const methodColor = getMethodColor(entry.method);
+  const methodColor = getMethodColor(entry.method, COLORS);
   const resourceType = classifyResourceType(entry.mimeType);
-  const typeVisual = getResponseTypeVisual(entry.mimeType);
+  const typeVisual = getResponseTypeVisual(entry.mimeType, COLORS);
 
   return (
     <TouchableOpacity
@@ -106,7 +108,7 @@ function LogRowBase({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     gap: 2,
     paddingHorizontal: 12,
@@ -118,8 +120,7 @@ const styles = StyleSheet.create({
   rowBig: {
     paddingVertical: 10,
   },
-  // The bottom line: badges take the spare width, so the menu button lands at the trailing edge and
-  // stays vertically centred against them whether any badges are showing or not.
+
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -175,27 +176,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
-});
+}));
 
-/**
- * The log holds up to 200 of these, each composing badges, icons and a context menu, so the comparison
- * below names every field the row depends on. Two groups, and the second is the one that bites:
- *
- * - **Rendered** — what you can see on the row. Getting one wrong shows visibly stale data.
- * - **Copied** — the request/response payloads `buildEntryCopyMenuItems` turns into cURL, a fetch
- *   snippet and raw-body actions. Nothing on the row displays them, so omitting one here would fail
- *   *silently*: the row would look right and copy the body of an earlier state of the request.
- *
- * `responseHeaders` is deliberately absent — neither group reads it, so a patch carrying only headers
- * correctly skips this row. Adding a field to the row or to the copy menu means adding it here.
- */
 export const LogRow = memo(
   LogRowBase,
   (prev, next) =>
     prev.bigRows === next.bigRows &&
     prev.onPress === next.onPress &&
     prev.entry.id === next.entry.id &&
-    // Rendered.
     prev.entry.method === next.entry.method &&
     prev.entry.url === next.entry.url &&
     prev.entry.status === next.entry.status &&
@@ -206,7 +194,6 @@ export const LogRow = memo(
     prev.entry.size === next.entry.size &&
     prev.entry.mimeType === next.entry.mimeType &&
     prev.entry.source === next.entry.source &&
-    // Copied by the context menu.
     prev.entry.requestBody === next.entry.requestBody &&
     prev.entry.responseBody === next.entry.responseBody &&
     prev.entry.requestHeaders === next.entry.requestHeaders

@@ -1,37 +1,19 @@
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { performanceStore } from '../../stores/performance/performance.store';
 import { formatSize } from '../../utils/format-bytes.util';
 import { ageAxisLabels } from '../../utils/performance/age-labels.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { LineChart } from '../ui/line-chart.ui';
 import { UsageMeter } from '../ui/usage-meter.ui';
 
 const PLOT_HEIGHT = 52;
-/** Breathing room above the peak, so the highest point isn't flush against the top edge. */
+
 const HEADROOM_FRACTION = 1.1;
 
-/**
- * Every memory reading in one card, narrowing outwards: the JS heap inside the process, the process on the
- * device. The device row used to live in the Device section, which meant answering "how much of the phone
- * is this app using" needed two places on screen at once.
- *
- * Two charts, not one with two lines.
- *
- * The JS heap and the app's footprint are the same unit but nowhere near the same magnitude — a heap of
- * 10MB against a process of 120MB. Sharing one scale would flatten the heap into the baseline, and giving
- * each its own y-axis on one plot is the dual-axis chart that every guide warns about, because the reader
- * infers a relationship from where the lines cross. Small multiples keep both readable and let the shapes
- * be compared without implying a crossing means anything.
- *
- * Each scale runs from zero to its own monotonic session peak, so height means absolute bytes and the axis
- * stops moving once the app has shown how much it uses.
- *
- * Device memory is a meter rather than a third plot: total RAM doesn't move, so what matters is the share
- * taken, and that is a part-of-whole reading — not a shape over time.
- */
 export function MemoryChartCard() {
+  const styles = useStyles();
   const { memory, systemMemory, support } = useSyncExternalStore(
     performanceStore.subscribe,
     performanceStore.getSnapshot
@@ -139,6 +121,8 @@ function Plot({
   capacity: number;
   xLabels: string[];
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
     <View style={styles.plotBlock}>
       <View style={styles.headerRow}>
@@ -164,7 +148,7 @@ function Plot({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   card: {
     width: '100%',
     gap: 10,
@@ -209,4 +193,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSecondary,
   },
-});
+}));

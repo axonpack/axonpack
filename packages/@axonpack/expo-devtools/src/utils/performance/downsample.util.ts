@@ -1,10 +1,3 @@
-/**
- * Collapses a long series into `buckets` values by taking the **minimum** of each bucket.
- *
- * Minimum, not average, because this exists for frame rates: a half-second dip to 12fps is the thing you
- * are looking for, and averaging it against nine healthy samples hides it completely. A chart that
- * smooths away the only interesting event is worse than no chart.
- */
 export function downsampleMin(values: number[], buckets: number): number[] {
   if (buckets <= 0 || values.length === 0) return [];
   if (values.length <= buckets) return values;

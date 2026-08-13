@@ -2,7 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { HeaderList } from './header-list.component';
 import { NetworkConditionsSection } from './network-conditions-section.component';
-import { rowStyles } from './shared.styles';
+import { useRowStyles } from './shared.styles';
+import { useThemeColors } from '../../../utils/themed-styles.util';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import {
   formatSource,
@@ -29,6 +30,7 @@ function GeneralRow({
   stacked: boolean;
   children?: React.ReactNode;
 }) {
+  const rowStyles = useRowStyles();
   const displayValue = children ?? (
     <Text style={stacked ? rowStyles.stackedValue : rowStyles.headerValue} selectable>
       {value}
@@ -67,6 +69,8 @@ export function HeadersTab({
   entry: NetworkLogEntry;
   stackedHeaders: boolean;
 }) {
+  const COLORS = useThemeColors();
+  const rowStyles = useRowStyles();
   return (
     <View>
       {entry.conditions && <NetworkConditionsSection conditions={entry.conditions} />}
@@ -78,7 +82,7 @@ export function HeadersTab({
             <View
               style={[
                 styles.statusDot,
-                { backgroundColor: getStatusColor(entry.status, entry.statusCode) },
+                { backgroundColor: getStatusColor(entry.status, entry.statusCode, COLORS) },
               ]}
             />
             <Text style={rowStyles.headerValue} selectable>

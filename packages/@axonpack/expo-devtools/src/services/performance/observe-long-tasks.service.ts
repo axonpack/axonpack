@@ -19,16 +19,6 @@ type ObserverHost = {
   };
 };
 
-/**
- * `supportedEntryTypes` is populated from what the native side implements, so it varies by platform and
- * RN version — gating on it at runtime is the only safe check.
- *
- * The threshold is applied here, not passed to `observe`. Long Tasks fixes its reporting threshold at
- * 50ms and states observers cannot configure it; `durationThreshold` belongs to Event Timing's partial
- * dictionary and is ignored for this entry type. Passing it looked like it worked only because the
- * default matched the spec's fixed value — a higher threshold silently did nothing. 50ms is therefore
- * a floor: a lower setting cannot surface more than the platform reports.
- */
 export function observeLongTasks(thresholdMs: number) {
   const Observer = (globalThis as unknown as { PerformanceObserver?: ObserverHost })
     .PerformanceObserver;
@@ -56,18 +46,14 @@ export function observeLongTasks(thresholdMs: number) {
         performanceStore.addDropped({ longTasks: options.droppedEntriesCount });
       }
     });
-    // `buffered` replays tasks from before the panel was opened — the startup ones are usually the
-    // interesting ones, and they are long gone by then.
+
     observer.observe({ type: 'longtask', buffered: true });
     performanceStore.setSupport({ longTasks: true });
 
     return () => {
-      // Anything queued but not yet delivered is lost on disconnect, so it's drained first.
       try {
         record(observer.takeRecords());
-      } catch {
-        // takeRecords is optional on older runtimes.
-      }
+      } catch {}
       observer.disconnect();
     };
   } catch {

@@ -13,8 +13,6 @@ export function newAuthConfig(): AuthConfig {
   return { type: 'none', bearerToken: '', apiKeyName: '', apiKeyValue: '' };
 }
 
-/** The header this auth config contributes, merged on top of the Headers table at send/snippet
- * time — mirrors Scalar's "Authentication" panel (Bearer token / API key). */
 export function buildAuthHeaders(auth: AuthConfig): Record<string, string> {
   if (auth.type === 'bearer' && auth.bearerToken.trim()) {
     return { Authorization: `Bearer ${auth.bearerToken}` };
@@ -27,8 +25,6 @@ export function buildAuthHeaders(auth: AuthConfig): Record<string, string> {
 
 const BEARER_HEADER_RE = /^Bearer\s+(.+)$/i;
 
-/** Splits a `Bearer <token>` Authorization header out of a header set so it seeds the
- * Authentication section instead of showing up twice (once there, once in the Headers table). */
 export function extractAuthConfig(headers: Record<string, string> | undefined): {
   auth: AuthConfig;
   rest: Record<string, string>;
@@ -56,7 +52,6 @@ export function newRow(key = '', value = '', enabled = true): KeyValueRow {
   return { id: `row-${rowCounter}`, key, value, enabled };
 }
 
-/** Keeps exactly one trailing blank row so the table always has a place to start typing a new one. */
 export function ensureTrailingBlankRow(rows: KeyValueRow[]): KeyValueRow[] {
   const last = rows[rows.length - 1];
   if (!last || last.key !== '' || last.value !== '') return [...rows, newRow()];
@@ -69,8 +64,6 @@ export function rowsFromRecord(record: Record<string, string> | undefined): KeyV
   );
 }
 
-/** Splits a `Cookie` header (any casing) out of a header set so it can seed its own table
- * instead of duplicating into the Headers table too. */
 export function extractCookieHeader(headers: Record<string, string> | undefined): {
   cookieValue: string | undefined;
   rest: Record<string, string>;
@@ -92,8 +85,6 @@ export function rowsToRecord(rows: KeyValueRow[]): Record<string, string> {
   return record;
 }
 
-/** Splits a URL's query string into rows and returns the bare base URL, so the URL bar and the
- * Query Parameters table don't fight over the same text — parsed once when the sandbox opens. */
 export function splitUrl(url: string): { base: string; params: KeyValueRow[] } {
   const queryIndex = url.indexOf('?');
   if (queryIndex === -1) return { base: url, params: ensureTrailingBlankRow([]) };
@@ -113,8 +104,6 @@ export function buildFinalUrl(base: string, params: KeyValueRow[]): string {
   return `${base}${base.includes('?') ? '&' : '?'}${search.toString()}`;
 }
 
-/** Cookies aren't readable from native fetch's jar (see ROADMAP.md's hard limits), so this table
- * is a user-editable convenience — its rows get serialized into a `Cookie` header at send time. */
 export function parseCookieHeader(cookieHeader: string | undefined): KeyValueRow[] {
   const rows = (cookieHeader ?? '')
     .split(';')
@@ -147,8 +136,6 @@ export type SandboxResult =
     }
   | { ok: false; error: string; duration: number };
 
-/** Sends via the global fetch — same one @axonpack/expo-devtools may have already patched, so a sandbox
- * request shows up as new activity in the log, same as a real replay would in any devtool. */
 export async function sendSandboxRequest({
   method,
   url,

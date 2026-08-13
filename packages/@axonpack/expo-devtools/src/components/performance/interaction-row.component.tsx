@@ -1,26 +1,30 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import type { InteractionEntry } from '../../stores/performance/performance.store';
 import { formatMs, getLongTaskColor } from '../../utils/performance/format-metrics.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 function InteractionRowBase({ entry }: { entry: InteractionEntry }) {
+  const COLORS = useThemeColors();
+  const styles = useStyles();
   return (
     <View style={styles.row}>
-      <View style={[styles.marker, { backgroundColor: getLongTaskColor(entry.duration) }]} />
+      <View
+        style={[styles.marker, { backgroundColor: getLongTaskColor(entry.duration, COLORS) }]}
+      />
       <Text style={styles.name} numberOfLines={1}>
         {entry.name}
       </Text>
       <Text style={styles.handler}>handler {formatMs(entry.processingDuration)}</Text>
-      <Text style={[styles.duration, { color: getLongTaskColor(entry.duration) }]}>
+      <Text style={[styles.duration, { color: getLongTaskColor(entry.duration, COLORS) }]}>
         {formatMs(entry.duration)}
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -50,14 +54,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
-});
+}));
 
-/**
- * Re-renders only when the row is a different entry.
- *
- * `entry` is this component's only prop, and the store never patches a recorded entry — it prepends and
- * trims. So any field that could differ belongs to a different entry, which the id already tells us.
- */
 export const InteractionRow = memo(
   InteractionRowBase,
   (prev, next) => prev.entry.id === next.entry.id

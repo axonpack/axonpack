@@ -1,8 +1,8 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
-import { sandboxStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useSandboxStyles } from './shared.styles';
 import type { SandboxResult } from '../../../utils/network/sandbox.util';
+import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ResponseBodyPreview } from '../response-body-preview.component';
 
@@ -13,6 +13,9 @@ export function ResponsePanel({
   sending: boolean;
   result: SandboxResult | null;
 }) {
+  const sandboxStyles = useSandboxStyles();
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   if (sending) {
     return (
       <View style={styles.centered}>
@@ -72,7 +75,7 @@ export function ResponsePanel({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   centered: {
     paddingVertical: 24,
     alignItems: 'center',
@@ -112,4 +115,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textPrimary,
   },
-});
+}));

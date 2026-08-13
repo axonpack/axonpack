@@ -1,12 +1,14 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 export function ErrorArgCell({ text, stack }: { text: string; stack?: string }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState(false);
 
   if (!stack) {
@@ -43,14 +45,13 @@ export function ErrorArgCell({ text, stack }: { text: string; stack?: string }) 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 2,
     minHeight: TOUCH_TARGET.dense,
   },
-  // Fills the row beside the disclosure triangle so a long message wraps rather than overflowing.
   message: {
     flex: 1,
     fontFamily: 'monospace',
@@ -67,4 +68,4 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: COLORS.textSecondary,
   },
-});
+}));

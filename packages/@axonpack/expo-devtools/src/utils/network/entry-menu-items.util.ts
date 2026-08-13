@@ -5,10 +5,6 @@ import { buildFetchCommand, buildNodeFetchCommand } from './fetch-snippet.util';
 import type { ContextMenuItem } from '../../components/ui/context-menu.ui';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 
-/**
- * The copy actions for one request, shared by the list row and the detail panel so the two menus can't
- * drift apart. "Try in sandbox" is not here: it needs the panel's own state, so the panel prepends it.
- */
 export function buildEntryCopyMenuItems(entry: NetworkLogEntry): ContextMenuItem[] {
   return [
     { label: 'Copy URL', onPress: () => Clipboard.setStringAsync(entry.url) },

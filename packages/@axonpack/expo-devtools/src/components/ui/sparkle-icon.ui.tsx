@@ -2,12 +2,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useState } from 'react';
 import { Animated, Easing } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { useThemeColors } from '../../utils/themed-styles.util';
 
 const PULSE_MS = 700;
 
-/** A small looping pulse — flags a menu item as novel/featured without needing a "New" badge. */
 export function SparkleIcon({ size = 16 }: { size?: number }) {
+  const COLORS = useThemeColors();
   const [pulse] = useState(() => new Animated.Value(0));
 
   useEffect(() => {

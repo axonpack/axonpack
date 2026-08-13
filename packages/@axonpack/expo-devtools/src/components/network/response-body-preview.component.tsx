@@ -1,14 +1,12 @@
 import { Image, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import WebView from 'react-native-webview';
 
-import { CodeHighlight } from './detail-panel/code-highlight';
 import { JsonTree } from '../json-tree';
-import { COLORS } from '../../constants/colors.const';
-import { detectLanguage } from '../../utils/network/code-highlight.util';
+import { CodeHighlight } from './detail-panel/code-highlight';
 import type { JsonValue } from '../../utils/json-tree.util';
+import { detectLanguage } from '../../utils/network/code-highlight.util';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 
-// Attempted regardless of the content-type header, since it's common for APIs to omit or
-// mislabel it — a body that happens to parse as JSON is shown as JSON either way.
 function parseJson(body: string): JsonValue | undefined {
   try {
     return JSON.parse(body);
@@ -29,21 +27,10 @@ function isSvg(mimeType: string | undefined): boolean {
   return mimeType?.toLowerCase().includes('svg') ?? false;
 }
 
-/** Wraps a bare `<svg>` fragment in a minimal document — Android's WebView won't reliably
- * render a fragment passed directly as `source.html`, unlike a full HTML document. */
 function wrapSvgDocument(svg: string): string {
   return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0">${svg}</body></html>`;
 }
 
-/**
- * JSON tree if the body parses as JSON, a live WebView render for HTML/SVG, an `Image` for
- * image responses, else syntax-highlighted text — shared between the Preview tab and the
- * sandbox's response view so both render a body the same way.
- *
- * Images re-fetch from `url` rather than reusing the captured `body`: response bodies are
- * captured via `.text()` (see patch-fetch/xhr services), which corrupts binary data, so it
- * can't be turned back into image bytes reliably.
- */
 export function ResponseBodyPreview({
   body,
   mimeType,
@@ -57,6 +44,7 @@ export function ResponseBodyPreview({
   emptyText: string;
   emptyTextStyle: StyleProp<TextStyle>;
 }) {
+  const styles = useStyles();
   if (isImage(mimeType)) {
     return <Image source={{ uri: url }} style={styles.image} resizeMode="contain" />;
   }
@@ -78,7 +66,7 @@ export function ResponseBodyPreview({
   return <CodeHighlight code={body} language={detectLanguage(mimeType, body)} />;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   image: {
     width: '100%',
     height: 240,
@@ -91,4 +79,4 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
   },
-});
+}));

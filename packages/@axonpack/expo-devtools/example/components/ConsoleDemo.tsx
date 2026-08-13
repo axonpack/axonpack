@@ -4,7 +4,6 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from './ActionButton';
 import { devtools } from '../devtools';
 
-// A plain string rather than JSX text — the quotes and `=>` would otherwise need HTML entities.
 const PROMPT_HINT =
   "At the > prompt, try: appInfo · double(21) · $modules('components') · " +
   "fetch('https://jsonplaceholder.typicode.com/todos/1').then(r => r.json())";
@@ -21,12 +20,10 @@ function buildCircular() {
   return root;
 }
 
-/** Nine levels deep — past the snapshot's depth cap, so the tail renders as `[Object]`. */
 function buildDeeplyNested() {
   return { l1: { l2: { l3: { l4: { l5: { l6: { l7: { l8: { l9: 'past the cap' } } } } } } } } };
 }
 
-/** Reading `boom` throws — the formatter must drop the entry, not take the app down with it. */
 function buildExplosive() {
   const value = { safe: 'this key reads fine' };
   Object.defineProperty(value, 'boom', {
@@ -145,8 +142,6 @@ const ACTIONS: { title: string; note?: string; items: { label: string; run: () =
       {
         label: 'Throwing getter',
         run: () => {
-          // The devtools patch swallows its own formatter error, but the *original* console can
-          // still throw on the same value — so the demo guards the call itself.
           try {
             console.log('object with a throwing getter', buildExplosive());
           } catch (error) {

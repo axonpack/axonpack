@@ -15,29 +15,25 @@ import {
 
 import { ConsolePrompt } from './console-prompt.component';
 import { ConsoleRow } from './console-row.component';
-import { COLORS } from '../../constants/colors.const';
-import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import {
   CONSOLE_LEVEL_LABELS,
-  CONSOLE_LEVEL_VISUALS,
+  consoleLevelVisuals,
   CONSOLE_LEVELS,
 } from '../../constants/console/console-levels.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import { isReplEnabled } from '../../services/console/evaluate-expression.service';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogEntry, ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { formatConsoleSource } from '../../utils/console/formatters.util';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
 
-// How close to the end still counts as "following the tail". A few pixels of slack absorbs the
-// rounding you get from variable-height rows without needing an exact match.
 const NEAR_BOTTOM_SLACK = 40;
 
-// Defined at module scope, not inline on the FlatList: a fresh `renderItem` identity on every store
-// emit defeats `ConsoleRow`'s memoization, which is what a burst of logging needs most.
 function keyExtractor(entry: ConsoleLogEntry): string {
   return entry.id;
 }
@@ -47,6 +43,8 @@ function renderConsoleRow({ item }: ListRenderItemInfo<ConsoleLogEntry>) {
 }
 
 export function ConsoleView() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const entries = useSyncExternalStore(consoleLogStore.subscribe, consoleLogStore.getSnapshot);
   const paused = useSyncExternalStore(consoleLogStore.subscribe, consoleLogStore.isPaused);
 
@@ -59,8 +57,7 @@ export function ConsoleView() {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const listRef = useRef<FlatList<ConsoleLogEntry>>(null);
-  // A ref, not state: the auto-scroll effect has to read the current value without re-running every
-  // time the scroll position changes.
+
   const followingTail = useRef(true);
 
   useEffect(() => {
@@ -80,8 +77,6 @@ export function ConsoleView() {
     return counts;
   }, [entries]);
 
-  // Only worth showing the Source filter once a WebView has actually logged something — a
-  // native-only app would otherwise get a chip row with one permanently-selected option.
   const sources = useMemo(() => {
     const seen = new Set<string>();
     for (const entry of entries) {
@@ -97,21 +92,14 @@ export function ConsoleView() {
       if (activeSource !== null && entry.source !== activeSource) return false;
       return query.length === 0 || entry.text.toLowerCase().includes(query);
     });
-    // Left newest-first, the order the store keeps. The list is `inverted`, which both flips it to
-    // read oldest-to-newest and anchors it to the newest end — so the tail follows itself.
+
     return filtered;
   }, [entries, activeLevel, activeSource, searchText]);
 
-  /**
-   * Unanimated on purpose. An animated scroll emits a stream of `onScroll` events at intermediate
-   * offsets, and `handleScroll` can't tell those from a real drag — it would clear the follow flag
-   * mid-flight and pop the jump-to-bottom button up instead. Jumping lands one event, at offset 0.
-   */
   useEffect(() => {
     if (followingTail.current) listRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [visibleEntries]);
 
-  // In an inverted list the newest end is offset 0, not the content height.
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const atBottom = event.nativeEvent.contentOffset.y <= NEAR_BOTTOM_SLACK;
     followingTail.current = atBottom;
@@ -125,8 +113,6 @@ export function ConsoleView() {
   }
 
   return (
-    // Keyboard avoidance lives on `DevtoolsPanel`, not here — see the note there for why it has to
-    // sit directly under the SafeAreaView.
     <View style={styles.container}>
       <DevtoolsToolbar
         paused={paused}
@@ -136,7 +122,7 @@ export function ConsoleView() {
         trailing={
           <View style={styles.headerSummary}>
             {(['warn', 'error'] as const).map((level) => {
-              const { icon, color } = CONSOLE_LEVEL_VISUALS[level];
+              const { icon, color } = consoleLevelVisuals(COLORS)[level];
               if (!countsByLevel[level] || !icon) return null;
               return (
                 <View key={level} style={styles.summaryItem}>
@@ -191,13 +177,12 @@ export function ConsoleView() {
               onPress={() => setActiveLevel(null)}
             />
             {CONSOLE_LEVELS.map((level) => {
-              const { icon, color } = CONSOLE_LEVEL_VISUALS[level];
+              const { icon, color } = consoleLevelVisuals(COLORS)[level];
               return (
                 <Chip
                   key={level}
                   label={`${CONSOLE_LEVEL_LABELS[level]} (${countsByLevel[level] ?? 0})`}
-                  // Same glyph and color the rows use, so a chip and its output read as one thing.
-                  // Logs has no glyph by design, which leaves it a plain chip on the default accent.
+
                   icon={icon ?? undefined}
                   tint={icon ? color : undefined}
                   active={activeLevel === level}
@@ -236,7 +221,7 @@ export function ConsoleView() {
           data={visibleEntries}
           keyExtractor={keyExtractor}
           renderItem={renderConsoleRow}
-          // A row can hold a JSON tree, so the window is kept tighter than the default 21 screens.
+
           initialNumToRender={15}
           maxToRenderPerBatch={10}
           windowSize={9}
@@ -263,16 +248,15 @@ export function ConsoleView() {
         )}
       </View>
 
-      {/* Submitting jumps to the tail even if you'd scrolled up — you asked for that output. */}
+      {}
       {isReplEnabled() && <ConsolePrompt onSubmit={scrollToBottom} />}
-      {/* Dropped while the keyboard is up: the keyboard already covers the home-indicator area, so
-          keeping the inset would float the prompt above the keyboard by its height. */}
+      {}
       {!keyboardVisible && <InsetPadding edge="bottom" />}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -307,8 +291,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 6,
   },
-  // Dense rather than full-size, so the glyph stays centred in the field instead of stretching it; the
-  // row's own 44dp height is what makes the slop above reachable on Android.
+
   searchClear: {
     width: TOUCH_TARGET.dense,
     height: TOUCH_TARGET.dense,
@@ -362,4 +345,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 40,
   },
-});
+}));

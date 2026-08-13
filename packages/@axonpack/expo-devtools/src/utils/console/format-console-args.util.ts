@@ -1,22 +1,14 @@
 import type { JsonValue } from '../json-tree.util';
 
-// Deeper than this snapshots as a placeholder. The tree can expand indefinitely, so the cap is
-// about bounding the work done on every single log call, not about what's readable.
 const MAX_DEPTH = 6;
 
 export type ConsoleArgTone = 'plain' | 'number' | 'boolean' | 'muted';
 
-/**
- * One `console.*` argument, rendered as its own cell. Objects and arrays keep their structure so
- * they go to the shared `JsonTree` instead of being flattened into a string.
- */
 export type ConsoleArg =
   | { kind: 'primitive'; text: string; tone: ConsoleArgTone }
   | { kind: 'json'; label?: string; value: JsonValue }
   | { kind: 'error'; text: string; stack?: string };
 
-// Takes the structural shape rather than `Function` — the built-in type is both lint-discouraged
-// and awkward to pass a `typeof x === 'function'` narrowing into.
 function describeFunction(value: { name?: unknown }): string {
   return typeof value.name === 'string' && value.name.length > 0 ? `ƒ ${value.name}()` : 'ƒ ()';
 }
@@ -28,8 +20,6 @@ function snapshotObject(
 ): { [key: string]: JsonValue } {
   const result: { [key: string]: JsonValue } = {};
   for (const key of Object.keys(value)) {
-    // Reading a property can throw (a getter with a side effect, a proxy trap) — one bad key
-    // shouldn't cost us the whole object.
     try {
       result[key] = snapshot((value as Record<string, unknown>)[key], depth + 1, seen);
     } catch {
@@ -39,11 +29,6 @@ function snapshotObject(
   return result;
 }
 
-/**
- * Deep-copies a value into the plain `JsonValue` shape the tree renders. Copied rather than kept by
- * reference on purpose: the ring buffer would otherwise pin 500 live app objects in memory, and
- * expanding a row later would show the object's state *now* rather than when it was logged.
- */
 function snapshot(value: unknown, depth: number, seen: Set<object>): JsonValue {
   if (value === null) return null;
 
@@ -82,8 +67,6 @@ function snapshot(value: unknown, depth: number, seen: Set<object>): JsonValue {
     }
     return snapshotObject(object, depth, seen);
   } finally {
-    // Deleted rather than left behind so two sibling references to one object aren't mislabelled
-    // as circular — only a genuine ancestor cycle is.
     seen.delete(object);
   }
 }
@@ -94,7 +77,7 @@ function toConsoleArg(value: unknown): ConsoleArg {
   switch (typeof value) {
     case 'undefined':
       return { kind: 'primitive', text: 'undefined', tone: 'muted' };
-    // A top-level string logs bare (`console.log('hi')` → `hi`), matching a browser console.
+
     case 'string':
       return { kind: 'primitive', text: value, tone: 'plain' };
     case 'number':
@@ -138,12 +121,11 @@ export function toConsoleArgs(args: unknown[]): ConsoleArg[] {
   return args.map(toConsoleArg);
 }
 
-/** Flat text behind the row — what the search box matches and what repeat-collapse compares. */
 export function getConsoleArgsText(parts: ConsoleArg[]): string {
   return parts
     .map((part) => {
       if (part.kind !== 'json') return part.text;
-      // Safe to stringify: `snapshot` already broke every cycle and capped the depth.
+
       const body = JSON.stringify(part.value) ?? '';
       return part.label ? `${part.label} ${body}` : body;
     })
