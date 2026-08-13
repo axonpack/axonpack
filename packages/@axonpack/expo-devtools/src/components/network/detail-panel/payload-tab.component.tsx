@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-import { rowStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useRowStyles } from './shared.styles';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import type { JsonValue } from '../../../utils/json-tree.util';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 import { JsonTree } from '../../json-tree';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
+import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
-import { ShareIconButton } from '../../ui/share-icon-button.ui';
 
-// Attempted regardless of the request's content-type, same rationale as the Preview tab.
 function parseJson(body: string | undefined): JsonValue | undefined {
   if (!body) return undefined;
   try {
@@ -21,6 +21,8 @@ function parseJson(body: string | undefined): JsonValue | undefined {
 }
 
 export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
+  const rowStyles = useRowStyles();
+  const styles = useStyles();
   const [viewSource, setViewSource] = useState(false);
 
   if (!entry.requestBody) {
@@ -36,11 +38,14 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
       headerRight={
         <View style={styles.headerRight}>
           {parsed !== undefined && (
-            <TouchableOpacity onPress={() => setViewSource((prev) => !prev)} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => setViewSource((prev) => !prev)}
+              hitSlop={HIT_SLOP.default}
+              style={styles.toggleButton}>
               <Text style={styles.toggle}>{showSource ? 'View parsed' : 'View source'}</Text>
             </TouchableOpacity>
           )}
-          <ShareIconButton value={entry.requestBody} />
+          <CopyIconButton value={entry.requestBody} />
         </View>
       }>
       {showSource ? (
@@ -52,15 +57,19 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  toggleButton: {
+    minHeight: TOUCH_TARGET.row,
+    justifyContent: 'center',
   },
   toggle: {
     fontSize: 12,
     fontWeight: '600',
     color: COLORS.accent,
   },
-});
+}));

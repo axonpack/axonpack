@@ -3,8 +3,6 @@ import type { ConsoleLogLevel } from '../../stores/console/console-log.store';
 import type { ConsoleArg } from '../../utils/console/format-console-args.util';
 import { getConsoleArgsText } from '../../utils/console/format-console-args.util';
 
-// Its own marker rather than a `type` on the network one, so the two handlers stay independent and
-// the network service doesn't have to grow a branch it doesn't own.
 const MESSAGE_MARKER = '__bruinDevtoolsConsole';
 
 const RELAYED_LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
@@ -34,15 +32,6 @@ function nextEntryId(source: string): string {
   return `${source}-console-${Date.now()}-${entryCounter}`;
 }
 
-/**
- * Patches `console` *inside* the page. A `<WebView>` is a separate JS engine, so `patchConsole`
- * can't see it — the same reason `patchFetch`/`patchXHR` needed their own injected script.
- *
- * Arguments are serialized to `ConsoleArg` in the page rather than shipped raw, because JSON would
- * flatten exactly what the row needs to know: a function, `undefined`, and an `Error` all survive
- * `postMessage` as nothing useful. This mirrors `format-console-args.util.ts`, deliberately
- * duplicated — it has to run as ES5 in a foreign engine, so it can't import ours.
- */
 export function getWebViewConsoleInjectedJavaScript(webviewName: string): string {
   if (!consoleLogStore.isEnabled()) {
     return 'true;';
@@ -218,8 +207,6 @@ export function handleWebViewConsoleMessage(
     return false;
   }
 
-  // Any page loaded in the WebView can post whatever it likes — including something wearing our
-  // marker — so the shape is checked rather than trusted before it reaches the store.
   const payload = message.payload;
   if (
     typeof payload !== 'object' ||

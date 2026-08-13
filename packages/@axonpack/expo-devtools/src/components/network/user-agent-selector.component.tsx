@@ -2,16 +2,19 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import {
   USER_AGENT_PRESET_IDS,
   USER_AGENT_PRESET_LABELS,
   USER_AGENT_PRESET_VALUES,
 } from '../../constants/network/user-agent-presets.const';
 import { networkConditionsStore } from '../../stores/network/network-conditions.store';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { Chip } from '../ui/chip.ui';
 
 export function UserAgentSelector() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const userAgentId = useSyncExternalStore(
     networkConditionsStore.subscribe,
     networkConditionsStore.getUserAgentId
@@ -53,7 +56,8 @@ export function UserAgentSelector() {
           {customUserAgent.length > 0 && (
             <TouchableOpacity
               onPress={() => networkConditionsStore.setCustomUserAgent('')}
-              hitSlop={8}>
+              hitSlop={HIT_SLOP.dense}
+              style={styles.clear}>
               <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
             </TouchableOpacity>
           )}
@@ -69,7 +73,7 @@ export function UserAgentSelector() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   section: {
     marginTop: 12,
   },
@@ -91,10 +95,17 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 8,
     paddingHorizontal: 10,
+    minHeight: TOUCH_TARGET.min,
     paddingVertical: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 6,
+  },
+  clear: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
@@ -107,4 +118,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 6,
   },
-});
+}));

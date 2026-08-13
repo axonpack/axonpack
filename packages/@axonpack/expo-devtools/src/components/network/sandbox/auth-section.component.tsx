@@ -1,10 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { sandboxStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useSandboxStyles } from './shared.styles';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { AuthConfig, AuthType } from '../../../utils/network/sandbox.util';
+import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 
 const AUTH_TYPES: { value: AuthType; label: string }[] = [
@@ -13,7 +14,6 @@ const AUTH_TYPES: { value: AuthType; label: string }[] = [
   { value: 'apikey', label: 'apikey' },
 ];
 
-/** A field whose value can be hidden behind dots (like a password field), toggled via an eye icon. */
 function SecretField({
   label,
   value,
@@ -25,6 +25,9 @@ function SecretField({
   onChangeText: (text: string) => void;
   placeholder?: string;
 }) {
+  const sandboxStyles = useSandboxStyles();
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [revealed, setRevealed] = useState(false);
 
   return (
@@ -40,10 +43,13 @@ function SecretField({
         autoCapitalize="none"
         autoCorrect={false}
       />
-      <TouchableOpacity onPress={() => setRevealed((prev) => !prev)} hitSlop={8}>
+      <TouchableOpacity
+        onPress={() => setRevealed((prev) => !prev)}
+        hitSlop={HIT_SLOP.dense}
+        style={sandboxStyles.rowAction}>
         <MaterialIcons
           name={revealed ? 'visibility-off' : 'visibility'}
-          size={16}
+          size={18}
           color={COLORS.textSecondary}
         />
       </TouchableOpacity>
@@ -58,11 +64,18 @@ export function AuthSection({
   auth: AuthConfig;
   onChange: (auth: AuthConfig) => void;
 }) {
+  const sandboxStyles = useSandboxStyles();
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
     <CollapsibleSection title="Authentication">
       <View style={styles.typeTabs}>
         {AUTH_TYPES.map((t) => (
-          <TouchableOpacity key={t.value} onPress={() => onChange({ ...auth, type: t.value })}>
+          <TouchableOpacity
+            key={t.value}
+            onPress={() => onChange({ ...auth, type: t.value })}
+            hitSlop={HIT_SLOP.default}
+            style={styles.typeTabButton}>
             <Text style={[styles.typeTab, auth.type === t.value && styles.typeTabActive]}>
               {t.label}
             </Text>
@@ -93,7 +106,10 @@ export function AuthSection({
               autoCorrect={false}
             />
             {auth.apiKeyName !== '' && (
-              <TouchableOpacity onPress={() => onChange({ ...auth, apiKeyName: '' })} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => onChange({ ...auth, apiKeyName: '' })}
+                hitSlop={HIT_SLOP.dense}
+                style={sandboxStyles.rowAction}>
                 <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
               </TouchableOpacity>
             )}
@@ -109,11 +125,15 @@ export function AuthSection({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   typeTabs: {
     flexDirection: 'row',
     gap: 16,
     paddingBottom: 8,
+  },
+  typeTabButton: {
+    minHeight: TOUCH_TARGET.row,
+    justifyContent: 'center',
   },
   typeTab: {
     fontSize: 12,
@@ -131,6 +151,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    minHeight: TOUCH_TARGET.min,
     paddingVertical: 6,
   },
   fieldLabel: {
@@ -142,4 +163,4 @@ const styles = StyleSheet.create({
   fieldInput: {
     flex: 1,
   },
-});
+}));

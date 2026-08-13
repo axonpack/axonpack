@@ -1,8 +1,10 @@
 import { StyleSheet, TextInput, View } from 'react-native';
 
-import { COLORS } from '../../../constants/colors.const';
+import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 
 export function UrlBar({ url, onChangeUrl }: { url: string; onChangeUrl: (url: string) => void }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
     <View style={styles.row}>
       <TextInput
@@ -18,7 +20,7 @@ export function UrlBar({ url, onChangeUrl }: { url: string; onChangeUrl: (url: s
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     paddingHorizontal: 12,
     paddingBottom: 10,
@@ -33,4 +35,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
-});
+}));

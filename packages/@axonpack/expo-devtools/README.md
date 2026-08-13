@@ -1,8 +1,8 @@
 # @axonpack/expo-devtools
 
 Browser-style devtools that live **inside** your React Native or Expo app. Tap a floating button and
-you get **Network**, **Console** and **Performance** tabs on the device itself — no desktop debugger,
-no cable, no native code.
+you get **Network**, **Console** and **Performance** tabs on the device itself — no desktop debugger and
+no cable.
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../../LICENSE)
@@ -28,7 +28,7 @@ to reproduce the moment you reach for a menu. This puts the tools where the bug 
 - **Pretend the network is bad** — switch to Slow 3G or go offline without touching your Wi-Fi.
 - **See what the app is costing** — JS heap, frame rate, and the moments the app froze long enough to
   notice.
-- **Make it look like your app** — the panel header carries your own name and icon.
+- **Seven themes, or your own** — Dracula, Nord, Monokai, One Dark and Solarized alongside light and dark, switchable from the panel header.
 - **Safe to ship** — nothing is captured until you switch it on, so leaving the code in a production
   build costs you nothing.
 
@@ -76,9 +76,89 @@ export default function App() {
 }
 ```
 
-That's everything. Drag the button anywhere on screen, tap it to open the panel, and every tab is
-already recording. The panel reopens on whichever tab you last had open, for as long as the app is
-running.
+That's everything. Drag the button anywhere on screen, tap it to open the panel, and the Network and
+Console tabs are already recording. (Performance starts paused — measuring costs something — so press
+its record button when you want it.) The panel reopens on whichever tab you last had open, for as
+long as the app is running.
+
+Every control, section and field is written up in [`REFERENCE.md`](./REFERENCE.md).
+
+### With Expo Router
+
+Expo Router owns the entry point, so there's no `index.ts` of your own to start it from. The root
+layout is the right place: call `init()` at **module scope**, not inside the component, so the
+patches are installed before the first screen renders.
+
+```tsx
+// app/_layout.tsx
+import { Stack } from 'expo-router';
+import { DevtoolsOverlay } from '@axonpack/expo-devtools';
+import { devtools } from '../devtools';
+
+devtools.init();
+
+export default function RootLayout() {
+  return (
+    <>
+      <Stack />
+      <DevtoolsOverlay />
+    </>
+  );
+}
+```
+
+Mounting the overlay in the root layout puts the button on every route, and it opens as a modal over
+whatever screen you're on — including inside a Tabs or Drawer layout. Only the root layout needs it;
+adding it to a nested layout as well would give you two buttons.
+
+To start even earlier — which makes the startup breakdown's _App setup_ phase truer, and catches
+requests fired during module evaluation — take over the entry point:
+
+```js
+// index.js
+import './devtools-init'; // a module whose only job is `devtools.init()`
+import 'expo-router/entry';
+```
+
+```json
+// package.json
+{ "main": "index.js" }
+```
+
+### The launcher button
+
+Nothing has to be configured: `<DevtoolsOverlay />` on its own gives you the bug glyph on a blue circle.
+Everything about its appearance is a prop, since that's where you mount it.
+
+To use your own icon, pass a component. It renders inside the button, which is already drawn for you, so
+it gets the resolved `size` and nothing about colour:
+
+```tsx
+<DevtoolsOverlay
+  iconComponent={({ size }) => <MyLogo width={size} height={size} />}
+  size={56} // diameter in dp, default 44
+  color="#111827" // button fill
+/>
+```
+
+| Prop            | Default     | What it does                                                                       |
+| --------------- | ----------- | ---------------------------------------------------------------------------------- |
+| `iconComponent` | –           | Renders in place of the built-in glyph. Given the resolved `size`; colour is yours |
+| `size`          | `44`        | Diameter of the button, in dp                                                      |
+| `color`         | accent blue | Button fill                                                                        |
+| `iconColor`     | white       | The built-in glyph only — an `iconComponent` colours itself                        |
+
+An image is the same shape as anything else:
+
+```tsx
+iconComponent={({ size }) => (
+  <Image source={require('./assets/icon.png')} style={{ width: size, height: size }} />
+)}
+```
+
+A `size` under 44 still gets a 44dp touch area through `hitSlop`, so a small button stays as easy to hit
+as it looks — and however big you make it, the drag stays inside the screen. Note that `color` and the
+default glyph have to work together: a pale button needs `iconColor` set, or the white glyph vanishes into it.
 
 ## The Network tab
 
@@ -146,7 +226,12 @@ snippet.
 query parameters, headers, cookies, auth, or the body, then Send and watch the real response come
 back. Handy for "does this break if the token is missing?" without touching your code.
 
-Prefer to look at it later? **Export** shares the currently-filtered list as JSON.
+Prefer to look at it later? **Export** opens the OS share sheet with the currently-filtered list as JSON,
+named `network-log-<timestamp>.json` — mail it to yourself, drop it in Slack, paste it into a bug report.
+
+It uses React Native's own `Share` and nothing else, so there is no filesystem involved and no extra
+dependency: on iOS the JSON also rides along as a `data:` URL, which is what lets the sheet offer Files
+and Mail an attachment; on Android, where `Share` carries text only, you get the JSON itself.
 
 ## The Console tab
 
@@ -204,57 +289,135 @@ where the file list above isn't available.
 The prompt is **off in release builds** by default, since it runs whatever is typed into it. Turn it
 on deliberately with `console: { repl: true }` if you want it there.
 
-## Showing your own app in the header
+## Themes
 
-By default the panel header carries this package's name. Point it at your own app instead:
+The header is one row: the tabs, a palette button, then close. The button lists every theme and switches
+the panel immediately. Seven ship with it:
+
+| Id                |                                                       |
+| ----------------- | ----------------------------------------------------- |
+| `light`           | Chrome DevTools' light Network tab — the default      |
+| `dark`            | Chrome DevTools' own dark theme                       |
+| `dracula`         | [Dracula](https://draculatheme.com)                   |
+| `nord`            | [Nord](https://www.nordtheme.com)                     |
+| `monokai`         | Monokai, as in TextMate and Sublime                   |
+| `one-dark`        | One Dark, from Atom                                   |
+| `solarized-light` | Solarized Light — the second of the two light options |
+
+Each is the project's published colours mapped onto this panel's tokens, not an approximation.
+
+Pick which one it opens with, and add your own:
 
 ```ts
 export const devtools = createDevtoolsClient({
-  name: 'Acme Delivery',
-  icon: require('./assets/icon.png'),
+  defaultTheme: 'midnight',
+  themes: {
+    midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
+  },
 });
 ```
 
-Either field works on its own — pass just a name and you keep the default mark, pass just an icon and
-you keep the default title.
+A theme names a `base` to inherit from — any of the seven — and overrides only the tokens it cares about,
+so a one-colour change is a one-line entry rather than a copy of all 21 that rots whenever a token is
+added. Reuse a built-in's id as your own name and you replace it. A `defaultTheme` naming something that was never registered is
+ignored rather than leaving the panel unstyled.
 
-Both have to be given explicitly. An app's installed launcher icon isn't reachable from JavaScript on
-iOS or Android, and the `icon` in your Expo config is a build-time path rather than something `Image`
-can load in a standalone build — so there's nothing dependable to detect. Passing the same
-`require(...)` your config uses is the one approach that works in every build.
+The choice lives in memory for the session, like the tab you last had open — persisting it would mean
+taking a storage dependency for a devtools colour scheme.
+
+The full token list is the `Palette` type, exported from the package root.
 
 ## The Performance tab
 
-Live metrics on the device, no desktop profiler and no cable.
+Live metrics on the device, no desktop profiler and no cable. The toolbar carries the record and
+clear buttons, then a chip per section — and only the section you're looking at is mounted, so the
+charts aren't re-rendering behind a list you're reading:
+
+```
+[⏺] [⊘] │ (Statistics) (User timing) (Interactions) (Long tasks) (Limiter)
+```
+
+Unlike the other two tabs, this one **starts paused**, because measuring isn't free. While it's
+paused nothing is measured at all — the instrumentation detaches rather than running and
+discarding — so leaving it off costs nothing. Pressing record attaches everything fresh and picks up
+whatever the platform still has buffered.
+
+### Statistics
 
 - **JS heap** — how much the JavaScript engine has allocated, with a sparkline of the last two
   minutes so you can watch it climb while you use the app.
-- **JS thread FPS** — measured from a frame-delta loop, green at 50+, amber under that, red under 30.
-- **Startup** — native init, runtime setup, bundle eval and the total, when the platform reports them.
-  Many setups don't, and the section is hidden rather than shown full of dashes.
-- **Long tasks** — anything that blocked the JS thread past the threshold (50 ms by default), newest
-  first, with when it happened and for how long. A "long task" is one stretch of JavaScript that ran
-  without yielding, so nothing else on that thread could happen meanwhile: no touches, no timers, no
-  animation driven from JS. At 60 fps a frame is 16.7 ms, so 50 ms is about three frames lost and
-  roughly where a tap starts to feel late; past ~200 ms it reads as a freeze.
+- **App memory** — the whole process footprint, which is what the OS holds against you and what a user
+  means by "memory". Routinely several times the JS heap, so the two are stacked as separate plots rather
+  than letting one stand in for the other. Needs a development build.
+- **Device memory** — how much RAM the phone has, and how much this app may still allocate, as a meter
+  directly under the app's own footprint: the figure above is the numerator, this is the denominator. On
+  Android the available side is system-wide free memory; on iOS it's what the process can still claim
+  before being killed, which is the figure that actually matters. Needs a development build.
+- **Storage** — total, used and free space on the data partition. Android only, for the App Store reason
+  below. Needs a development build.
+- **Frame rate** — the JS thread from a frame-delta loop, and the main thread from a native display-link
+  counter, on one chart. Both readings and both lines wear the same colour per thread, and the gap between
+  them is the reading that matters: a healthy JS line above a collapsed main-thread line is an app that
+  feels frozen while every JS metric says it's fine. The main-thread figure needs a development build.
+- **Startup** — process start to first render, split into native startup, bundle eval, app setup and
+  first render. Measured by this package's own native module, so it works even where the platform's own
+  markers are all null. Phase boundaries are this package's load points, not platform milestones, so they
+  shift a little with import order — and if the platform _does_ report its markers, they're shown
+  underneath as a second set.
+
+### The three lists
+
+- **User timing** — timings you name yourself, following the
+  [W3C User Timing](https://www.w3.org/TR/user-timing/) signatures. The one metric here that can point
+  at a specific piece of code, so it's the answer to a long task you can't explain:
+
+  ```ts
+  devtools.mark('checkout');
+  await buildCart();
+  devtools.measure('checkout');
+  ```
+
+  `measure(name, startOrOptions?, endMark?)` takes a start mark name, or an options object with
+  `start`, `end`, `duration` and `detail` — the same shapes the spec defines. Calls are also forwarded
+  to the real `performance.mark`/`measure`, so the entries exist on the platform timeline too. Nothing
+  is _observed_ from that timeline, which is why React's own internal measures never appear here.
 
 - **Interactions** — anything that took longer than 100 ms from the event to the next paint. Each row
   also shows how long your handler itself held the JS thread: a small handler under a large total
-  means the interaction was stuck behind something else rather than being slow itself.
+  means the interaction was stuck behind something else rather than being slow itself. Durations come
+  rounded to the nearest 8 ms, and nothing under 16 ms is ever reported.
 
-Both lists share one view — pick which with the chips. Recording works like the other tabs: a record
-button pauses and resumes, and a bin clears what's been collected. While it's paused nothing is measured at all — the instrumentation detaches rather than
-running and discarding — so leaving the tab switched off costs nothing. Switching it back on attaches
-fresh, and picks up whatever the platform still has buffered.
+- **Long tasks** — anything that blocked the JS thread past the threshold (150 ms by default), newest
+  first, with when it happened and for how long. A "long task" is one stretch of JavaScript that ran
+  without yielding, so nothing else on that thread could happen meanwhile: no touches, no timers, no
+  animation driven from JS. At 60 fps a frame is 16.7 ms, so 150 ms is about nine frames lost; past
+  ~200 ms it reads as a freeze. Drop `performance.longTaskThresholdMs` to 50 if you want to see the
+  smaller ones too.
+
+### Limiter
+
+The last chip: breaking things on purpose, so the numbers in the other sections can be trusted. Pick a
+thread, pick a duration — 100 ms to 3 s, or type your own — and block it:
+
+- **JavaScript** — shows up as a long task and drops the FPS reading. Works everywhere.
+- **Main (UI)** — freezes what you see and touch while the JS numbers stay perfectly healthy. That gap is
+  the blind spot the FPS card warns about, and this is how you see it for yourself. Needs a development
+  build.
+
+There's also a **Crash** button for either thread, which takes two taps. It isn't limited to development
+builds — like everything else here, it only exists at all once `.init()` has run, so guard that call if
+you don't want the panel reachable in a release.
 
 ### What it deliberately doesn't show
 
 This tab is honest about the difference between what JavaScript can see and what you probably want to
 know:
 
-- **App memory is not JS heap.** "Memory" usually means the process footprint (RSS). That needs
-  native code — `task_vm_info` on iOS, `Debug.MemoryInfo` on Android — so it isn't here. The JS heap
-  is a real number, just a smaller one than you might assume.
+- **Storage is Android-only.** Nothing here asks for a permission on either platform, and nothing makes
+  your App Store submission harder — which is why iOS storage is missing. `StatFs` on Android needs no
+  permission and no manifest entry, but iOS's `systemFreeSize` is one of Apple's required-reason APIs: no
+  prompt, but it obliges a privacy-manifest declaration at submission, and a library reading it risks
+  pushing that onto every app that embeds it.
 - **No "% of heap limit" gauge.** Hermes doesn't report a heap-size limit, so the denominator would
   have to be invented.
 - **FPS is the JS thread only.** A janky native scroll or a heavy layout happens on the UI thread,
@@ -266,6 +429,9 @@ know:
 - **Some metrics depend on the platform.** Long tasks and startup markers only appear if the native
   side implements them, which varies by platform and React Native version. When they're missing the
   tab says so rather than showing zeros.
+- **Some entries never reach the list.** The platform keeps its own buffer and discards entries once it
+  overflows, telling us only how many went missing. When that happens the list says so rather than
+  presenting what survived as the whole picture.
 - **Long tasks name no culprit.** React Native's `PerformanceLongTaskTiming` returns a permanently
   empty `attribution` array — the web API's mechanism for reporting which code was responsible — so a
   row can tell you a task blocked the thread for 180 ms, but never that it was your list render. Use it
@@ -315,23 +481,26 @@ stylesheets and scripts the browser loads by itself still go out at full speed.
 `createDevtoolsClient(config?)` — every option is optional, and the defaults are what most apps
 want.
 
-| Option                               | Type                      | Default     | Description                                                                           |
-| ------------------------------------ | ------------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `name`                               | `string`                  | `undefined` | Your app's name, shown in the panel header instead of this package's.                 |
-| `icon`                               | `ImageSourcePropType`     | `undefined` | Your app's icon, e.g. `require('./assets/icon.png')`.                                 |
-| `webviewSources`                     | `string[]`                | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs. |
-| `network.includeFetch`               | `boolean`                 | `true`      | Capture requests made with `fetch`.                                                   |
-| `network.includeXmlHttpRequest`      | `boolean`                 | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries.  |
-| `network.disabledByDefault`          | `boolean`                 | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.  |
-| `console.capture`                    | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.       |
-| `console.repl`                       | `boolean`                 | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                     |
-| `console.context`                    | `Record<string, unknown>` | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
-| `console.disabledByDefault`          | `boolean`                 | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.        |
-| `performance.sampleIntervalMs`       | `number`                  | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.  |
-| `performance.longTaskThresholdMs`    | `number`                  | `50`        | Only report tasks that blocked the JS thread at least this long.                      |
-| `performance.interactionThresholdMs` | `number`                  | `100`       | Only report interactions that took at least this long, event to next paint.           |
-| `performance.historySize`            | `number`                  | `120`       | How many heap samples and long tasks are kept.                                        |
-| `performance.disabledByDefault`      | `boolean`                 | `false`     | Open the Performance tab not recording.                                               |
+| Option                               | Type                          | Default     | Description                                                                           |
+| ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `defaultTheme`                       | `string`                      | `'light'`   | Which theme the panel opens with — a built-in or one of yours.                        |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
+| `webviewSources`                     | `string[]`                    | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs. |
+| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                   |
+| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most other HTTP libraries.  |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.  |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.       |
+| `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                     |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.        |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.  |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only report tasks that blocked the JS thread at least this long.                      |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only report interactions that took at least this long, event to next paint.           |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.          |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab not recording. On by default — measuring costs something.    |
+
+Every field of every panel, and the rest of the API — the client's methods, the overlay's props, the
+theme tokens, the exported types — is in [`REFERENCE.md`](./REFERENCE.md).
 
 ## Leaving it in production
 

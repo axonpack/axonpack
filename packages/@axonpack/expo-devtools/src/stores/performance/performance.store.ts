@@ -8,58 +8,90 @@ export type MemorySample = {
 
 export type LongTaskEntry = {
   id: string;
-  /**
-   * Wall clock, recorded on insert. `startTime` is an offset from the performance time origin, which
-   * on a device that has been up for days reads as "464670 s" and tells a reader nothing.
-   */
+
   timestamp: number;
   name: string;
-  /** ms the JS thread was blocked. */
+
   duration: number;
-  /** ms since the performance time origin. */
+
   startTime: number;
 };
 
-/**
- * All four fields come straight from `performance.rnStartupTiming` and any of them can be null — the
- * platform only fills them in if its native code calls `ReactMarker.setAppStartTime`.
- */
 export type StartupTiming = {
   startTime?: number;
   endTime?: number;
   initializeRuntimeStart?: number;
   executeJavaScriptBundleEntryPointStart?: number;
+
+  processStart?: number;
+  nativeModuleInit?: number;
+  jsBundleEval?: number;
+  initCalled?: number;
+  firstRender?: number;
+};
+
+export type UserTimingEntry = {
+  id: string;
+  timestamp: number;
+
+  kind: 'mark' | 'measure';
+  name: string;
+
+  startTime: number;
+
+  duration: number;
+
+  detail?: string;
 };
 
 export type InteractionEntry = {
   id: string;
   timestamp: number;
-  /** The event type, e.g. `touchstart`, `click`. */
+
   name: string;
   startTime: number;
-  /** Event to next paint — what the user actually waited. */
+
   duration: number;
-  /** How long the handler itself held the JS thread, a subset of `duration`. */
+
   processingDuration: number;
 };
 
-/**
- * Whether each collector actually attached. Every one of these depends on what the native side
- * implements, which varies by platform and RN version — without this an empty list is ambiguous
- * between "nothing happened" and "this device never reports it", which are opposite conclusions.
- */
+export type SystemMemorySample = {
+  timestamp: number;
+  appBytes?: number;
+  totalBytes?: number;
+
+  availableToAppBytes?: number;
+};
+
+export type StorageInfo = {
+  totalBytes?: number;
+  freeBytes?: number;
+};
+
+export type PerformanceDropped = {
+  longTasks: number;
+  interactions: number;
+};
+
 export type PerformanceSupport = {
   memory: boolean;
+
+  systemMemory: boolean;
   longTasks: boolean;
   interactions: boolean;
 };
 
 export type PerformanceSnapshot = {
   memory: MemorySample[];
+  systemMemory: SystemMemorySample[];
+  storage?: StorageInfo;
   longTasks: LongTaskEntry[];
+  userTiming: UserTimingEntry[];
   interactions: InteractionEntry[];
   startup?: StartupTiming;
   support: PerformanceSupport;
+  dropped: PerformanceDropped;
 };
 
 type PerformanceEvents = {
@@ -70,17 +102,74 @@ const DEFAULT_HISTORY_SIZE = 120;
 
 let historySize = DEFAULT_HISTORY_SIZE;
 let memory: MemorySample[] = [];
+let systemMemory: SystemMemorySample[] = [];
+let storage: StorageInfo | undefined;
 let longTasks: LongTaskEntry[] = [];
+let userTiming: UserTimingEntry[] = [];
 let interactions: InteractionEntry[] = [];
 let startup: StartupTiming | undefined;
-// Kept out of the snapshot on purpose: it changes twice a second, and anything reading the snapshot
-// re-renders with it. `getFps` is a primitive selector so only the one leaf that wants it subscribes.
+
 let fps: number | undefined;
+let uiFps: number | undefined;
+
+const FPS_HISTORY_SIZE = 600;
+
+const FPS_BUCKET_SAMPLES = 10;
+const FPS_BUCKETS = 60;
+
+type BucketState = {
+  closed: number[];
+
+  open?: number;
+  openCount: number;
+};
+
+function emptyBuckets(): BucketState {
+  return { closed: [], openCount: 0 };
+}
+
+function pushBucketSample(state: BucketState, value: number): BucketState {
+  const open = state.open === undefined ? value : Math.min(state.open, value);
+  const openCount = state.openCount + 1;
+  if (openCount < FPS_BUCKET_SAMPLES) return { closed: state.closed, open, openCount };
+  return { closed: [...state.closed, open].slice(-FPS_BUCKETS), openCount: 0 };
+}
+
+function bucketSeries(state: BucketState): number[] {
+  return state.open === undefined ? state.closed : [...state.closed, state.open];
+}
+
+let fpsBucketState = emptyBuckets();
+let uiFpsBucketState = emptyBuckets();
+
+let fpsSeriesCache: number[] = [];
+let uiFpsSeriesCache: number[] = [];
+
+const FPS_WINDOW_HINT_MS = 500;
+let fpsHistory: number[] = [];
+let uiFpsHistory: number[] = [];
+
+let fpsPeak = 0;
+
+const PEAK_CONFIRMATIONS = 3;
+
+const PEAK_TOLERANCE = 0.95;
+
+type PeakRun = { candidate: number; count: number };
+const jsPeakRun: PeakRun = { candidate: 0, count: 0 };
+const uiPeakRun: PeakRun = { candidate: 0, count: 0 };
+
+let heapPeak = 0;
+let appMemoryPeak = 0;
+
+let sampleIntervalMs = 1000;
 let support: PerformanceSupport = {
   memory: false,
+  systemMemory: false,
   longTasks: false,
   interactions: false,
 };
+let dropped: PerformanceDropped = { longTasks: 0, interactions: 0 };
 let paused = false;
 let enabled = false;
 
@@ -88,37 +177,48 @@ const emitter = new EventEmitter<PerformanceEvents>();
 
 let snapshot: PerformanceSnapshot = {
   memory,
+  systemMemory,
+  storage,
   longTasks,
+  userTiming,
   interactions,
   startup,
   support,
+  dropped,
 };
+let snapshotStale = false;
 
-/**
- * At most one notification per this interval. Without a ceiling the tab feeds itself: rendering the
- * list is work that can exceed the long-task threshold, which records another entry, which notifies,
- * which renders again. Recording our own render is indistinguishable from a real long task, so the
- * loop has to be broken by bounding the notification rate rather than by filtering entries.
- *
- * Leading edge fires immediately, so a single user action still lands at once; a burst coalesces into
- * one trailing notification.
- */
 const MIN_NOTIFY_INTERVAL_MS = 250;
 let lastNotifyAt = 0;
 let pendingNotify: ReturnType<typeof setTimeout> | undefined;
+
+function observePeak(run: PeakRun, value: number) {
+  if (value <= fpsPeak) {
+    run.candidate = 0;
+    run.count = 0;
+    return;
+  }
+
+  if (run.count > 0 && value >= run.candidate * PEAK_TOLERANCE) {
+    run.count += 1;
+  } else {
+    run.candidate = value;
+    run.count = 1;
+  }
+
+  if (run.count >= PEAK_CONFIRMATIONS) {
+    fpsPeak = run.candidate;
+    run.candidate = 0;
+    run.count = 0;
+  }
+}
 
 function notify() {
   lastNotifyAt = Date.now();
   emitter.emit('change');
 }
 
-/**
- * `immediate` is for control changes — pausing, clearing, support flags. Those are rare, and a user
- * pressing record has to see it take effect at once; only the high-frequency data path is throttled.
- */
-function publish(immediate = false) {
-  snapshot = { memory, longTasks, interactions, startup, support };
-
+function scheduleNotify(immediate = false) {
   if (immediate) {
     if (pendingNotify !== undefined) {
       clearTimeout(pendingNotify);
@@ -145,11 +245,31 @@ function publish(immediate = false) {
   }
 }
 
+function publish(immediate = false) {
+  snapshotStale = true;
+  scheduleNotify(immediate);
+}
+
 let taskCounter = 0;
+let userTimingCounter = 0;
 let interactionCounter = 0;
 
 export const performanceStore = {
   getSnapshot(): PerformanceSnapshot {
+    if (snapshotStale) {
+      snapshot = {
+        memory,
+        systemMemory,
+        storage,
+        longTasks,
+        userTiming,
+        interactions,
+        startup,
+        support,
+        dropped,
+      };
+      snapshotStale = false;
+    }
     return snapshot;
   },
   subscribe(listener: () => void) {
@@ -165,7 +285,43 @@ export const performanceStore = {
   getFps(): number | undefined {
     return fps;
   },
-  /** Latest sample only — the leaf that renders the number doesn't need the whole series. */
+  getUiFps(): number | undefined {
+    return uiFps;
+  },
+  getFpsHistory(): number[] {
+    return fpsHistory;
+  },
+  getFpsSeries(): number[] {
+    return fpsSeriesCache;
+  },
+  getUiFpsSeries(): number[] {
+    return uiFpsSeriesCache;
+  },
+  getFpsBucketCount(): number {
+    return FPS_BUCKETS;
+  },
+  getFpsBucketMs(): number {
+    return FPS_BUCKET_SAMPLES * FPS_WINDOW_HINT_MS;
+  },
+  getFpsPeak(): number {
+    const windowMax = Math.max(0, ...fpsHistory, ...uiFpsHistory);
+    return fpsPeak <= windowMax ? fpsPeak : windowMax;
+  },
+  getHeapPeak(): number {
+    return heapPeak;
+  },
+  getAppMemoryPeak(): number {
+    return appMemoryPeak;
+  },
+  getSampleIntervalMs(): number {
+    return sampleIntervalMs;
+  },
+  setSampleIntervalMs(next: number) {
+    sampleIntervalMs = next;
+  },
+  getUiFpsHistory(): number[] {
+    return uiFpsHistory;
+  },
   getLatestHeapUsed(): number | undefined {
     return memory.at(-1)?.usedJSHeapSize;
   },
@@ -177,25 +333,45 @@ export const performanceStore = {
     paused = nextPaused;
     publish(true);
   },
-  /** Reported by each collector as it installs, so the UI can say why a list is empty. */
+  addDropped(next: Partial<PerformanceDropped>) {
+    if (!enabled || paused) return;
+    dropped = {
+      longTasks: dropped.longTasks + (next.longTasks ?? 0),
+      interactions: dropped.interactions + (next.interactions ?? 0),
+    };
+    publish();
+  },
   setSupport(next: Partial<PerformanceSupport>) {
     support = { ...support, ...next };
     publish(true);
   },
+  getHistorySize(): number {
+    return historySize;
+  },
   setHistorySize(next: number) {
     historySize = Math.max(1, next);
   },
-  addMemorySample(sample: MemorySample) {
+  setStorage(next: StorageInfo) {
+    if (!enabled) return;
+    storage = next;
+    publish(true);
+  },
+  addSystemMemorySample(sample: SystemMemorySample) {
     if (!enabled || paused) return;
-    // Appended rather than prepended: the sparkline reads left-to-right as oldest-to-newest.
-    memory = [...memory, sample].slice(-historySize);
+    systemMemory = [...systemMemory, sample].slice(-historySize);
+    if (sample.appBytes !== undefined && sample.appBytes > appMemoryPeak) {
+      appMemoryPeak = sample.appBytes;
+    }
     publish();
   },
-  /**
-   * Batched, not one call per entry: every collector receives entries in groups (an observer
-   * callback, or the whole native buffer on attach), and publishing per entry meant a full re-render
-   * of the list for each one.
-   */
+  addMemorySample(sample: MemorySample) {
+    if (!enabled || paused) return;
+    memory = [...memory, sample].slice(-historySize);
+    if (sample.usedJSHeapSize !== undefined && sample.usedJSHeapSize > heapPeak) {
+      heapPeak = sample.usedJSHeapSize;
+    }
+    publish();
+  },
   addLongTasks(entries: Omit<LongTaskEntry, 'id' | 'timestamp'>[]) {
     if (!enabled || paused || entries.length === 0) return;
     const now = Date.now();
@@ -205,6 +381,21 @@ export const performanceStore = {
     });
     longTasks = [...additions.reverse(), ...longTasks].slice(0, historySize);
     publish();
+  },
+  addUserTiming(entries: Omit<UserTimingEntry, 'id' | 'timestamp'>[]) {
+    if (!enabled || paused || entries.length === 0) return;
+    const now = Date.now();
+    const additions = entries.slice(-historySize).map((entry) => {
+      userTimingCounter += 1;
+      return { ...entry, id: `usertiming-${userTimingCounter}`, timestamp: now };
+    });
+    userTiming = [...additions.reverse(), ...userTiming].slice(0, historySize);
+    publish();
+  },
+  clearUserTiming(predicate?: (entry: UserTimingEntry) => boolean) {
+    if (predicate === undefined) userTiming = [];
+    else userTiming = userTiming.filter((entry) => !predicate(entry));
+    publish(true);
   },
   addInteractions(entries: Omit<InteractionEntry, 'id' | 'timestamp'>[]) {
     if (!enabled || paused || entries.length === 0) return;
@@ -216,7 +407,6 @@ export const performanceStore = {
     interactions = [...additions.reverse(), ...interactions].slice(0, historySize);
     publish();
   },
-  /** Read once at startup, so it isn't gated on `paused` the way sampled data is. */
   setStartup(next: StartupTiming) {
     if (!enabled) return;
     startup = next;
@@ -225,13 +415,47 @@ export const performanceStore = {
   setFps(next: number | undefined) {
     if (!enabled || paused) return;
     fps = next;
-    publish();
+    if (next !== undefined) {
+      fpsHistory = [...fpsHistory, next].slice(-FPS_HISTORY_SIZE);
+      fpsBucketState = pushBucketSample(fpsBucketState, next);
+      fpsSeriesCache = bucketSeries(fpsBucketState);
+      observePeak(jsPeakRun, next);
+    }
+    scheduleNotify();
+  },
+  setUiFps(next: number | undefined) {
+    if (!enabled || paused) return;
+    uiFps = next;
+    if (next !== undefined) {
+      uiFpsHistory = [...uiFpsHistory, next].slice(-FPS_HISTORY_SIZE);
+      uiFpsBucketState = pushBucketSample(uiFpsBucketState, next);
+      uiFpsSeriesCache = bucketSeries(uiFpsBucketState);
+      observePeak(uiPeakRun, next);
+    }
+    scheduleNotify();
   },
   clear() {
     memory = [];
+    systemMemory = [];
     longTasks = [];
+    userTiming = [];
     interactions = [];
+    dropped = { longTasks: 0, interactions: 0 };
     fps = undefined;
+    uiFps = undefined;
+    fpsHistory = [];
+    uiFpsHistory = [];
+    fpsBucketState = emptyBuckets();
+    uiFpsBucketState = emptyBuckets();
+    fpsSeriesCache = [];
+    uiFpsSeriesCache = [];
+    fpsPeak = 0;
+    jsPeakRun.candidate = 0;
+    jsPeakRun.count = 0;
+    uiPeakRun.candidate = 0;
+    uiPeakRun.count = 0;
+    heapPeak = 0;
+    appMemoryPeak = 0;
     publish(true);
   },
 };

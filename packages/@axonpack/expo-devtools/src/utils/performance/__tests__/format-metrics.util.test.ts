@@ -1,10 +1,15 @@
-import { COLORS } from '../../../constants/colors.const';
-import { diffMs, formatMs, getFpsColor, getLongTaskColor } from '../format-metrics.util';
+import { LIGHT_PALETTE as COLORS } from '../../../constants/theme.const';
+import { diffMs, formatMs, getLongTaskColor } from '../format-metrics.util';
 
 describe('formatMs', () => {
   it('marks an absent value rather than printing 0', () => {
     expect(formatMs(undefined)).toBe('–');
-    expect(formatMs(0)).toBe('0.00 ms');
+    expect(formatMs(0)).toBe('0 ms');
+  });
+
+  it('never prints a negative zero', () => {
+    expect(formatMs(-0.001)).toBe('0 ms');
+    expect(formatMs(-0.0001)).toBe('0 ms');
   });
 
   it('keeps sub-millisecond precision but rounds past 1ms', () => {
@@ -20,7 +25,6 @@ describe('formatMs', () => {
 });
 
 describe('diffMs', () => {
-  // Startup markers are individually nullable, so a missing one must not read as a zero-length phase.
   it('returns undefined when either end is missing', () => {
     expect(diffMs(undefined, 100)).toBeUndefined();
     expect(diffMs(100, undefined)).toBeUndefined();
@@ -37,21 +41,9 @@ describe('diffMs', () => {
 });
 
 describe('threshold colors', () => {
-  it('grades fps against a 60fps target', () => {
-    expect(getFpsColor(60)).toBe(COLORS.success);
-    expect(getFpsColor(50)).toBe(COLORS.success);
-    expect(getFpsColor(49)).toBe(COLORS.warning);
-    expect(getFpsColor(30)).toBe(COLORS.warning);
-    expect(getFpsColor(29)).toBe(COLORS.error);
-  });
-
-  it('is muted for an unknown fps rather than alarming', () => {
-    expect(getFpsColor(undefined)).toBe(COLORS.textSecondary);
-  });
-
   it('escalates long tasks at the perceptible thresholds', () => {
-    expect(getLongTaskColor(60)).toBe(COLORS.textSecondary);
-    expect(getLongTaskColor(100)).toBe(COLORS.warning);
-    expect(getLongTaskColor(200)).toBe(COLORS.error);
+    expect(getLongTaskColor(60, COLORS)).toBe(COLORS.textSecondary);
+    expect(getLongTaskColor(100, COLORS)).toBe(COLORS.warning);
+    expect(getLongTaskColor(200, COLORS)).toBe(COLORS.error);
   });
 });

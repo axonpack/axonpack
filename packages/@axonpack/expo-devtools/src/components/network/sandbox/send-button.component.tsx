@@ -1,8 +1,10 @@
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 
-import { COLORS } from '../../../constants/colors.const';
+import { TOUCH_TARGET } from '../../../constants/metrics.const';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 
 export function SendButton({ sending, onPress }: { sending: boolean; onPress: () => void }) {
+  const styles = useStyles();
   return (
     <TouchableOpacity style={styles.button} onPress={onPress} disabled={sending}>
       {sending ? (
@@ -14,16 +16,18 @@ export function SendButton({ sending, onPress }: { sending: boolean; onPress: ()
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   button: {
     backgroundColor: COLORS.textPrimary,
     borderRadius: 6,
     paddingHorizontal: 16,
-    paddingVertical: 9,
+    minHeight: TOUCH_TARGET.min,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
   },
-});
+}));

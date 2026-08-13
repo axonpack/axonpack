@@ -1,12 +1,15 @@
-import { COLORS } from '../../constants/colors.const';
+import type { Palette } from '../../constants/theme.const';
 import type { NetworkLogStatus } from '../../stores/network/network-log.store';
 
-/**
- * `status` alone only reflects whether the fetch/XHR call itself completed — `fetch()` and XHR
- * both resolve normally on a 4xx/5xx response, so a 503 comes through as `'success'`. Pass
- * `statusCode` too to color those as errors, matching Chrome DevTools.
- */
-export function getStatusColor(status: NetworkLogStatus, statusCode?: number): string {
+export function isErrorStatus(status: NetworkLogStatus, statusCode?: number): boolean {
+  return status === 'error' || (statusCode !== undefined && statusCode >= 400);
+}
+
+export function getStatusColor(
+  status: NetworkLogStatus,
+  statusCode: number | undefined,
+  COLORS: Palette
+): string {
   switch (status) {
     case 'error':
       return COLORS.error;
@@ -17,8 +20,6 @@ export function getStatusColor(status: NetworkLogStatus, statusCode?: number): s
   }
 }
 
-// Standard HTTP reason phrases (RFC 9110 + common extensions), matching Node's http.STATUS_CODES.
-// Used as a fallback since RN's fetch/XHR implementations don't always populate `statusText`.
 const HTTP_STATUS_TEXTS: Record<number, string> = {
   100: 'Continue',
   101: 'Switching Protocols',
@@ -84,12 +85,6 @@ const HTTP_STATUS_TEXTS: Record<number, string> = {
   511: 'Network Authentication Required',
 };
 
-/**
- * Our own mapped reason phrase leads (e.g. "OK" for 200) since some runtimes report a
- * `statusText` that isn't the real reason phrase at all (observed: "no error" for a 200) — the
- * server/runtime value is only appended in brackets when it disagrees with our mapping, e.g.
- * "OK (no error)". Falls back to the raw statusText for a status code we don't have mapped.
- */
 export function getStatusText(
   statusCode: number,
   statusText: string | undefined
@@ -101,8 +96,7 @@ export function getStatusText(
   return mapped;
 }
 
-/** Color-codes an HTTP method the way most API tooling does (GET blue, POST green, mutate-in-place amber, DELETE red). */
-export function getMethodColor(method: string): string {
+export function getMethodColor(method: string, COLORS: Palette): string {
   switch (method.toUpperCase()) {
     case 'GET':
       return COLORS.accent;
@@ -118,17 +112,11 @@ export function getMethodColor(method: string): string {
   }
 }
 
-/**
- * `entry.source` is 'fetch'/'xhr' for native requests, or the WebView's own name for anything
- * captured via the injected script (see webview-network-logger.service.ts) — the only way to
- * tell those apart is that a WebView name is never literally 'fetch' or 'xhr'.
- */
 export function formatSource(source: string): string {
   if (source === 'fetch' || source === 'xhr') return source;
   return `WebView::[${source}]`;
 }
 
-/** Last path segment plus the query string, matching Chrome's "Name" column (used for big rows). */
 export function getDisplayNameWithQuery(url: string): string {
   try {
     const parsed = new URL(url);

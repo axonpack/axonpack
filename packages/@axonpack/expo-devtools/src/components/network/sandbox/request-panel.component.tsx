@@ -1,10 +1,9 @@
-import { StyleSheet, TextInput } from 'react-native';
+import { TextInput } from 'react-native';
 
 import { AuthSection } from './auth-section.component';
 import { KeyValueTable } from './key-value-table.component';
 import { NetworkConditionsSection } from './network-conditions-section.component';
-import { sandboxStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useSandboxStyles } from './shared.styles';
 import { buildCurlCommand } from '../../../utils/network/curl.util';
 import {
   buildAuthHeaders,
@@ -14,6 +13,7 @@ import {
   type AuthConfig,
   type KeyValueRow,
 } from '../../../utils/network/sandbox.util';
+import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
 
@@ -44,6 +44,9 @@ export function RequestPanel({
   bodyText: string;
   onChangeBodyText: (text: string) => void;
 }) {
+  const sandboxStyles = useSandboxStyles();
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const cookieHeader = rowsToCookieHeader(cookieRows);
   const curlHeaders = {
     ...rowsToRecord(headerRows),
@@ -91,7 +94,7 @@ export function RequestPanel({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   bodyInput: {
     minHeight: 100,
     fontSize: 12,
@@ -99,4 +102,4 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     textAlignVertical: 'top',
   },
-});
+}));

@@ -1,0 +1,15 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.axonpackdevtools'
+version = '2.0.0'
+
+android {
+  namespace "expo.modules.axonpackdevtools"
+  defaultConfig {
+    versionCode 1
+    versionName '2.0.0'
+  }
+}

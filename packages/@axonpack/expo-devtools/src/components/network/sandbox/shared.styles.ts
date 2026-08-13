@@ -1,8 +1,9 @@
 import { StyleSheet } from 'react-native';
 
-import { COLORS } from '../../../constants/colors.const';
+import { TOUCH_TARGET } from '../../../constants/metrics.const';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 
-export const sandboxStyles = StyleSheet.create({
+export const useSandboxStyles = makeThemedStyles((COLORS) => ({
   section: {
     marginBottom: 4,
   },
@@ -10,13 +11,14 @@ export const sandboxStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    minHeight: TOUCH_TARGET.min,
     paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
-  // Bordered/tinted box so a key or value field visibly reads as editable, not static text.
   fieldBox: {
     fontSize: 13,
+    minHeight: TOUCH_TARGET.dense,
     color: COLORS.textPrimary,
     backgroundColor: COLORS.sectionTint,
     borderWidth: StyleSheet.hairlineWidth,
@@ -24,6 +26,13 @@ export const sandboxStyles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 6,
+  },
+
+  rowAction: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   keyField: {
     flex: 0.4,
@@ -47,4 +56,4 @@ export const sandboxStyles = StyleSheet.create({
     fontStyle: 'italic',
     paddingVertical: 8,
   },
-});
+}));

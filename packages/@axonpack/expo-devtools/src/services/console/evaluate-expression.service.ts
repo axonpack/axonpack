@@ -4,7 +4,6 @@ import { normalizeExpressionInput } from '../../utils/console/normalize-expressi
 let replEnabled = false;
 let userContext: Record<string, unknown> = {};
 
-/** Set by `createDevtoolsClient(...).init()`. The prompt stays hidden until this turns it on. */
 export function configureRepl(enabled: boolean, context?: Record<string, unknown>) {
   replEnabled = enabled;
   userContext = context ?? {};
@@ -14,18 +13,10 @@ export function isReplEnabled(): boolean {
   return replEnabled;
 }
 
-/** The injected names an expression can use — the built-in helpers plus whatever the app passed. */
 export function getReplContext(): Record<string, unknown> {
   return { $m: findModule, $modules: listModules, ...userContext };
 }
 
-/**
- * Runs a typed expression. Hermes drops _local mode_ `eval()` but keeps `new Function`, so the code
- * compiles against globals plus the names below, passed in as parameters — the only way to make an
- * app's own objects resolvable, since Metro's module closures aren't reachable from any scope.
- *
- * Throws whatever the expression throws; the caller renders it as the result.
- */
 export function evaluateExpression(rawSource: string): unknown {
   const source = normalizeExpressionInput(rawSource);
   const context = getReplContext();

@@ -71,12 +71,6 @@ function extractSize(
   return body?.length;
 }
 
-/**
- * Expo installs its own native `fetch` (expo/winter/fetch) by default, which does NOT
- * go through `XMLHttpRequest` like classic React Native's whatwg-fetch polyfill did.
- * That's why this needs its own patch alongside patchXHR — one covers fetch, the other
- * covers XHR-based HTTP client libraries and raw XHR, and neither overlaps with the other in this setup.
- */
 export function patchFetch() {
   if (isPatched) return;
   isPatched = true;
@@ -110,8 +104,6 @@ export function patchFetch() {
     });
 
     if (conditions.offline) {
-      // Matches what a genuine connection failure throws, so app-level error handling that
-      // branches on the error type behaves the same as it would with the network really down.
       const offlineError = new TypeError('Network request failed');
       networkLogStore.update(id, {
         status: 'error',

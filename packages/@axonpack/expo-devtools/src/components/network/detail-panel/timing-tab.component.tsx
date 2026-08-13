@@ -1,10 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { rowStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useRowStyles } from './shared.styles';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 
 export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
+  const rowStyles = useRowStyles();
+  const styles = useStyles();
   return (
     <View style={rowStyles.section}>
       <View style={rowStyles.headerRow}>
@@ -32,11 +34,11 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   timingNote: {
     marginTop: 12,
     fontSize: 11,
     color: COLORS.textSecondary,
     fontStyle: 'italic',
   },
-});
+}));

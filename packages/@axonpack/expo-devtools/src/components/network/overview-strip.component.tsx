@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
-import { getStatusColor } from '../../utils/network/formatters.util';
+import { isErrorStatus } from '../../utils/network/formatters.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 const BUCKET_COUNT = 36;
 const MAX_BAR_HEIGHT = 20;
@@ -34,7 +34,8 @@ function buildOverview(entries: NetworkLogEntry[]): {
     const index = Math.min(BUCKET_COUNT - 1, Math.floor((entry.startedAt - min) / bucketDuration));
     const bucket = buckets[index];
     bucket.count += 1;
-    if (getStatusColor(entry.status, entry.statusCode) === COLORS.error) bucket.hasError = true;
+
+    if (isErrorStatus(entry.status, entry.statusCode)) bucket.hasError = true;
   }
 
   return { buckets, min, max };
@@ -48,13 +49,6 @@ function formatSpan(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-/**
- * A compact activity histogram — request count per time bucket, buckets with a failure
- * highlighted red. Tapping a bucket filters the list to that time window (tapping the same
- * bucket again clears it). Deliberately not a Chrome-style per-request waterfall: duration bars
- * collide once several requests overlap on a narrow screen, and there's no phase-breakdown data
- * to anchor a precise timeline against anyway (see ROADMAP's hard limits).
- */
 export function OverviewStrip({
   entries,
   activeRange,
@@ -64,6 +58,8 @@ export function OverviewStrip({
   activeRange: TimeRange | null;
   onSelectRange: (range: TimeRange | null) => void;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const { buckets, min, max } = useMemo(() => buildOverview(entries), [entries]);
 
   if (entries.length === 0) return null;
@@ -114,7 +110,7 @@ export function OverviewStrip({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     marginHorizontal: 12,
     marginTop: 8,
@@ -157,4 +153,4 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
     fontWeight: '600',
   },
-});
+}));

@@ -2,8 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 export function CollapsibleSection({
   title,
@@ -13,11 +14,12 @@ export function CollapsibleSection({
 }: {
   title: string;
   count?: number;
-  /** Extra control rendered at the far right of the header, e.g. a "View source" toggle —
-   * it's its own touch target and doesn't trigger the section's expand/collapse. */
+
   headerRight?: ReactNode;
   children: ReactNode;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -30,7 +32,7 @@ export function CollapsibleSection({
         }}>
         <MaterialIcons
           name="arrow-drop-down"
-          size={18}
+          size={20}
           color={COLORS.textSecondary}
           style={!expanded && styles.iconCollapsed}
         />
@@ -45,7 +47,7 @@ export function CollapsibleSection({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -54,10 +56,9 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
-    // Bleeds past the screen's own horizontal content padding so the tint spans edge-to-edge,
-    // then reapplies it via paddingHorizontal to keep the title's inset unchanged.
     marginHorizontal: -12,
     paddingHorizontal: 12,
+    minHeight: TOUCH_TARGET.row,
     paddingVertical: 6,
   },
   iconCollapsed: {
@@ -72,4 +73,4 @@ const styles = StyleSheet.create({
   body: {
     paddingTop: 2,
   },
-});
+}));

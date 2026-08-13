@@ -1,12 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { rowStyles } from './shared.styles';
-import { COLORS } from '../../../constants/colors.const';
+import { useRowStyles } from './shared.styles';
 import type { ResolvedNetworkConditions } from '../../../stores/network/network-conditions.store';
 import {
   formatThrottleSummary,
   formatUserAgentSummary,
 } from '../../../utils/network/network-conditions.util';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 
 export function NetworkConditionsSection({
@@ -14,6 +14,8 @@ export function NetworkConditionsSection({
 }: {
   conditions: ResolvedNetworkConditions;
 }) {
+  const rowStyles = useRowStyles();
+  const styles = useStyles();
   const isThrottled = conditions.offline || conditions.throttle !== null;
   const hasUserAgentOverride = conditions.userAgent !== null;
 
@@ -55,9 +57,7 @@ export function NetworkConditionsSection({
   );
 }
 
-const styles = StyleSheet.create({
-  // A non-default condition is worth spotting at a glance — it's the most likely explanation for
-  // a request being unexpectedly slow or failing.
+const useStyles = makeThemedStyles((COLORS) => ({
   active: {
     color: COLORS.warning,
     fontWeight: '600',
@@ -66,4 +66,4 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     fontWeight: '600',
   },
-});
+}));

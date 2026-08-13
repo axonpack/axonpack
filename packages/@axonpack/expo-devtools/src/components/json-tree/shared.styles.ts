@@ -1,15 +1,15 @@
-import { StyleSheet } from 'react-native';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 
-import { COLORS } from '../../constants/colors.const';
-
-export const treeStyles = StyleSheet.create({
+export const useTreeStyles = makeThemedStyles((COLORS) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingVertical: 2,
+    minHeight: TOUCH_TARGET.dense,
+    paddingVertical: 4,
   },
   toggle: {
-    width: 14,
+    width: 16,
     alignItems: 'center',
   },
   text: {
@@ -36,4 +36,4 @@ export const treeStyles = StyleSheet.create({
   nullValue: {
     color: COLORS.textSecondary,
   },
-});
+}));

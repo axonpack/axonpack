@@ -18,19 +18,16 @@ type Rule = { type: TokenType; pattern: RegExp };
 
 export type Language = 'javascript' | 'css' | 'markup' | 'plain';
 
-// Body sizes beyond this render as plain monospace text — a naive single-pass regex tokenizer
-// re-slicing the remaining string on every token is fine for a preview, not for megabytes of text.
 export const MAX_HIGHLIGHT_LENGTH = 50_000;
 
 function detectFromContent(body: string): Language {
   const trimmed = body.trimStart();
   if (/^(<!doctype|<html|<\?xml)/i.test(trimmed)) return 'markup';
-  // Heuristic: a CSS rule looks like `selector { property: value; }` near the start of the body.
+
   if (/^[.#@a-zA-Z][^{}]{0,80}\{[^}]*:[^}]*\}/.test(trimmed)) return 'css';
   return 'plain';
 }
 
-/** Prefers the response's mimeType; falls back to sniffing a few unambiguous leading patterns. */
 export function detectLanguage(mimeType: string | undefined, body: string): Language {
   const mime = mimeType?.toLowerCase() ?? '';
   if (mime.includes('javascript') || mime.includes('ecmascript') || mime.includes('typescript')) {
@@ -76,8 +73,7 @@ const CSS_RULES: Rule[] = [
 const MARKUP_RULES: Rule[] = [
   { type: 'comment', pattern: /^<!--[\s\S]*?-->/ },
   { type: 'tag', pattern: /^<\/?[a-zA-Z][\w-]*/ },
-  // Whitespace must be its own rule (not left to the catch-all below) so that after a tag
-  // name, `attr-name`'s lookahead gets a chance to match starting at the attribute itself.
+
   { type: 'plain', pattern: /^\s+/ },
   { type: 'attr-name', pattern: /^[a-zA-Z-]+(?=\s*=)/ },
   { type: 'attr-value', pattern: /^(['"])(?:\\.|(?!\1).)*\1/ },
@@ -93,7 +89,6 @@ const LANGUAGE_RULES: Record<Language, Rule[]> = {
   plain: [],
 };
 
-/** Single-pass, longest-first-match tokenizer — not a real parser, but plenty for a preview. */
 export function tokenize(code: string, language: Language): Token[] {
   const rules = LANGUAGE_RULES[language];
   if (rules.length === 0) return [{ type: 'plain', text: code }];
@@ -103,7 +98,6 @@ export function tokenize(code: string, language: Language): Token[] {
   while (rest.length > 0) {
     let matched = false;
     for (const rule of rules) {
-      // Every pattern is `^`-anchored, so a match (if any) is always at index 0.
       const match = rule.pattern.exec(rest);
       if (match && match[0].length > 0) {
         tokens.push({ type: rule.type, text: match[0] });
@@ -127,20 +121,13 @@ export function tokenize(code: string, language: Language): Token[] {
 
 const INDENT_UNIT = '  ';
 
-/**
- * Reflows minified/single-line JS or CSS onto multiple indented lines for readability —
- * not a real formatter (no operator spacing, no line-length wrapping), just enough structure
- * from `{`/`}`/`;` to make a minified body skimmable. Re-tokenizes the raw code internally so
- * it never breaks a line inside a string or comment; markup/plain pass through unchanged.
- */
 export function formatCode(code: string, language: Language): string {
   if (language !== 'javascript' && language !== 'css') return code;
 
   let output = '';
   let indent = 0;
   let atLineStart = true;
-  // Set after `,`/`:`, where we already appended our own trailing space — otherwise an input
-  // that (unlike the typical minified case) already had a space there would get a second one.
+
   let justInsertedSpace = false;
 
   for (const token of tokenize(code, language)) {

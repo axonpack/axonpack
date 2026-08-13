@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-import { rowStyles } from './shared.styles';
+import { useRowStyles } from './shared.styles';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { CopyIconButton } from '../../ui/copy-icon-button.ui';
 
@@ -13,6 +13,7 @@ export function HeaderList({
   headers: Record<string, string> | undefined;
   stacked: boolean;
 }) {
+  const rowStyles = useRowStyles();
   const entries = headers ? Object.entries(headers) : [];
   return (
     <CollapsibleSection title={title} count={entries.length}>

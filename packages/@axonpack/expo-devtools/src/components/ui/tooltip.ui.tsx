@@ -1,12 +1,10 @@
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 
 const BUBBLE_WIDTH = 160;
 const EDGE_MARGIN = 8;
 
-/** A long-press label — RN has no built-in tooltip, and an icon-only button carries no
- * visible text otherwise. Anchored near the touch point, dismissed on release or tap-away. */
 export function Tooltip({
   anchor,
   label,
@@ -16,6 +14,7 @@ export function Tooltip({
   label: string;
   onClose: () => void;
 }) {
+  const styles = useStyles();
   const { width, height } = useWindowDimensions();
 
   if (!anchor) return null;
@@ -37,7 +36,7 @@ export function Tooltip({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   bubble: {
     position: 'absolute',
     width: BUBBLE_WIDTH,
@@ -53,4 +52,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-});
+}));
