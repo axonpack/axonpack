@@ -65,7 +65,6 @@ describe('performance collector lifecycle', () => {
     expect(observeCount).toBe(0);
   });
 
-  /** The reported bug: `disabledByDefault: true`, then pressing record, logged nothing ever. */
   it('attaches and records once recording is switched on', () => {
     performanceStore.setPaused(true);
     teardown = startPerformanceCollectors(OPTIONS);
@@ -91,7 +90,6 @@ describe('performance collector lifecycle', () => {
     teardown = startPerformanceCollectors(OPTIONS);
     const afterStart = observeCount;
 
-    // Collectors publish their own support on attach, so a naive listener would loop here.
     performanceStore.addLongTasks([{ name: 'noise', duration: 60, startTime: 1 }]);
     performanceStore.setSupport({ memory: true });
 
@@ -101,8 +99,7 @@ describe('performance collector lifecycle', () => {
   it('reads startup timing even while paused, since it is a one-shot', () => {
     performanceStore.setPaused(true);
     teardown = startPerformanceCollectors(OPTIONS);
-    // No native Performance module under test, so the read is a no-op — what matters is that it
-    // isn't gated behind the record button.
+
     expect(() => performanceStore.getSnapshot()).not.toThrow();
   });
 });

@@ -24,13 +24,10 @@ function buildFetchSnippet(entry: FetchSnippetSource, browserOnlyFields: boolean
   return `fetch(${JSON.stringify(entry.url)}, {\n${options.join(',\n')}\n});`;
 }
 
-/** A copy-pasteable browser `fetch()` call — the "Copy as fetch" item, matching Chrome DevTools. */
 export function buildFetchCommand(entry: FetchSnippetSource): string {
   return buildFetchSnippet(entry, true);
 }
 
-/** Same as `buildFetchCommand` but drops the browser-only `mode`/`credentials` fields, which have
- * no meaning outside a page context — the "Copy as fetch (Node.js)" item. */
 export function buildNodeFetchCommand(entry: FetchSnippetSource): string {
   return buildFetchSnippet(entry, false);
 }

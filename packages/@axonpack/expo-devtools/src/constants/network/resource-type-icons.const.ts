@@ -1,10 +1,7 @@
 import type { MaterialIconName } from '../../components/ui/icon-button.ui';
 import type { ResourceType } from '../../utils/network/resource-type.util';
-import { COLORS } from '../colors.const';
+import type { Palette } from '../theme.const';
 
-// Pictorial glyphs only. Material ships lettering-as-icon glyphs named `http`, `css`, `html` and
-// `javascript` that literally draw the words "HTTP"/"CSS"/"HTML"/"JS", which read as stray text
-// next to a row of real icons rather than as icons.
 export const RESOURCE_TYPE_ICONS: Record<ResourceType, MaterialIconName> = {
   'fetch-xhr': 'swap-horiz',
   js: 'code',
@@ -13,20 +10,15 @@ export const RESOURCE_TYPE_ICONS: Record<ResourceType, MaterialIconName> = {
   other: 'insert-drive-file',
 };
 
-/** `kind: 'json'` has no MaterialIcon behind it — it's drawn by `JsonIcon`. See that file for why. */
 export type ResponseTypeVisual =
   { kind: 'material'; icon: MaterialIconName; color: string } | { kind: 'json'; color: string };
 
-/** Orange, shared by the two types that get a warm accent. */
 const ORANGE = '#e8710a';
 
-/**
- * Per-row icon + color keyed directly off `mimeType`, matching Chrome DevTools' Network tab
- * file-type icons — more granular than the `ResourceType` filter-chip buckets above (which
- * group CSS/HTML/JSON/fonts/wasm together under "Fetch/XHR"/"Other" for filtering purposes).
- */
-export function getResponseTypeVisual(mimeType: string | undefined): ResponseTypeVisual {
-  // Also the in-flight case — a pending request has no content-type yet.
+export function getResponseTypeVisual(
+  mimeType: string | undefined,
+  COLORS: Palette
+): ResponseTypeVisual {
   if (!mimeType) return { kind: 'material', icon: 'swap-horiz', color: COLORS.textSecondary };
 
   if (mimeType.startsWith('image/')) {

@@ -23,9 +23,6 @@ const SECTIONS: { transport: Transport; label: string }[] = [
   { transport: 'axios', label: 'axios' },
 ];
 
-// Structurally a real JWT (decodable header/payload), but the signature is fake and these are
-// public test APIs (jsonplaceholder/httpbin) that never validate it — this exists purely so the
-// devtools Headers tab has an Authorization value to show.
 const FAKE_BEARER_TOKEN =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlLXVzZXItaWQiLCJuYW1lIjoiQnJ1aW4gRGV2dG9vbHMgRXhhbXBsZSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxOTk5OTk5OTk5fQ.fake-signature-for-demo-purposes-only';
 
@@ -74,8 +71,6 @@ async function axiosUpload(url: string, formData: FormData) {
   return { status: response.status, text: JSON.stringify(response.data).slice(0, 300) };
 }
 
-// Transport-agnostic: exists purely to give the devtools Preview tab a real image response to
-// render, not to exercise fetch/XHR/axios differences the way the other buttons do.
 async function fetchImage() {
   const response = await fetch(IMAGE_URL);
   return {

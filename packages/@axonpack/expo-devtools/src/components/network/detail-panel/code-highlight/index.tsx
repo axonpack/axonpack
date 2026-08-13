@@ -1,6 +1,6 @@
 import { Text } from 'react-native';
 
-import { codeStyles } from './shared.styles';
+import { useCodeStyles } from './shared.styles';
 import {
   formatCode,
   MAX_HIGHLIGHT_LENGTH,
@@ -9,8 +9,8 @@ import {
 } from '../../../../utils/network/code-highlight.util';
 
 export function CodeHighlight({ code, language }: { code: string; language: Language }) {
-  // A TextInput can't render multi-colored inline runs, so unlike the read-only response/payload
-  // views this stays a plain selectable Text tree — native selection is the only copy affordance.
+  const codeStyles = useCodeStyles();
+
   if (language === 'plain' || code.length > MAX_HIGHLIGHT_LENGTH) {
     return (
       <Text style={codeStyles.text} selectable>

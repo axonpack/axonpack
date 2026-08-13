@@ -2,22 +2,17 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from './ActionButton';
+import { devtools } from '../devtools';
 
-/**
- * Busy-waits rather than sleeping: the Performance tab measures the JS thread being *occupied*, and
- * an `await` would hand it straight back and record nothing.
- */
 function blockThread(ms: number) {
   const until = Date.now() + ms;
-  // eslint-disable-next-line no-empty
+
   while (Date.now() < until) {}
 }
 
-/** Big enough to move the heap sparkline visibly, and retained so it can't be collected right away. */
 function allocate(megabytes: number) {
   const chunk: number[][] = [];
   for (let index = 0; index < megabytes; index += 1) {
-    // ~1MB per row: 131,072 doubles at 8 bytes each.
     chunk.push(new Array(131_072).fill(index));
   }
   return chunk;
@@ -38,7 +33,6 @@ export function PerformanceDemo() {
         <ActionButton
           label="Block 3 × 120ms"
           onPress={() => {
-            // Separate tasks, not one long one: each yields to the event loop before the next.
             for (let index = 0; index < 3; index += 1)
               setTimeout(() => blockThread(120), index * 50);
           }}
@@ -58,6 +52,29 @@ export function PerformanceDemo() {
         <Text style={styles.counter}>tapped {spins}×</Text>
       </View>
 
+      <Text style={styles.heading}>User timing</Text>
+      <Text style={styles.hint}>Timings you name yourself. Shows up under User timing.</Text>
+      <View style={styles.row}>
+        <ActionButton
+          label="Mark + measure (180ms)"
+          onPress={() => {
+            devtools.mark('checkout');
+            blockThread(180);
+            devtools.measure('checkout');
+          }}
+        />
+        <ActionButton
+          label="Measure with detail"
+          onPress={() => {
+            devtools.mark('cart', { detail: { items: 3 } });
+            blockThread(60);
+            devtools.measure('cart', { start: 'cart', detail: { items: 3 } });
+          }}
+        />
+        <ActionButton label="Single mark" onPress={() => devtools.mark('button:pressed')} />
+        <ActionButton label="Clear marks" onPress={() => devtools.clearMarks()} />
+      </View>
+
       <Text style={styles.heading}>JS heap</Text>
       <Text style={styles.hint}>Sampled once a second, so give the graph a moment.</Text>
       <View style={styles.row}>
@@ -68,7 +85,6 @@ export function PerformanceDemo() {
         <ActionButton
           label="Allocate 20MB, drop it"
           onPress={() => {
-            // Deliberately unretained: shows the heap rise then fall once the GC gets to it.
             allocate(20);
           }}
         />

@@ -2,22 +2,19 @@ import { useMemo, useState, useSyncExternalStore } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
-import { PanelBrand } from './panel-brand.component';
-import { COLORS } from '../../constants/colors.const';
-import { devtoolsTabStore } from '../../stores/devtools-tab.store';
+import { ThemePicker } from './theme-picker.component';
 import { consoleLogStore } from '../../stores/console/console-log.store';
+import { devtoolsTabStore } from '../../stores/devtools-tab.store';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { ConsoleView } from '../console/console-view.component';
 import { NetworkView } from '../network/network-view.component';
 import { PerformanceView } from '../performance/performance-view.component';
 import { IconButton } from '../ui/icon-button.ui';
 
-/**
- * Everything inside the modal. Split out of `DevtoolsOverlay` so its store subscriptions only run
- * while the modal is actually open — `Modal` renders nothing when hidden, so this stays unmounted
- * and a chatty app doesn't re-render the FAB on every log line.
- */
 export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
-  // Seeded from the last close rather than reset to Network, so reopening lands where you left off.
+  const styles = useStyles();
+  const COLORS = useThemeColors();
+
   const [tab, setTab] = useState<DevtoolsTab>(devtoolsTabStore.get);
   const consoleEntries = useSyncExternalStore(
     consoleLogStore.subscribe,
@@ -43,47 +40,39 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
   }, [tab]);
 
   return (
-    /**
-     * Keyboard avoidance has to live here, wrapping everything, rather than inside the tab that owns
-     * the text input. `KeyboardAvoidingView` measures itself from `onLayout`, whose coordinates are
-     * parent-relative — placed below the header and tab bar it reads its own bottom edge as ~120px
-     * higher than it is and under-pads by exactly that, leaving the console prompt behind the
-     * keyboard. As a direct child of the modal's SafeAreaView its measured bottom is the screen's.
-     * Android gets an explicit behavior too: this renders inside a `Modal`, whose window doesn't
-     * reliably inherit the activity's `adjustResize`.
-     */
     <KeyboardAvoidingView
       style={styles.panel}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {}
       <View style={styles.header}>
-        <PanelBrand />
+        <DevtoolsTabBar
+          tab={tab}
+          onChange={(next) => {
+            setTab(next);
+            devtoolsTabStore.set(next);
+          }}
+          badges={{ console: consoleErrorCount }}
+        />
+        <ThemePicker />
         <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
       </View>
-
-      <DevtoolsTabBar
-        tab={tab}
-        onChange={(next) => {
-          setTab(next);
-          devtoolsTabStore.set(next);
-        }}
-        badges={{ console: consoleErrorCount }}
-      />
 
       <View style={styles.tabPanel}>{tabContent}</View>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   panel: {
     flex: 1,
   },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: COLORS.toolbarBackground,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
@@ -93,4 +82,4 @@ const styles = StyleSheet.create({
   hiddenTabPanel: {
     display: 'none',
   },
-});
+}));

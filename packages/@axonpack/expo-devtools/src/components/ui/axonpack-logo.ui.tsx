@@ -14,8 +14,6 @@ export function AxonpackLogo({ size = 18 }: { size?: number }) {
 }
 
 const styles = StyleSheet.create({
-  // The source art is a white tile, so it needs an edge to read as a mark rather than a gap
-  // against the sheet's own white background.
   logo: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#00000014',

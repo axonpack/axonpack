@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { MethodSelector } from './method-selector.component';
 import { RequestPanel } from './request-panel.component';
@@ -7,7 +7,6 @@ import { ResponsePanel } from './response-panel.component';
 import { SandboxTabBar } from './sandbox-tab-bar.component';
 import { SendButton } from './send-button.component';
 import { UrlBar } from './url-bar.component';
-import { COLORS } from '../../../constants/colors.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import {
   buildAuthHeaders,
@@ -27,6 +26,7 @@ import {
   type SandboxResult,
   type SandboxTab,
 } from '../../../utils/network/sandbox.util';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
 import { InsetPadding } from '../../ui/inset-padding.ui';
 import { SparkleIcon } from '../../ui/sparkle-icon.ui';
@@ -40,6 +40,7 @@ export function SandboxSheet({
   entry: NetworkLogEntry | null;
   onClose: () => void;
 }) {
+  const styles = useStyles();
   const [prevVisible, setPrevVisible] = useState(false);
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
@@ -52,8 +53,6 @@ export function SandboxSheet({
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SandboxResult | null>(null);
 
-  // Re-seed every field from `entry` each time the sheet opens, rather than mirroring it via an
-  // effect (see https://react.dev/learn/you-might-not-need-an-effect).
   if (visible !== prevVisible) {
     setPrevVisible(visible);
     if (visible && entry) {
@@ -134,9 +133,7 @@ export function SandboxSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  // Horizontal padding comes from BottomSheet's header row; the vertical padding here is what
-  // gives that row its height, since the row itself sets none.
+const useStyles = makeThemedStyles((COLORS) => ({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,4 +160,4 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingBottom: 24,
   },
-});
+}));

@@ -1,9 +1,8 @@
 import { StyleSheet } from 'react-native';
 
-import { COLORS } from '../../../constants/colors.const';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 
-// Row/text styles shared across the Headers, Preview, Response, and Timing tabs.
-export const rowStyles = StyleSheet.create({
+export const useRowStyles = makeThemedStyles((COLORS) => ({
   section: {
     marginBottom: 16,
   },
@@ -18,8 +17,7 @@ export const rowStyles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textPrimary,
   },
-  // Header/field name accent — same color across General, and both the column and
-  // stacked Request/Response header layouts, so toggling the view only changes layout.
+
   headerListKey: {
     width: 140,
     fontSize: 12,
@@ -38,9 +36,7 @@ export const rowStyles = StyleSheet.create({
     gap: 6,
     marginBottom: 2,
   },
-  // Same accent as headerListKey, but no fixed width — there's no column to align in the
-  // stacked layout, and a fixed width wraps long header names (e.g. Strict-Transport-Security)
-  // onto a second line for no reason.
+
   stackedKey: {
     flexShrink: 1,
     fontSize: 12,
@@ -61,4 +57,4 @@ export const rowStyles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontStyle: 'italic',
   },
-});
+}));

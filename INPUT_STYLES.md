@@ -24,7 +24,11 @@ an action chip):
     autoCorrect={false}
   />
   {value.length > 0 && (
-    <TouchableOpacity onPress={() => onChangeText("")} hitSlop={8}>
+    <TouchableOpacity
+      onPress={() => onChangeText("")}
+      hitSlop={HIT_SLOP.dense}
+      style={styles.searchClear}
+    >
       <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
     </TouchableOpacity>
   )}
@@ -40,7 +44,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    // Height, not padding: the row *is* the tap target that focuses the field, so it takes the
+    // platform floor from `constants/metrics.const.ts` rather than a padding that happened to look right.
+    minHeight: TOUCH_TARGET.min,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 6,
@@ -50,6 +56,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textPrimary,
     padding: 0, // RN adds default vertical padding to TextInput; zero it so it aligns with the row
+  },
+  // A trailing control is square and centred rather than glyph-sized, so it doesn't stretch the field.
+  // `TOUCH_TARGET.dense` plus the slop above, not the 44 floor — the row's own height carries that.
+  searchClear: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 ```
@@ -64,6 +78,11 @@ const styles = StyleSheet.create({
   stays visually bare (`padding: 0`, no border) so the row is the only visible chrome.
 - Colors always come from `COLORS` (`src/constants/colors.const.ts`) — never hardcode hex values
   in an input's styles.
+- Sizes that decide whether something can be _hit_ come from `TOUCH_TARGET` / `HIT_SLOP`
+  (`src/constants/metrics.const.ts`) — never a literal. The panel's scale was tuned on a simulator,
+  where a dp reads much larger than on a phone, and every control drifted under the platform floor
+  once. `hitSlop` is a top-up, never the whole target: on Android a child's slop is clipped by its
+  parent's bounds, so a bordered row still needs real height of its own.
 - `placeholderTextColor` is always `COLORS.textSecondary`, matching how secondary text is styled
   everywhere else in the network view.
 

@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
 export type DevtoolsTab = 'network' | 'console' | 'performance';
@@ -19,11 +20,18 @@ export function DevtoolsTabBar({
 }: {
   tab: DevtoolsTab;
   onChange: (tab: DevtoolsTab) => void;
-  /** Count shown on a tab that isn't currently open — how an error logged elsewhere gets noticed. */
+
   badges?: Partial<Record<DevtoolsTab, number>>;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
-    <View style={styles.row}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.row}
+      contentContainerStyle={styles.rowContent}
+      keyboardShouldPersistTaps="handled">
       {TABS.map(({ key, label, icon }) => {
         const active = tab === key;
         const badge = badges?.[key];
@@ -35,7 +43,7 @@ export function DevtoolsTabBar({
             style={[styles.tab, active && styles.tabActive]}>
             <MaterialIcons
               name={icon}
-              size={14}
+              size={16}
               color={active ? COLORS.accent : COLORS.textSecondary}
             />
             <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
@@ -43,23 +51,24 @@ export function DevtoolsTabBar({
           </TouchableOpacity>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.toolbarBackground,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
+    flex: 1,
+  },
+  rowContent: {
+    flexGrow: 1,
+    alignItems: 'stretch',
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    minHeight: TOUCH_TARGET.min,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
@@ -86,4 +95,4 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     overflow: 'hidden',
   },
-});
+}));

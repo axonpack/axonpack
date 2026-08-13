@@ -1,11 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import type { StartupTiming } from '../../stores/performance/performance.store';
 import { diffMs, formatMs } from '../../utils/performance/format-metrics.util';
+import { makeThemedStyles } from '../../utils/themed-styles.util';
 import { CollapsibleSection } from '../ui/collapsible-section.ui';
 
 function Row({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -15,44 +16,87 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 export function StartupTimingSection({ startup }: { startup?: StartupTiming }) {
-  const hasAnyMarker =
+  const styles = useStyles();
+  const measured =
+    startup?.processStart !== undefined && startup.firstRender !== undefined ? startup : undefined;
+
+  const platform =
     startup !== undefined &&
     (startup.startTime !== undefined ||
       startup.endTime !== undefined ||
       startup.initializeRuntimeStart !== undefined ||
-      startup.executeJavaScriptBundleEntryPointStart !== undefined);
+      startup.executeJavaScriptBundleEntryPointStart !== undefined)
+      ? startup
+      : undefined;
 
-  if (!hasAnyMarker) return null;
+  if (measured === undefined && platform === undefined) return null;
 
   return (
     <CollapsibleSection title="Startup">
       <View style={styles.body}>
-        <Row label="Total" value={formatMs(diffMs(startup.startTime, startup.endTime))} />
-        <Row
-          label="Native init"
-          value={formatMs(diffMs(startup.startTime, startup.initializeRuntimeStart))}
-        />
-        <Row
-          label="Runtime setup"
-          value={formatMs(
-            diffMs(startup.initializeRuntimeStart, startup.executeJavaScriptBundleEntryPointStart)
-          )}
-        />
-        <Row
-          label="Bundle eval"
-          value={formatMs(diffMs(startup.executeJavaScriptBundleEntryPointStart, startup.endTime))}
-        />
-        {/* Every field is nullable — the platform only fills them in if its native code reports
-              them, so a dash means "not reported", not "zero". */}
-        <Text style={styles.note}>
-          Measured once at launch. A dash means the platform did not report that marker.
-        </Text>
+        {measured ? (
+          <>
+            <Row
+              label="Total"
+              value={formatMs(diffMs(measured.processStart, measured.firstRender))}
+            />
+            <Row
+              label="Native startup"
+              value={formatMs(diffMs(measured.processStart, measured.nativeModuleInit))}
+            />
+            <Row
+              label="Bundle eval"
+              value={formatMs(diffMs(measured.nativeModuleInit, measured.jsBundleEval))}
+            />
+            <Row
+              label="App setup"
+              value={formatMs(diffMs(measured.jsBundleEval, measured.initCalled))}
+            />
+            <Row
+              label="To first render"
+              value={formatMs(diffMs(measured.initCalled, measured.firstRender))}
+            />
+            <Text style={styles.note}>
+              Process start to first render, measured once at launch. The phase boundaries are where
+              this package loads, so they move a little with your import order.
+            </Text>
+          </>
+        ) : null}
+
+        {platform ? (
+          <>
+            {measured ? <Text style={styles.subheading}>Reported by the platform</Text> : null}
+            <Row label="Total" value={formatMs(diffMs(platform.startTime, platform.endTime))} />
+            <Row
+              label="Native init"
+              value={formatMs(diffMs(platform.startTime, platform.initializeRuntimeStart))}
+            />
+            <Row
+              label="Runtime setup"
+              value={formatMs(
+                diffMs(
+                  platform.initializeRuntimeStart,
+                  platform.executeJavaScriptBundleEntryPointStart
+                )
+              )}
+            />
+            <Row
+              label="Bundle eval"
+              value={formatMs(
+                diffMs(platform.executeJavaScriptBundleEntryPointStart, platform.endTime)
+              )}
+            />
+            {measured ? null : (
+              <Text style={styles.note}>A dash means the platform did not report that marker.</Text>
+            )}
+          </>
+        ) : null}
       </View>
     </CollapsibleSection>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   body: {
     gap: 4,
     paddingHorizontal: 10,
@@ -73,11 +117,17 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontVariant: ['tabular-nums'],
   },
+  subheading: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    marginTop: 10,
+  },
   note: {
     fontSize: 11,
     lineHeight: 15,
     color: COLORS.textSecondary,
-    paddingHorizontal: 10,
-    paddingBottom: 8,
+    marginTop: 4,
   },
-});
+}));

@@ -1,18 +1,15 @@
 import { networkConditionsStore } from '../../stores/network/network-conditions.store';
 
-/** The slice of a `<WebView>` instance this service needs — avoids depending on the WebView types. */
 type InjectableWebView = {
   injectJavaScript: (script: string) => void;
 };
 
-/** Where the injected script reads the current conditions from, inside the page's own window. */
 export const CONDITIONS_GLOBAL = '__axonpackDevtoolsConditions';
 
 const registry = new Map<string, InjectableWebView>();
 const refCallbacks = new Map<string, (instance: InjectableWebView | null) => void>();
 let unsubscribe: (() => void) | null = null;
 
-/** The statement that (re)seeds the page's conditions global — used both at injection and on push. */
 export function buildConditionsScript(): string {
   return `window.${CONDITIONS_GLOBAL} = ${JSON.stringify(networkConditionsStore.resolve())};`;
 }
@@ -20,9 +17,7 @@ export function buildConditionsScript(): string {
 function pushTo(webview: InjectableWebView) {
   try {
     webview.injectJavaScript(`${buildConditionsScript()} true;`);
-  } catch {
-    // A WebView torn down between the store change and this push — nothing to do.
-  }
+  } catch {}
 }
 
 function pushToAll() {

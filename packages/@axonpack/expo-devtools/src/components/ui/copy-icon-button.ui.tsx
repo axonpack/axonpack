@@ -1,11 +1,14 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 export function CopyIconButton({ value }: { value: string }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -19,18 +22,22 @@ export function CopyIconButton({ value }: { value: string }) {
   }
 
   return (
-    <TouchableOpacity onPress={handlePress} hitSlop={12} style={styles.button}>
+    <TouchableOpacity onPress={handlePress} hitSlop={HIT_SLOP.dense} style={styles.button}>
       <MaterialIcons
         name={copied ? 'check' : 'content-copy'}
-        size={14}
+        size={16}
         color={copied ? COLORS.success : COLORS.textSecondary}
       />
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   button: {
     marginLeft: 6,
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-});
+}));

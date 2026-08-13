@@ -8,10 +8,8 @@ export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
   other: 'Other',
 };
 
-/** All resource types, in the order they should appear as filter chips. */
 export const RESOURCE_TYPES: ResourceType[] = ['fetch-xhr', 'js', 'img', 'media', 'other'];
 
-/** Classifies a response by its content-type, matching Chrome DevTools' Network tab type filter chips. */
 export function classifyResourceType(mimeType: string | undefined): ResourceType {
   if (!mimeType) return 'fetch-xhr';
 

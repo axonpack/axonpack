@@ -1,7 +1,8 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../../constants/colors.const';
+import { TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { SandboxTab } from '../../../utils/network/sandbox.util';
+import { makeThemedStyles } from '../../../utils/themed-styles.util';
 
 export function SandboxTabBar({
   tab,
@@ -12,6 +13,7 @@ export function SandboxTabBar({
   onChange: (tab: SandboxTab) => void;
   responseStatus: number | undefined;
 }) {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <TouchableOpacity
@@ -30,7 +32,7 @@ export function SandboxTabBar({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -39,8 +41,9 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 10,
+    minHeight: TOUCH_TARGET.min,
     alignItems: 'center',
+    justifyContent: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
@@ -55,4 +58,4 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: COLORS.accent,
   },
-});
+}));

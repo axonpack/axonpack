@@ -1,11 +1,5 @@
 import { View } from 'react-native';
 
-/**
- * A rounded circle outline containing a smaller filled shape — the network log's record/pause
- * toggle: a square inside reads as "recording, tap to stop" (the classic tape-deck stop glyph),
- * a circle inside reads as "tap to start". Built from plain Views since MaterialIcons has
- * nothing shaped like this.
- */
 export function RecordToggleIcon({
   size = 19,
   color,

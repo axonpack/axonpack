@@ -49,7 +49,7 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS 
 
 ## Architecture: `@axonpack/expo-devtools`
 
-Pure JS/TSX Expo module — no native iOS/Android code (removed; `expo-module.config.json` declares no native platforms). `package.json` `exports` uses an `expo-source` condition pointing Metro straight at `src/index.ts`, and a `default` condition pointing other consumers at the compiled `build/`.
+Almost entirely JS/TSX. There is exactly one native module — `ios/AxonpackDevtoolsModule.swift` and `android/.../AxonpackDevtoolsModule.kt`, declared in `expo-module.config.json` — and it does two things JS cannot: block/crash the **main** thread for the Limiter section, and report the real process start time (`sysctl` `kinfo_proc` on iOS, `Process.getStartUptimeMillis()` on Android) so the Startup section works where `performance.rnStartupTiming` returns all nulls. It is loaded with `requireOptionalNativeModule`, so an app in Expo Go still works and only those two buttons go dark. The crash paths are deliberately **not** gated on `__DEV__` — reaching them needs the panel, which needs `init()`, so the `.init()` guard is the single gate for everything in this package. `package.json` `files` therefore publishes `ios`, `android` and `expo-module.config.json` alongside `build`. `package.json` `exports` uses an `expo-source` condition pointing Metro straight at `src/index.ts`, and a `default` condition pointing other consumers at the compiled `build/`.
 
 ### Client pattern (`src/client/create-devtools-client.client.ts`)
 
@@ -57,8 +57,8 @@ The public API is a single factory, deliberately **not** a React Provider/Contex
 
 ```ts
 const devtools = createDevtoolsClient({
-  name: "My App", // panel header identity — see below
-  icon: require("./assets/icon.png"),
+  theme: "dark", // built-in 'light'/'dark', or one of `themes` below
+  themes: { midnight: { base: "dark", colors: { accent: "#a78bfa" } } },
   webviewSources: ["my-webview"], // top-level: both tabs capture from a WebView
   network: { includeFetch, includeXmlHttpRequest, disabledByDefault },
   console: { capture, repl, context, disabledByDefault },
@@ -69,7 +69,7 @@ devtools.init(); // call once at app startup — installs the fetch/XHR/console 
 Everything is optional and the defaults suit most apps. The UI is mounted separately, via the exported `<DevtoolsOverlay />` — the factory installs instrumentation, it doesn't render.
 
 - `webviewSources` uses a TS 5 `const` type parameter, so the literal array flows into `getWebViewInjectedJavaScriptBeforeContentLoaded`/`handleWebViewMessage`'s parameter types — passing an undeclared name is a compile error, not just a lint warning. It doubles as a runtime allowlist: `handleWebViewNetworkMessage` silently drops messages whose `source` isn't in the list. It sits at the top level rather than under `network` because the console tab captures from a declared WebView too, and the allowlist has to be one list for both.
-- `name`/`icon` are top-level and must be passed explicitly — there is no way to detect them. A device's installed launcher icon isn't reachable from JS without native code, and `expoConfig.icon` is a build-time path string, not something `Image` can load in a standalone build. They reach the header through `stores/app-identity.store.ts` rather than a prop, because `DevtoolsOverlay` is mounted somewhere else in the tree and never sees the config object.
+- **Theming** (`constants/theme.const.ts`, `stores/theme.store.ts`, `utils/themed-styles.util.ts`). `StyleSheet.create` copies the colour values it is handed, so a sheet built at module load can never follow a theme — every sheet in the package is therefore built through `makeThemedStyles((COLORS) => ({...}))`, which returns a hook and caches one sheet per palette identity. Components read loose colours with `useThemeColors()`. Naming the factory's parameter `COLORS` is what made the migration mechanical: 210 in-style usages needed no edit. Colour-returning helpers (`getStatusColor`, `getMethodColor`, `getLongTaskColor`, `getResponseTypeVisual`, `consoleLevelVisuals`) take a `Palette` argument rather than closing over one; `isErrorStatus` exists because one call site compared a colour to `COLORS.error`, which stops meaning anything once there are two palettes. Seven palettes ship (`light`, `dark`, `dracula`, `nord`, `monokai`, `one-dark`, `solarized-light`), each mapped from the project's own published colours. Custom themes patch a base (`{ base, colors }`) instead of supplying all 21 tokens, and the active choice is in memory for the session — persisting it would mean a storage dependency. There is no longer an app icon or name in the header: it holds the tab bar, the theme picker and close.
 - **Two independent gates, easily confused.** Each store's internal `enabled` flag is what `init()` flips; there is no config option and no UI for it, and until `init()` runs nothing records anywhere (this is what makes shipping the code to production free — guard the `.init()` call and that's the whole mechanism). `paused` is what the record button in each tab's toolbar controls. `disabledByDefault` sets `paused`, not `enabled` — mapping it to `enabled` would leave a tab permanently dead, since nothing in the UI can turn that back on. REPL rows pass `{ force: true }` to `consoleLogStore.add` so the `>` prompt still answers while the console is paused.
 
 ### Network logging (`src/services/network/`, `src/stores/network/`)

@@ -1,10 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import type { MaterialIconName } from './icon-button.ui';
-import { COLORS } from '../../constants/colors.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 export function InfoBadge({ icon, label }: { icon?: MaterialIconName; label: string }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   return (
     <View style={styles.badge}>
       {icon && <MaterialIcons name={icon} size={11} color={COLORS.textSecondary} />}
@@ -15,7 +17,7 @@ export function InfoBadge({ icon, label }: { icon?: MaterialIconName; label: str
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -30,4 +32,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
-});
+}));

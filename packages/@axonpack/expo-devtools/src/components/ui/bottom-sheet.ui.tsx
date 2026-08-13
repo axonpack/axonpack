@@ -3,15 +3,12 @@ import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { AxonpackLogo } from './axonpack-logo.ui';
 import { IconButton } from './icon-button.ui';
-import { COLORS } from '../../constants/colors.const';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 const OFFSCREEN_Y = 400;
 const SLIDE_IN_MS = 220;
 const SLIDE_OUT_MS = 180;
 
-/** A slide-up panel with a backdrop, drag handle, and close button — not a bottom-sheet
- * library, just `Animated.timing` on translateY. Keeps rendering `children` through the
- * close animation; the caller decides what "last known content" to pass in the meantime. */
 export function BottomSheet({
   visible,
   onClose,
@@ -20,16 +17,16 @@ export function BottomSheet({
 }: {
   visible: boolean;
   onClose: () => void;
-  /** Fills the header row between the logo on the left and the close button on the right. */
+
   headerContent?: ReactNode;
   children: ReactNode;
 }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const [translateY] = useState(() => new Animated.Value(OFFSCREEN_Y));
   const [shouldRender, setShouldRender] = useState(visible);
   const [prevVisible, setPrevVisible] = useState(visible);
 
-  // Adjust state during render when `visible` changes, rather than mirroring it via an effect
-  // (see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
   if (visible !== prevVisible) {
     setPrevVisible(visible);
     if (visible) setShouldRender(true);
@@ -77,7 +74,7 @@ export function BottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   backdrop: {
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
@@ -108,9 +105,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: COLORS.border,
   },
-  // No vertical padding — headerContent sets the row's height itself, so a tab bar's active
-  // underline sits flush against the separator below instead of floating above it. minHeight
-  // keeps the logo and close button off the separator when there's no header content at all.
+
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -125,4 +120,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

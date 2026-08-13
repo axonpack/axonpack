@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   ScrollView,
@@ -17,7 +17,7 @@ import { LogRow } from './log-row.component';
 import { OverviewStrip, type TimeRange } from './overview-strip.component';
 import { ThrottleSelector } from './throttle-selector.component';
 import { UserAgentSelector } from './user-agent-selector.component';
-import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
@@ -30,15 +30,22 @@ import {
   RESOURCE_TYPES,
 } from '../../utils/network/resource-type.util';
 import type { ResourceType } from '../../utils/network/resource-type.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
+import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
-import { RecordToggleButton } from '../ui/record-toggle-button.ui';
 import { SettingRow } from '../ui/setting-row.ui';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
 
+function keyExtractor(entry: NetworkLogEntry): string {
+  return entry.id;
+}
+
 export function NetworkView() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const { width } = useWindowDimensions();
   const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getSnapshot);
   const paused = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.isPaused);
@@ -78,8 +85,6 @@ export function NetworkView() {
     return Array.from(seen);
   }, [logs]);
 
-  // Excludes the overview's time-range filter so the histogram itself always shows the full
-  // timeline — selecting a bucket narrows the list below without the strip rescaling under you.
   const overviewLogs = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return logs.filter((entry) => {
@@ -138,72 +143,62 @@ export function NetworkView() {
     setMoreFiltersOpen((current) => !current);
   }
 
-  function renderRow(entry: NetworkLogEntry) {
-    return (
-      <LogRow
-        key={entry.id}
-        entry={entry}
-        bigRows={bigRows}
-        onPress={() => setSelectedEntry(entry)}
-      />
-    );
-  }
+  const renderRow = useCallback(
+    ({ item }: { item: NetworkLogEntry }) => (
+      <LogRow entry={item} bigRows={bigRows} onPress={setSelectedEntry} />
+    ),
+    [bigRows]
+  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerActions}>
-          <RecordToggleButton paused={paused} onToggle={() => networkLogStore.setPaused(!paused)} />
-          <IconButton
-            name="block"
-            color={COLORS.textSecondary}
-            onPress={networkLogStore.clear}
-            label="Clear log"
-          />
+      <DevtoolsToolbar
+        paused={paused}
+        onTogglePaused={() => networkLogStore.setPaused(!paused)}
+        onClear={networkLogStore.clear}
+        clearLabel="Clear log">
+        <ToolbarDivider />
 
-          <View style={styles.headerDivider} />
+        <IconButton
+          name={reversed ? 'arrow-upward' : 'arrow-downward'}
+          color={COLORS.textSecondary}
+          onPress={() => setReversed((c) => !c)}
+          label={reversed ? 'Show oldest first' : 'Show newest first'}
+        />
+        <IconButton
+          name="filter-list"
+          color={openPanel === 'filters' ? COLORS.accent : COLORS.textSecondary}
+          active={openPanel === 'filters'}
+          onPress={() => togglePanel('filters')}
+          label="Filter"
+        />
 
-          <IconButton
-            name={reversed ? 'arrow-upward' : 'arrow-downward'}
-            color={COLORS.textSecondary}
-            onPress={() => setReversed((c) => !c)}
-            label={reversed ? 'Show oldest first' : 'Show newest first'}
-          />
-          <IconButton
-            name="filter-list"
-            color={openPanel === 'filters' ? COLORS.accent : COLORS.textSecondary}
-            active={openPanel === 'filters'}
-            onPress={() => togglePanel('filters')}
-            label="Filter"
-          />
+        <ToolbarDivider />
 
-          <View style={styles.headerDivider} />
+        <IconButton
+          name={preserveLog ? 'bookmark' : 'bookmark-border'}
+          color={preserveLog ? COLORS.accent : COLORS.textSecondary}
+          active={preserveLog}
+          onPress={() => networkLogStore.setPreserveLog(!preserveLog)}
+          label="Preserve log"
+        />
 
-          <IconButton
-            name={preserveLog ? 'bookmark' : 'bookmark-border'}
-            color={preserveLog ? COLORS.accent : COLORS.textSecondary}
-            active={preserveLog}
-            onPress={() => networkLogStore.setPreserveLog(!preserveLog)}
-            label="Preserve log"
-          />
+        <ToolbarDivider />
 
-          <View style={styles.headerDivider} />
-
-          <IconButton
-            name="file-download"
-            color={COLORS.textSecondary}
-            onPress={() => exportNetworkLog(visibleLogs)}
-            label="Export"
-          />
-          <IconButton
-            name="settings"
-            color={openPanel === 'settings' ? COLORS.accent : COLORS.textSecondary}
-            active={openPanel === 'settings'}
-            onPress={() => togglePanel('settings')}
-            label="Settings"
-          />
-        </View>
-      </View>
+        <IconButton
+          name="file-download"
+          color={COLORS.textSecondary}
+          onPress={() => exportNetworkLog(visibleLogs)}
+          label="Export"
+        />
+        <IconButton
+          name="settings"
+          color={openPanel === 'settings' ? COLORS.accent : COLORS.textSecondary}
+          active={openPanel === 'settings'}
+          onPress={() => togglePanel('settings')}
+          label="Settings"
+        />
+      </DevtoolsToolbar>
 
       {openPanel === 'settings' && (
         <ScrollView style={styles.scrollablePanel} contentContainerStyle={styles.panel}>
@@ -245,7 +240,10 @@ export function NetworkView() {
               autoCorrect={false}
             />
             {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => setSearchText('')}
+                hitSlop={HIT_SLOP.dense}
+                style={styles.searchClear}>
                 <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
               </TouchableOpacity>
             )}
@@ -341,8 +339,8 @@ export function NetworkView() {
       {groupByFetchClient ? (
         <SectionList
           sections={sections}
-          keyExtractor={(entry) => entry.id}
-          renderItem={({ item }) => renderRow(item)}
+          keyExtractor={keyExtractor}
+          renderItem={renderRow}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader} selectable>
               {formatSource(section.title)} ({section.data.length})
@@ -356,8 +354,8 @@ export function NetworkView() {
       ) : (
         <FlatList
           data={visibleLogs}
-          keyExtractor={(entry) => entry.id}
-          renderItem={({ item }) => renderRow(item)}
+          keyExtractor={keyExtractor}
+          renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           contentInsetAdjustmentBehavior="never"
           ListEmptyComponent={
@@ -378,7 +376,7 @@ export function NetworkView() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -388,33 +386,13 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     flexGrow: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    backgroundColor: '#0000000D',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  headerDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 18,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 6,
-  },
   panel: {
     padding: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.background,
   },
-  // The settings panel outgrew the screen once throttling and user-agent moved in — cap it so the
-  // request list underneath stays visible instead of being pushed off.
+
   scrollablePanel: {
     flexGrow: 0,
     maxHeight: 320,
@@ -424,10 +402,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    minHeight: TOUCH_TARGET.min,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 6,
+  },
+
+  searchClear: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchInput: {
     flex: 1,
@@ -467,4 +452,4 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 40,
   },
-});
+}));

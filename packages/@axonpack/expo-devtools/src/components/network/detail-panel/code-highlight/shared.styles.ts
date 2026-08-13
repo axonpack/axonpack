@@ -1,9 +1,6 @@
-import { StyleSheet } from 'react-native';
+import { makeThemedStyles } from '../../../../utils/themed-styles.util';
 
-import { COLORS } from '../../../../constants/colors.const';
-
-// Keys match TokenType exactly, so a token's own `type` indexes this map directly.
-export const codeStyles = StyleSheet.create({
+export const useCodeStyles = makeThemedStyles((COLORS) => ({
   text: {
     fontFamily: 'monospace',
     fontSize: 12,
@@ -21,4 +18,4 @@ export const codeStyles = StyleSheet.create({
   selector: { color: COLORS.codeTag },
   punctuation: { color: COLORS.textSecondary },
   plain: { color: COLORS.textPrimary },
-});
+}));

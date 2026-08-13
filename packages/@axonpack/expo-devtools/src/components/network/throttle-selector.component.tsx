@@ -1,21 +1,22 @@
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
 import {
   THROTTLE_PRESET_IDS,
   THROTTLE_PRESET_LABELS,
 } from '../../constants/network/throttle-presets.const';
 import { networkConditionsStore } from '../../stores/network/network-conditions.store';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { Chip } from '../ui/chip.ui';
 
-/** Keeps a cleared field usable — parsing '' to NaN would otherwise snap it back to a number. */
 function parsePositiveInt(text: string): number {
   const parsed = Number.parseInt(text.replace(/[^0-9]/g, ''), 10);
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 export function ThrottleSelector() {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const throttleId = useSyncExternalStore(
     networkConditionsStore.subscribe,
     networkConditionsStore.getThrottleId
@@ -84,7 +85,7 @@ export function ThrottleSelector() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeThemedStyles((COLORS) => ({
   section: {
     marginTop: 12,
   },
@@ -129,4 +130,4 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     padding: 0,
   },
-});
+}));

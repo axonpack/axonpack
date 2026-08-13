@@ -2,14 +2,17 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { COLORS } from '../../constants/colors.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
 import { getCompletions } from '../../services/console/complete-expression.service';
 import { runReplCommand } from '../../services/console/run-repl-command.service';
 import { consolePromptStore } from '../../stores/console/console-prompt.store';
 import { normalizeExpressionInput } from '../../utils/console/normalize-expression.util';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { Chip } from '../ui/chip.ui';
 
 export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
+  const styles = useStyles();
+  const COLORS = useThemeColors();
   const source = useSyncExternalStore(consolePromptStore.subscribe, consolePromptStore.getDraft);
   const focusRequest = useSyncExternalStore(
     consolePromptStore.subscribe,
@@ -17,7 +20,6 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
   );
   const inputRef = useRef<TextInput>(null);
 
-  // Skips the first render — mount shouldn't pop the keyboard, only an actual recall should.
   const lastFocusRequest = useRef(focusRequest);
   useEffect(() => {
     if (focusRequest === lastFocusRequest.current) return;
@@ -30,10 +32,9 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
 
   function submit() {
     if (!canRun) return;
-    // Ahead of the run so the rows it adds land while the list is already following the tail.
+
     onSubmit?.();
-    // Handed over raw — `runReplCommand` normalizes and trims, so the echoed row and the code that
-    // runs can't drift apart.
+
     runReplCommand(source);
     consolePromptStore.setDraft('');
   }
@@ -49,7 +50,7 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          // Without "always", the first tap only dismisses the keyboard and the chip never fires.
+
           keyboardShouldPersistTaps="always"
           contentContainerStyle={styles.suggestions}>
           {completion.options.map((option) => (
@@ -69,7 +70,7 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
           ref={inputRef}
           style={styles.input}
           value={source}
-          // Normalized here rather than at evaluation, so what you see in the field is what runs.
+
           onChangeText={(text) => consolePromptStore.setDraft(normalizeExpressionInput(text))}
           onSubmitEditing={submit}
           placeholder="Run an expression"
@@ -79,18 +80,25 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
           autoComplete="off"
           spellCheck={false}
           returnKeyType="send"
-          // Keeps the keyboard up so a second command doesn't need another tap into the field.
+
           blurOnSubmit={false}
         />
         {source.length > 0 && (
-          <TouchableOpacity onPress={() => consolePromptStore.setDraft('')} hitSlop={8}>
+          <TouchableOpacity
+            onPress={() => consolePromptStore.setDraft('')}
+            hitSlop={HIT_SLOP.dense}
+            style={styles.action}>
             <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={submit} hitSlop={8} disabled={!canRun}>
+        <TouchableOpacity
+          onPress={submit}
+          hitSlop={HIT_SLOP.dense}
+          disabled={!canRun}
+          style={styles.action}>
           <MaterialIcons
             name="play-arrow"
-            size={18}
+            size={20}
             color={canRun ? COLORS.accent : COLORS.border}
           />
         </TouchableOpacity>
@@ -99,9 +107,7 @@ export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  // Docked to the bottom of the tab rather than floating inside it, so it gets a single top
-  // separator instead of the bordered, rounded box `INPUT_STYLES.md` describes for inline inputs.
+const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: COLORS.border,
@@ -118,14 +124,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    minHeight: TOUCH_TARGET.min,
+  },
+
+  action: {
+    width: TOUCH_TARGET.dense,
+    height: TOUCH_TARGET.dense,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
     fontFamily: 'monospace',
     fontSize: 13,
     color: COLORS.textPrimary,
-    // RN adds default vertical padding to TextInput; zero it so it aligns with the row.
     padding: 0,
   },
-});
+}));

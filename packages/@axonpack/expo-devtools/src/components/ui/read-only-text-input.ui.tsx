@@ -1,10 +1,6 @@
 import { StyleSheet, TextInput, type TextStyle } from 'react-native';
 
-function blockEdits() {
-  // Controlled TextInput with a no-op onChangeText: any keystroke gets discarded on
-  // re-render since the value always snaps back to the prop, but cursor movement,
-  // selection, and copy still work natively — unlike `editable={false}`, which blocks those too.
-}
+function blockEdits() {}
 
 export function ReadOnlyTextInput({
   value,
