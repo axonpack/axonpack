@@ -12,7 +12,6 @@ import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
 function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
   const visual = CONSOLE_LEVEL_VISUALS[entry.level];
-  // Only the REPL's own echo is replayable — there's no source text behind a captured log.
   const recallable = entry.level === 'input';
 
   const content = (
@@ -29,7 +28,6 @@ function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
               key={`${entry.id}-${index}`}
               arg={arg}
               plainColor={entry.level === 'error' ? COLORS.error : undefined}
-              // A `selectable` Text swallows taps on iOS, which would eat the recall press.
               selectable={!recallable}
             />
           ))}
@@ -37,8 +35,6 @@ function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
       </View>
 
       <View style={styles.meta}>
-        {/* Only page output is labelled — tagging every native row would be noise in the common
-            case where there's no WebView at all. */}
         {entry.source && entry.source !== NATIVE_CONSOLE_SOURCE && (
           <Text style={styles.metaText}>{formatConsoleSource(entry.source)}</Text>
         )}
@@ -58,15 +54,6 @@ function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
   );
 }
 
-/**
- * Unlike the performance rows, a console entry really is patched in place of its predecessor: `add`
- * collapses a repeat by replacing the newest entry with a higher `count` and a newer `timestamp`, and a
- * REPL result replaces the pending row's `parts` and `text`. Both have to re-render, which is why this
- * lists fields rather than trusting the id.
- *
- * `entry` is the only prop, and every field of it is read — `text` by the copy button and by recall — so
- * anything added to `ConsoleLogEntry` that the row uses needs a line here too.
- */
 export const ConsoleRow = memo(
   ConsoleRowBase,
   (prev, next) =>
