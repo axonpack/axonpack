@@ -12,7 +12,7 @@ Every control, section and field in the panel, and the whole public API. The
 
 Throughout: **dev build** means the feature reads this package's native module, so it is dark in Expo
 Go and lights up in a build made with `expo run:ios` / `expo run:android` or EAS. Nothing in the
-panel crashes without it — the control says what it needs instead.
+panel crashes without it: the control says what it needs instead.
 
 ---
 
@@ -31,7 +31,7 @@ button itself never appears inside the modal.
 | Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                    |
 
 The tab you last had open is remembered for the life of the app process, so reopening the panel
-returns you to it. Only the active tab is mounted — switching tabs and back resets that tab's
+returns you to it. Only the active tab is mounted, so switching tabs and back resets that tab's
 filters, its open detail sheet and its scroll position. Captured data is untouched: it lives in the
 stores, not the views.
 
@@ -46,8 +46,11 @@ Every tab has one, and the first two controls are always the same:
 
 Pausing and `.init()` are different switches, and the difference matters when you ship: until
 `.init()` runs, nothing is patched, observed or recorded anywhere. The record button only pauses a
-tab that `.init()` already turned on. There is no UI for the `.init()` gate — that is the point of
-it.
+tab that `.init()` already turned on. There is no UI for the `.init()` gate, which is the point of it.
+
+Shipping safely takes two guards, not one. `.init()` controls **capture**; rendering
+`<DevtoolsOverlay />` controls **access**. The overlay does not check whether `.init()` ran, so an
+unguarded mount in a release build gives you a reachable panel over empty lists.
 
 ---
 
@@ -70,16 +73,16 @@ requests; older ones fall off the end. Request and response bodies are kept in f
 
 ### Filters panel
 
-| Field                | What it does                                                                                               |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Search box           | Matches method, URL, status code and source — not header or body text. Clear it with the ✕ inside the box. |
-| **Invert** chip      | Shows everything that does _not_ match the search text.                                                    |
-| **Type** chips       | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other` — classified from the response MIME type.                |
-| **Method** chips     | `All` plus one chip per method actually captured (`GET`, `POST`, …). No captures, no chips.                |
-| **Source** chips     | `All` plus one per source seen — your app, or `WebView::[name]` for each declared browser view.            |
-| More filters ▸       | Reveals the two switches below.                                                                            |
-| Hide data URLs       | Drops requests whose URL starts with `data:`.                                                              |
-| Hide failed requests | Drops requests that errored (network failures, not 4xx/5xx responses).                                     |
+| Field                | What it does                                                                                              |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| Search box           | Matches method, URL, status code and source, not header or body text. Clear it with the ✕ inside the box. |
+| **Invert** chip      | Shows everything that does _not_ match the search text.                                                   |
+| **Type** chips       | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`, classified from the response MIME type.                |
+| **Method** chips     | `All` plus one chip per method actually captured (`GET`, `POST`, …). No captures, no chips.               |
+| **Source** chips     | `All` plus one per source seen: your app, or `WebView::[name]` for each declared browser view.            |
+| More filters ▸       | Reveals the two switches below.                                                                           |
+| Hide data URLs       | Drops requests whose URL starts with `data:`.                                                             |
+| Hide failed requests | Drops requests that errored (network failures, not 4xx/5xx responses).                                    |
 
 Type, method and source filters combine with the search, and the search's **Invert** applies only to
 the text match.
@@ -102,7 +105,7 @@ Throttle profiles, as applied to your app's own requests and to wired-up WebView
 | Slow 3G | 400 kbps                 | 2000 ms                                    |
 | Fast 3G | 1638 kbps                | 563 ms                                     |
 | Fast 4G | 9000 kbps                | 85 ms                                      |
-| Offline | —                        | requests fail immediately                  |
+| Offline | none                     | requests fail immediately                  |
 | Custom  | your **Download (kbps)** | your **Latency (ms)** (defaults 750 / 500) |
 
 Picking **Custom** under User agent reveals a free-text field for the whole UA string. Every captured
@@ -128,7 +131,7 @@ Shown when **Show overview** is on, and only once at least one request is captur
 | Name            | Last path segment plus the query string (large rows only).                                   |
 | URL             | Full URL, one line on large rows, two on compact.                                            |
 | Badges          | Resource type · source (only when it came from a WebView) · response size (large rows only). |
-| ⋮               | The copy menu — also on long-press anywhere in the row.                                      |
+| ⋮               | The copy menu, also on long-press anywhere in the row.                                       |
 
 The copy menu: **Copy URL**, **Copy as cURL**, **Copy as fetch**, **Copy as fetch (Node.js)**, plus
 **Copy request payload** and **Copy response** when those exist.
@@ -146,15 +149,15 @@ Tapping a row opens a sheet with up to five tabs. It always opens on **Headers**
 | Request Headers    | Every header sent, with a per-value copy button. Count in the section header.                                 |
 | Response Headers   | Every header received, same treatment.                                                                        |
 
-**Payload** — the request body as an explorable JSON tree. The tab is hidden entirely when the
+**Payload**: the request body as an explorable JSON tree. The tab is hidden entirely when the
 request had no body.
 
-**Preview** — the response rendered: pretty-printed and syntax-coloured JSON, a real image for image
+**Preview**: the response rendered: pretty-printed and syntax-coloured JSON, a real image for image
 responses, HTML as HTML. Falls back to `No preview available`.
 
-**Response** — the raw response body, in full, with a copy button.
+**Response**: the raw response body, in full, with a copy button.
 
-**Timing** — Started At and Duration (`(pending)` while in flight), plus a note that a
+**Timing**: Started At and Duration (`(pending)` while in flight), plus a note that a
 DNS/TCP/TLS/TTFB breakdown isn't observable from JS, since those phases happen in the native
 networking stack.
 
@@ -162,7 +165,7 @@ The sheet's ⋮ menu adds **Try in sandbox** above the same copy items as the ro
 
 ### Sandbox
 
-Opens the request as something editable, seeded from what was captured — URL, method, query
+Opens the request as something editable, seeded from what was captured: URL, method, query
 parameters, headers, cookies, auth and body all split into their own fields.
 
 | Area             | What's in it                                                                                                                                                                |
@@ -200,27 +203,27 @@ pages. Holds the **500** most recent rows.
 | Field            | What it does                                                                                      |
 | ---------------- | ------------------------------------------------------------------------------------------------- |
 | Search box       | Matches the rendered text of a message.                                                           |
-| **Level** chips  | `All (n)`, `Logs (n)`, `Info (n)`, `Warnings (n)`, `Errors (n)`, `Debug (n)` — counts are live.   |
+| **Level** chips  | `All (n)`, `Logs (n)`, `Info (n)`, `Warnings (n)`, `Errors (n)`, `Debug (n)`. Counts are live.    |
 | **Source** chips | One per source, shown only when more than one source has logged (i.e. once a WebView reports in). |
 
 ### A console row
 
-| Element    | Meaning                                                                                                                                                  |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Level icon | Info, warning, error and debug get a glyph and colour; warnings and errors tint the whole row.                                                           |
-| Arguments  | One cell per logged argument, so a message and its object stay apart. Objects and arrays render as a collapsed JSON tree — tap to expand level by level. |
-| Error      | The message on the row; tap to expand the full stack.                                                                                                    |
-| Source     | `WebView::[name]` for browser-view output; absent for your app's own.                                                                                    |
-| ×n         | Repeat count. Consecutive identical messages from the same source collapse into one row.                                                                 |
-| Time       | Wall-clock time of the most recent occurrence.                                                                                                           |
-| Copy       | Copies the row's text.                                                                                                                                   |
+| Element    | Meaning                                                                                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Level icon | Info, warning, error and debug get a glyph and colour; warnings and errors tint the whole row.                                                          |
+| Arguments  | One cell per logged argument, so a message and its object stay apart. Objects and arrays render as a collapsed JSON tree; tap to expand level by level. |
+| Error      | The message on the row; tap to expand the full stack.                                                                                                   |
+| Source     | `WebView::[name]` for browser-view output; absent for your app's own.                                                                                   |
+| ×n         | Repeat count. Consecutive identical messages from the same source collapse into one row.                                                                |
+| Time       | Wall-clock time of the most recent occurrence.                                                                                                          |
+| Copy       | Copies the row's text.                                                                                                                                  |
 
 The list follows the newest output and stops following the moment you scroll back, with a ⌄ button
 to jump to the newest again.
 
 ### The `>` prompt
 
-Present when the REPL is enabled — `console.repl`, which defaults to `__DEV__`.
+Present when the REPL is enabled through `console.repl`, which defaults to `__DEV__`.
 
 - Type an expression and submit: your input appears as an `input` row (`›`), the result as a `result`
   row (`‹`). Objects come back as the same explorable tree.
@@ -229,7 +232,7 @@ Present when the REPL is enabled — `console.repl`, which defaults to `__DEV__`
   you're inside. Tap one to complete.
 - **Tap any earlier input row** to load that command back into the prompt.
 - `$modules('auth')` lists loaded Metro modules matching a string; `$m('src/stores/auth')` returns
-  one. Both read Metro's module registry, which only a development bundle has — in a release build
+  one. Both read Metro's module registry, which only a development bundle has, so in a release build
   they return nothing.
 - Anything passed in `console.context` is in scope by name.
 
@@ -266,17 +269,17 @@ Four cards plus the startup breakdown.
 
 **Frames per second**
 
-| Field       | Meaning                                                                                                                   |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
-| JS thread   | Current frames per second from a `requestAnimationFrame` delta loop, sampled every 500 ms.                                |
-| Main thread | Current frames per second from a native display-link counter. Reads `dev build` without the native module.                |
-| Chart       | Both threads on one plot, one colour per thread, 60 buckets of 5 s — **last 5 min**. Each bucket keeps its worst reading. |
-| Axis        | Scaled to the confirmed peak (min 60) plus headroom, so a 120 Hz device isn't clipped.                                    |
+| Field       | Meaning                                                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| JS thread   | Current frames per second from a `requestAnimationFrame` delta loop, sampled every 500 ms.                                            |
+| Main thread | Current frames per second from a native display-link counter. Reads `dev build` without the native module.                            |
+| Chart       | Both threads on one plot, one colour per thread, 60 buckets of 5 s, covering the **last 5 min**. Each bucket keeps its worst reading. |
+| Axis        | Scaled to the confirmed peak (min 60) plus headroom, so a 120 Hz device isn't clipped.                                                |
 
 The gap between the two lines is the reading that matters: a healthy JS line above a collapsed main
 line is an app that feels frozen while every JS metric says it's fine.
 
-**Interactions** (card) — the slowest event-to-next-paint seen, with the average and the count as the
+**Interactions** (card): the slowest event-to-next-paint seen, with the average and the count as the
 hint. Before anything is captured it reads `Slowest event to next paint`.
 
 **Memory**
@@ -284,18 +287,18 @@ hint. Before anything is captured it reads `Slowest event to next paint`.
 | Field               | Meaning                                                                                                                                                                                 |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | JS Heap plot        | `performance.memory` used heap, captioned `of <total> allocated`. Reads `This JS engine doesn't report it` on JSC/V8.                                                                   |
-| App memory plot     | Whole-process footprint — what the OS holds against you. Needs a dev build.                                                                                                             |
+| App memory plot     | Whole-process footprint, what the OS holds against you. Needs a dev build.                                                                                                              |
 | Device memory meter | Used against total RAM, captioned with what is still available to this app. On Android that's system-wide free memory; on iOS it's what the process can still claim. Needs a dev build. |
 
 Both plots are sampled on `performance.sampleIntervalMs` (default 1 s) and span `historySize`
-samples — two minutes at the defaults. Each carries its own peak marker.
+samples, two minutes at the defaults. Each carries its own peak marker.
 
-**Storage** — a Used meter against the data partition's total, captioned with the free space. Android
+**Storage**: a Used meter against the data partition's total, captioned with the free space. Android
 only, and needs a dev build; the card says which of the two is missing. iOS is absent on purpose:
 `systemFreeSize` is one of Apple's required-reason APIs, and a library reading it would push a
 privacy-manifest declaration onto every app that embeds it.
 
-**Startup** — process start to first render, read once at launch. Up to two blocks:
+**Startup**: process start to first render, read once at launch. Up to two blocks:
 
 | Block                    | Rows                                                               |
 | ------------------------ | ------------------------------------------------------------------ |
@@ -304,7 +307,7 @@ privacy-manifest declaration onto every app that embeds it.
 
 The measured block comes from the native module's real process start time, so it works where the
 platform's own markers are all null. Its phase boundaries are this package's own load points, so they
-shift a little with your import order — the earlier you call `.init()`, the truer _App setup_ is. The
+shift a little with your import order; the earlier you call `.init()`, the truer _App setup_ is. The
 platform block is `performance.rnStartupTiming`, and a dash means the platform never reported that
 marker. The whole section is hidden when neither is available.
 
@@ -354,17 +357,19 @@ entries before the panel could read them.
 
 Breaks things on purpose, so the numbers above can be trusted.
 
-| Field  | Options                                                                            |
-| ------ | ---------------------------------------------------------------------------------- |
-| Thread | **JavaScript** (works everywhere) or **Main (UI)** (needs a dev build).            |
-| For    | `100ms`, `250ms`, `500ms`, `1s`, `3s`, or a custom value in ms.                    |
-| Block  | Blocks the chosen thread for that long.                                            |
-| Crash  | Crashes the chosen thread. Takes two taps — the first arms it, the second does it. |
+| Field  | Options                                                                           |
+| ------ | --------------------------------------------------------------------------------- |
+| Thread | **JavaScript** (works everywhere) or **Main (UI)** (needs a dev build).           |
+| For    | `100ms`, `250ms`, `500ms`, `1s`, `3s`, or a custom value in ms.                   |
+| Block  | Blocks the chosen thread for that long.                                           |
+| Crash  | Crashes the chosen thread. Takes two taps: the first arms it, the second does it. |
 
 Blocking the JS thread shows up as a long task and drops the JS frame rate. Blocking the main thread
-freezes the screen while every JS number stays healthy — that gap is the blind spot the frame-rate
-card warns about, and this is how you see it for yourself. The crash paths are **not** gated on
-`__DEV__`: reaching them needs the panel, which needs `.init()`, so guarding that call is the gate.
+freezes the screen while every JS number stays healthy. That gap is the blind spot the frame-rate card
+warns about, and this is how you see it for yourself. The crash paths are **not** gated on
+`__DEV__`, and they do **not** go through any store, so `.init()` is not what keeps them out of a
+release: they work as soon as the panel is on screen. What gates them is whether you rendered
+`<DevtoolsOverlay />` at all.
 
 ---
 
@@ -372,26 +377,26 @@ card warns about, and this is how you see it for yourself. The crash paths are *
 
 ### `createDevtoolsClient(config?)`
 
-Returns the client. Call it once, module-scope, and export the instance — everything else hangs off
+Returns the client. Call it once, module-scope, and export the instance. Everything else hangs off
 it.
 
-| Option                               | Type                          | Default     | What it does                                                                       |
-| ------------------------------------ | ----------------------------- | ----------- | ---------------------------------------------------------------------------------- |
-| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with — a built-in or one of yours.                     |
-| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                   |
-| `webviewSources`                     | `readonly string[]`           | `undefined` | Names of `<WebView>`s allowed to report in, for both the Network and Console tabs. |
-| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                |
-| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest` — this is what catches axios and most HTTP libraries.     |
-| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                       |
-| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.         |
-| `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt.                                                               |
-| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                  |
-| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                               |
-| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse. |
-| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                     |
-| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                    |
-| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.       |
-| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on** — measuring costs something.   |
+| Option                               | Type                          | Default     | What it does                                                                          |
+| ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                         |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
+| `webviewSources`                     | `readonly string[]`           | `undefined` | Names of `<WebView>`s allowed to report in, for both the Network and Console tabs.    |
+| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                   |
+| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest`. This is what catches axios and most HTTP libraries.         |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                          |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.            |
+| `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt.                                                                  |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                  |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.    |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                        |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                       |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.          |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something. |
 
 `webviewSources` uses a `const` type parameter, so the literal names flow into the WebView helpers'
 parameter types: passing an undeclared name is a compile error, and at runtime a message from an
@@ -404,13 +409,13 @@ undeclared source is dropped.
 | `init()`                                                       | Installs everything: the fetch/XHR patches, the console patch, the REPL context, the performance collectors, and your themes. Until this runs, nothing is captured. Call once, as early as possible. |
 | `mark(name, options?)`                                         | Records a user-timing mark. `options`: `{ detail?, startTime? }`.                                                                                                                                    |
 | `measure(name, startOrOptions?, endMark?)`                     | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree.               |
-| `clearMarks(name?)`                                            | Drops recorded marks — all of them, or one name.                                                                                                                                                     |
-| `clearMeasures(name?)`                                         | Drops recorded measures — all of them, or one name.                                                                                                                                                  |
+| `clearMarks(name?)`                                            | Drops recorded marks, all of them or one name.                                                                                                                                                       |
+| `clearMeasures(name?)`                                         | Drops recorded measures, all of them or one name.                                                                                                                                                    |
 | `getWebViewInjectedJavaScriptBeforeContentLoaded(source)`      | The script to hand a `<WebView>`'s `injectedJavaScriptBeforeContentLoaded`. Covers both requests and console output.                                                                                 |
 | `handleWebViewMessage(event)`                                  | Feed a `<WebView>`'s `onMessage` events here. Returns `true` when it consumed one.                                                                                                                   |
 | `getWebViewRef(source)`                                        | A ref to attach to the `<WebView>`, so a throttle change reaches an already-open page.                                                                                                               |
 | `getWebViewUserAgent()`                                        | The current user-agent override, for the `userAgent` prop.                                                                                                                                           |
-| `shouldAllowWebViewRequest`                                    | For `onShouldStartLoadWithRequest` — blocks navigation while Offline is on.                                                                                                                          |
+| `shouldAllowWebViewRequest`                                    | For `onShouldStartLoadWithRequest`. Blocks navigation while Offline is on.                                                                                                                           |
 | `networkLogStore`, `networkConditionsStore`, `consoleLogStore` | The underlying stores, if you want to read or drive them yourself.                                                                                                                                   |
 
 #### User timing
@@ -430,13 +435,16 @@ appear in the list.
 
 | Prop            | Type                              | Default     | What it does                                                       |
 | --------------- | --------------------------------- | ----------- | ------------------------------------------------------------------ |
-| `iconComponent` | `ComponentType<{ size: number }>` | –           | Renders in place of the built-in glyph. Given the resolved `size`. |
+| `iconComponent` | `ComponentType<{ size: number }>` | none        | Renders in place of the built-in glyph. Given the resolved `size`. |
 | `size`          | `number`                          | `44`        | Diameter of the button, in dp.                                     |
 | `color`         | `string`                          | accent blue | Button fill.                                                       |
-| `iconColor`     | `string`                          | `'#ffffff'` | The built-in glyph only — an `iconComponent` colours itself.       |
+| `iconColor`     | `string`                          | `'#ffffff'` | The built-in glyph only; an `iconComponent` colours itself.        |
 
 The button is draggable, stays inside the screen, and keeps a 44dp touch area through `hitSlop` even
 at a smaller `size`. Mounting it is also what marks _first render_ for the startup breakdown.
+
+The overlay renders whether or not `.init()` has run: it takes no `enabled` prop and reads no store to
+decide. Guard the mount itself when you don't want the panel reachable, as in the README's quick start.
 
 ### Themes
 
@@ -453,7 +461,7 @@ createDevtoolsClient({
 
 Built-in ids: `light`, `dark`, `dracula`, `nord`, `monokai`, `one-dark`, `solarized-light`. Reuse one
 as your own name and you replace it. A `defaultTheme` naming something unregistered is ignored rather
-than leaving the panel unstyled. The choice lives in memory for the session — persisting it would
+than leaving the panel unstyled. The choice lives in memory for the session. Persisting it would
 mean taking a storage dependency for a colour scheme.
 
 The 21 tokens of `Palette`:
@@ -480,13 +488,13 @@ The 21 tokens of `Palette`:
 Everything else works in Expo Go. The native module is loaded optionally, so a missing module dims a
 control instead of breaking the panel.
 
-| Feature                                    | Without a dev build                                        |
-| ------------------------------------------ | ---------------------------------------------------------- |
-| Main-thread frame rate                     | Reads `dev build`; the JS line still plots.                |
-| App memory · Device memory                 | Card says `Needs a dev build`.                             |
-| Storage                                    | Card says `Needs a dev build`; Android only regardless.    |
-| Startup — measured block                   | Falls back to the platform block, which may be all dashes. |
-| Limiter — Main (UI) thread block and crash | Buttons disabled with a note.                              |
+| Feature                            | Without a dev build                                        |
+| ---------------------------------- | ---------------------------------------------------------- |
+| Main-thread frame rate             | Reads `dev build`; the JS line still plots.                |
+| App memory · Device memory         | Card says `Needs a dev build`.                             |
+| Storage                            | Card says `Needs a dev build`; Android only regardless.    |
+| Startup, measured block            | Falls back to the platform block, which may be all dashes. |
+| Limiter, Main (UI) block and crash | Buttons disabled with a note.                              |
 
 Platform-dependent regardless of build type: long tasks and interactions only appear if the native
 side implements those entry types, which varies by platform and React Native version. When they're
