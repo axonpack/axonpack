@@ -1,4 +1,32 @@
-import { createDevtoolsClient } from '@axonpack/expo-devtools';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  asyncStorageAdapter,
+  createDevtoolsClient,
+  defineStorageAdapter,
+  mmkvAdapter,
+  secureStoreAdapter,
+} from '@axonpack/expo-devtools';
+import * as SecureStore from 'expo-secure-store';
+import { createMMKV } from 'react-native-mmkv';
+
+/**
+ * MMKV's native module isn't in Expo Go and `createMMKV()` throws without it, so the example drops to
+ * the other three stores rather than crashing at import. `bun run ios` gets you the real thing.
+ */
+function openMmkv() {
+  try {
+    return createMMKV({ id: 'devtools-example' });
+  } catch {
+    return null;
+  }
+}
+
+export const mmkv = openMmkv();
+
+/** Proves the escape hatch: a store of our own, no native dependency involved. */
+export const memoryStore = new Map<string, string>();
+
+export const SECURE_KEYS = ['session', 'pin'];
 
 export const devtools = createDevtoolsClient({
   defaultTheme: 'dark',
@@ -17,5 +45,26 @@ export const devtools = createDevtoolsClient({
       appInfo: { name: 'devtools-example', platform: 'expo', tabs: ['requests', 'console'] },
       double: (value: number) => value * 2,
     },
+  },
+  storage: {
+    adapters: [
+      asyncStorageAdapter({ driver: AsyncStorage }),
+      ...(mmkv ? [mmkvAdapter({ driver: mmkv })] : []),
+      // SecureStore cannot list its own keys, so it is told which ones to watch.
+      secureStoreAdapter({ driver: SecureStore, keys: SECURE_KEYS }),
+      defineStorageAdapter({
+        name: 'In-memory',
+        kind: 'sync',
+        getAllKeys: () => [...memoryStore.keys()],
+        getItem: (key) => memoryStore.get(key) ?? null,
+        setItem: (key, text) => {
+          memoryStore.set(key, text);
+        },
+        removeItem: (key) => {
+          memoryStore.delete(key);
+        },
+      }),
+    ],
+    maxKeys: 1000,
   },
 });

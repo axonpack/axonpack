@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { TOUCH_TARGET } from '../../constants/metrics.const';
@@ -14,6 +14,15 @@ export type ContextMenuItem = {
 const MENU_WIDTH = 230;
 const EDGE_MARGIN = 8;
 
+/** Both sides of `menu`'s `paddingVertical`, which the item heights alone don't account for. */
+const MENU_VERTICAL_PADDING = 8;
+
+function clamp(value: number, min: number, max: number): number {
+  // `max` can fall below `min` in a short landscape window, and clamping to the smaller of the two
+  // would put the menu off the top edge — the floor wins.
+  return Math.max(min, Math.min(value, Math.max(min, max)));
+}
+
 export function ContextMenu({
   anchor,
   items,
@@ -26,15 +35,29 @@ export function ContextMenu({
   const styles = useStyles();
   const { width, height } = useWindowDimensions();
 
+  // Keyed on the item count so a menu of a different length falls back to the estimate rather than
+  // being placed with the last menu's height.
+  const [measured, setMeasured] = useState<{ count: number; height: number } | null>(null);
+
   if (!anchor) return null;
 
-  const left = Math.min(anchor.x, width - MENU_WIDTH - EDGE_MARGIN);
-  const top = Math.min(anchor.y, height - items.length * 40 - EDGE_MARGIN);
+  const menuHeight =
+    measured?.count === items.length
+      ? measured.height
+      : items.length * TOUCH_TARGET.row + MENU_VERTICAL_PADDING;
+
+  const left = clamp(anchor.x, EDGE_MARGIN, width - MENU_WIDTH - EDGE_MARGIN);
+  const top = clamp(anchor.y, EDGE_MARGIN, height - menuHeight - EDGE_MARGIN);
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
-        <View style={[styles.menu, { left, top }]}>
+        <View
+          style={[styles.menu, { left, top }]}
+          // The estimate above is short whenever a label wraps, so the real height replaces it.
+          onLayout={(event) =>
+            setMeasured({ count: items.length, height: event.nativeEvent.layout.height })
+          }>
           {items.map((item) => (
             <Pressable
               key={item.label}

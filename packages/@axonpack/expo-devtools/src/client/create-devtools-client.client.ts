@@ -18,6 +18,11 @@ import {
 } from '../services/network/webview-network-logger.service';
 import { startPerformanceCollectors } from '../services/performance/performance-collectors.service';
 import {
+  resolveStorageAdapters,
+  type StorageAdapterDefinition,
+} from '../services/storage/define-adapter.service';
+import { configureStorageReads } from '../services/storage/read-storage.service';
+import {
   clearRecordedMarks,
   clearRecordedMeasures,
   recordMark,
@@ -29,6 +34,7 @@ import { consoleLogStore } from '../stores/console/console-log.store';
 import { networkConditionsStore } from '../stores/network/network-conditions.store';
 import { networkLogStore } from '../stores/network/network-log.store';
 import { performanceStore } from '../stores/performance/performance.store';
+import { storageStore } from '../stores/storage/storage.store';
 import { themeStore } from '../stores/theme.store';
 
 type WebViewMessageEventLike = {
@@ -58,6 +64,19 @@ export type DevtoolsPerformanceConfig = {
   disabledByDefault?: boolean;
 };
 
+export type DevtoolsStorageConfig = {
+  /**
+   * The stores to inspect, built with `asyncStorageAdapter` / `mmkvAdapter` /
+   * `secureStoreAdapter` / `defineStorageAdapter`. Nothing is discovered automatically — this
+   * package depends on no storage library, so this list is the whole of what the tab can see.
+   */
+  adapters?: readonly StorageAdapterDefinition[];
+  /** Keys read per store before the tab stops and says how many it skipped. */
+  maxKeys?: number;
+  /** Blanket read-only default; an individual adapter can still set its own. */
+  readOnly?: boolean;
+};
+
 export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   defaultTheme?: ThemeId;
   themes?: Record<ThemeId, ThemeConfig>;
@@ -65,6 +84,7 @@ export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
   network?: DevtoolsNetworkConfig;
   console?: DevtoolsConsoleConfig;
   performance?: DevtoolsPerformanceConfig;
+  storage?: DevtoolsStorageConfig;
 };
 
 export function createDevtoolsClient<
@@ -89,6 +109,11 @@ export function createDevtoolsClient<
     historySize = 120,
     disabledByDefault: performanceStartsPaused = true,
   } = config?.performance ?? {};
+  const {
+    adapters: storageAdapters,
+    maxKeys: storageMaxKeys,
+    readOnly: storageReadOnly,
+  } = config?.storage ?? {};
 
   return {
     init() {
@@ -113,6 +138,14 @@ export function createDevtoolsClient<
         longTaskThresholdMs,
         interactionThresholdMs,
       });
+
+      configureStorageReads({ maxKeys: storageMaxKeys });
+      if (storageAdapters?.length) {
+        storageStore.setAdapters(
+          resolveStorageAdapters(storageAdapters, { readOnly: storageReadOnly })
+        );
+      }
+      storageStore.setEnabled(true);
     },
     getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
       const scripts = [getWebViewInjectedJavaScriptBeforeContentLoaded(source)];
@@ -143,5 +176,6 @@ export function createDevtoolsClient<
     networkLogStore,
     networkConditionsStore,
     consoleLogStore,
+    storageStore,
   };
 }

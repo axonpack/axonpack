@@ -1,4 +1,4 @@
-import { encodeBase64 } from '../export-network-log.util';
+import { encodeBase64 } from '../base64.util';
 
 describe('encodeBase64', () => {
   it('matches the RFC 4648 test vectors, padding included', () => {
