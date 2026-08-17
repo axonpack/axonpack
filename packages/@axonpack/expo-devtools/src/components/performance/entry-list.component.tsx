@@ -86,7 +86,7 @@ export function EntryList({ list }: { list: PerformanceListKey }) {
           ) : null}
           {list === 'interactions' && rows.length > 0 ? (
             <Text style={styles.listNote}>
-              Times are rounded to 8 ms, and anything under 16 ms isn&apos;t reported.
+              Times are rounded to 8 ms, and anything under 16 ms isn't reported.
             </Text>
           ) : null}
           {droppedForList > 0 ? (

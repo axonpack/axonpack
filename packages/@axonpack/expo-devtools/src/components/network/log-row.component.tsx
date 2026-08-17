@@ -16,8 +16,10 @@ import {
   getStatusColor,
 } from '../../utils/network/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../../utils/network/resource-type.util';
+import { findMatches, type Matcher } from '../../utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { ContextMenu } from '../ui/context-menu.ui';
+import { HighlightedText } from '../ui/highlighted-text.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InfoBadge } from '../ui/info-badge.ui';
 import { JsonIcon } from '../ui/json-icon.ui';
@@ -25,10 +27,12 @@ import { JsonIcon } from '../ui/json-icon.ui';
 function LogRowBase({
   entry,
   bigRows,
+  matcher,
   onPress,
 }: {
   entry: NetworkLogEntry;
   bigRows: boolean;
+  matcher: Matcher | null;
 
   onPress: (entry: NetworkLogEntry) => void;
 }) {
@@ -44,6 +48,7 @@ function LogRowBase({
   const methodColor = getMethodColor(entry.method, COLORS);
   const resourceType = classifyResourceType(entry.mimeType);
   const typeVisual = getResponseTypeVisual(entry.mimeType, COLORS);
+  const displayName = getDisplayNameWithQuery(entry.url);
 
   return (
     <TouchableOpacity
@@ -73,13 +78,21 @@ function LogRowBase({
         )}
         <View style={styles.urlTextGroup}>
           {bigRows && (
-            <Text style={styles.name} numberOfLines={1}>
-              {getDisplayNameWithQuery(entry.url)}
-            </Text>
+            <HighlightedText
+              text={displayName}
+              ranges={findMatches(displayName, matcher)}
+              style={styles.name}
+              numberOfLines={1}
+              selectable={false}
+            />
           )}
-          <Text style={[styles.url, !bigRows && styles.urlPrimary]} numberOfLines={bigRows ? 1 : 2}>
-            {entry.url}
-          </Text>
+          <HighlightedText
+            text={entry.url}
+            ranges={findMatches(entry.url, matcher)}
+            style={[styles.url, !bigRows && styles.urlPrimary]}
+            numberOfLines={bigRows ? 1 : 2}
+            selectable={false}
+          />
         </View>
       </View>
 
@@ -182,6 +195,8 @@ export const LogRow = memo(
   LogRowBase,
   (prev, next) =>
     prev.bigRows === next.bigRows &&
+    // Compiled once per query upstream, so identity is a safe stand-in for the query itself.
+    prev.matcher === next.matcher &&
     prev.onPress === next.onPress &&
     prev.entry.id === next.entry.id &&
     prev.entry.method === next.entry.method &&

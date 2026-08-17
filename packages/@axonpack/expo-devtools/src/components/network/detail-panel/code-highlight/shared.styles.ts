@@ -5,6 +5,7 @@ export const useCodeStyles = makeThemedStyles((COLORS) => ({
     fontFamily: 'monospace',
     fontSize: 12,
     flexWrap: 'wrap',
+    color: COLORS.textPrimary,
   },
   keyword: { color: COLORS.codeKeyword },
   string: { color: COLORS.jsonString },

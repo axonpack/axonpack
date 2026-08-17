@@ -55,7 +55,7 @@ export function MemoryChartCard() {
         latest={memory.at(-1)?.usedJSHeapSize}
         caption={
           !support.memory
-            ? 'This JS engine doesn&apos;t report it'
+            ? "This JS engine doesn't report it"
             : memory.at(-1)?.totalJSHeapSize !== undefined
               ? `of ${formatSize(memory.at(-1)?.totalJSHeapSize)} allocated`
               : 'Waiting for the first sample'

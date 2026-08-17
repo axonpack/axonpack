@@ -4,7 +4,9 @@ import { Text, TouchableOpacity } from 'react-native';
 import type { Palette } from '../../constants/theme.const';
 import type { ConsoleArgTone } from '../../utils/console/format-console-args.util';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { findMatches, type Matcher } from '../../utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
+import { HighlightedText } from '../ui/highlighted-text.ui';
 
 const CLAMP_LINES = 6;
 
@@ -21,24 +23,30 @@ export function TextArgCell({
   tone,
   plainColor,
   selectable = true,
+  matcher = null,
 }: {
   text: string;
   tone: ConsoleArgTone;
 
   plainColor?: string;
   selectable?: boolean;
+  matcher?: Matcher | null;
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState(false);
   const color = tone === 'plain' ? (plainColor ?? COLORS.textPrimary) : toneColor(tone, COLORS);
   const clampable = text.length > CLAMP_MIN_LENGTH || text.split('\n').length > CLAMP_LINES;
+  const ranges = findMatches(text, matcher);
 
   if (!clampable) {
     return (
-      <Text style={[styles.text, { color }]} selectable={selectable}>
-        {text}
-      </Text>
+      <HighlightedText
+        text={text}
+        ranges={ranges}
+        style={[styles.text, { color }]}
+        selectable={selectable}
+      />
     );
   }
 
@@ -49,12 +57,13 @@ export function TextArgCell({
         animateNextLayout();
         setExpanded((current) => !current);
       }}>
-      <Text
+      <HighlightedText
+        text={text}
+        ranges={ranges}
         style={[styles.text, { color }]}
         numberOfLines={expanded ? undefined : CLAMP_LINES}
-        selectable={selectable}>
-        {text}
-      </Text>
+        selectable={selectable}
+      />
       {}
       <Text style={styles.toggle}>{expanded ? 'Show less' : 'Show more'}</Text>
     </TouchableOpacity>

@@ -464,14 +464,19 @@ as your own name and you replace it. A `defaultTheme` naming something unregiste
 than leaving the panel unstyled. The choice lives in memory for the session. Persisting it would
 mean taking a storage dependency for a colour scheme.
 
-The 21 tokens of `Palette`:
+The 22 tokens of `Palette`:
 
 | Group    | Tokens                                                                                      |
 | -------- | ------------------------------------------------------------------------------------------- |
 | Surfaces | `background`, `toolbarBackground`, `toolbarOverlay`, `sectionTint`, `border`                |
 | Text     | `textPrimary`, `textSecondary`                                                              |
 | Status   | `accent`, `pending`, `success`, `error`, `warning`, `errorSurface`, `warningSurface`        |
+| Search   | `matchHighlight`                                                                            |
 | Syntax   | `keyAccent`, `jsonKey`, `jsonString`, `jsonNumber`, `codeKeyword`, `codeComment`, `codeTag` |
+
+`matchHighlight` is the background painted behind text matching the current search. Every built-in
+palette sets it to a translucent colour so syntax highlighting still reads through it — keep that
+property if you override it.
 
 ### Exported types
 

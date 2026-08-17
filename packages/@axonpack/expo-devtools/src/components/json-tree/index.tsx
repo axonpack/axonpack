@@ -5,10 +5,12 @@ import { View } from 'react-native';
 import { JsonNode } from './json-node.component';
 import {
   collectExpandablePaths,
+  collectMatchingPaths,
   formatCopyValue,
   isExpandable,
   type JsonValue,
 } from '../../utils/json-tree.util';
+import type { Matcher } from '../../utils/text-search.util';
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu.ui';
 
 const ROOT_PATH = '$';
@@ -19,16 +21,33 @@ export function JsonTree({
   value,
   rootLabel,
   defaultExpanded = true,
+  matcher = null,
 }: {
   value: JsonValue;
   rootLabel?: string;
 
   defaultExpanded?: boolean;
+  matcher?: Matcher | null;
 }) {
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() =>
-    defaultExpanded ? new Set([ROOT_PATH]) : new Set()
-  );
+  // A search rebuilds the expansion from scratch: open exactly the branches holding a match, and
+  // collapse the rest. An invalid pattern matches everything, so it counts as no search at all.
+  function expansionFor(activeMatcher: Matcher | null): Set<string> {
+    if (activeMatcher?.pattern) {
+      return collectMatchingPaths(ROOT_PATH, value, activeMatcher, rootLabel);
+    }
+    return defaultExpanded ? new Set([ROOT_PATH]) : new Set();
+  }
+
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => expansionFor(matcher));
+  const [prevMatcher, setPrevMatcher] = useState(matcher);
   const [menu, setMenu] = useState<MenuState | null>(null);
+
+  // Keyed on the matcher, not on the derived set: `value` is re-parsed on every render upstream, so
+  // comparing the set (or the value) would loop.
+  if (matcher !== prevMatcher) {
+    setPrevMatcher(matcher);
+    setExpandedPaths(expansionFor(matcher));
+  }
 
   function toggle(path: string) {
     setExpandedPaths((prev) => {
@@ -98,6 +117,7 @@ export function JsonTree({
         value={value}
         depth={0}
         expandedPaths={expandedPaths}
+        matcher={matcher}
         onToggle={toggle}
         onLongPress={openMenu}
       />

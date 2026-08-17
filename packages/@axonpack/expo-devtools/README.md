@@ -221,9 +221,11 @@ was. A request still in flight shows an amber **PENDING** so you can tell "waiti
 </table>
 
 **Finding one request among hundreds.** Search the text, then narrow with the chips: type (Fetch/XHR, JS,
-Img, Media, Other), method, or source. The method and source chips are built from what you've actually
-captured, so they only ever offer real options. There's an **Invert** switch for "everything except this",
-and extra toggles to hide data URLs or hide failed requests.
+Img, Media, Other), status (2xx, 4xx, Failed, Pending), method, or source. The status, method and source
+chips are built from what you've actually captured, so they only ever offer real options. Search matches
+light up in the list, and the box carries the three switches you expect from an editor: **match case**,
+**whole word**, and **regex**. **Invert** flips the whole filter — every chip, not just the text — and
+**Clear** resets all of it in one press. Extra toggles hide data URLs or failed requests.
 
 **Testing a bad connection.** Pick Slow 3G, Fast 3G, Fast 4G, Offline, or set your own speed and delay. It
 applies immediately, to your app's own requests and to in-app browser pages. You can also pretend to be an
@@ -256,6 +258,10 @@ A panel slides up with everything captured, across a few tabs:
 - **Response**: the raw body, in full, never cut off.
 - **Timing**: when it started and how long it took. It also tells you plainly that a DNS/TCP/TLS
   breakdown isn't available on-device, rather than showing numbers it can't measure.
+
+Payload, Preview and Response share a search box that stays put while the body scrolls, with the same
+match case / whole word / regex switches, and every hit highlighted where it sits — in the JSON tree, in
+the syntax-coloured code, and in the raw body alike.
 
 The **⋮** menu copies the URL, or the whole request as a ready-to-paste **cURL** command or `fetch`
 snippet.
@@ -295,7 +301,8 @@ weren't looking.
 - Errors show their message on the row and the **full stack** when you tap it.
 - The same message logged over and over becomes **one row with a count**, so a chatty screen doesn't bury
   everything else.
-- Filter by level (each chip carries a live count) or by source, or search the text of every message.
+- Filter by level (each chip carries a live count) or by source, or search the text of every message —
+  with match case, whole word and regex, and every match highlighted where it sits.
 - The newest output stays in view automatically, and stops following if you scroll back to read
   something, with a button to jump back to the newest.
 - Copy any line with one tap.

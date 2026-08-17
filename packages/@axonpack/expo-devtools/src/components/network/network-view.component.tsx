@@ -1,4 +1,3 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
@@ -6,7 +5,6 @@ import {
   SectionList,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View,
@@ -22,19 +20,24 @@ import { networkLogStore } from '../../stores/network/network-log.store';
 import type { NetworkLogEntry } from '../../stores/network/network-log.store';
 import { animateNextLayout } from '../../utils/layout-animation.util';
 import { exportNetworkLog } from '../../utils/network/export-network-log.util';
-import { matchesQuery } from '../../utils/network/filter-entries.util';
-import { formatSource } from '../../utils/network/formatters.util';
 import {
-  classifyResourceType,
-  RESOURCE_TYPE_LABELS,
-  RESOURCE_TYPES,
-} from '../../utils/network/resource-type.util';
-import type { ResourceType } from '../../utils/network/resource-type.util';
+  DEFAULT_NETWORK_FILTERS,
+  hasActiveFilters,
+  matchesFilters,
+  sortStatusClasses,
+  statusClass,
+  statusClassLabel,
+  type NetworkFilters,
+} from '../../utils/network/filter-entries.util';
+import { formatSource } from '../../utils/network/formatters.util';
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from '../../utils/network/resource-type.util';
+import { buildMatcher } from '../../utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
+import { SearchInput } from '../ui/search-input.ui';
 import { SettingRow } from '../ui/setting-row.ui';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
@@ -54,13 +57,7 @@ export function NetworkView() {
     networkLogStore.isPreserveLogEnabled
   );
 
-  const [searchText, setSearchText] = useState('');
-  const [invertSearch, setInvertSearch] = useState(false);
-  const [hideDataUrls, setHideDataUrls] = useState(false);
-  const [hideFailed, setHideFailed] = useState(false);
-  const [activeType, setActiveType] = useState<ResourceType | null>(null);
-  const [activeMethod, setActiveMethod] = useState<string | null>(null);
-  const [activeSource, setActiveSource] = useState<string | null>(null);
+  const [filters, setFilters] = useState<NetworkFilters>(DEFAULT_NETWORK_FILTERS);
   const [reversed, setReversed] = useState(false);
   const [openPanel, setOpenPanel] = useState<'settings' | 'filters' | null>(null);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
@@ -85,28 +82,22 @@ export function NetworkView() {
     return Array.from(seen);
   }, [logs]);
 
-  const overviewLogs = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    return logs.filter((entry) => {
-      if (hideDataUrls && entry.url.startsWith('data:')) return false;
-      if (hideFailed && entry.status === 'error') return false;
-      if (activeSource !== null && entry.source !== activeSource) return false;
-      if (activeMethod !== null && entry.method !== activeMethod) return false;
-      if (activeType !== null && classifyResourceType(entry.mimeType) !== activeType) return false;
+  const statuses = useMemo(() => {
+    const seen = new Set<string>();
+    for (const entry of logs) seen.add(statusClass(entry));
+    return sortStatusClasses(Array.from(seen));
+  }, [logs]);
 
-      const matches = matchesQuery(entry, query);
-      return invertSearch ? !matches : matches;
-    });
-  }, [
-    logs,
-    searchText,
-    invertSearch,
-    hideDataUrls,
-    hideFailed,
-    activeSource,
-    activeMethod,
-    activeType,
-  ]);
+  // One compiled matcher for the whole list — recompiling per row would run it on every keystroke.
+  const matcher = useMemo(
+    () => buildMatcher({ text: filters.search, ...filters.modes }),
+    [filters.search, filters.modes]
+  );
+
+  const overviewLogs = useMemo(
+    () => logs.filter((entry) => matchesFilters(entry, filters, matcher)),
+    [logs, filters, matcher]
+  );
 
   const visibleLogs = useMemo(() => {
     let result = activeTimeRange
@@ -143,11 +134,23 @@ export function NetworkView() {
     setMoreFiltersOpen((current) => !current);
   }
 
+  function patchFilters(patch: Partial<NetworkFilters>) {
+    setFilters((current) => ({ ...current, ...patch }));
+  }
+
+  function clearFilters() {
+    setFilters(DEFAULT_NETWORK_FILTERS);
+    // The overview's brushed range is a filter too, even though it is set from a different surface.
+    setActiveTimeRange(null);
+  }
+
+  const filtersActive = hasActiveFilters(filters) || activeTimeRange !== null;
+
   const renderRow = useCallback(
     ({ item }: { item: NetworkLogEntry }) => (
-      <LogRow entry={item} bigRows={bigRows} onPress={setSelectedEntry} />
+      <LogRow entry={item} bigRows={bigRows} matcher={matcher} onPress={setSelectedEntry} />
     ),
-    [bigRows]
+    [bigRows, matcher]
   );
 
   return (
@@ -228,40 +231,72 @@ export function NetworkView() {
 
       {openPanel === 'filters' && (
         <View style={styles.panel}>
-          <View style={styles.searchRow}>
-            <MaterialIcons name="search" size={16} color={COLORS.textSecondary} />
-            <TextInput
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Filter"
-              placeholderTextColor={COLORS.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
+          <View style={styles.filterHeader}>
+            <Text style={styles.filterCount}>
+              {visibleLogs.length} of {logs.length}
+            </Text>
+            <Chip
+              label="Invert"
+              active={filters.invert}
+              onPress={() => patchFilters({ invert: !filters.invert })}
             />
-            {searchText.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchText('')}
-                hitSlop={HIT_SLOP.dense}
-                style={styles.searchClear}>
-                <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            )}
-            <Chip label="Invert" active={invertSearch} onPress={() => setInvertSearch((c) => !c)} />
+            <TouchableOpacity
+              onPress={clearFilters}
+              disabled={!filtersActive}
+              hitSlop={HIT_SLOP.default}
+              accessibilityLabel="Clear all filters"
+              style={styles.clearFilters}>
+              <Text style={[styles.clearFiltersLabel, !filtersActive && styles.clearFiltersOff]}>
+                Clear
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          <SearchInput
+            value={filters.search}
+            onChangeText={(search) => patchFilters({ search })}
+            modes={filters.modes}
+            onModesChange={(modes) => patchFilters({ modes })}
+            invalid={matcher?.invalid ?? false}
+          />
 
           <Text style={styles.filterSectionLabel}>Type</Text>
           <View style={styles.chipsRow}>
-            <Chip label="All" active={activeType === null} onPress={() => setActiveType(null)} />
+            <Chip
+              label="All"
+              active={filters.type === null}
+              onPress={() => patchFilters({ type: null })}
+            />
             {RESOURCE_TYPES.map((type) => (
               <Chip
                 key={type}
                 label={RESOURCE_TYPE_LABELS[type]}
-                active={activeType === type}
-                onPress={() => setActiveType(type)}
+                active={filters.type === type}
+                onPress={() => patchFilters({ type })}
               />
             ))}
           </View>
+
+          {statuses.length > 0 && (
+            <>
+              <Text style={styles.filterSectionLabel}>Status</Text>
+              <View style={styles.chipsRow}>
+                <Chip
+                  label="All"
+                  active={filters.status === null}
+                  onPress={() => patchFilters({ status: null })}
+                />
+                {statuses.map((status) => (
+                  <Chip
+                    key={status}
+                    label={statusClassLabel(status)}
+                    active={filters.status === status}
+                    onPress={() => patchFilters({ status })}
+                  />
+                ))}
+              </View>
+            </>
+          )}
 
           {methods.length > 0 && (
             <>
@@ -269,15 +304,15 @@ export function NetworkView() {
               <View style={styles.chipsRow}>
                 <Chip
                   label="All"
-                  active={activeMethod === null}
-                  onPress={() => setActiveMethod(null)}
+                  active={filters.method === null}
+                  onPress={() => patchFilters({ method: null })}
                 />
                 {methods.map((method) => (
                   <Chip
                     key={method}
                     label={method}
-                    active={activeMethod === method}
-                    onPress={() => setActiveMethod(method)}
+                    active={filters.method === method}
+                    onPress={() => patchFilters({ method })}
                   />
                 ))}
               </View>
@@ -290,15 +325,15 @@ export function NetworkView() {
               <View style={styles.chipsRow}>
                 <Chip
                   label="All"
-                  active={activeSource === null}
-                  onPress={() => setActiveSource(null)}
+                  active={filters.source === null}
+                  onPress={() => patchFilters({ source: null })}
                 />
                 {sources.map((source) => (
                   <Chip
                     key={source}
                     label={formatSource(source)}
-                    active={activeSource === source}
-                    onPress={() => setActiveSource(source)}
+                    active={filters.source === source}
+                    onPress={() => patchFilters({ source })}
                   />
                 ))}
               </View>
@@ -315,13 +350,13 @@ export function NetworkView() {
             <View>
               <SettingRow
                 label="Hide data URLs"
-                value={hideDataUrls}
-                onValueChange={setHideDataUrls}
+                value={filters.hideDataUrls}
+                onValueChange={(hideDataUrls) => patchFilters({ hideDataUrls })}
               />
               <SettingRow
                 label="Hide failed requests"
-                value={hideFailed}
-                onValueChange={setHideFailed}
+                value={filters.hideFailed}
+                onValueChange={(hideFailed) => patchFilters({ hideFailed })}
               />
             </View>
           )}
@@ -397,28 +432,30 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flexGrow: 0,
     maxHeight: 320,
   },
-  searchRow: {
+  filterHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    minHeight: TOUCH_TARGET.min,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderRadius: 6,
+    gap: 8,
+    marginBottom: 10,
   },
-
-  searchClear: {
-    width: TOUCH_TARGET.dense,
-    height: TOUCH_TARGET.dense,
-    alignItems: 'center',
+  filterCount: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontVariant: ['tabular-nums'],
+  },
+  clearFilters: {
+    minHeight: TOUCH_TARGET.dense,
     justifyContent: 'center',
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    padding: 0,
+  clearFiltersLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.accent,
+  },
+  clearFiltersOff: {
+    color: COLORS.textSecondary,
+    opacity: 0.5,
   },
   moreFiltersToggle: {
     fontSize: 12,
