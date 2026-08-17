@@ -30,9 +30,7 @@ export function IdleState({ startupBelow = true }: { startupBelow?: boolean }) {
       </View>
 
       <Text style={styles.title}>Not recording</Text>
-      <Text style={styles.lede}>
-        Measuring has a small cost, so it&apos;s off until you turn it on.
-      </Text>
+      <Text style={styles.lede}>Measuring has a small cost, so it's off until you turn it on.</Text>
 
       <View style={styles.list}>
         {COLLECTS.map((item) => (
