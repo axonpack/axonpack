@@ -6,9 +6,10 @@
 
 **Browser-style devtools that live inside your React Native or Expo app.**
 
-Tap a floating button for three tabs on the device itself: **Network** (every request, resendable, with
-throttling), **Console** (every log, plus a prompt that answers) and **Performance** (frame rate, memory,
-the moments the app froze). No desktop debugger, no cable, and nothing captured until you switch it on.
+Tap a floating button for four tabs on the device itself: **Network** (every request, resendable, with
+throttling), **Console** (every log, plus a prompt that answers), **Performance** (frame rate, memory,
+the moments the app froze) and **Storage** (every key you've saved, searchable and editable). No desktop
+debugger, no cable, and nothing captured until you switch it on.
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![npm downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
@@ -119,7 +120,8 @@ export default function App() {
 </details>
 
 That's it. Drag the button anywhere on screen, tap it to open the panel, and the Network and Console tabs
-are already recording. The panel reopens on whichever tab you last had open, for as long as the app is
+are already recording. The Storage tab is empty until you tell it which stores you use — see
+[Storage](#storage). The panel reopens on whichever tab you last had open, for as long as the app is
 running.
 
 A few things that trip people up:
@@ -456,6 +458,81 @@ to know:
   overflows, telling us only how many went missing. When that happens the list says so rather than
   presenting what survived as the whole picture.
 
+### Storage
+
+Every key you've saved, on the device, without a `console.log(await AsyncStorage.getAllKeys())`.
+
+This tab is the one that can't find anything by itself. A key-value store is a separate install with its
+own native code, and this package deliberately depends on none of them — so you hand over the stores you
+already use, once, where you create the client:
+
+```ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { createMMKV } from 'react-native-mmkv';
+import {
+  createDevtoolsClient,
+  asyncStorageAdapter,
+  mmkvAdapter,
+  secureStoreAdapter,
+  defineStorageAdapter,
+} from '@axonpack/expo-devtools';
+
+const mmkv = createMMKV();
+
+export const devtools = createDevtoolsClient({
+  storage: {
+    adapters: [
+      asyncStorageAdapter({ driver: AsyncStorage }),
+      mmkvAdapter({ driver: mmkv }),
+      // SecureStore can't list its own keys, so you name the ones worth watching.
+      secureStoreAdapter({ driver: SecureStore, keys: ['session'] }),
+      // Anything else — your own cache, a wrapper, an in-memory store.
+      defineStorageAdapter({
+        name: 'My cache',
+        kind: 'sync',
+        getAllKeys: () => cache.keys(),
+        getItem: (key) => cache.get(key) ?? null,
+        setItem: (key, text) => cache.set(key, text),
+        removeItem: (key) => cache.remove(key),
+      }),
+    ],
+  },
+});
+```
+
+Then the toolbar gets a dropdown to switch between your stores, and each key a row with its type, size
+and value:
+
+- **Search** keys, values or both, with match case / whole word / regex, and matches highlighted in place.
+- **Filter** by value type — Object, Array, String, Number, Boolean, Binary, Empty, Missing — with counts,
+  or narrow to JSON only and hide empty values.
+- **Sort** by key, size or type, ascending or descending, and **group by namespace**: the `auth:token`,
+  `cache/user/1`, `settings.theme` prefixes your keys already use, which no store knows about.
+- **Tap a key** for its value in the same expandable JSON tree the Network tab uses, the raw characters
+  exactly as stored, an editor, and an Info tab. Copy the key, the value, or the pair as JSON.
+- **Edit** a value and **delete** a key, one at a time, with a confirmation on delete.
+- **Export** the filtered keys of a store as JSON through the share sheet.
+
+Whether a store can be edited or deleted from is derived from what you handed over: register it without a
+`setItem` and the editor says so. `storage: { readOnly: true }`, or `readOnly` on one adapter, makes that
+explicit.
+
+#### What it deliberately doesn't do
+
+- **No store-wide clear, and no way to add a key.** The tab edits and deletes one key at a time. There is
+  no "clear storage" button anywhere in it, on purpose — the same icon means "clear the log" in three
+  other tabs.
+- **No mutation history.** Nothing patches the store you hand over, so your app behaves exactly as it did
+  and the tab shows state, not the writes that produced it.
+- **No SQLite.** A table needs schema, queries and paging rather than a key list.
+- **SecureStore can't be enumerated.** The keychain is addressed by key, not listed, so you name the keys
+  and the tab says that's what it's showing rather than implying the store is empty.
+- **Big stores are capped.** Reads stop at `storage.maxKeys` (1,000 by default) and the summary names the
+  real total, rather than quietly showing a short list.
+- **Binary values are shown, not edited.** There's no text form of the bytes to round-trip, so only their
+  length is reported.
+
 ### Themes
 
 The header is one row: the tabs, a palette button, then close. The button lists every theme and switches
@@ -542,23 +619,26 @@ go out at full speed.
 
 `createDevtoolsClient(config?)`. Every option is optional, and the defaults are what most apps want.
 
-| Option                               | Type                          | Default     | Description                                                                             |
-| ------------------------------------ | ----------------------------- | ----------- | --------------------------------------------------------------------------------------- |
-| `defaultTheme`                       | `string`                      | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                           |
-| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                        |
-| `webviewSources`                     | `string[]`                    | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs.   |
-| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                     |
-| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest`. This is what catches axios and most other HTTP libraries.     |
-| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.    |
-| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.         |
-| `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                       |
-| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                       |
-| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.          |
-| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.    |
-| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only report tasks that blocked the JS thread at least this long.                        |
-| `performance.interactionThresholdMs` | `number`                      | `100`       | Only report interactions that took at least this long, event to next paint.             |
-| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.            |
-| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab not recording. On by default, since measuring costs something. |
+| Option                               | Type                          | Default     | Description                                                                                   |
+| ------------------------------------ | ----------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
+| `defaultTheme`                       | `string`                      | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                 |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                              |
+| `webviewSources`                     | `string[]`                    | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs.         |
+| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                           |
+| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest`. This is what catches axios and most other HTTP libraries.           |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.          |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.               |
+| `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                             |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                             |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab not recording. The `>` prompt still works while it's off.                |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often the JS heap is read. Each read crosses into the engine, so keep it coarse.          |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only report tasks that blocked the JS thread at least this long.                              |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only report interactions that took at least this long, event to next paint.                   |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                  |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab not recording. On by default, since measuring costs something.       |
+| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is found automatically — see [Storage](#storage). |
+| `storage.maxKeys`                    | `number`                      | `1000`      | Keys read per store before it stops and reports how many it skipped.                          |
+| `storage.readOnly`                   | `boolean`                     | `false`     | Make every store read-only. One adapter can still override it.                                |
 
 Every field of every panel, and the rest of the API (the client's methods, the overlay's props, the theme
 tokens, the exported types) is in [`REFERENCE.md`](./REFERENCE.md).
@@ -603,7 +683,13 @@ each a wall of buttons:
   can retain or release to make the heap chart move.
 
 `example/devtools.ts` doubles as a worked configuration: a dark default theme, a custom `midnight` one, two
-declared `webviewSources`, and a `console.context` you can reach from the prompt.
+declared `webviewSources`, a `console.context` you can reach from the prompt, and all four storage adapters
+registered against real AsyncStorage, MMKV, SecureStore and an in-memory `Map`. Its Storage screen seeds
+each store with a spread of value shapes to poke at.
+
+AsyncStorage and SecureStore ship inside Expo Go, so `bun run start` exercises them as-is. MMKV doesn't —
+the example catches that and registers the other three stores instead of crashing, and `bun run ios` gets
+you all four.
 
 ```sh
 cd example

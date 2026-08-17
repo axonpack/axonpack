@@ -7,16 +7,18 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ConsoleDemo } from './components/ConsoleDemo';
 import { PerformanceDemo } from './components/PerformanceDemo';
 import { RequestsScreen } from './components/RequestsScreen';
+import { StorageDemo } from './components/StorageDemo';
 import { TabBar } from './components/TabBar';
 
 const TABS = [
   { key: 'requests' as const, label: 'Requests' },
   { key: 'console' as const, label: 'Console' },
   { key: 'performance' as const, label: 'Performance' },
+  { key: 'storage' as const, label: 'Storage' },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<'requests' | 'console' | 'performance'>('requests');
+  const [tab, setTab] = useState<'requests' | 'console' | 'performance' | 'storage'>('requests');
 
   return (
     <SafeAreaProvider>
@@ -25,6 +27,7 @@ export default function App() {
         {tab === 'requests' ? <RequestsScreen /> : null}
         {tab === 'console' ? <ConsoleDemo /> : null}
         {tab === 'performance' ? <PerformanceDemo /> : null}
+        {tab === 'storage' ? <StorageDemo /> : null}
         <DevtoolsOverlay size={52} color="#ffffff" iconColor="#1a73e8" />
         <StatusBar style="auto" />
       </SafeAreaView>

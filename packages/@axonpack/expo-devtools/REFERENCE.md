@@ -7,6 +7,7 @@ Every control, section and field in the panel, and the whole public API. The
 - [Network tab](#network-tab)
 - [Console tab](#console-tab)
 - [Performance tab](#performance-tab)
+- [Storage tab](#storage-tab)
 - [API](#api)
 - [What needs a development build](#what-needs-a-development-build)
 
@@ -23,12 +24,12 @@ button itself never appears inside the modal.
 
 ### Header row
 
-| Item         | What it does                                                                                    |
-| ------------ | ----------------------------------------------------------------------------------------------- |
-| Tab bar      | **Network**, **Console**, **Performance**. Scrolls horizontally on a narrow screen.             |
-| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. |
-| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                            |
-| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                    |
+| Item         | What it does                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| Tab bar      | **Network**, **Console**, **Performance**, **Storage**. Scrolls horizontally on a narrow screen. |
+| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s.  |
+| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                             |
+| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                     |
 
 The tab you last had open is remembered for the life of the app process, so reopening the panel
 returns you to it. Only the active tab is mounted, so switching tabs and back resets that tab's
@@ -37,12 +38,17 @@ stores, not the views.
 
 ### Toolbar row
 
-Every tab has one, and the first two controls are always the same:
+Every tab has one. On the three tabs that record — Network, Console, Performance — it opens with the
+same two controls:
 
 | Control    | What it does                                                                         |
 | ---------- | ------------------------------------------------------------------------------------ |
 | Record (⏺) | Pauses and resumes **capture** for that tab. Red when recording, hollow when paused. |
 | Clear (⊘)  | Throws away everything that tab has collected. Not undoable.                         |
+
+The Storage tab has neither, on purpose: it reads on demand rather than recording, so there is no
+stream to pause, and a clear button there would mean wiping your storage rather than dropping a log.
+It opens with Refresh instead.
 
 Pausing and `.init()` are different switches, and the difference matters when you ship: until
 `.init()` runs, nothing is patched, observed or recorded anywhere. The record button only pauses a
@@ -293,8 +299,9 @@ hint. Before anything is captured it reads `Slowest event to next paint`.
 Both plots are sampled on `performance.sampleIntervalMs` (default 1 s) and span `historySize`
 samples, two minutes at the defaults. Each carries its own peak marker.
 
-**Storage**: a Used meter against the data partition's total, captioned with the free space. Android
-only, and needs a dev build; the card says which of the two is missing. iOS is absent on purpose:
+**Storage**: disk space, not the [Storage tab](#storage-tab)'s contents — a Used meter against the data
+partition's total, captioned with the free space. Android only, and needs a dev build; the card says
+which of the two is missing. iOS is absent on purpose:
 `systemFreeSize` is one of Apple's required-reason APIs, and a library reading it would push a
 privacy-manifest declaration onto every app that embeds it.
 
@@ -373,6 +380,105 @@ release: they work as soon as the panel is on screen. What gates them is whether
 
 ---
 
+## Storage tab
+
+Every key in every store you registered, with its value, type and byte size.
+
+```
+[AsyncStorage 12 ▾] │ [⟳] [Filter] │ [⤓]
+AsyncStorage  ·  Async  ·  read at 14:22:07
+[12 keys] [4.1 KB] [cache/feed · 1.2 KB]
+```
+
+Unlike the other three tabs, this one **finds nothing by itself**. A key-value store is a separate
+install with its own native code, and this package depends on none of them, so the stores arrive
+through `storage.adapters` in the client config. With none registered the tab explains that and shows
+the snippet to copy, rather than an empty list that would read as "you have no data".
+
+### Toolbar
+
+| Control            | What it does                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Store dropdown (▾) | Which store the tab is showing, with its key count. Appears once a second store is registered; the menu ticks the active one and carries every store's count. |
+| Refresh (⟳)        | Re-reads the selected store. This is where the record button is in every other tab.                                                                           |
+| Filter             | Opens the filter panel, at the top of the scrolling content. Pressing it also scrolls you back up to it.                                                      |
+| Export (⤓)         | The currently-filtered entries as JSON through the OS share sheet.                                                                                            |
+
+There is **no record button** — storage is a pull, not a stream, so there is no stream to pause. And
+no clear button: that icon means "clear the log" in the other three tabs, and it must never come to
+mean "wipe your storage". The tab reads on open and on Refresh; nothing polls.
+
+### Store summary
+
+The toolbar is the only pinned row. The summary and the filter panel are the list's header, so they
+scroll away with the rows — an open filter panel would otherwise leave a phone with almost no list.
+
+The summary names the store, whether it is `Async` or `Sync`, when it was last read, its key count,
+total bytes and largest key — plus whatever needs saying honestly:
+
+- `SecureStore can't list its own keys — showing the 2 you declared.`
+- `Read 1,000 of 4,312 keys — the rest are past the cap.`
+- `Read-only — values here cannot be edited or deleted.`
+
+### Filters panel
+
+| Section      | What it holds                                                                                                               |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Header       | `n of m`, **Invert**, **Clear** — as in the Network tab.                                                                    |
+| Search       | The shared search box, with match-case / whole-word / regex modes.                                                          |
+| Search in    | **Keys + values**, **Keys**, **Values**. A key and its value are different haystacks.                                       |
+| Type         | Object · Array · String · Number · Boolean · Binary · Empty · Missing, with counts. Only types actually present get a chip. |
+| Sort by      | **Key**, **Size**, **Type**, plus an ascending/descending chip. Sorted by key within a type.                                |
+| More filters | **Group by namespace**, **Hide empty values**, **JSON values only**.                                                        |
+
+**Group by namespace** recovers the prefix conventions no store knows about — `auth:token`,
+`cache/user/1`, `settings.theme`, `user_name` — splitting on the first of `:` `/` `.` `_` and grouping
+under it. A key with no prefix lands under `Ungrouped`.
+
+### A key row
+
+The type glyph, the key, its size, and the value collapsed to one line. Matches from the search are
+highlighted in both the key and the value. **Empty** and **Missing** are separate types on purpose: an
+empty string is a value a store can hold, and conflating the two hides a real one. A key that failed to
+read shows the reason in red instead of a value — SecureStore throws per key on a value it can't
+decrypt, and losing the whole store to that would be the wrong trade. Long-press for the copy menu.
+
+### Detail sheet
+
+Tap a row for **Value**, **Raw**, **Edit** and **Info**, with a kebab menu of Copy key / Copy value /
+Copy as JSON / Copy value (formatted), and **Delete key** when the store can delete.
+
+| Tab   | What it shows                                                                                                                                                |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Value | The same inspectable, syntax-highlighted `JsonTree` as the Network tab's Preview when the text parses as an object or array; monospace text when it doesn't. |
+| Raw   | The characters exactly as stored — no parsing, no pretty-printing — with the character and byte counts.                                                      |
+| Edit  | The value in an editable box, with Revert and Save.                                                                                                          |
+| Info  | Key, store, how it is shown, how it is stored, size, read time, whether it can be edited or deleted.                                                         |
+
+Value and Raw carry their own search box for looking inside one large value, the same one the Network
+tab's detail sheet uses.
+
+**Editing.** Save writes through the type the value was read as, so a number edited in a text box is
+still a number to the store; a non-numeric edit of a numeric key is refused rather than silently
+stringified. The key is then read back rather than assumed, because a store is free to normalise what
+it was handed. Broken JSON in a value that was stored as JSON is a **warning, not a block** — a store
+can legitimately hold text that was never JSON. Edit says why it is unavailable when it is: the store
+is read-only, or was registered without a way to write, or the value is binary.
+
+**Deleting** asks for confirmation first, and acts on exactly one key. There is no store-wide clear
+anywhere in the tab, and no way to add a key that isn't already there.
+
+### What this tab does not do
+
+- **No mutation history.** Nothing patches the store instance you hand over, so the tab shows state,
+  not the writes that produced it.
+- **No SQLite.** A table needs schema, queries and paging, not a key list — that is the Database tab's
+  job, and squeezing `expo-sqlite` into a key-value adapter would serve neither.
+- **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
+  their length is reported.
+
+---
+
 ## API
 
 ### `createDevtoolsClient(config?)`
@@ -397,26 +503,82 @@ it.
 | `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                       |
 | `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.          |
 | `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something. |
+| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.              |
+| `storage.maxKeys`                    | `number`                      | `1000`      | Keys read per store before the tab stops and says how many it skipped.                |
+| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.               |
 
 `webviewSources` uses a `const` type parameter, so the literal names flow into the WebView helpers'
 parameter types: passing an undeclared name is a compile error, and at runtime a message from an
 undeclared source is dropped.
 
+### Storage adapters
+
+Four factories, all built on the last one. Each returns a `StorageAdapterDefinition` for
+`storage.adapters`; ids are assigned from the names at `init()`, suffixed on collision.
+
+```ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { createMMKV } from 'react-native-mmkv';
+
+const mmkv = createMMKV();
+
+createDevtoolsClient({
+  storage: {
+    adapters: [
+      asyncStorageAdapter({ driver: AsyncStorage }),
+      mmkvAdapter({ driver: mmkv }),
+      secureStoreAdapter({ driver: SecureStore, keys: ['session', 'pin'] }),
+      defineStorageAdapter({
+        name: 'In-memory',
+        kind: 'sync',
+        getAllKeys: () => [...map.keys()],
+        getItem: (key) => map.get(key) ?? null,
+        setItem: (key, text) => {
+          map.set(key, text);
+        },
+        removeItem: (key) => {
+          map.delete(key);
+        },
+      }),
+    ],
+  },
+});
+```
+
+| Factory                                | For                                                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `asyncStorageAdapter({ driver })`      | `@react-native-async-storage/async-storage` and anything copying its API. Uses `getMany` (v3) or `multiGet` (v1/v2) for batch reads when present. |
+| `mmkvAdapter({ driver })`              | `react-native-mmkv`, both majors — v4's `remove` and v3's `delete` are both accepted.                                                             |
+| `secureStoreAdapter({ driver, keys })` | `expo-secure-store`. Takes `keys` because the keychain cannot be listed, and an optional `options` passed through to every call.                  |
+| `defineStorageAdapter({ ... })`        | Anything else. Duck-types nothing; takes exactly what you hand it.                                                                                |
+
+All four accept `name` (defaulted from the library) and `readOnly`. `defineStorageAdapter` needs either
+`getAllKeys` or a fixed `keys` list — passing `keys` is what turns enumeration off — and any of
+`getItem` (required), `getMany`, `setItem`, `removeItem`. **Whether the tab can edit or delete is
+derived from which of those you provided**, so a store you registered read-only in effect is read-only
+in the UI without a flag. Sync functions are fine everywhere: they're awaited, not branched on, and
+`kind` only decides the badge the tab shows.
+
+`getItem` may return a bare `string | null`, or a `{ text, valueType }` when the type matters — that
+second form is how `mmkvAdapter` keeps a stored `1` from rendering as `"1"`, and what an edit is written
+back through.
+
 ### Client methods
 
-| Member                                                         | What it does                                                                                                                                                                                         |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init()`                                                       | Installs everything: the fetch/XHR patches, the console patch, the REPL context, the performance collectors, and your themes. Until this runs, nothing is captured. Call once, as early as possible. |
-| `mark(name, options?)`                                         | Records a user-timing mark. `options`: `{ detail?, startTime? }`.                                                                                                                                    |
-| `measure(name, startOrOptions?, endMark?)`                     | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree.               |
-| `clearMarks(name?)`                                            | Drops recorded marks, all of them or one name.                                                                                                                                                       |
-| `clearMeasures(name?)`                                         | Drops recorded measures, all of them or one name.                                                                                                                                                    |
-| `getWebViewInjectedJavaScriptBeforeContentLoaded(source)`      | The script to hand a `<WebView>`'s `injectedJavaScriptBeforeContentLoaded`. Covers both requests and console output.                                                                                 |
-| `handleWebViewMessage(event)`                                  | Feed a `<WebView>`'s `onMessage` events here. Returns `true` when it consumed one.                                                                                                                   |
-| `getWebViewRef(source)`                                        | A ref to attach to the `<WebView>`, so a throttle change reaches an already-open page.                                                                                                               |
-| `getWebViewUserAgent()`                                        | The current user-agent override, for the `userAgent` prop.                                                                                                                                           |
-| `shouldAllowWebViewRequest`                                    | For `onShouldStartLoadWithRequest`. Blocks navigation while Offline is on.                                                                                                                           |
-| `networkLogStore`, `networkConditionsStore`, `consoleLogStore` | The underlying stores, if you want to read or drive them yourself.                                                                                                                                   |
+| Member                                                                         | What it does                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `init()`                                                                       | Installs everything: the fetch/XHR patches, the console patch, the REPL context, the performance collectors, your storage adapters, and your themes. Until this runs, nothing is captured and no store is read. Call once, as early as possible. |
+| `mark(name, options?)`                                                         | Records a user-timing mark. `options`: `{ detail?, startTime? }`.                                                                                                                                                                                |
+| `measure(name, startOrOptions?, endMark?)`                                     | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree.                                                           |
+| `clearMarks(name?)`                                                            | Drops recorded marks, all of them or one name.                                                                                                                                                                                                   |
+| `clearMeasures(name?)`                                                         | Drops recorded measures, all of them or one name.                                                                                                                                                                                                |
+| `getWebViewInjectedJavaScriptBeforeContentLoaded(source)`                      | The script to hand a `<WebView>`'s `injectedJavaScriptBeforeContentLoaded`. Covers both requests and console output.                                                                                                                             |
+| `handleWebViewMessage(event)`                                                  | Feed a `<WebView>`'s `onMessage` events here. Returns `true` when it consumed one.                                                                                                                                                               |
+| `getWebViewRef(source)`                                                        | A ref to attach to the `<WebView>`, so a throttle change reaches an already-open page.                                                                                                                                                           |
+| `getWebViewUserAgent()`                                                        | The current user-agent override, for the `userAgent` prop.                                                                                                                                                                                       |
+| `shouldAllowWebViewRequest`                                                    | For `onShouldStartLoadWithRequest`. Blocks navigation while Offline is on.                                                                                                                                                                       |
+| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore` | The underlying stores, if you want to read or drive them yourself.                                                                                                                                                                               |
 
 #### User timing
 
@@ -481,10 +643,13 @@ property if you override it.
 ### Exported types
 
 `DevtoolsClientConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
-`DevtoolsOverlayProps`, `BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`, `NetworkLogEntry`,
-`NetworkLogStatus`, `ResolvedNetworkConditions`, `ThrottlePresetId`, `ThrottleProfile`,
-`UserAgentPresetId`, `ConsoleLogEntry`, `ConsoleLogLevel`, `LongTaskEntry`, `MemorySample`,
-`StartupTiming`, `UserTimingEntry`, `MarkOptions`, `MeasureOptions`.
+`DevtoolsStorageConfig`, `DevtoolsOverlayProps`, `BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`,
+`NetworkLogEntry`, `NetworkLogStatus`, `ResolvedNetworkConditions`, `ThrottlePresetId`,
+`ThrottleProfile`, `UserAgentPresetId`, `ConsoleLogEntry`, `ConsoleLogLevel`, `LongTaskEntry`,
+`MemorySample`, `StartupTiming`, `UserTimingEntry`, `MarkOptions`, `MeasureOptions`,
+`StorageAdapter`, `StorageAdapterConfig`, `StorageAdapterDefinition`, `StorageAdapterKind`,
+`StorageAdapterState`, `StorageEntry`, `StorageReadResult`, `StorageValueType`, `StoredValueKind`,
+`AsyncStorageLikeDriver`, `MmkvLikeDriver`, `SecureStoreLikeDriver`.
 
 ---
 
@@ -497,10 +662,15 @@ control instead of breaking the panel.
 | ---------------------------------- | ---------------------------------------------------------- |
 | Main-thread frame rate             | Reads `dev build`; the JS line still plots.                |
 | App memory · Device memory         | Card says `Needs a dev build`.                             |
-| Storage                            | Card says `Needs a dev build`; Android only regardless.    |
+| Storage card (disk space)          | Card says `Needs a dev build`; Android only regardless.    |
 | Startup, measured block            | Falls back to the platform block, which may be all dashes. |
 | Limiter, Main (UI) block and crash | Buttons disabled with a note.                              |
 
 Platform-dependent regardless of build type: long tasks and interactions only appear if the native
 side implements those entry types, which varies by platform and React Native version. When they're
 missing the list says so rather than showing zeros.
+
+The Storage tab needs nothing from this package's native module — but the stores you register bring
+their own requirements. MMKV and SecureStore carry native code of their own, so a store that needs a
+dev build to exist at all also needs one to be inspectable. A store built on `defineStorageAdapter`
+alone (an in-memory `Map`, say) works in Expo Go.

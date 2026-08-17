@@ -115,6 +115,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   suggestions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
     paddingTop: 8,

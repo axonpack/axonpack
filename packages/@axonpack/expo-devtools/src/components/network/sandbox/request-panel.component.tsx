@@ -1,5 +1,3 @@
-import { TextInput } from 'react-native';
-
 import { AuthSection } from './auth-section.component';
 import { KeyValueTable } from './key-value-table.component';
 import { NetworkConditionsSection } from './network-conditions-section.component';
@@ -13,9 +11,9 @@ import {
   type AuthConfig,
   type KeyValueRow,
 } from '../../../utils/network/sandbox.util';
-import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
+import { TextArea } from '../../ui/text-area.ui';
 
 export function RequestPanel({
   method,
@@ -45,8 +43,6 @@ export function RequestPanel({
   onChangeBodyText: (text: string) => void;
 }) {
   const sandboxStyles = useSandboxStyles();
-  const styles = useStyles();
-  const COLORS = useThemeColors();
   const cookieHeader = rowsToCookieHeader(cookieRows);
   const curlHeaders = {
     ...rowsToRecord(headerRows),
@@ -68,16 +64,7 @@ export function RequestPanel({
         <KeyValueTable rows={cookieRows} onChange={onChangeCookieRows} />
       </CollapsibleSection>
       <CollapsibleSection title="Body">
-        <TextInput
-          style={styles.bodyInput}
-          value={bodyText}
-          onChangeText={onChangeBodyText}
-          placeholder="Request body"
-          placeholderTextColor={COLORS.textSecondary}
-          multiline
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+        <TextArea value={bodyText} onChangeText={onChangeBodyText} placeholder="Request body" />
       </CollapsibleSection>
       <CollapsibleSection title="Code Snippet">
         <ReadOnlyTextInput
@@ -93,13 +80,3 @@ export function RequestPanel({
     </>
   );
 }
-
-const useStyles = makeThemedStyles((COLORS) => ({
-  bodyInput: {
-    minHeight: 100,
-    fontSize: 12,
-    fontFamily: 'monospace',
-    color: COLORS.textPrimary,
-    textAlignVertical: 'top',
-  },
-}));

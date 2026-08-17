@@ -9,6 +9,7 @@ import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util
 import { ConsoleView } from '../console/console-view.component';
 import { NetworkView } from '../network/network-view.component';
 import { PerformanceView } from '../performance/performance-view.component';
+import { StorageView } from '../storage/storage-view.component';
 import { IconButton } from '../ui/icon-button.ui';
 
 export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
@@ -34,6 +35,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         return <ConsoleView />;
       case 'performance':
         return <PerformanceView />;
+      case 'storage':
+        return <StorageView />;
       default:
         return null;
     }

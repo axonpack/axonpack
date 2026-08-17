@@ -72,7 +72,48 @@ Not built for console yet:
 - **Console entries in Export** — Export is still network-only.
 - **`undefined`, functions and symbols nested inside a logged object** — the tree's `JsonValue` shape has no slot for them, so they snapshot to the strings `'undefined'` / `'ƒ name()'` / `'Symbol(x)'` and render quoted. Only affects nested values; as a top-level argument each still renders in its own untyped cell.
 
+**Storage tab — built.** Lists every key in every store you register, with its value, type and byte size; searches and filters over them; opens a value in the same inspectable `JsonTree` the Network tab's Preview and the Console tab's object cells use; and edits or deletes one key at a time.
+
+The one structural difference from every other tab: **it cannot discover anything on its own.** Network patches globals it knows are there and Performance reads platform APIs, but a key-value store is a separate install with its own native code (`@react-native-async-storage/async-storage`, `react-native-mmkv`, `expo-secure-store`), and this package deliberately depends on none of them. So the stores come in through the client config, next to `webviewSources` and for the same reason — a declared list is both the allowlist and the type surface:
+
+```ts
+createDevtoolsClient({
+  storage: {
+    adapters: [
+      asyncStorageAdapter({ driver: AsyncStorage }),
+      mmkvAdapter({ driver: mmkv }),
+      secureStoreAdapter({ driver: SecureStore, keys: ['session'] }),
+      defineStorageAdapter({
+        name: 'In-memory',
+        kind: 'sync',
+        getAllKeys,
+        getItem,
+        setItem,
+        removeItem,
+      }),
+    ],
+  },
+});
+```
+
+Four factories, all written in terms of `defineStorageAdapter`, which duck-types nothing and takes exactly what it is handed. Reads always go through `await`, sync drivers included — awaiting a non-promise costs one microtask and removes a second code path, so `kind: 'sync'` is a badge in the UI and an honesty note, never a branch. Every call goes through the driver object rather than a destructured method reference, because a native instance's method loses `this` the moment you pull it off. Both async-storage batch APIs are accepted (3's `getMany`, 1/2's `multiGet`), as are both MMKV majors (4 renamed `delete` to `remove` and returns `ArrayBuffer` where 3 returned `Uint8Array` — the driver type asks only for a `byteLength`).
+
+The store follows the same `EventEmitter` + `useSyncExternalStore` shape as the network log and the same disabled-until-`init()` gate, with **no `paused` flag** — that second gate exists for the three tabs recording a stream whose cost is continuous. Storage is a pull: its cost is per read, so the toolbar carries Refresh where the others carry a record button, and `DevtoolsToolbar` grew optional record/clear props to make that possible. It carries **no clear button at all** — that icon means "clear the log" in three tabs and must never come to mean "wipe your storage". Which store you're looking at is a dropdown in that same toolbar row (`adapter-selector.component.tsx`, built on `ContextMenu` like the header's theme picker) rather than a chip per store: chips took a row of their own and wrapped to two lines once an app registered four, and the toolbar already had the width for one control.
+
+MMKV has no "what type is this key" call, so a value's type is discovered by probing `getString` → `getNumber` → `getBoolean` → `getBuffer`, each checked with `!== undefined` rather than truthiness: a stored `0` and a stored `false` are values, and reading them as misses would hide them from the tab. An edit writes back through the type it was read as, so a number edited in a text box is still a number to the store — and a non-numeric edit of a numeric key is refused rather than silently stringified.
+
+The toolbar is the only pinned row: the summary and the filter panel are the list's `ListHeaderComponent`, so they scroll with the rows. Pinned they were taller than the list they filtered, and RN's `flexShrink` defaulting to 0 meant the unbounded list didn't shrink to fit — its tail simply ran off the bottom of the screen with nothing able to scroll it back. Hence `flex: 1` on both lists here and in the Network tab, which had the same latent shape. The header is passed as an element rather than a function, since a fresh function each render is a new component type to `VirtualizedList` and would remount the search box — dropping its focus on every keystroke.
+
+Filters mirror the Network tab's, including regex/case/whole-word search modes, Invert and Clear: search scope (keys / values / both — a key and its value are different haystacks), type chips with counts, sort by key/size/type in either direction, Group by namespace (recovering the `auth:token` / `cache/user/1` prefix conventions no store knows about), Hide empty values and JSON only. A value's type is classified **once at read time** and stored on the entry, because classification parses JSON and re-running it for a thousand keys on every keystroke would be the slowest thing in the tab.
+
+Storage-specific hard limits, stated in the UI rather than papered over:
+
+- **SecureStore cannot enumerate.** The keychain/keystore is addressed by key, not listed, so `secureStoreAdapter` takes the keys worth watching and the summary says that's what it's showing — an unenumerable store would otherwise read as an empty one.
+- **A read cap.** `maxKeys` (1,000 by default) bounds the read; past it the summary names the real total rather than quietly showing a short list.
+- **Binary values are shown, never edited.** There's no text form of the bytes to round-trip, so only their length is reported.
+- **No store-wide clear, and no add-key.** Deliberate: the tab edits and deletes one key at a time.
+- **No mutation history.** Nothing patches the store instance you register, so the tab sees state, not the writes that produced it. A Changes feed (before → after, with revert) would mean wrapping `setItem`/`removeItem` the way `patchFetch` wraps `fetch`; the store and adapter shapes are ready for it.
+
 Still missing entirely:
 
-- **Storage tab** — inspect AsyncStorage / SQLite / MMKV, whichever backend `@axonpack/lite-storage` ends up using.
-- **Database tab** — likely overlaps heavily with the storage tab depending on what "database" ends up meaning once `@axonpack/lite-storage` exists.
+- **Database tab** — SQLite and friends. Genuinely different from the storage tab: a table needs schema, queries and paging rather than a key list, so `expo-sqlite` is deliberately not squeezed into a key-value adapter.

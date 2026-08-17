@@ -5,12 +5,13 @@ import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
-export type DevtoolsTab = 'network' | 'console' | 'performance';
+export type DevtoolsTab = 'network' | 'console' | 'performance' | 'storage';
 
 const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'network', label: 'Network', icon: 'swap-vert' },
   { key: 'console', label: 'Console', icon: 'terminal' },
   { key: 'performance', label: 'Performance', icon: 'speed' },
+  { key: 'storage', label: 'Storage', icon: 'storage' },
 ];
 
 export function DevtoolsTabBar({
