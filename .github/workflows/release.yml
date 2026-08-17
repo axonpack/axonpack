@@ -1,9 +1,14 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+# Never cancel a run mid-publish: a half-published release is worse than a queued one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
