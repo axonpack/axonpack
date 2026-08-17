@@ -5,8 +5,8 @@ import { makeThemedStyles } from '../../utils/themed-styles.util';
 
 const STROKE = 2;
 const DEFAULT_HEIGHT = 64;
-const AXIS_WIDTH = 26;
 
+const LABEL_GUTTER = 6;
 const LABEL_OFFSET = 6;
 
 export type LineSeries = {
@@ -36,23 +36,42 @@ export function LineChart({
 }) {
   const styles = useStyles();
   const [width, setWidth] = useState(0);
+  const [axisWidth, setAxisWidth] = useState(0);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.width;
     if (next !== width) setWidth(next);
   };
 
+  const onAxisLayout = (event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.width;
+    if (next !== axisWidth) setAxisWidth(next);
+  };
+
   const ticks = [domainMax, domainMax / 2, 0];
   const yOfTick = (value: number) => height - (value / domainMax) * height;
+  const labelOf = (tick: number) => (formatTick ? formatTick(tick) : String(Math.round(tick)));
+  const widestTick = ticks
+    .map(labelOf)
+    .reduce((widest, label) => (label.length > widest.length ? label : widest), '');
 
   return (
     <View>
       <View style={styles.row}>
         {}
-        <View style={[styles.axis, { height }]}>
+        <View style={[styles.axis, { height }]} onLayout={onAxisLayout}>
+          {/* Ticks are absolutely positioned to sit on their gridline, so they can't size the
+              column. This copy is what gives it a width — without it the axis stays at whatever
+              was hard-coded and a tick like "16.3 MB" wraps to two lines. */}
+          <Text aria-hidden style={[styles.tickLabel, styles.tickSizer]} numberOfLines={1}>
+            {widestTick}
+          </Text>
           {ticks.map((tick) => (
-            <Text key={tick} style={[styles.tickLabel, { top: yOfTick(tick) - LABEL_OFFSET }]}>
-              {formatTick ? formatTick(tick) : Math.round(tick)}
+            <Text
+              key={tick}
+              numberOfLines={1}
+              style={[styles.tickLabel, { top: yOfTick(tick) - LABEL_OFFSET }]}>
+              {labelOf(tick)}
             </Text>
           ))}
         </View>
@@ -77,18 +96,19 @@ export function LineChart({
             : null}
         </View>
       </View>
-      {xLabels ? <Axes xLabels={xLabels} /> : null}
+      {xLabels ? <Axes xLabels={xLabels} inset={axisWidth} /> : null}
     </View>
   );
 }
 
-function Axes({ xLabels }: { xLabels: string[] }) {
+function Axes({ xLabels, inset }: { xLabels: string[]; inset: number }) {
   const styles = useStyles();
   return (
-    <View style={styles.xAxis}>
+    <View style={[styles.xAxis, { marginLeft: inset }]}>
       {xLabels.map((label, index) => (
         <Text
           key={label}
+          numberOfLines={1}
           style={[
             styles.tickLabel,
             styles.xTickLabel,
@@ -167,26 +187,32 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   axis: {
     position: 'relative',
-    width: AXIS_WIDTH,
+    alignItems: 'flex-end',
   },
   tickLabel: {
     position: 'absolute',
-    right: 6,
+    right: LABEL_GUTTER,
     fontSize: 9,
     lineHeight: 12,
     color: COLORS.textSecondary,
     fontVariant: ['tabular-nums'],
   },
+  tickSizer: {
+    position: 'relative',
+    right: 0,
+    marginRight: LABEL_GUTTER,
+    opacity: 0,
+  },
   xAxis: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginLeft: AXIS_WIDTH,
     marginTop: 3,
   },
   xTickLabel: {
     position: 'relative',
     right: 0,
     textAlign: 'center',
+    flexShrink: 0,
   },
   xTickFirst: {
     textAlign: 'left',
