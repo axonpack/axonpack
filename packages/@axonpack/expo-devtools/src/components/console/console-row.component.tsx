@@ -7,10 +7,11 @@ import { consoleLevelVisuals } from '../../constants/console/console-levels.cons
 import type { ConsoleLogEntry } from '../../stores/console/console-log.store';
 import { consolePromptStore } from '../../stores/console/console-prompt.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../../utils/console/formatters.util';
+import type { Matcher } from '../../utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { CopyIconButton } from '../ui/copy-icon-button.ui';
 
-function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
+function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: Matcher | null }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
   const visual = consoleLevelVisuals(COLORS)[entry.level];
@@ -31,6 +32,7 @@ function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
               arg={arg}
               plainColor={entry.level === 'error' ? COLORS.error : undefined}
               selectable={!recallable}
+              matcher={matcher}
             />
           ))}
         </View>
@@ -59,6 +61,8 @@ function ConsoleRowBase({ entry }: { entry: ConsoleLogEntry }) {
 export const ConsoleRow = memo(
   ConsoleRowBase,
   (prev, next) =>
+    // Compiled once per query upstream, so identity is a safe stand-in for the query itself.
+    prev.matcher === next.matcher &&
     prev.entry.id === next.entry.id &&
     prev.entry.count === next.entry.count &&
     prev.entry.timestamp === next.entry.timestamp &&

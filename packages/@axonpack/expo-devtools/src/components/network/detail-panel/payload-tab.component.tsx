@@ -5,11 +5,12 @@ import { useRowStyles } from './shared.styles';
 import { HIT_SLOP, TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import type { JsonValue } from '../../../utils/json-tree.util';
+import { findMatches, type Matcher } from '../../../utils/text-search.util';
 import { makeThemedStyles } from '../../../utils/themed-styles.util';
 import { JsonTree } from '../../json-tree';
 import { CollapsibleSection } from '../../ui/collapsible-section.ui';
 import { CopyIconButton } from '../../ui/copy-icon-button.ui';
-import { ReadOnlyTextInput } from '../../ui/read-only-text-input.ui';
+import { HighlightedText } from '../../ui/highlighted-text.ui';
 
 function parseJson(body: string | undefined): JsonValue | undefined {
   if (!body) return undefined;
@@ -20,7 +21,13 @@ function parseJson(body: string | undefined): JsonValue | undefined {
   }
 }
 
-export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
+export function PayloadTab({
+  entry,
+  matcher = null,
+}: {
+  entry: NetworkLogEntry;
+  matcher?: Matcher | null;
+}) {
   const rowStyles = useRowStyles();
   const styles = useStyles();
   const [viewSource, setViewSource] = useState(false);
@@ -49,9 +56,13 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
         </View>
       }>
       {showSource ? (
-        <ReadOnlyTextInput value={entry.requestBody} style={rowStyles.monospace} />
+        <HighlightedText
+          text={entry.requestBody}
+          ranges={findMatches(entry.requestBody, matcher)}
+          style={rowStyles.monospace}
+        />
       ) : (
-        <JsonTree value={parsed} />
+        <JsonTree value={parsed} matcher={matcher} />
       )}
     </CollapsibleSection>
   );

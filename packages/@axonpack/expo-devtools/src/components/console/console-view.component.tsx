@@ -1,11 +1,10 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
   Keyboard,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   type ListRenderItemInfo,
@@ -20,26 +19,25 @@ import {
   consoleLevelVisuals,
   CONSOLE_LEVELS,
 } from '../../constants/console/console-levels.const';
-import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
+import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { isReplEnabled } from '../../services/console/evaluate-expression.service';
 import { consoleLogStore } from '../../stores/console/console-log.store';
 import type { ConsoleLogEntry, ConsoleLogLevel } from '../../stores/console/console-log.store';
 import { formatConsoleSource } from '../../utils/console/formatters.util';
 import { animateNextLayout } from '../../utils/layout-animation.util';
+import { buildMatcher, DEFAULT_SEARCH_MODES, testMatch } from '../../utils/text-search.util';
+import type { SearchModes } from '../../utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { DevtoolsToolbar, ToolbarDivider } from '../devtools-toolbar.component';
 import { Chip } from '../ui/chip.ui';
 import { IconButton } from '../ui/icon-button.ui';
 import { InsetPadding } from '../ui/inset-padding.ui';
+import { SearchInput } from '../ui/search-input.ui';
 
 const NEAR_BOTTOM_SLACK = 40;
 
 function keyExtractor(entry: ConsoleLogEntry): string {
   return entry.id;
-}
-
-function renderConsoleRow({ item }: ListRenderItemInfo<ConsoleLogEntry>) {
-  return <ConsoleRow entry={item} />;
 }
 
 export function ConsoleView() {
@@ -49,6 +47,7 @@ export function ConsoleView() {
   const paused = useSyncExternalStore(consoleLogStore.subscribe, consoleLogStore.isPaused);
 
   const [searchText, setSearchText] = useState('');
+  const [searchModes, setSearchModes] = useState<SearchModes>(DEFAULT_SEARCH_MODES);
   const [activeLevel, setActiveLevel] = useState<ConsoleLogLevel | null>(null);
   const [activeSource, setActiveSource] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -85,16 +84,28 @@ export function ConsoleView() {
     return seen.size > 1 ? Array.from(seen) : [];
   }, [entries]);
 
-  const visibleEntries = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    const filtered = entries.filter((entry) => {
-      if (activeLevel !== null && entry.level !== activeLevel) return false;
-      if (activeSource !== null && entry.source !== activeSource) return false;
-      return query.length === 0 || entry.text.toLowerCase().includes(query);
-    });
+  // One compiled matcher for the whole list — recompiling per row would run it on every keystroke.
+  const matcher = useMemo(
+    () => buildMatcher({ text: searchText, ...searchModes }),
+    [searchText, searchModes]
+  );
 
-    return filtered;
-  }, [entries, activeLevel, activeSource, searchText]);
+  const visibleEntries = useMemo(
+    () =>
+      entries.filter((entry) => {
+        if (activeLevel !== null && entry.level !== activeLevel) return false;
+        if (activeSource !== null && entry.source !== activeSource) return false;
+        return testMatch(entry.text, matcher);
+      }),
+    [entries, activeLevel, activeSource, matcher]
+  );
+
+  const renderConsoleRow = useCallback(
+    ({ item }: ListRenderItemInfo<ConsoleLogEntry>) => (
+      <ConsoleRow entry={item} matcher={matcher} />
+    ),
+    [matcher]
+  );
 
   useEffect(() => {
     if (followingTail.current) listRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -148,26 +159,13 @@ export function ConsoleView() {
 
       {filtersOpen && (
         <View style={styles.panel}>
-          <View style={styles.searchRow}>
-            <MaterialIcons name="search" size={16} color={COLORS.textSecondary} />
-            <TextInput
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="Filter"
-              placeholderTextColor={COLORS.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchText('')}
-                hitSlop={HIT_SLOP.dense}
-                style={styles.searchClear}>
-                <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchInput
+            value={searchText}
+            onChangeText={setSearchText}
+            modes={searchModes}
+            onModesChange={setSearchModes}
+            invalid={matcher?.invalid ?? false}
+          />
 
           <Text style={styles.filterSectionLabel}>Level</Text>
           <View style={styles.chipsRow}>
@@ -280,29 +278,6 @@ const useStyles = makeThemedStyles((COLORS) => ({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.background,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    minHeight: TOUCH_TARGET.min,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderRadius: 6,
-  },
-
-  searchClear: {
-    width: TOUCH_TARGET.dense,
-    height: TOUCH_TARGET.dense,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    padding: 0,
   },
   filterSectionLabel: {
     fontSize: 11,

@@ -10,7 +10,9 @@ import {
   isPlainObject,
   type JsonValue,
 } from '../../utils/json-tree.util';
+import { findMatches, type Matcher } from '../../utils/text-search.util';
 import { useThemeColors } from '../../utils/themed-styles.util';
+import { HighlightedText } from '../ui/highlighted-text.ui';
 
 const INDENT_PER_DEPTH = 14;
 
@@ -21,6 +23,7 @@ export function JsonNode({
   depth,
   indexOffset = 0,
   expandedPaths,
+  matcher,
   onToggle,
   onLongPress,
 }: {
@@ -30,6 +33,7 @@ export function JsonNode({
   depth: number;
   indexOffset?: number;
   expandedPaths: Set<string>;
+  matcher: Matcher | null;
   onToggle: (path: string) => void;
   onLongPress: (path: string, value: JsonValue, x: number, y: number) => void;
 }) {
@@ -56,8 +60,18 @@ export function JsonNode({
           )}
         </View>
         <Text style={treeStyles.text}>
-          {label !== undefined && <Text style={treeStyles.key}>{label}: </Text>}
-          <ValuePreview value={value} />
+          {label !== undefined && (
+            <Text style={treeStyles.key}>
+              <HighlightedText
+                text={label}
+                ranges={findMatches(label, matcher)}
+                style={treeStyles.key}
+                selectable={false}
+              />
+              {': '}
+            </Text>
+          )}
+          <ValuePreview value={value} matcher={matcher} />
         </Text>
       </Pressable>
       {expandable && expanded && (
@@ -67,6 +81,7 @@ export function JsonNode({
           depth={depth + 1}
           indexOffset={indexOffset}
           expandedPaths={expandedPaths}
+          matcher={matcher}
           onToggle={onToggle}
           onLongPress={onLongPress}
         />
@@ -75,14 +90,37 @@ export function JsonNode({
   );
 }
 
-function ValuePreview({ value }: { value: JsonValue }) {
+function ValuePreview({ value, matcher }: { value: JsonValue; matcher: Matcher | null }) {
   const treeStyles = useTreeStyles();
+  // A collapsed node shows a summary (`{…}`, `Array(3)`), not searchable content of its own.
   if (isExpandable(value)) {
     return <Text style={treeStyles.punctuation}>{buildPreview(value)}</Text>;
   }
-  if (typeof value === 'string') return <Text style={treeStyles.string}>&quot;{value}&quot;</Text>;
-  if (typeof value === 'number') return <Text style={treeStyles.number}>{value}</Text>;
-  if (typeof value === 'boolean') return <Text style={treeStyles.boolean}>{String(value)}</Text>;
+  if (typeof value === 'string') {
+    return (
+      <Text style={treeStyles.string}>
+        &quot;
+        <HighlightedText
+          text={value}
+          ranges={findMatches(value, matcher)}
+          style={treeStyles.string}
+          selectable={false}
+        />
+        &quot;
+      </Text>
+    );
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    const text = String(value);
+    return (
+      <HighlightedText
+        text={text}
+        ranges={findMatches(text, matcher)}
+        style={typeof value === 'number' ? treeStyles.number : treeStyles.boolean}
+        selectable={false}
+      />
+    );
+  }
   return <Text style={treeStyles.nullValue}>null</Text>;
 }
 
@@ -92,6 +130,7 @@ function JsonChildren({
   depth,
   indexOffset,
   expandedPaths,
+  matcher,
   onToggle,
   onLongPress,
 }: {
@@ -100,6 +139,7 @@ function JsonChildren({
   depth: number;
   indexOffset: number;
   expandedPaths: Set<string>;
+  matcher: Matcher | null;
   onToggle: (path: string) => void;
   onLongPress: (path: string, value: JsonValue, x: number, y: number) => void;
 }) {
@@ -118,6 +158,7 @@ function JsonChildren({
                 depth={depth}
                 indexOffset={start}
                 expandedPaths={expandedPaths}
+                matcher={matcher}
                 onToggle={onToggle}
                 onLongPress={onLongPress}
               />
@@ -136,6 +177,7 @@ function JsonChildren({
             value={item}
             depth={depth}
             expandedPaths={expandedPaths}
+            matcher={matcher}
             onToggle={onToggle}
             onLongPress={onLongPress}
           />
@@ -156,6 +198,7 @@ function JsonChildren({
             value={item}
             depth={depth}
             expandedPaths={expandedPaths}
+            matcher={matcher}
             onToggle={onToggle}
             onLongPress={onLongPress}
           />

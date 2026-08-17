@@ -1,11 +1,13 @@
 import { Image, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import WebView from 'react-native-webview';
 
-import { JsonTree } from '../json-tree';
 import { CodeHighlight } from './detail-panel/code-highlight';
 import type { JsonValue } from '../../utils/json-tree.util';
 import { detectLanguage } from '../../utils/network/code-highlight.util';
+import { classifyPreview } from '../../utils/network/preview-kind.util';
+import type { Matcher } from '../../utils/text-search.util';
 import { makeThemedStyles } from '../../utils/themed-styles.util';
+import { JsonTree } from '../json-tree';
 
 function parseJson(body: string): JsonValue | undefined {
   try {
@@ -13,18 +15,6 @@ function parseJson(body: string): JsonValue | undefined {
   } catch {
     return undefined;
   }
-}
-
-function isImage(mimeType: string | undefined): boolean {
-  return mimeType?.toLowerCase().startsWith('image/') ?? false;
-}
-
-function isHtml(mimeType: string | undefined): boolean {
-  return mimeType?.toLowerCase().includes('html') ?? false;
-}
-
-function isSvg(mimeType: string | undefined): boolean {
-  return mimeType?.toLowerCase().includes('svg') ?? false;
 }
 
 function wrapSvgDocument(svg: string): string {
@@ -37,33 +27,32 @@ export function ResponseBodyPreview({
   url,
   emptyText,
   emptyTextStyle,
+  matcher = null,
 }: {
   body: string | undefined;
   mimeType: string | undefined;
   url: string;
   emptyText: string;
   emptyTextStyle: StyleProp<TextStyle>;
+  matcher?: Matcher | null;
 }) {
   const styles = useStyles();
-  if (isImage(mimeType)) {
+  const kind = classifyPreview(mimeType);
+
+  if (kind === 'image') {
     return <Image source={{ uri: url }} style={styles.image} resizeMode="contain" />;
   }
 
   if (!body) return <Text style={emptyTextStyle}>{emptyText}</Text>;
 
-  if (isHtml(mimeType)) {
-    return <WebView source={{ html: body, baseUrl: url }} style={styles.webview} />;
-  }
-
-  if (isSvg(mimeType)) {
-    return (
-      <WebView source={{ html: wrapSvgDocument(body), baseUrl: url }} style={styles.webview} />
-    );
+  if (kind === 'webview') {
+    const html = mimeType?.toLowerCase().includes('html') ? body : wrapSvgDocument(body);
+    return <WebView source={{ html, baseUrl: url }} style={styles.webview} />;
   }
 
   const parsed = parseJson(body);
-  if (parsed !== undefined) return <JsonTree value={parsed} />;
-  return <CodeHighlight code={body} language={detectLanguage(mimeType, body)} />;
+  if (parsed !== undefined) return <JsonTree value={parsed} matcher={matcher} />;
+  return <CodeHighlight code={body} language={detectLanguage(mimeType, body)} matcher={matcher} />;
 }
 
 const useStyles = makeThemedStyles((COLORS) => ({

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HeadersTab } from './headers-tab.component';
 import { PayloadTab } from './payload-tab.component';
@@ -9,11 +9,19 @@ import { TimingTab } from './timing-tab.component';
 import { TOUCH_TARGET } from '../../../constants/metrics.const';
 import type { NetworkLogEntry } from '../../../stores/network/network-log.store';
 import { buildEntryCopyMenuItems } from '../../../utils/network/entry-menu-items.util';
+import { classifyPreview } from '../../../utils/network/preview-kind.util';
+import {
+  buildMatcher,
+  DEFAULT_SEARCH_MODES,
+  MAX_SEARCHABLE_LENGTH,
+  type SearchModes,
+} from '../../../utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../utils/themed-styles.util';
 import { BottomSheet } from '../../ui/bottom-sheet.ui';
 import { ContextMenu, type ContextMenuItem } from '../../ui/context-menu.ui';
 import { IconButton } from '../../ui/icon-button.ui';
 import { InsetPadding } from '../../ui/inset-padding.ui';
+import { SearchInput } from '../../ui/search-input.ui';
 import { SparkleIcon } from '../../ui/sparkle-icon.ui';
 import { SandboxSheet } from '../sandbox';
 
@@ -43,6 +51,13 @@ export function DetailPanel({
   const [prevEntry, setPrevEntry] = useState<NetworkLogEntry | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchModes, setSearchModes] = useState<SearchModes>(DEFAULT_SEARCH_MODES);
+
+  const matcher = useMemo(
+    () => buildMatcher({ text: search, ...searchModes }),
+    [search, searchModes]
+  );
 
   if (entry !== prevEntry) {
     setPrevEntry(entry);
@@ -55,6 +70,14 @@ export function DetailPanel({
 
   const active = entry ?? renderedEntry;
   if (!active) return null;
+
+  const searchedBody = tab === 'payload' ? active.requestBody : active.responseBody;
+  const searchable =
+    Boolean(searchedBody) &&
+    (tab === 'payload' ||
+      tab === 'response' ||
+      (tab === 'preview' && classifyPreview(active.mimeType) === 'text'));
+  const bodyTooLarge = (searchedBody?.length ?? 0) > MAX_SEARCHABLE_LENGTH;
 
   const menuItems: ContextMenuItem[] = [
     {
@@ -102,6 +125,26 @@ export function DetailPanel({
             />
           </View>
         }>
+        {searchable && (
+          // Outside the ScrollView so it stays put while the body scrolls under it.
+          <View style={styles.searchBar}>
+            <SearchInput
+              value={search}
+              onChangeText={setSearch}
+              modes={searchModes}
+              onModesChange={setSearchModes}
+              placeholder="Search this body"
+              invalid={matcher?.invalid ?? false}
+            />
+            {bodyTooLarge && search.length > 0 && (
+              <Text style={styles.searchNote}>
+                Body is over {MAX_SEARCHABLE_LENGTH.toLocaleString()} characters — too large to
+                highlight
+              </Text>
+            )}
+          </View>
+        )}
+
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
@@ -111,9 +154,9 @@ export function DetailPanel({
           keyboardDismissMode="interactive">
           <View>
             {tab === 'headers' && <HeadersTab entry={active} stackedHeaders={stackedHeaders} />}
-            {tab === 'payload' && <PayloadTab entry={active} />}
-            {tab === 'preview' && <PreviewTab entry={active} />}
-            {tab === 'response' && <ResponseTab entry={active} />}
+            {tab === 'payload' && <PayloadTab entry={active} matcher={matcher} />}
+            {tab === 'preview' && <PreviewTab entry={active} matcher={matcher} />}
+            {tab === 'response' && <ResponseTab entry={active} matcher={matcher} />}
             {tab === 'timing' && <TimingTab entry={active} />}
             <InsetPadding edge="bottom" />
           </View>
@@ -155,6 +198,17 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   tabLabelActive: {
     color: COLORS.accent,
+  },
+  searchBar: {
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  searchNote: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
   },
   content: {
     flexGrow: 0,
