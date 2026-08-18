@@ -5,6 +5,7 @@ export type {
   DevtoolsConsoleConfig,
   DevtoolsNetworkConfig,
   DevtoolsPerformanceConfig,
+  DevtoolsStorageConfig,
 } from './client/create-devtools-client.client';
 export { DevtoolsOverlay } from './components/devtools-overlay/devtools-overlay.component';
 export type { DevtoolsOverlayProps } from './components/devtools-overlay/devtools-overlay.component';
@@ -20,3 +21,22 @@ export type {
   UserTimingEntry,
 } from './stores/performance/performance.store';
 export type { MarkOptions, MeasureOptions } from './services/performance/user-timing.service';
+export {
+  asyncStorageAdapter,
+  defineStorageAdapter,
+  mmkvAdapter,
+  secureStoreAdapter,
+} from './services/storage/define-adapter.service';
+export type {
+  AsyncStorageLikeDriver,
+  MmkvLikeDriver,
+  SecureStoreLikeDriver,
+  StorageAdapter,
+  StorageAdapterConfig,
+  StorageAdapterDefinition,
+  StorageAdapterKind,
+  StorageReadResult,
+  StorageValueType,
+} from './services/storage/define-adapter.service';
+export type { StorageEntry, StorageAdapterState } from './stores/storage/storage.store';
+export type { StoredValueKind } from './utils/storage/classify-value.util';

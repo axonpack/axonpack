@@ -1,3 +1,8 @@
 # Submodule with its own history and formatting — the root `format` task would otherwise
 # rewrite its files on every commit and leave the gitlink permanently dirty.
 marketing
+
+# `expo prebuild` output and the pods it vendors. Git ignores these, but Prettier didn't, so once
+# the example had been built locally `bun run format` started rewriting third-party sources.
+packages/@axonpack/expo-devtools/example/ios
+packages/@axonpack/expo-devtools/example/android

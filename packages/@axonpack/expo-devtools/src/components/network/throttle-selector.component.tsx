@@ -99,6 +99,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 8,
   },
   customRow: {

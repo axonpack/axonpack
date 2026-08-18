@@ -376,6 +376,7 @@ export function NetworkView() {
           sections={sections}
           keyExtractor={keyExtractor}
           renderItem={renderRow}
+          style={styles.list}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader} selectable>
               {formatSource(section.title)} ({section.data.length})
@@ -391,6 +392,7 @@ export function NetworkView() {
           data={visibleLogs}
           keyExtractor={keyExtractor}
           renderItem={renderRow}
+          style={styles.list}
           contentContainerStyle={styles.listContent}
           contentInsetAdjustmentBehavior="never"
           ListEmptyComponent={
@@ -415,6 +417,11 @@ const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  // The bounded box the rows scroll inside. Without it the list sizes to its own content, and with a
+  // panel open the last rows end up past the bottom of the screen rather than scrolling.
+  list: {
+    flex: 1,
   },
   listContent: {
     paddingVertical: 6,
@@ -474,6 +481,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 8,
   },
   sectionHeader: {
