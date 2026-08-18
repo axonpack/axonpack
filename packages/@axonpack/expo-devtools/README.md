@@ -517,21 +517,7 @@ and value:
 Whether a store can be edited or deleted from is derived from what you handed over: register it without a
 `setItem` and the editor says so. `storage: { readOnly: true }`, or `readOnly` on one adapter, makes that
 explicit.
-
-#### What it deliberately doesn't do
-
-- **No store-wide clear, and no way to add a key.** The tab edits and deletes one key at a time. There is
-  no "clear storage" button anywhere in it, on purpose — the same icon means "clear the log" in three
-  other tabs.
-- **No mutation history.** Nothing patches the store you hand over, so your app behaves exactly as it did
-  and the tab shows state, not the writes that produced it.
-- **No SQLite.** A table needs schema, queries and paging rather than a key list.
-- **SecureStore can't be enumerated.** The keychain is addressed by key, not listed, so you name the keys
-  and the tab says that's what it's showing rather than implying the store is empty.
-- **Big stores are capped.** Reads stop at `storage.maxKeys` (1,000 by default) and the summary names the
-  real total, rather than quietly showing a short list.
-- **Binary values are shown, not edited.** There's no text form of the bytes to round-trip, so only their
-  length is reported.
+ß
 
 ### Themes
 
