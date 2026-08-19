@@ -2,15 +2,13 @@ import { ScrollView, StyleSheet } from 'react-native';
 
 import { Chip } from '../ui/chip.ui';
 
-export type PerformanceSection =
-  'statistics' | 'longTasks' | 'userTiming' | 'interactions' | 'limiter';
+export type PerformanceSection = 'statistics' | 'longTasks' | 'userTiming' | 'interactions';
 
 const SECTIONS: { key: PerformanceSection; label: string }[] = [
   { key: 'statistics', label: 'Statistics' },
   { key: 'userTiming', label: 'User timing' },
   { key: 'interactions', label: 'Interactions' },
   { key: 'longTasks', label: 'Long tasks' },
-  { key: 'limiter', label: 'Limiter' },
 ];
 
 export function SectionChips({
@@ -47,7 +45,7 @@ export function SectionChips({
 }
 
 const styles = StyleSheet.create({
-  // The strip shrinks and scrolls rather than pushing the trailing limiter button off the row.
+  // The strip shrinks and scrolls rather than pushing the toolbar's trailing controls off the row.
   strip: {
     flexShrink: 1,
   },

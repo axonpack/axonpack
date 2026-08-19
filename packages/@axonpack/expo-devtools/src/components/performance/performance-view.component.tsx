@@ -3,7 +3,6 @@ import { ScrollView, View } from 'react-native';
 
 import { EntryList } from './entry-list.component';
 import { IdleState } from './idle-state.component';
-import { LimiterPanel } from './limiter-panel.component';
 import { ResourcesSection } from './resources-section.component';
 import { SectionChips, type PerformanceSection } from './section-chips.component';
 import { StartupTimingSection } from './startup-timing.component';
@@ -53,11 +52,6 @@ export function PerformanceView() {
         <ScrollView>
           {paused && neverRecorded ? <IdleState /> : <ResourcesSection />}
           <StartupTimingSection startup={startup} />
-          <InsetPadding edge="bottom" />
-        </ScrollView>
-      ) : section === 'limiter' ? (
-        <ScrollView keyboardShouldPersistTaps="handled">
-          <LimiterPanel />
           <InsetPadding edge="bottom" />
         </ScrollView>
       ) : (

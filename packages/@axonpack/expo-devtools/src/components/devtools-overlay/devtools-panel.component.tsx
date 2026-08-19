@@ -4,9 +4,12 @@ import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
 import { ThemePicker } from './theme-picker.component';
 import { consoleLogStore } from '../../stores/console/console-log.store';
+import { crashStore } from '../../stores/crash/crash.store';
 import { devtoolsTabStore } from '../../stores/devtools-tab.store';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { ConsoleView } from '../console/console-view.component';
+import { CrashView } from '../crash/crash-view.component';
+import { DebugView } from '../debug/debug-view.component';
 import { NetworkView } from '../network/network-view.component';
 import { PerformanceView } from '../performance/performance-view.component';
 import { StorageView } from '../storage/storage-view.component';
@@ -21,10 +24,16 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
     consoleLogStore.subscribe,
     consoleLogStore.getSnapshot
   );
+  const crashRecords = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
 
   const consoleErrorCount = useMemo(
     () => consoleEntries.filter((entry) => entry.level === 'error').length,
     [consoleEntries]
+  );
+
+  const unseenCrashCount = useMemo(
+    () => crashRecords.filter((record) => !record.seen).length,
+    [crashRecords]
   );
 
   const tabContent = useMemo(() => {
@@ -37,6 +46,10 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         return <PerformanceView />;
       case 'storage':
         return <StorageView />;
+      case 'crashes':
+        return <CrashView />;
+      case 'debug':
+        return <DebugView />;
       default:
         return null;
     }
@@ -54,7 +67,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
             setTab(next);
             devtoolsTabStore.set(next);
           }}
-          badges={{ console: consoleErrorCount }}
+          badges={{ console: consoleErrorCount, crashes: unseenCrashCount }}
         />
         <ThemePicker />
         <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />

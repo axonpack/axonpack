@@ -114,6 +114,154 @@ Storage-specific hard limits, stated in the UI rather than papered over:
 - **No store-wide clear, and no add-key.** Deliberate: the tab edits and deletes one key at a time.
 - **No mutation history.** Nothing patches the store instance you register, so the tab sees state, not the writes that produced it. A Changes feed (before → after, with revert) would mean wrapping `setItem`/`removeItem` the way `patchFetch` wraps `fetch`; the store and adapter shapes are ready for it.
 
+**The launcher button is self-guarding.** `DevtoolsOverlay` subscribes to `devtoolsReadyStore`, which
+`init()` flips at its very end — past the `enabled` gate and past every subsystem — and renders nothing
+until then. An app that mounts the overlay without a `__DEV__` check therefore ships no button rather
+than one opening empty lists, and `enabled: false` leaves it hidden too. It is a store rather than a
+boolean because the order isn't guaranteed: `init()` normally runs at module scope, but an app calling
+it from an effect mounts the overlay first and needs the button to appear when it lands.
+
+The crash report sheet is deliberately outside that gate — it is the one subsystem meant to run in
+production, so an unguarded overlay still delivers crash reports while showing no devtools UI.
+
+**Crashes tab — built.** Captures the errors that end a session — or nearly do — and turns each into a
+report you can read on the device: message, stack, component stack, breadcrumbs, device details, and
+the whole record as JSON, with copy-as-Markdown / copy-as-JSON / share on every one. A newly captured
+crash opens the report sheet on its own; the tab keeps the history with an unread marker, and the tab
+bar carries the unread count.
+
+**It is the one subsystem meant to survive into production**, so it has its own gate. The
+package-wide `enabled` flag switches off every other tab, and `crash.enableWhileDevtoolsDisabled`
+keeps crash capture running past it — which means `init()` can be called unconditionally:
+
+`enableWhileDevtoolsDisabled` installs the handlers **when the client is constructed**, not at
+`init()` — the one deliberate exception to "nothing in this package runs until `init()`". It has to
+be: "the devtools are off" covers `if (__DEV__) devtools.init()` just as much as it covers
+`enabled: false`, and waiting for a call that never comes would make the flag a promise the package
+doesn't keep. Setting it is the consent `init()` would otherwise have given, and it buys earlier
+coverage — handlers installed at import catch what is thrown before `init()` would have run.
+
+Both shapes therefore work, and neither needs a guard around anything but the overlay:
+
+```ts
+const devtools = createDevtoolsClient({
+  enabled: __DEV__,
+  crash: {
+    enableWhileDevtoolsDisabled: true,
+    breadcrumbs: __DEV__, // request URLs and log lines — off in release by default
+    redact: (record) => record, // runs before the store, the disk and onCrash
+    onCrash: (record) => reportToBackend(record),
+  },
+});
+
+devtools.init(); // no guard needed: everything but crash capture stops at `enabled`
+```
+
+…or, keeping the guard the app already had:
+
+```ts
+const devtools = createDevtoolsClient({
+  crash: { enableWhileDevtoolsDisabled: true },
+});
+
+if (__DEV__) devtools.init(); // crash capture is already installed; this adds the panel
+```
+
+Turning it on brings **only** the crash handlers. The panel, the REPL, console capture and full-body
+network logging stay off, which is the entire point — the last of those is a PII surface nobody wants
+in a release build.
+
+Four tiers, and which one caught a crash decides how much it can tell you:
+
+- **JS errors** — the `ErrorUtils` global handler, _wrapped_ rather than replaced. React Native
+  installs its own at startup (`setUpErrorHandling.js`); calling the previous one afterwards is what
+  keeps LogBox, the red box and RN's native reporting alive.
+- **Unhandled promise rejections** — `HermesInternal.enablePromiseRejectionTracker`. This is the tier
+  that adds the most in a release build: RN registers its tracker **only under `__DEV__`**
+  (`Libraries/Core/polyfillPromise.js`), so an unhandled rejection in production is currently silent.
+  It is a single-slot API, so ours displaces RN's in dev — re-emitting through `console.error`
+  restores LogBox, since `installConsoleErrorReporter` routes that into it. Done that way rather than
+  importing `ExceptionsManager` to stay off a deep, version-specific path into RN's internals.
+- **React render errors** — the exported `<DevtoolsErrorBoundary>`. The only tier that produces a
+  **component stack**, which is usually the half worth reading, and it turns a white screen into a
+  fallback with a Try again button.
+- **Uncaught native exceptions** — `Thread.setDefaultUncaughtExceptionHandler` on Android,
+  `NSSetUncaughtExceptionHandler` on iOS, both chained to whatever was installed before them.
+
+**Which tiers capture depends on the gate.** With the devtools enabled, all four do. With them
+disabled, only `native-exception` does — the JS tiers report errors the app survived, which is a
+developer's concern, and the sheet there is in front of a user. A fatal JS error still arrives, since
+React Native turns it into a native exception on its way to killing the process, so the native handler
+picks it up. The JS handlers are not installed at all in that mode, and `captureCrash` filters by kind
+as well, because `DevtoolsErrorBoundary` is a component the app mounts rather than a handler this
+package installs.
+
+There is no option for whether the sheet opens: a captured crash always opens one. The gate is capture
+itself.
+
+A crash that ends the process gives JavaScript no further turn, so the record is written **from
+native, on the dying thread**, to a JSON Lines file in the app's own sandbox — Application Support on
+iOS (not Caches, which the system may purge), `filesDir` on Android. It is drained at the next
+launch, which is also what proves the process died: a record still in the file outlived the run that
+wrote it. Persisting from native rather than JS is also what keeps the "this package depends on no
+storage library" rule intact. JS fatals are persisted the same way, since RN may take the process
+down right behind them; non-fatal records are not, because the app survived them and re-reporting one
+at the next launch would be a bug.
+
+**The sheet has two forms, and the wrong one in a release build is a real problem.** The full sheet is
+a debugging tool: five tabs, a stack tree, a raw JSON dump, and this package's own logo on the header.
+Putting that in front of somebody using the app is a category error. So `crash.popupDetail` defaults to
+`'auto'` — the full sheet when the devtools are enabled, and a **compact** sheet when they are not:
+what broke, when, the app version, and Share / Copy / Dismiss. Nothing on it names this package, and
+the full record still travels with Share and Copy, which serialise everything the detailed sheet would
+have shown. `'full'` and `'compact'` force it either way, for an internal build that ships the sheet
+but not the panel.
+
+The compact sheet carries **no close cross** — its two buttons are the way out, so dismissing is a
+choice rather than something you swipe past. The second button is **Restart app** where that is
+genuinely possible and **Close** where it is not: Android relaunches through the native module
+(launcher intent on a fresh task, then `exit(0)`, because a soft JS reload would leave the native
+state the crash happened in), while iOS has no supported way for an app to relaunch or terminate
+itself — `exit(0)` is a documented App Store rejection. The backdrop and the Android back button still
+dismiss it either way; a sheet with no exit at all is a trap.
+
+The compact sheet is also why theme registration moved above the `enabled` gate: it is the one piece
+of UI in this package that can render in a release build, and it reads the same palette as the panel.
+
+`crash.disableDefaultLogBox` turns React Native's own error UI off, for an app that would rather read
+a crash in the report sheet than in a red box. It calls `LogBox.uninstall()` rather than
+`ignoreAllLogs()` — muting only hides the toasts, and RN's own comment on that method says "uncaught
+errors will still open a full screen LogBox". Uninstalling clears the `isInstalled` flag gating
+`addException`, which is what actually stops the red box. **The yellow warning toasts go with it**:
+LogBox is one component and the two cannot be separated, so warnings are left to the Console tab.
+Turning it on while `showPopup` is off means a JS error surfaces nowhere on screen, so that
+combination warns once at `init()` rather than silently swallowing errors.
+
+Breadcrumbs cost almost nothing: they are read from the console and network ring buffers that already
+exist, so nothing is recorded _for_ crash reporting.
+
+Hard limits, stated in the UI rather than papered over:
+
+- **No symbolication.** A release bundle is minified and this package ships no source maps, so the
+  frames point into the bundle. The Stack tab says so instead of implying otherwise.
+- **No signal handlers.** `SIGSEGV`/`SIGABRT`/`SIGBUS`, Swift `fatalError` and NDK crashes are out of
+  scope. Catching them needs an async-signal-safe handler that would fight Crashlytics, Sentry and
+  Bugsnag over the same slot, and would yield unsymbolicated addresses anyway. Uncaught exception
+  handlers cover essentially every real React Native crash and carry none of that risk.
+- **No ANR or watchdog detection.** A hung main thread is a different mechanism from an exception.
+- **Expo Go loses two tiers.** Native exception capture and the device block need the native module,
+  so in Expo Go a record carries only what JavaScript itself knows.
+
+Not built for crashes yet:
+
+- **Sending reports anywhere.** `onCrash` hands you the record; there is no transport, no queue and no
+  retry. Shipping one would mean opinions about endpoints and offline batching that belong in the
+  app.
+- **Grouping and fingerprinting.** Every capture is its own row; two hundred instances of one bug fill
+  the buffer instead of collapsing the way the console's repeat-collapse does.
+- **Session and route context automatically.** `setCrashContext` takes whatever you give it, but
+  nothing hooks a navigation library to fill in the current route on its own.
+
 Still missing entirely:
 
 - **Database tab** — SQLite and friends. Genuinely different from the storage tab: a table needs schema, queries and paging rather than a key list, so `expo-sqlite` is deliberately not squeezed into a key-value adapter.

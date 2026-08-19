@@ -15,7 +15,7 @@ import {
 import { makeThemedStyles } from '../../utils/themed-styles.util';
 import { InsetPadding } from '../ui/inset-padding.ui';
 
-export type PerformanceListKey = Exclude<PerformanceSection, 'statistics' | 'limiter'>;
+export type PerformanceListKey = Exclude<PerformanceSection, 'statistics'>;
 
 type ListRow =
   | { key: 'longTasks'; entry: LongTaskEntry }

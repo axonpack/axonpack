@@ -135,13 +135,14 @@ A few things that trip people up:
 - **Performance starts paused.** Measuring isn't free, so press its record button when you want it. The
   other two tabs record from launch.
 - **Expo Go works.** A handful of readings come from this package's native module and go quiet there:
-  main-thread frame rate, app and device memory, storage, and the main-thread Limiter. Everything else,
-  including all of Network and Console, behaves the same. Use a development build for the full set.
+  main-thread frame rate, app and device memory, storage, the Debug tab's main-thread controls, and
+  native crash capture. Everything else, including all of Network and Console, behaves the same. Use a
+  development build for the full set.
 - **In-app browser pages need two extra props** on the `<WebView>` itself. See
   [Capturing inside an in-app browser](#capturing-inside-an-in-app-browser).
-- **Both guards matter.** Skipping `init()` stops all capture, but `<DevtoolsOverlay />` still draws its
-  button whatever you do, so it needs the same flag or production keeps a button that opens an empty
-  panel.
+- **`init()` is the guard.** `<DevtoolsOverlay />` draws nothing until `init()` has brought the panel
+  up, so an unguarded mount in a release build is harmless rather than a button over empty lists.
+  Crash reports still surface, because that is the one subsystem meant to run in production.
 
 ### Optional: starting before Expo Router
 
@@ -349,13 +350,11 @@ re-rendering behind a list you're reading.
     <td width="25%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/perf-user-timing.png" width="200" alt="User timing entries with durations" /></td>
     <td width="25%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/perf-interactions.png" width="200" alt="Slow interactions with handler time and total" /></td>
     <td width="25%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/perf-long-tasks.png" width="200" alt="Long tasks list, newest first" /></td>
-    <td width="25%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/perf-limiter.png" width="200" alt="Limiter with thread and duration options" /></td>
   </tr>
   <tr>
     <td>Timings you named yourself.</td>
     <td>Slow taps, handler time beside the total.</td>
     <td>When the thread was stuck, and for how long.</td>
-    <td>Block a thread on purpose.</td>
   </tr>
 </table>
 
@@ -414,23 +413,6 @@ re-rendering behind a list you're reading.
   thread could happen meanwhile: no touches, no timers, no animation driven from JS. At 60 fps a frame is
   16.7 ms, so 150 ms is about nine frames lost; past ~200 ms it reads as a freeze. Drop
   `performance.longTaskThresholdMs` to 50 if you want to see the smaller ones too.
-
-#### Limiter
-
-The last chip: breaking things on purpose, so the numbers in the other sections can be trusted. Pick a
-thread, pick a duration (100 ms to 3 s, or type your own), and block it:
-
-- **JavaScript**: shows up as a long task and drops the FPS reading. Works everywhere.
-- **Main (UI)**: freezes what you see and touch while the JS numbers stay perfectly healthy. That gap is
-  the blind spot the frame-rate card warns about, and this is how you see it for yourself. Needs a
-  development build.
-
-There's also a **Crash** button for either thread, which takes two taps.
-
-> [!WARNING]
-> The Limiter isn't restricted to development builds, and it doesn't go through the recording gate either:
-> the buttons call straight into the native module, so they work whenever the panel is on screen, whether
-> or not `.init()` ran. Guarding the `<DevtoolsOverlay />` mount is what keeps them out of a release.
 
 #### What it deliberately doesn't show
 
@@ -517,7 +499,41 @@ and value:
 Whether a store can be edited or deleted from is derived from what you handed over: register it without a
 `setItem` and the editor says so. `storage: { readOnly: true }`, or `readOnly` on one adapter, makes that
 explicit.
-ß
+
+### Debug
+
+Tools that break the app on purpose, so the numbers on the other tabs can be trusted. These controls used
+to be the last chip on the Performance tab, which read as a category error: every Performance section
+reports something that happened, while these go out and cause it.
+
+Pick a thread, pick a duration (100 ms to 3 s, or type your own), and block it:
+
+- **JavaScript**: shows up as a long task and drops the FPS reading. Works everywhere.
+- **Main (UI)**: freezes what you see and touch while the JS numbers stay perfectly healthy. That gap is
+  the blind spot the frame-rate card warns about, and this is how you see it for yourself. Needs a
+  development build.
+
+There's also a **Crash** button for either thread, which takes two taps. The two are not the same event,
+and the difference is worth seeing once: a JS throw is caught and reported before you let go of the
+button, while a main-thread crash ends the process and is read back off disk at the next launch. Either
+way the report is waiting on the Crashes tab.
+
+There is no record button and nothing to clear, so the tab carries no toolbar.
+
+<table>
+  <tr>
+    <td width="25%"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/expo-devtools/docs/screenshots/perf-limiter.png" width="200" alt="Debug tab with thread and duration options" /></td>
+  </tr>
+  <tr>
+    <td>Block or crash a thread on purpose.</td>
+  </tr>
+</table>
+
+> [!WARNING]
+> The Debug tab isn't restricted to development builds, and it doesn't go through the recording gate
+> either: the buttons call straight into the native module, so they work whenever the panel is on screen,
+> whether or not `.init()` ran. Guarding the `<DevtoolsOverlay />` mount is what keeps them out of a
+> release.
 
 ### Themes
 
@@ -644,13 +660,14 @@ they do different jobs:
 `process.env.EXPO_PUBLIC_APP_ENV !== 'prod'` from the [Quick start](#quick-start) and `__DEV__` are the two
 usual choices; anything else works too, including a value you fetch for a specific user.
 
-> [!WARNING]
-> Guarding these two calls is the whole mechanism. There's no config option that does it for you, and the
-> overlay does not check whether `init()` ran: mount it without the guard and a production build gets a
-> floating button opening an empty panel.
+> [!NOTE]
+> Guarding the overlay is belt and braces rather than load-bearing: it hides itself until `init()` has
+> brought the panel up, so skipping the `init()` call alone is enough. Guarding both is still worth
+> doing — it keeps the component out of the render tree entirely.
 
-Note that the Limiter's crash buttons are not restricted to development builds either. They live behind the
-panel, so the guard above is what keeps them unreachable.
+That also settles the Debug tab, whose buttons call straight into the native module and are not
+restricted to development builds. They live behind the panel, and the panel is now unreachable without
+`init()`.
 
 ## Example app
 

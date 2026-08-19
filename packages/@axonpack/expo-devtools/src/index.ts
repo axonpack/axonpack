@@ -6,9 +6,23 @@ export type {
   DevtoolsNetworkConfig,
   DevtoolsPerformanceConfig,
   DevtoolsStorageConfig,
+  DevtoolsCrashConfig,
 } from './client/create-devtools-client.client';
 export { DevtoolsOverlay } from './components/devtools-overlay/devtools-overlay.component';
 export type { DevtoolsOverlayProps } from './components/devtools-overlay/devtools-overlay.component';
+export { CrashReportOverlay } from './components/crash/crash-report-overlay.component';
+export type { CrashPopupDetail } from './services/crash/crash-popup.service';
+export { DevtoolsErrorBoundary } from './components/crash/devtools-error-boundary.component';
+export type { DevtoolsErrorBoundaryProps } from './components/crash/devtools-error-boundary.component';
+export type {
+  CrashBreadcrumb,
+  CrashBreadcrumbCategory,
+  CrashDeviceInfo,
+  CrashKind,
+  CrashNativeDetail,
+  CrashRecord,
+} from './stores/crash/crash.store';
+export { formatCrashJson, formatCrashReport } from './utils/crash/format-crash-report.util';
 export type { ConsoleLogEntry, ConsoleLogLevel } from './stores/console/console-log.store';
 export type { ThrottlePresetId, ThrottleProfile } from './constants/network/throttle-presets.const';
 export type { UserAgentPresetId } from './constants/network/user-agent-presets.const';

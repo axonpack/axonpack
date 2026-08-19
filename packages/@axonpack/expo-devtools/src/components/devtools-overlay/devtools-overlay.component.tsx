@@ -1,11 +1,13 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState, useEffect, type ComponentType } from 'react';
+import { useState, useEffect, useSyncExternalStore, type ComponentType } from 'react';
 import { Animated, Dimensions, Modal, PanResponder } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevtoolsPanel } from './devtools-panel.component';
+import { CrashReportOverlay } from '../crash/crash-report-overlay.component';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { markFirstRender } from '../../services/performance/read-startup-timing.service';
+import { devtoolsReadyStore } from '../../stores/devtools-ready.store';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 const DEFAULT_SIZE = 44;
@@ -37,6 +39,13 @@ export function DevtoolsOverlay({
 }: DevtoolsOverlayProps = {}) {
   const styles = useStyles();
   const COLORS = useThemeColors();
+
+  /**
+   * Subscribed rather than read once: `init()` usually runs at module scope, before anything
+   * renders, but an app that calls it from an effect mounts this first and needs the button to
+   * appear when it lands.
+   */
+  const ready = useSyncExternalStore(devtoolsReadyStore.subscribe, devtoolsReadyStore.isReady);
 
   const fill = color ?? COLORS.accent;
   useEffect(markFirstRender, []);
@@ -75,6 +84,16 @@ export function DevtoolsOverlay({
   const slop = Math.max(0, (TOUCH_TARGET.min - size) / 2);
   const glyphSize = Math.round(size * GLYPH_RATIO);
 
+  /**
+   * No `init()`, no button. The panel is the only way to reach the Debug tab and the console REPL,
+   * so hiding it is what makes an unguarded mount in a release build harmless rather than a
+   * reachable devtools panel over empty lists.
+   *
+   * The crash overlay is deliberately outside that: it is the one subsystem meant to run in
+   * production, and an app that mounts this component unguarded should still get its crash reports.
+   */
+  if (!ready) return <CrashReportOverlay />;
+
   return (
     <>
       <Animated.View
@@ -96,6 +115,11 @@ export function DevtoolsOverlay({
           <MaterialIcons name="bug-report" size={glyphSize} color={iconColor} />
         )}
       </Animated.View>
+
+      {/* Mounted here so a dev build gets the crash report sheet without wiring a second
+          component. It de-duplicates itself, so an app that also mounts one for production is
+          fine. */}
+      <CrashReportOverlay />
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <SafeAreaProvider style={{ flex: 1, backgroundColor: COLORS.background }}>
