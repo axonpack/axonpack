@@ -2,12 +2,12 @@ import { Image, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-n
 import WebView from 'react-native-webview';
 
 import { CodeHighlight } from './detail-panel/code-highlight';
+import { JsonTree } from '../../../core/components/json-tree';
 import type { JsonValue } from '../../../core/utils/json-tree.util';
-import { detectLanguage } from '../utils/code-highlight.util';
-import { classifyPreview } from '../utils/preview-kind.util';
 import type { Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
-import { JsonTree } from '../../../core/components/json-tree';
+import { detectLanguage } from '../utils/code-highlight.util';
+import { classifyPreview } from '../utils/preview-kind.util';
 
 function parseJson(body: string): JsonValue | undefined {
   try {
@@ -47,7 +47,20 @@ export function ResponseBodyPreview({
 
   if (kind === 'webview') {
     const html = mimeType?.toLowerCase().includes('html') ? body : wrapSvgDocument(body);
-    return <WebView source={{ html, baseUrl: url }} style={styles.webview} />;
+    return (
+      <WebView
+        source={{ html, baseUrl: url }}
+        style={styles.webview}
+        // A response body is untrusted markup, and both defaults point the wrong way for a preview:
+        // script inside the body would run, and a tapped link that misses `originWhitelist` is handed
+        // to the system browser rather than refused. So scripts are off and only the document itself
+        // may navigate — iOS asks about that one with the base URL, Android never asks about it.
+        javaScriptEnabled={false}
+        onShouldStartLoadWithRequest={(request) =>
+          request.url === url || !/^https?:/i.test(request.url)
+        }
+      />
+    );
   }
 
   const parsed = parseJson(body);
