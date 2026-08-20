@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react
 
 import { Chip } from '../../../core/components/ui/chip.ui';
 import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { getCompletions } from '../services/complete-expression.service';
 import { runReplCommand } from '../services/run-repl-command.service';
@@ -136,7 +137,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   input: {
     flex: 1,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 13,
     color: COLORS.textPrimary,
     padding: 0,

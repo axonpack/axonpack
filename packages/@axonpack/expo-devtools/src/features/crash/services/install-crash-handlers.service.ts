@@ -87,10 +87,6 @@ function installRejectionHandler() {
           ? rejection
           : new Error(`Unhandled promise rejection: ${describeRejection(rejection)}`);
       captureCrash(error, 'unhandled-rejection');
-
-      if (__DEV__) {
-        console.error(`Uncaught (in promise, id: ${id}): ${describeRejection(rejection)}`);
-      }
     },
     onHandled: (id) => {
       if (__DEV__) {

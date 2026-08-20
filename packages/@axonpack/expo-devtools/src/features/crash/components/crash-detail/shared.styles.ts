@@ -1,5 +1,7 @@
 import { StyleSheet } from 'react-native';
 
+import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
+import { MONOSPACE } from '../../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 
 export const useCrashDetailStyles = makeThemedStyles((COLORS) => ({
@@ -7,7 +9,7 @@ export const useCrashDetailStyles = makeThemedStyles((COLORS) => ({
     gap: 8,
   },
   monospace: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     lineHeight: 17,
     color: COLORS.textPrimary,
@@ -49,7 +51,7 @@ export const useCrashDetailStyles = makeThemedStyles((COLORS) => ({
   frameIndex: {
     width: 22,
     fontSize: 10,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     color: COLORS.textSecondary,
   },
   frameBody: {
@@ -61,17 +63,27 @@ export const useCrashDetailStyles = makeThemedStyles((COLORS) => ({
     paddingRight: 12,
   },
   frameFn: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     color: COLORS.textPrimary,
   },
   frameLocation: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 11,
     color: COLORS.textSecondary,
   },
   /** Vendor frames stay readable but stop competing with app frames for attention. */
   frameVendor: {
     opacity: 0.55,
+  },
+  frameToggle: {
+    minHeight: TOUCH_TARGET.dense,
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  frameToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.accent,
   },
 }));

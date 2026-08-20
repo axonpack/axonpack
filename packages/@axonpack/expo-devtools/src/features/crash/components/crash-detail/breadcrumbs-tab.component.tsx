@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Text, View } from 'react-native';
 
 import { useCrashDetailStyles } from './shared.styles';
+import { MONOSPACE } from '../../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import type { CrashBreadcrumb, CrashRecord } from '../../stores/crash.store';
 import { formatCrashTime } from '../../utils/format-crash-report.util';
@@ -61,7 +62,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     borderBottomColor: COLORS.border,
   },
   time: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 10,
     color: COLORS.textSecondary,
     marginTop: 1,

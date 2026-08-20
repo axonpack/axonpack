@@ -45,6 +45,31 @@ describe('parseStack', () => {
   });
 });
 
+describe('parseComponentStack — React 19 shape', () => {
+  // React 19 writes component stacks in the error-stack shape, which is what makes them
+  // symbolicable; parsing them as the old `in Foo (at Bar)` form left one raw line per entry.
+  it('parses a modern component stack into names and locations', () => {
+    const frames = parseComponentStack(
+      [
+        '    at ActionButton (http://localhost:8081/index.bundle//&platform=ios:5:5)',
+        '    at View (http://localhost:8081/index.bundle//&platform=ios:125:1)',
+      ].join('\n')
+    );
+
+    expect(frames[0]).toEqual({
+      fn: 'ActionButton',
+      location: 'http://localhost:8081/index.bundle//&platform=ios:5:5',
+      vendor: false,
+    });
+    expect(frames).toHaveLength(2);
+  });
+
+  it('still parses the React 18 shape', () => {
+    const frames = parseComponentStack('    in ActionButton (at App.tsx:24)');
+    expect(frames[0]).toEqual({ fn: 'ActionButton', location: 'App.tsx:24', vendor: false });
+  });
+});
+
 describe('parseComponentStack', () => {
   it('splits React frames into component and file', () => {
     const frames = parseComponentStack('\n    in ProfileScreen (at App.tsx:42)\n    in App');

@@ -4,6 +4,7 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import type { CrashRecord } from '../stores/crash.store';
 import { exportCrashReport } from '../utils/export-crash-report.util';
@@ -152,7 +153,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     color: COLORS.error,
   },
   errorMessage: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     lineHeight: 17,
     color: COLORS.textPrimary,

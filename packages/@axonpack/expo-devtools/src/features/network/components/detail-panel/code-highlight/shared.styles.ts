@@ -1,8 +1,9 @@
+import { MONOSPACE } from '../../../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../../../core/utils/themed-styles.util';
 
 export const useCodeStyles = makeThemedStyles((COLORS) => ({
   text: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     flexWrap: 'wrap',
     color: COLORS.textPrimary,

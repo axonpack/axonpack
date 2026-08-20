@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { captureCrash } from '../services/capture-crash.service';
 
@@ -74,7 +75,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     color: COLORS.textPrimary,
   },
   message: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     lineHeight: 17,
     textAlign: 'center',

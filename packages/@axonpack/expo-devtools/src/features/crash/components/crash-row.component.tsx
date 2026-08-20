@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { getCrashKindVisual } from '../constants/crash-kind-visuals.const';
 import type { CrashRecord } from '../stores/crash.store';
@@ -73,7 +74,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     color: COLORS.textPrimary,
   },
   message: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 11,
     lineHeight: 15,
     color: COLORS.textSecondary,
@@ -86,7 +87,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   time: {
     marginLeft: 'auto',
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 10,
     color: COLORS.textSecondary,
   },

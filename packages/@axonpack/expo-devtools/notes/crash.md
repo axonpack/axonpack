@@ -63,6 +63,30 @@ Which tier caught a crash decides how much it can say:
   drain a pile of records at once, and dismissing one used to put the next straight back up in the
   same sheet with nothing animating between them: the exit button read as dead. The records are all
   still in the store, unread, for the tab.
+- **A stack is symbolicated by asking Metro, the way LogBox does.** A frame from a dev bundle names
+  the bundle, not the file — `index.bundle:104857:23` — and the source map that turns it back into
+  `CrashDemo.tsx:79:25` lives on the dev server. So the stack is POSTed to `/symbolicate`, whose
+  answer also carries the `codeFrame` (source lines, `>` marker, caret) the Source section renders,
+  and a `collapse` flag per frame that decides what hides behind "See N more frames". Three things
+  about that response are only knowable by asking a real Metro, and all three were wrong on the first
+  attempt: an unmappable frame is **echoed back** with its bundle URL and a null position rather than
+  blanked, it carries `collapse: true` whatever it is (so honouring that would hide app frames), and
+  a positionless frame like `native` round-trips as line `0`. All three now fall back to the raw
+  frame. The `content` is ANSI-coloured for a terminal and is stripped here.
+- **Two symbolication requests, not one, because Metro answers with one code frame per request** —
+  the first mappable frame of whatever it was handed. So the error stack and the component stack go
+  separately, which is what yields the second source: where it threw, and which element rendered it.
+  The section is titled "Sources" only when both are there, and a component that threw in its own
+  render is deduped by content down to one. React Native does exactly this
+  (`LogBoxLog.handleSymbolicate`), and its `parseComponentStack` is now just its error-stack parser —
+  React 19 writes component stacks in the `at Foo (bundle:1:2)` shape, not React 18's
+  `in Foo (at Bar.tsx:12)`. Ours parses both; before that, every modern component-stack entry came out
+  as one unparsed line, which also meant it had no location to symbolicate.
+- **The dev server is found from the frames, not from `getDevServer`.** That avoids a deep,
+  version-specific import into RN internals, and it is a tighter gate than `__DEV__`: nothing is
+  contacted unless the trace itself came from an http origin, so a release build asks nobody. The
+  request goes through the **unpatched** `fetch` (`core/utils/unpatched-fetch.util.ts`) — the panel's
+  own traffic must not appear in its own Network tab, or be throttled by its own conditions.
 - **Breadcrumbs cost almost nothing.** They are read from the console and network ring buffers that
   already exist, so nothing is recorded _for_ crash reporting.
 - **Redaction runs before anything leaves the process** — the store, the disk and the consumer's
@@ -73,7 +97,8 @@ Which tier caught a crash decides how much it can say:
 
 ## Won't do
 
-- **Symbolication.** A release bundle is minified and this package ships no source maps, so frames
+- **Symbolicating a release bundle.** Dev symbolication exists (above); release does not. There is
+  no dev server to ask, the bundle is minified and this package ships no source maps, so the frames
   point into the bundle. The Stack section says so.
 - **Signal-level crashes.** Segfaults, `fatalError` and NDK crashes need an async-signal-safe
   handler that would fight Crashlytics, Sentry and Bugsnag over the same slot, and would yield

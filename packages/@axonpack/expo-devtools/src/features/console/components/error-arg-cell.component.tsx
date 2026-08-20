@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 
@@ -54,7 +55,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   message: {
     flex: 1,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     color: COLORS.error,
   },
@@ -64,7 +65,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   stack: {
     marginTop: 4,
     marginLeft: 18,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 10,
     color: COLORS.textSecondary,
   },

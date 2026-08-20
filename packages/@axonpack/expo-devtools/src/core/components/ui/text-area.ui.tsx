@@ -1,5 +1,6 @@
 import { StyleSheet, TextInput, View, type TextStyle } from 'react-native';
 
+import { MONOSPACE } from '../../constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 /**
@@ -56,7 +57,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flex: 1,
     padding: 0,
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     color: COLORS.textPrimary,
     textAlignVertical: 'top',
   },

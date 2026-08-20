@@ -16,7 +16,8 @@ const VENDOR_PATTERNS = [
   '[native code]',
 ];
 
-function isVendor(location: string): boolean {
+/** Exported for symbolication, which re-classifies frames once Metro has given them real paths. */
+export function isVendorLocation(location: string): boolean {
   return VENDOR_PATTERNS.some((pattern) => location.includes(pattern));
 }
 
@@ -37,7 +38,7 @@ export function parseStack(stack: string | null): StackFrame[] {
       const v8 = V8_FRAME.exec(line);
       if (v8) {
         const location = v8[2] ?? line;
-        return { fn: v8[1] ?? '<anonymous>', location, vendor: isVendor(location) };
+        return { fn: v8[1] ?? '<anonymous>', location, vendor: isVendorLocation(location) };
       }
 
       const spiderMonkey = SPIDERMONKEY_FRAME.exec(line);
@@ -46,17 +47,22 @@ export function parseStack(stack: string | null): StackFrame[] {
         return {
           fn: spiderMonkey[1] || '<anonymous>',
           location,
-          vendor: isVendor(location),
+          vendor: isVendorLocation(location),
         };
       }
 
-      return { fn: line, location: '', vendor: isVendor(line) };
+      return { fn: line, location: '', vendor: isVendorLocation(line) };
     });
 }
 
+const LEGACY_COMPONENT_FRAME = /^in\s+(.+?)(?:\s+\(at\s+(.+?)\))?$/;
+
 /**
- * React's component stack is a different shape from an error stack — `\n    in Foo (at Bar.tsx:12)`
- * — so it gets its own parser rather than being forced through the one above.
+ * React 19 writes a component stack in the *same* shape as an error stack — `at Foo (bundle:1:2)` —
+ * which is what makes it symbolicable; React 18 wrote `in Foo (at Bar.tsx:12)`. React Native's own
+ * parser now just forwards to its error-stack parser for that reason. Both shapes still turn up, so
+ * the legacy one is tried per line and everything else goes through the parser above — which is also
+ * what gives these frames a real `location` for symbolication to replace.
  */
 export function parseComponentStack(componentStack: string | null | undefined): StackFrame[] {
   if (!componentStack) return [];
@@ -65,10 +71,12 @@ export function parseComponentStack(componentStack: string | null | undefined): 
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .map((line) => {
-      const match = /^in\s+(.+?)(?:\s+\(at\s+(.+?)\))?$/.exec(line);
-      if (!match) return { fn: line, location: '', vendor: false };
-      const location = match[2] ?? '';
-      return { fn: match[1] ?? line, location, vendor: isVendor(location) };
+    .flatMap((line) => {
+      const legacy = LEGACY_COMPONENT_FRAME.exec(line);
+      if (legacy) {
+        const location = legacy[2] ?? '';
+        return [{ fn: legacy[1] ?? line, location, vendor: isVendorLocation(location) }];
+      }
+      return parseStack(line);
     });
 }

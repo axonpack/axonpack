@@ -3,6 +3,7 @@ import { Text, TouchableOpacity } from 'react-native';
 
 import { HighlightedText } from '../../../core/components/ui/highlighted-text.ui';
 import type { Palette } from '../../../core/constants/theme.const';
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
@@ -72,7 +73,7 @@ export function TextArgCell({
 
 const useStyles = makeThemedStyles((COLORS) => ({
   text: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
   },
 

@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { DeviceSection } from './device-section.component';
 import { useCrashDetailStyles } from './shared.styles';
 import { StackSection } from './stack-section.component';
+import { MONOSPACE } from '../../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import { getCrashKindVisual } from '../../constants/crash-kind-visuals.const';
 import type { CrashRecord } from '../../stores/crash.store';
@@ -122,7 +123,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     color: COLORS.textPrimary,
   },
   message: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 13,
     lineHeight: 19,
     color: COLORS.textPrimary,

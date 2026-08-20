@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
+import { MONOSPACE } from '../../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 
 export const useSandboxStyles = makeThemedStyles((COLORS) => ({
@@ -42,7 +43,7 @@ export const useSandboxStyles = makeThemedStyles((COLORS) => ({
   },
   codeSnippet: {
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     color: COLORS.textPrimary,
     backgroundColor: COLORS.sectionTint,
     borderWidth: StyleSheet.hairlineWidth,

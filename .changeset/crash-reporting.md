@@ -4,6 +4,7 @@
 
 - New **Crashes** tab: every crash the app has hit, with the unread count on the tab itself
 - **Crash report sheet** opens the moment a crash is caught, with the message, stack, component stack, breadcrumbs, device details and the raw record
+- **Stack frames name your files** — in development the stack is symbolicated against the dev server, so a frame reads `CrashDemo.tsx:79:25` instead of `index.bundle:104857:23`, with the failing source line and a caret above it, and library frames folded behind **See N more frames**
 - **Copy and share** any report as Markdown or JSON, straight to the share sheet
 - **Crashes that end the app** are saved to the device and reported the next time it opens
 - **Catches four kinds of crash**: fatal and non-fatal JavaScript errors, unhandled promise rejections, React render errors, and uncaught native exceptions on iOS and Android

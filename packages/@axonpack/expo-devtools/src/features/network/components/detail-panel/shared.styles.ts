@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 
+import { MONOSPACE } from '../../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 
 export const useRowStyles = makeThemedStyles((COLORS) => ({
@@ -48,7 +49,7 @@ export const useRowStyles = makeThemedStyles((COLORS) => ({
     color: COLORS.textPrimary,
   },
   monospace: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     color: COLORS.textPrimary,
   },

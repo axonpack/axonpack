@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 
+import { MONOSPACE } from '../../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 
 export const useDetailStyles = makeThemedStyles((COLORS) => ({
@@ -13,7 +14,7 @@ export const useDetailStyles = makeThemedStyles((COLORS) => ({
     gap: 4,
   },
   monospace: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     color: COLORS.textPrimary,
   },

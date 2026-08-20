@@ -1,4 +1,5 @@
 import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { MONOSPACE } from '../../constants/typography.const';
 import { makeThemedStyles } from '../../utils/themed-styles.util';
 
 export const useTreeStyles = makeThemedStyles((COLORS) => ({
@@ -14,7 +15,7 @@ export const useTreeStyles = makeThemedStyles((COLORS) => ({
   },
   text: {
     flex: 1,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontSize: 12,
     flexWrap: 'wrap',
   },

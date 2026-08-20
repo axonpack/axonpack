@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { STORED_VALUE_ICONS, STORED_VALUE_LABELS } from '../constants/value-type-icons.const';
 import type { StorageEntry } from '../stores/storage.store';
 import { formatSize } from '../../../core/utils/format-bytes.util';
@@ -124,7 +125,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   value: {
     flex: 1,
     fontSize: 11,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     color: COLORS.textSecondary,
   },
   error: {

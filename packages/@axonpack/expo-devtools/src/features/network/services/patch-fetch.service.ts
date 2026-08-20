@@ -1,3 +1,4 @@
+import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import {
@@ -76,6 +77,7 @@ export function patchFetch() {
   isPatched = true;
 
   const originalFetch = globalThis.fetch;
+  rememberUnpatchedFetch(originalFetch);
 
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const id = nextRequestId();

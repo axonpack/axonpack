@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { MONOSPACE } from '../../constants/typography.const';
 
 export function JsonIcon({ size = 14, color }: { size?: number; color: string }) {
   return (
@@ -16,7 +17,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   glyph: {
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     fontWeight: '700',
     letterSpacing: -1,
     includeFontPadding: false,

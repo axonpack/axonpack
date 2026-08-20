@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { MONOSPACE } from '../../../core/constants/typography.const';
 import { storageStore } from '../stores/storage.store';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { ReadOnlyTextInput } from '../../../core/components/ui/read-only-text-input.ui';
@@ -101,7 +102,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     marginTop: 6,
     padding: 10,
     fontSize: 11,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     color: COLORS.textPrimary,
     backgroundColor: COLORS.toolbarBackground,
     borderWidth: StyleSheet.hairlineWidth,

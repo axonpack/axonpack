@@ -1,5 +1,6 @@
 import { StyleSheet, TextInput, View } from 'react-native';
 
+import { MONOSPACE } from '../../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 
 export function UrlBar({ url, onChangeUrl }: { url: string; onChangeUrl: (url: string) => void }) {
@@ -27,7 +28,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   input: {
     fontSize: 13,
-    fontFamily: 'monospace',
+    fontFamily: MONOSPACE,
     color: COLORS.textPrimary,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
