@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { useCrashDetailStyles } from './shared.styles';
+import { formatFrameLocation } from '../../../../core/utils/frame-location.util';
 import { animateNextLayout } from '../../../../core/utils/layout-animation.util';
-import { formatFrameLocation } from '../../utils/frame-location.util';
-import type { StackFrame } from '../../utils/parse-stack.util';
+import type { StackFrame } from '../../../../core/utils/parse-stack.util';
 
 export function StackFrames({ frames }: { frames: StackFrame[] }) {
   const styles = useCrashDetailStyles();

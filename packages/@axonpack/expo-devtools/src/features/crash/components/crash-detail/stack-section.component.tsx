@@ -5,9 +5,12 @@ import { useCrashDetailStyles } from './shared.styles';
 import { SourceFrames } from './source-frames.component';
 import { StackFrames } from './stack-frames.component';
 import { CollapsibleSection } from '../../../../core/components/ui/collapsible-section.ui';
-import { symbolicateStack, type SymbolicatedStack } from '../../services/symbolicate-stack.service';
+import {
+  symbolicateStack,
+  type SymbolicatedStack,
+} from '../../../../core/services/symbolicate-stack.service';
+import { parseComponentStack, parseStack } from '../../../../core/utils/parse-stack.util';
 import type { CrashRecord } from '../../stores/crash.store';
-import { parseComponentStack, parseStack } from '../../utils/parse-stack.util';
 
 export function StackSection({ record }: { record: CrashRecord }) {
   const styles = useCrashDetailStyles();

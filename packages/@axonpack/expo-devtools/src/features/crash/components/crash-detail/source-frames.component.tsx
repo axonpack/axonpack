@@ -3,22 +3,12 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useCrashDetailStyles } from './shared.styles';
 import { CollapsibleSection } from '../../../../core/components/ui/collapsible-section.ui';
 import { MONOSPACE } from '../../../../core/constants/typography.const';
+import type { CodeFrame } from '../../../../core/services/symbolicate-stack.service';
+import { isMarkedCodeFrameLine } from '../../../../core/utils/code-frame.util';
+import { formatFrameLocation } from '../../../../core/utils/frame-location.util';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
-import type { CrashCodeFrame } from '../../services/symbolicate-stack.service';
-import { formatFrameLocation } from '../../utils/frame-location.util';
 
-/**
- * `@babel/code-frame` marks the offending line with a leading `>` and points at the column with a
- * caret on the line below. The caret line is matched by shape — gutter pipe, then nothing but
- * carets — because a bare `includes('^')` also marks any source line holding a bitwise xor.
- */
-const CARET_LINE = /^\s*\|\s*\^+/;
-
-function isMarked(line: string): boolean {
-  return line.startsWith('>') || CARET_LINE.test(line);
-}
-
-function SourceCard({ codeFrame }: { codeFrame: CrashCodeFrame }) {
+function SourceCard({ codeFrame }: { codeFrame: CodeFrame }) {
   const styles = useStyles();
   const detailStyles = useCrashDetailStyles();
 
@@ -32,7 +22,7 @@ function SourceCard({ codeFrame }: { codeFrame: CrashCodeFrame }) {
             // Source lines are positional and a blank one can repeat, so the index is the identity.
             <Text
               key={`${index}-${line}`}
-              style={[styles.codeLine, isMarked(line) && styles.codeLineMarked]}
+              style={[styles.codeLine, isMarkedCodeFrameLine(line) && styles.codeLineMarked]}
               selectable>
               {line}
             </Text>
@@ -54,7 +44,7 @@ function SourceCard({ codeFrame }: { codeFrame: CrashCodeFrame }) {
  * One card per stack that had a source to show: where it threw, and — for a render error — which
  * element rendered it. Plural heading only when there is more than one, as in React Native's own.
  */
-export function SourceFrames({ codeFrames }: { codeFrames: CrashCodeFrame[] }) {
+export function SourceFrames({ codeFrames }: { codeFrames: CodeFrame[] }) {
   const styles = useStyles();
 
   if (codeFrames.length === 0) return null;

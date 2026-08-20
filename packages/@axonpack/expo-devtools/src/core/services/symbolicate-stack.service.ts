@@ -1,8 +1,8 @@
-import { getUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
+import { getUnpatchedFetch } from '../utils/unpatched-fetch.util';
 import { parseFrameLocation } from '../utils/frame-location.util';
 import { isVendorLocation, type StackFrame } from '../utils/parse-stack.util';
 
-export type CrashCodeFrame = {
+export type CodeFrame = {
   /** Metro's own `@babel/code-frame` output — the source lines, the `>` marker and the caret. */
   content: string;
   fileName: string;
@@ -16,7 +16,7 @@ export type SymbolicatedStack = {
    * One per stack that had a mappable frame — the error's, then the component's. React Native shows
    * the same two and titles the section "Sources" when both are there.
    */
-  codeFrames: CrashCodeFrame[];
+  codeFrames: CodeFrame[];
 };
 
 /**
@@ -90,7 +90,7 @@ function toStackFrame(raw: RawFrame, fallback: StackFrame): StackFrame {
   };
 }
 
-function toCodeFrame(raw: unknown): CrashCodeFrame | null {
+function toCodeFrame(raw: unknown): CodeFrame | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const { content, fileName, location } = raw as Record<string, unknown>;
   if (typeof content !== 'string' || content.length === 0) return null;
@@ -113,7 +113,7 @@ function toCodeFrame(raw: unknown): CrashCodeFrame | null {
 
 type SymbolicatedRequest = {
   frames: StackFrame[];
-  codeFrame: CrashCodeFrame | null;
+  codeFrame: CodeFrame | null;
 };
 
 async function requestSymbolication(
@@ -165,7 +165,7 @@ async function symbolicateBothStacks(
   if (primary === null && component === null) return null;
 
   const codeFrames = [primary?.codeFrame, component?.codeFrame].filter(
-    (codeFrame, index, all): codeFrame is CrashCodeFrame =>
+    (codeFrame, index, all): codeFrame is CodeFrame =>
       // The same content twice says nothing twice: a component that threw in its own render answers
       // both requests with one snippet.
       codeFrame != null && all.findIndex((other) => other?.content === codeFrame.content) === index
