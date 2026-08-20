@@ -13,6 +13,7 @@ import { setCrashPopupDetail } from '../features/crash/services/crash-popup.serv
 import { disableDefaultLogBox } from '../features/crash/services/disable-logbox.service';
 import { installCrashHandlers } from '../features/crash/services/install-crash-handlers.service';
 import { patchFetch } from '../features/network/services/patch-fetch.service';
+import { patchWebSocket } from '../features/network/services/patch-websocket.service';
 import { patchXHR } from '../features/network/services/patch-xhr.service';
 import {
   getWebViewConditionsRef,
@@ -55,6 +56,8 @@ type WebViewMessageEventLike = {
 export type DevtoolsNetworkConfig = {
   includeFetch?: boolean;
   includeXmlHttpRequest?: boolean;
+  /** WebSocket connections and their messages. Defaults to `true`. */
+  includeWebSocket?: boolean;
   disabledByDefault?: boolean;
 };
 
@@ -186,6 +189,7 @@ export function createDevtoolsClient<
   const {
     includeFetch = true,
     includeXmlHttpRequest = true,
+    includeWebSocket = true,
     disabledByDefault: networkStartsPaused = false,
   } = config?.network ?? {};
   const {
@@ -285,6 +289,7 @@ export function createDevtoolsClient<
       if (networkStartsPaused) networkLogStore.setPaused(true);
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
+      if (includeWebSocket) patchWebSocket();
       if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
       if (consoleStartsPaused) consoleLogStore.setPaused(true);
       if (captureConsole) patchConsole();

@@ -3,20 +3,24 @@ import { StyleSheet, View } from 'react-native';
 
 import { NativeRequests } from './NativeRequests';
 import { TabBar } from './TabBar';
+import { WebSocketDemo } from './WebSocketDemo';
 import { WebViewDemo } from './WebViewDemo';
 
 const TABS = [
   { key: 'native' as const, label: 'Native' },
   { key: 'webview' as const, label: 'WebView' },
+  { key: 'socket' as const, label: 'Socket' },
 ];
 
 export function RequestsScreen() {
-  const [tab, setTab] = useState<'native' | 'webview'>('native');
+  const [tab, setTab] = useState<'native' | 'webview' | 'socket'>('native');
 
   return (
     <View style={styles.container}>
       <TabBar tabs={TABS} activeKey={tab} onChange={setTab} variant="secondary" />
-      {tab === 'native' ? <NativeRequests /> : <WebViewDemo />}
+      {tab === 'native' ? <NativeRequests /> : null}
+      {tab === 'webview' ? <WebViewDemo /> : null}
+      {tab === 'socket' ? <WebSocketDemo /> : null}
     </View>
   );
 }

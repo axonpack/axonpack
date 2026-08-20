@@ -13,26 +13,10 @@ import {
 import { DetailPanel } from './detail-panel';
 import { LogRow } from './log-row.component';
 import { OverviewStrip, type TimeRange } from './overview-strip.component';
+import { SocketDetailPanel } from './socket-detail-panel.component';
+import { SocketRow } from './socket-row.component';
 import { ThrottleSelector } from './throttle-selector.component';
 import { UserAgentSelector } from './user-agent-selector.component';
-import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
-import { networkLogStore } from '../stores/network-log.store';
-import type { NetworkLogEntry } from '../stores/network-log.store';
-import { animateNextLayout } from '../../../core/utils/layout-animation.util';
-import { exportNetworkLog } from '../utils/export-network-log.util';
-import {
-  DEFAULT_NETWORK_FILTERS,
-  hasActiveFilters,
-  matchesFilters,
-  sortStatusClasses,
-  statusClass,
-  statusClassLabel,
-  type NetworkFilters,
-} from '../utils/filter-entries.util';
-import { formatSource } from '../utils/formatters.util';
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from '../utils/resource-type.util';
-import { buildMatcher } from '../../../core/utils/text-search.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import {
   DevtoolsToolbar,
   ToolbarDivider,
@@ -42,10 +26,29 @@ import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
 import { SettingRow } from '../../../core/components/ui/setting-row.ui';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { animateNextLayout } from '../../../core/utils/layout-animation.util';
+import { buildMatcher } from '../../../core/utils/text-search.util';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
+import { networkLogStore } from '../stores/network-log.store';
+import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
+import { exportNetworkLog } from '../utils/export-network-log.util';
+import {
+  DEFAULT_NETWORK_FILTERS,
+  hasActiveFilters,
+  matchesFilters,
+  matchesSocketFilters,
+  sortStatusClasses,
+  statusClass,
+  statusClassLabel,
+  type NetworkFilters,
+} from '../utils/filter-entries.util';
+import { formatSource } from '../utils/formatters.util';
+import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from '../utils/resource-type.util';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
 
-function keyExtractor(entry: NetworkLogEntry): string {
+function keyExtractor(entry: NetworkEntry): string {
   return entry.id;
 }
 
@@ -53,7 +56,7 @@ export function NetworkView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
   const { width } = useWindowDimensions();
-  const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getSnapshot);
+  const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getMergedSnapshot);
   const paused = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.isPaused);
   const preserveLog = useSyncExternalStore(
     networkLogStore.subscribe,
@@ -69,7 +72,7 @@ export function NetworkView() {
   const [showOverview, setShowOverview] = useState(false);
   const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
-  const [selectedEntry, setSelectedEntry] = useState<NetworkLogEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -87,7 +90,9 @@ export function NetworkView() {
 
   const statuses = useMemo(() => {
     const seen = new Set<string>();
-    for (const entry of logs) seen.add(statusClass(entry));
+    for (const entry of logs) {
+      if (entry.kind === 'http') seen.add(statusClass(entry));
+    }
     return sortStatusClasses(Array.from(seen));
   }, [logs]);
 
@@ -98,8 +103,19 @@ export function NetworkView() {
   );
 
   const overviewLogs = useMemo(
-    () => logs.filter((entry) => matchesFilters(entry, filters, matcher)),
+    () =>
+      logs.filter((entry) =>
+        entry.kind === 'websocket'
+          ? matchesSocketFilters(entry, filters, matcher)
+          : matchesFilters(entry, filters, matcher)
+      ),
     [logs, filters, matcher]
+  );
+
+  /** The overview charts durations and status codes, neither of which a socket has. */
+  const overviewRequests = useMemo(
+    () => overviewLogs.filter((entry): entry is NetworkLogEntry => entry.kind === 'http'),
+    [overviewLogs]
   );
 
   const visibleLogs = useMemo(() => {
@@ -117,7 +133,7 @@ export function NetworkView() {
 
   const sections = useMemo(() => {
     if (!groupByFetchClient) return [];
-    const bySource = new Map<string, NetworkLogEntry[]>();
+    const bySource = new Map<string, NetworkEntry[]>();
     for (const entry of visibleLogs) {
       const key = entry.source ?? 'unknown';
       const list = bySource.get(key) ?? [];
@@ -150,9 +166,17 @@ export function NetworkView() {
   const filtersActive = hasActiveFilters(filters) || activeTimeRange !== null;
 
   const renderRow = useCallback(
-    ({ item }: { item: NetworkLogEntry }) => (
-      <LogRow entry={item} bigRows={bigRows} matcher={matcher} onPress={setSelectedEntry} />
-    ),
+    ({ item }: { item: NetworkEntry }) =>
+      item.kind === 'websocket' ? (
+        <SocketRow
+          entry={item}
+          messageCount={networkLogStore.getWebSocketMessages(item.id).length}
+          bigRows={bigRows}
+          onPress={setSelectedEntry}
+        />
+      ) : (
+        <LogRow entry={item} bigRows={bigRows} matcher={matcher} onPress={setSelectedEntry} />
+      ),
     [bigRows, matcher]
   );
 
@@ -194,7 +218,7 @@ export function NetworkView() {
         <IconButton
           name="file-download"
           color={COLORS.textSecondary}
-          onPress={() => exportNetworkLog(visibleLogs)}
+          onPress={() => exportNetworkLog(visibleLogs.filter((e) => e.kind === 'http'))}
           label="Export"
         />
         <IconButton
@@ -368,7 +392,7 @@ export function NetworkView() {
 
       {showOverview && (
         <OverviewStrip
-          entries={overviewLogs}
+          entries={overviewRequests}
           activeRange={activeTimeRange}
           onSelectRange={setActiveTimeRange}
         />
@@ -408,9 +432,14 @@ export function NetworkView() {
       )}
 
       <DetailPanel
-        entry={selectedEntry}
+        entry={selectedEntry?.kind === 'http' ? selectedEntry : null}
         onClose={() => setSelectedEntry(null)}
         stackedHeaders={stackedHeaders}
+      />
+
+      <SocketDetailPanel
+        entry={selectedEntry?.kind === 'websocket' ? selectedEntry : null}
+        onClose={() => setSelectedEntry(null)}
       />
     </View>
   );

@@ -1,11 +1,11 @@
 import { classifyResourceType, type ResourceType } from './resource-type.util';
-import type { NetworkLogEntry } from '../stores/network-log.store';
 import {
   DEFAULT_SEARCH_MODES,
   testMatch,
   type Matcher,
   type SearchModes,
 } from '../../../core/utils/text-search.util';
+import type { NetworkLogEntry, WebSocketLogEntry } from '../stores/network-log.store';
 
 /** A `2xx`-style band, or the two states that have no code of their own. */
 export type StatusClass = string;
@@ -84,6 +84,28 @@ export function matchesFilters(
     (filters.type === null || classifyResourceType(entry.mimeType) === filters.type) &&
     (filters.status === null || statusClass(entry) === filters.status) &&
     matchesQuery(entry, matcher);
+
+  return filters.invert ? !matches : matches;
+}
+
+/**
+ * A socket is in the same list but not in the same buckets: it has no resource type and no status
+ * code, so a filter on either of those excludes it rather than matching it loosely.
+ */
+export function matchesSocketFilters(
+  entry: WebSocketLogEntry,
+  filters: NetworkFilters,
+  matcher: Matcher | null
+): boolean {
+  if (filters.hideDataUrls && entry.url.startsWith('data:')) return false;
+  if (filters.hideFailed && entry.status === 'error') return false;
+
+  const matches =
+    filters.type === null &&
+    filters.status === null &&
+    (filters.source === null || entry.source === filters.source) &&
+    (filters.method === null || entry.method === filters.method) &&
+    testMatch(`${entry.method} ${entry.url} ${entry.status} ${entry.source ?? ''}`, matcher);
 
   return filters.invert ? !matches : matches;
 }
