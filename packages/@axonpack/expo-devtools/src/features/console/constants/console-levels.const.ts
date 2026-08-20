@@ -1,6 +1,6 @@
 import type { MaterialIconName } from '../../../core/components/ui/icon-button.ui';
-import type { ConsoleLogLevel } from '../stores/console-log.store';
 import type { Palette } from '../../../core/constants/theme.const';
+import type { ConsoleLogLevel } from '../stores/console-log.store';
 
 export const CONSOLE_LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
 

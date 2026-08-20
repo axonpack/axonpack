@@ -4,10 +4,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CompactCrashSheet } from './compact-crash-sheet.component';
 import { CrashDetailSheet } from './crash-detail';
+import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { getCrashPopupDetail } from '../services/crash-popup.service';
 import { crashOverlayOwnerStore } from '../stores/crash-overlay-owner.store';
 import { crashStore } from '../stores/crash.store';
-import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 
 /**
  * Mounting this twice is harmless rather than something to get right: `DevtoolsOverlay` mounts one

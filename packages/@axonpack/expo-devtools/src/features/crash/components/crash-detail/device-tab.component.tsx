@@ -1,8 +1,8 @@
 import { Text, View } from 'react-native';
 
 import { useCrashDetailStyles } from './shared.styles';
-import type { CrashRecord } from '../../stores/crash.store';
 import { formatSize } from '../../../../core/utils/format-bytes.util';
+import type { CrashRecord } from '../../stores/crash.store';
 
 export function DeviceTab({ record }: { record: CrashRecord }) {
   const styles = useCrashDetailStyles();

@@ -1,8 +1,8 @@
 import { ErrorArgCell } from './error-arg-cell.component';
 import { TextArgCell } from './text-arg-cell.component';
-import type { ConsoleArg } from '../utils/format-console-args.util';
-import type { Matcher } from '../../../core/utils/text-search.util';
 import { JsonTree } from '../../../core/components/json-tree';
+import type { Matcher } from '../../../core/utils/text-search.util';
+import type { ConsoleArg } from '../utils/format-console-args.util';
 
 export function ConsoleArgCell({
   arg,

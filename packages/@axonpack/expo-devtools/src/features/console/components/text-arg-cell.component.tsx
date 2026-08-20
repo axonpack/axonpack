@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 
+import { HighlightedText } from '../../../core/components/ui/highlighted-text.ui';
 import type { Palette } from '../../../core/constants/theme.const';
-import type { ConsoleArgTone } from '../utils/format-console-args.util';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { HighlightedText } from '../../../core/components/ui/highlighted-text.ui';
+import type { ConsoleArgTone } from '../utils/format-console-args.util';
 
 const CLAMP_LINES = 6;
 

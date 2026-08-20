@@ -6,17 +6,17 @@ import { DeviceTab } from './device-tab.component';
 import { RawTab } from './raw-tab.component';
 import { StackTab } from './stack-tab.component';
 import { SummaryTab } from './summary-tab.component';
-import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
-import type { CrashRecord } from '../../stores/crash.store';
-import { buildCrashMenuItems } from '../../utils/crash-menu-items.util';
-import { exportCrashReport } from '../../utils/export-crash-report.util';
-import { formatCrashTitle } from '../../utils/format-crash-report.util';
-import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import { BottomSheet } from '../../../../core/components/ui/bottom-sheet.ui';
 import { ContextMenu } from '../../../../core/components/ui/context-menu.ui';
 import { CopyIconButton } from '../../../../core/components/ui/copy-icon-button.ui';
 import { IconButton } from '../../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
+import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
+import type { CrashRecord } from '../../stores/crash.store';
+import { buildCrashMenuItems } from '../../utils/crash-menu-items.util';
+import { exportCrashReport } from '../../utils/export-crash-report.util';
+import { formatCrashTitle } from '../../utils/format-crash-report.util';
 
 type Tab = 'summary' | 'stack' | 'breadcrumbs' | 'device' | 'raw';
 

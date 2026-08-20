@@ -2,9 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Text, View } from 'react-native';
 
 import { useCrashDetailStyles } from './shared.styles';
+import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import type { CrashBreadcrumb, CrashRecord } from '../../stores/crash.store';
 import { formatCrashTime } from '../../utils/format-crash-report.util';
-import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 
 function crumbColor(crumb: CrashBreadcrumb, error: string, warning: string, secondary: string) {
   if (crumb.level === 'error') return error;

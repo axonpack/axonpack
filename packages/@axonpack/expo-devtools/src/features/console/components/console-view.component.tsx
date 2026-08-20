@@ -15,15 +15,14 @@ import {
 import { ConsolePrompt } from './console-prompt.component';
 import { ConsoleRow } from './console-row.component';
 import {
-  CONSOLE_LEVEL_LABELS,
-  consoleLevelVisuals,
-  CONSOLE_LEVELS,
-} from '../constants/console-levels.const';
+  DevtoolsToolbar,
+  ToolbarDivider,
+} from '../../../core/components/devtools-toolbar.component';
+import { Chip } from '../../../core/components/ui/chip.ui';
+import { IconButton } from '../../../core/components/ui/icon-button.ui';
+import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
+import { SearchInput } from '../../../core/components/ui/search-input.ui';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
-import { isReplEnabled } from '../services/evaluate-expression.service';
-import { consoleLogStore } from '../stores/console-log.store';
-import type { ConsoleLogEntry, ConsoleLogLevel } from '../stores/console-log.store';
-import { formatConsoleSource } from '../utils/formatters.util';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import {
   buildMatcher,
@@ -33,13 +32,14 @@ import {
 import type { SearchModes } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import {
-  DevtoolsToolbar,
-  ToolbarDivider,
-} from '../../../core/components/devtools-toolbar.component';
-import { Chip } from '../../../core/components/ui/chip.ui';
-import { IconButton } from '../../../core/components/ui/icon-button.ui';
-import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
-import { SearchInput } from '../../../core/components/ui/search-input.ui';
+  CONSOLE_LEVEL_LABELS,
+  consoleLevelVisuals,
+  CONSOLE_LEVELS,
+} from '../constants/console-levels.const';
+import { isReplEnabled } from '../services/evaluate-expression.service';
+import { consoleLogStore } from '../stores/console-log.store';
+import type { ConsoleLogEntry, ConsoleLogLevel } from '../stores/console-log.store';
+import { formatConsoleSource } from '../utils/formatters.util';
 
 const NEAR_BOTTOM_SLACK = 40;
 

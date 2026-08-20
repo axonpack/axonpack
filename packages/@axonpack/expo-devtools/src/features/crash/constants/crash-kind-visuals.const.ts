@@ -1,6 +1,6 @@
 import type { MaterialIconName } from '../../../core/components/ui/icon-button.ui';
-import type { CrashKind } from '../stores/crash.store';
 import type { Palette } from '../../../core/constants/theme.const';
+import type { CrashKind } from '../stores/crash.store';
 
 export type CrashKindVisual = {
   icon: MaterialIconName;

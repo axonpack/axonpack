@@ -1,6 +1,6 @@
 import { consoleLogStore } from '../../console/stores/console-log.store';
-import type { CrashBreadcrumb } from '../stores/crash.store';
 import { networkLogStore } from '../../network/stores/network-log.store';
+import type { CrashBreadcrumb } from '../stores/crash.store';
 
 /**
  * The last thing the app did before it broke, assembled from ring buffers that already exist — which

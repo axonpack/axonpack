@@ -2,12 +2,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import type { CrashRecord } from '../stores/crash.store';
 import { exportCrashReport } from '../utils/export-crash-report.util';
 import { formatCrashTime } from '../utils/format-crash-report.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 
 const OFFSCREEN_Y = 400;
 const SLIDE_IN_MS = 220;

@@ -2,13 +2,13 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { Chip } from '../../../core/components/ui/chip.ui';
 import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { getCompletions } from '../services/complete-expression.service';
 import { runReplCommand } from '../services/run-repl-command.service';
 import { consolePromptStore } from '../stores/console-prompt.store';
 import { normalizeExpressionInput } from '../utils/normalize-expression.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { Chip } from '../../../core/components/ui/chip.ui';
 
 export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
   const styles = useStyles();

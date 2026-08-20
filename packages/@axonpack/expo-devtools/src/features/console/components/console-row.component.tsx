@@ -3,13 +3,13 @@ import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ConsoleArgCell } from './console-arg-cell.component';
+import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
+import type { Matcher } from '../../../core/utils/text-search.util';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { consoleLevelVisuals } from '../constants/console-levels.const';
 import type { ConsoleLogEntry } from '../stores/console-log.store';
 import { consolePromptStore } from '../stores/console-prompt.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../utils/formatters.util';
-import type { Matcher } from '../../../core/utils/text-search.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
 
 function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: Matcher | null }) {
   const styles = useStyles();

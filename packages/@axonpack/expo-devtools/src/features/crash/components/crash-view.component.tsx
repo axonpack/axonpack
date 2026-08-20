@@ -3,16 +3,6 @@ import { FlatList, Text, View } from 'react-native';
 
 import { CrashDetailSheet } from './crash-detail';
 import { CrashRow } from './crash-row.component';
-import { crashStore, type CrashKind, type CrashRecord } from '../stores/crash.store';
-import { CRASH_KIND_LABELS } from '../utils/format-crash-report.util';
-import {
-  buildMatcher,
-  DEFAULT_SEARCH_MODES,
-  testMatch,
-  type SearchModes,
-} from '../../../core/utils/text-search.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import {
   DevtoolsToolbar,
   ToolbarDivider,
@@ -21,6 +11,16 @@ import { Chip } from '../../../core/components/ui/chip.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
+import { animateNextLayout } from '../../../core/utils/layout-animation.util';
+import {
+  buildMatcher,
+  DEFAULT_SEARCH_MODES,
+  testMatch,
+  type SearchModes,
+} from '../../../core/utils/text-search.util';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
+import { crashStore, type CrashKind, type CrashRecord } from '../stores/crash.store';
+import { CRASH_KIND_LABELS } from '../utils/format-crash-report.util';
 
 const KIND_ORDER: CrashKind[] = [
   'js-fatal',

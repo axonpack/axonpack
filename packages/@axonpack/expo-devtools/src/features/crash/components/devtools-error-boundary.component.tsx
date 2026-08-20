@@ -1,9 +1,9 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { captureCrash } from '../services/capture-crash.service';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
+import { captureCrash } from '../services/capture-crash.service';
 
 export type DevtoolsErrorBoundaryProps = {
   children: ReactNode;

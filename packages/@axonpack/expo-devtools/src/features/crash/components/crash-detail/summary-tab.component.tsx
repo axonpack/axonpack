@@ -2,10 +2,10 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Text, View } from 'react-native';
 
 import { useCrashDetailStyles } from './shared.styles';
+import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import { getCrashKindVisual } from '../../constants/crash-kind-visuals.const';
 import type { CrashRecord } from '../../stores/crash.store';
 import { CRASH_KIND_LABELS, formatCrashTime } from '../../utils/format-crash-report.util';
-import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 
 export function SummaryTab({ record }: { record: CrashRecord }) {
   const styles = useStyles();
