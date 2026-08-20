@@ -1,7 +1,4 @@
-import {
-  THROTTLE_PRESET_LABELS,
-  type ThrottleProfile,
-} from '../constants/throttle-presets.const';
+import { THROTTLE_PRESET_LABELS, type ThrottleProfile } from '../constants/throttle-presets.const';
 import { USER_AGENT_PRESET_LABELS } from '../constants/user-agent-presets.const';
 import type { ResolvedNetworkConditions } from '../stores/network-conditions.store';
 

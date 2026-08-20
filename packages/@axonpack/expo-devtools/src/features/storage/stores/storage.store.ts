@@ -1,9 +1,6 @@
 import { EventEmitter } from 'expo';
 
-import type {
-  StorageAdapter,
-  StorageValueType,
-} from '../services/define-adapter.service';
+import type { StorageAdapter, StorageValueType } from '../services/define-adapter.service';
 import type { StoredValueKind } from '../utils/classify-value.util';
 
 export type StorageEntry = {

@@ -1,10 +1,7 @@
 import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
-import {
-  computeThrottleDelayMs,
-  remainingDelayMs,
-} from '../utils/network-conditions.util';
+import { computeThrottleDelayMs, remainingDelayMs } from '../utils/network-conditions.util';
 
 let isPatched = false;
 let requestCounter = 0;

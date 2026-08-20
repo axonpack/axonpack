@@ -3,10 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { useDetailStyles } from './shared.styles';
 import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
-import {
-  isEditableValueType,
-  type StorageAdapter,
-} from '../../services/define-adapter.service';
+import { isEditableValueType, type StorageAdapter } from '../../services/define-adapter.service';
 import { setStorageValue } from '../../services/write-storage.service';
 import type { StorageEntry } from '../../stores/storage.store';
 import { parseStoredJson } from '../../utils/classify-value.util';

@@ -2,10 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
-import {
-  getResponseTypeVisual,
-  RESOURCE_TYPE_ICONS,
-} from '../constants/resource-type-icons.const';
+import { getResponseTypeVisual, RESOURCE_TYPE_ICONS } from '../constants/resource-type-icons.const';
 import type { NetworkLogEntry } from '../stores/network-log.store';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { buildEntryCopyMenuItems } from '../utils/entry-menu-items.util';

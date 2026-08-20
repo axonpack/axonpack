@@ -5,7 +5,10 @@ import {
   getWebViewConsoleInjectedJavaScript,
   handleWebViewConsoleMessage,
 } from '../features/console/services/webview-console-logger.service';
-import { configureCrashCapture, setCrashContext } from '../features/crash/services/capture-crash.service';
+import {
+  configureCrashCapture,
+  setCrashContext,
+} from '../features/crash/services/capture-crash.service';
 import { setCrashPopupDetail } from '../features/crash/services/crash-popup.service';
 import { disableDefaultLogBox } from '../features/crash/services/disable-logbox.service';
 import { installCrashHandlers } from '../features/crash/services/install-crash-handlers.service';

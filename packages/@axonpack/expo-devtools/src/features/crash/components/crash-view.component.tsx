@@ -13,7 +13,10 @@ import {
 } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
-import { DevtoolsToolbar, ToolbarDivider } from '../../../core/components/devtools-toolbar.component';
+import {
+  DevtoolsToolbar,
+  ToolbarDivider,
+} from '../../../core/components/devtools-toolbar.component';
 import { Chip } from '../../../core/components/ui/chip.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';

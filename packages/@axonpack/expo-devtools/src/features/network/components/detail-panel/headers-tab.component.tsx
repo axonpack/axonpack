@@ -5,11 +5,7 @@ import { NetworkConditionsSection } from './network-conditions-section.component
 import { useRowStyles } from './shared.styles';
 import { useThemeColors } from '../../../../core/utils/themed-styles.util';
 import type { NetworkLogEntry } from '../../stores/network-log.store';
-import {
-  formatSource,
-  getStatusColor,
-  getStatusText,
-} from '../../utils/formatters.util';
+import { formatSource, getStatusColor, getStatusText } from '../../utils/formatters.util';
 import { CollapsibleSection } from '../../../../core/components/ui/collapsible-section.ui';
 import { CopyIconButton } from '../../../../core/components/ui/copy-icon-button.ui';
 

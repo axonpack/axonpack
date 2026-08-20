@@ -2,10 +2,7 @@ import { Text, View } from 'react-native';
 
 import { useRowStyles } from './shared.styles';
 import type { ResolvedNetworkConditions } from '../../stores/network-conditions.store';
-import {
-  formatThrottleSummary,
-  formatUserAgentSummary,
-} from '../../utils/network-conditions.util';
+import { formatThrottleSummary, formatUserAgentSummary } from '../../utils/network-conditions.util';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 import { CollapsibleSection } from '../../../../core/components/ui/collapsible-section.ui';
 

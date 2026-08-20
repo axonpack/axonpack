@@ -1,10 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import {
-  THROTTLE_PRESET_IDS,
-  THROTTLE_PRESET_LABELS,
-} from '../constants/throttle-presets.const';
+import { THROTTLE_PRESET_IDS, THROTTLE_PRESET_LABELS } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { Chip } from '../../../core/components/ui/chip.ui';

@@ -9,7 +9,10 @@ import { StartupTimingSection } from './startup-timing.component';
 import { startFpsMonitor } from '../services/fps-monitor.service';
 import { performanceStore } from '../stores/performance.store';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
-import { DevtoolsToolbar, ToolbarDivider } from '../../../core/components/devtools-toolbar.component';
+import {
+  DevtoolsToolbar,
+  ToolbarDivider,
+} from '../../../core/components/devtools-toolbar.component';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 
 export function PerformanceView() {

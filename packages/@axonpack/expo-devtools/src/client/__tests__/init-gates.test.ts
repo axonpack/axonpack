@@ -1,6 +1,9 @@
 import { createDevtoolsClient } from '../create-devtools-client.client';
 import { BUILT_IN_PALETTES } from '../../core/constants/theme.const';
-import { captureCrash, resetCrashCapture } from '../../features/crash/services/capture-crash.service';
+import {
+  captureCrash,
+  resetCrashCapture,
+} from '../../features/crash/services/capture-crash.service';
 import { getCrashPopupDetail } from '../../features/crash/services/crash-popup.service';
 import { resetCrashHandlers } from '../../features/crash/services/install-crash-handlers.service';
 import { crashStore } from '../../features/crash/stores/crash.store';
