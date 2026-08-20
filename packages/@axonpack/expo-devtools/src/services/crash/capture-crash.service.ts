@@ -19,7 +19,6 @@ export type CrashCaptureOptions = {
    */
   jsTiers: boolean;
   breadcrumbs: boolean;
-  maxBreadcrumbs: number;
   /** A non-fatal error is visible in the panel this session; persisting it would re-report it. */
   persistNonFatal: boolean;
   redact?: (record: CrashRecord) => CrashRecord | null;
@@ -28,8 +27,7 @@ export type CrashCaptureOptions = {
 
 const DEFAULT_OPTIONS: CrashCaptureOptions = {
   jsTiers: true,
-  breadcrumbs: false,
-  maxBreadcrumbs: 25,
+  breadcrumbs: true,
   persistNonFatal: false,
 };
 
@@ -99,7 +97,7 @@ export function captureCrash(
       fromPreviousLaunch: false,
       timestamp: Date.now(),
       device: readDeviceInfo(),
-      breadcrumbs: options.breadcrumbs ? collectBreadcrumbs(options.maxBreadcrumbs) : undefined,
+      breadcrumbs: options.breadcrumbs ? collectBreadcrumbs() : undefined,
       context: Object.keys(context).length > 0 ? { ...context } : undefined,
       seen: false,
     };

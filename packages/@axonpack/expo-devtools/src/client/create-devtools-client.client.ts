@@ -74,28 +74,28 @@ export type DevtoolsCrashConfig = {
   /** Capture at all. Defaults to `true`. */
   enabled?: boolean;
   /**
-   * Keep capturing crashes even when the rest of the devtools is switched off. Defaults to `false`.
+   * Keep capturing crashes even when the devtools are off — which, in this package, means nothing
+   * more than an app that never calls `init()`. The usual `if (__DEV__) devtools.init()` in a
+   * release build is exactly that case. Defaults to `false`.
    *
-   * "Switched off" means both ways of switching them off: `enabled: false`, **and an app that never
-   * calls `init()` at all** — including the usual `if (__DEV__) devtools.init()`. So this flag
-   * installs the crash handlers when the client is constructed rather than waiting for `init()`;
-   * anything else would make the flag a promise the package doesn't keep.
+   * So this flag installs the crash handlers when the client is **constructed**, making it the one
+   * deliberate exception to "nothing in this package runs until `init()`". Setting it is the consent
+   * `init()` would otherwise have given, and it buys earlier coverage: handlers installed at import
+   * catch what is thrown before `init()` would have run.
    *
-   * That makes it the one deliberate exception to "nothing in this package runs until `init()`".
-   * Setting it *is* the consent that `init()` would otherwise have given, and it buys earlier
-   * coverage: handlers installed at import catch errors thrown before `init()` would have run.
-   *
-   * It still brings nothing else with it — no panel, no REPL, no console capture, no request
-   * bodies.
+   * On its own it captures **native exceptions only** — the crashes that end the app — and reports
+   * them in the compact sheet. A later `init()` upgrades it: the JS tiers install too and the full
+   * sheet takes over. It brings nothing else with it either way: no panel, no REPL, no console
+   * capture, no request bodies.
    */
   enableWhileDevtoolsDisabled?: boolean;
   /**
-   * Which tiers to capture, when the devtools are enabled. All default to `true`.
+   * Which tiers to capture once `init()` has run. All default to `true`.
    *
-   * With the devtools **disabled**, only `nativeExceptions` runs whatever these say: the JS tiers
-   * report errors the app survived, which is a developer's concern, and the sheet is in front of a
-   * user there. A fatal JS error still arrives — React Native turns it into a native exception on
-   * the way to killing the process, so the native handler picks it up.
+   * Before that — an app relying on `enableWhileDevtoolsDisabled` alone — only `nativeExceptions`
+   * runs whatever these say: the JS tiers report errors the app survived, which is a developer's
+   * concern, and the sheet is in front of a user there. A fatal JS error still arrives, because
+   * React Native turns it into a native exception on the way to killing the process.
    */
   handlers?: {
     /** `ErrorUtils` global handler — fatal and non-fatal JS errors. */
@@ -134,7 +134,7 @@ export type DevtoolsCrashConfig = {
    */
   disableDefaultLogBox?: boolean;
   /**
-   * Attach the recent console and network entries to each record. Defaults to `__DEV__` — that
+   * Attach the recent console and network entries to each record. Defaults to `true` — that
    * trail carries request URLs and whatever the app logged, which is a different privacy
    * proposition from a stack trace.
    */
@@ -166,14 +166,6 @@ export type DevtoolsStorageConfig = {
 };
 
 export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
-  /**
-   * The package-wide gate. `false` makes `init()` a no-op for every subsystem *except* crash
-   * capture, which has its own `crash.enableWhileDevtoolsDisabled` flag — so a release build can
-   * call `init()` unconditionally and still ship nothing but the crash handlers.
-   *
-   * Defaults to `true`, which is the behaviour of an app that guards its own `init()` call.
-   */
-  enabled?: boolean;
   defaultTheme?: ThemeId;
   themes?: Record<ThemeId, ThemeConfig>;
   webviewSources?: TWebviewSources;
@@ -195,7 +187,7 @@ export function createDevtoolsClient<
   } = config?.network ?? {};
   const {
     capture: captureConsole = true,
-    repl: enableRepl = __DEV__,
+    repl: enableRepl = true,
     context: replContext,
     disabledByDefault: consoleStartsPaused = false,
   } = config?.console ?? {};
@@ -217,33 +209,24 @@ export function createDevtoolsClient<
     handlers: crashHandlers,
     popupDetail: crashPopupDetail = 'auto',
     disableDefaultLogBox: turnOffLogBox = false,
-    breadcrumbs: crashBreadcrumbs = __DEV__,
-    maxBreadcrumbs = 25,
+    breadcrumbs: crashBreadcrumbs = true,
     maxRecords: maxCrashRecords = 25,
     persistNonFatal = false,
     redact: redactCrash,
     onCrash,
   } = config?.crash ?? {};
 
-  const devtoolsEnabled = config?.enabled ?? true;
-
   /**
-   * The crash subsystem is deliberately gated on its own flag rather than the package-wide one: it
-   * is the only part of this package designed to run in a release build, and coupling it to
-   * `enabled` would mean choosing between no crash reports and shipping the whole panel.
+   * Crash capture is the only part of this package that can run without `init()`, so it is the only
+   * thing here with a gate of its own.
    *
-   * Called from `init()`, above its `enabled` early return — and, when
-   * `enableWhileDevtoolsDisabled` is set, from the factory itself, so it runs for an app that never
-   * calls `init()`. Both paths are safe to hit: `installCrashHandlers` installs once per process and
-   * everything else here is idempotent.
-   *
-   * `panelAvailable` is what `popupDetail: 'auto'` resolves against, and it is not the same thing as
-   * `devtoolsEnabled`: the factory-time call cannot know whether `init()` is coming, so it takes the
-   * compact sheet, and the `init()` call upgrades it if a panel really is going up.
+   * `panelAvailable` says whether a devtools panel is coming up, which is simply whether this is the
+   * `init()` call. The factory-time call cannot know that `init()` is coming, so it takes the
+   * cautious side of every choice — native tier only, compact sheet — and `init()` upgrades it.
    */
   function initCrashCapture(panelAvailable: boolean) {
     if (!crashEnabled) return;
-    if (!devtoolsEnabled && !crashSurvivesDisabled) return;
+    if (!panelAvailable && !crashSurvivesDisabled) return;
 
     crashStore.setMaxRecords(maxCrashRecords);
     crashStore.setEnabled(true);
@@ -252,21 +235,21 @@ export function createDevtoolsClient<
     );
     configureCrashCapture({
       /**
-       * Belt to the handler braces below. The JS handlers are not installed at all when the devtools
-       * are off, but `DevtoolsErrorBoundary` calls `captureCrash` directly — it is a component the
-       * app mounts, not a handler we install — so the policy has to live here too.
+       * Belt to the handler braces below. The JS handlers are not installed at all before `init()`,
+       * but `DevtoolsErrorBoundary` calls `captureCrash` directly — it is a component the app
+       * mounts, not a handler we install — so the policy has to live here too.
        */
-      jsTiers: devtoolsEnabled,
+      jsTiers: panelAvailable,
       breadcrumbs: crashBreadcrumbs,
-      maxBreadcrumbs,
       persistNonFatal,
       redact: redactCrash,
       onCrash,
     });
-    // With the devtools off, only the tier that ends the process is installed — see `handlers`.
+    // Without `init()`, only the tier that ends the app is installed — see `handlers`. Each tier
+    // installs at most once, so the `init()` call adds the JS ones rather than doubling up.
     installCrashHandlers({
-      jsErrors: devtoolsEnabled && (crashHandlers?.jsErrors ?? true),
-      unhandledRejections: devtoolsEnabled && (crashHandlers?.unhandledRejections ?? true),
+      jsErrors: panelAvailable && (crashHandlers?.jsErrors ?? true),
+      unhandledRejections: panelAvailable && (crashHandlers?.unhandledRejections ?? true),
       nativeExceptions: crashHandlers?.nativeExceptions ?? true,
     });
 
@@ -291,11 +274,9 @@ export function createDevtoolsClient<
   return {
     init() {
       // First among the subsystems, so the handlers are already listening if anything below throws.
-      // Re-run even when the factory already installed them: this is where a panel-backed `full`
-      // sheet gets chosen, and where the config lands for an app that only calls `init()`.
-      initCrashCapture(devtoolsEnabled);
-
-      if (!devtoolsEnabled) return;
+      // Safe to re-run when the factory already installed the native tier: this is where the JS
+      // tiers get added and the full sheet takes over.
+      initCrashCapture(true);
 
       networkLogStore.setEnabled(true);
       if (networkStartsPaused) networkLogStore.setPaused(true);

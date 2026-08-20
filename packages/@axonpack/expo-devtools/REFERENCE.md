@@ -55,10 +55,10 @@ Pausing and `.init()` are different switches, and the difference matters when yo
 `.init()` runs, nothing is patched, observed or recorded anywhere. The record button only pauses a
 tab that `.init()` already turned on. There is no UI for the `.init()` gate, which is the point of it.
 
-`.init()` controls both **capture** and **access**: the overlay subscribes to whether `.init()`
-finished and draws nothing until it has, so an unguarded mount in a release build shows no button
-rather than a panel over empty lists. `enabled: false` leaves it hidden too — that configuration runs
-crash capture and nothing else.
+`.init()` is the only gate, and it controls both **capture** and **access**: the overlay subscribes to
+whether `.init()` finished and draws nothing until it has, so an unguarded mount in a release build
+shows no button rather than a panel over empty lists. There is no config flag that says "off" —
+not calling `.init()` is what says it.
 
 The one thing it keeps rendering is the crash report sheet, which is meant to work in production.
 Guarding the mount as well is still worth doing; it just is not what keeps the panel out.

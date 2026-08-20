@@ -10,11 +10,11 @@ import { networkLogStore } from '../../stores/network/network-log.store';
  * Off in production by default: a breadcrumb trail carries request URLs and whatever the app logged,
  * which is a different privacy proposition from a stack trace.
  */
-export function collectBreadcrumbs(limit: number): CrashBreadcrumb[] {
+export function collectBreadcrumbs(): CrashBreadcrumb[] {
   const crumbs: CrashBreadcrumb[] = [];
 
   try {
-    for (const entry of consoleLogStore.getSnapshot().slice(0, limit)) {
+    for (const entry of consoleLogStore.getSnapshot()) {
       crumbs.push({
         at: entry.timestamp,
         category: 'console',
@@ -27,7 +27,7 @@ export function collectBreadcrumbs(limit: number): CrashBreadcrumb[] {
   }
 
   try {
-    for (const entry of networkLogStore.getSnapshot().slice(0, limit)) {
+    for (const entry of networkLogStore.getSnapshot()) {
       crumbs.push({
         at: entry.startedAt,
         category: 'network',
@@ -39,5 +39,5 @@ export function collectBreadcrumbs(limit: number): CrashBreadcrumb[] {
     // As above.
   }
 
-  return crumbs.sort((a, b) => b.at - a.at).slice(0, limit);
+  return crumbs.sort((a, b) => b.at - a.at);
 }

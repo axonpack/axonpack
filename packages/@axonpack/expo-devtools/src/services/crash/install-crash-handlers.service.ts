@@ -23,7 +23,17 @@ type ErrorUtilsHost = {
   };
 };
 
-let installed = false;
+/**
+ * Per tier, not one flag for the lot: `enableWhileDevtoolsDisabled` installs the native tier when
+ * the client is built, and a later `init()` has to be able to add the JS tiers on top. A single
+ * `installed` guard would have silently refused that second call.
+ */
+const installed = {
+  jsErrors: false,
+  unhandledRejections: false,
+  nativeExceptions: false,
+  drained: false,
+};
 
 /**
  * React Native installs its own global handler at startup (`setUpErrorHandling.js`), so ours wraps
@@ -103,19 +113,31 @@ function drainPreviousLaunchCrashes() {
 }
 
 export function installCrashHandlers(config: CrashHandlerConfig) {
-  if (installed) return;
-  installed = true;
-
-  if (config.jsErrors) installJsErrorHandler();
-  if (config.unhandledRejections) installRejectionHandler();
-  if (config.nativeExceptions) installNativeCrashHandler();
+  if (config.jsErrors && !installed.jsErrors) {
+    installed.jsErrors = true;
+    installJsErrorHandler();
+  }
+  if (config.unhandledRejections && !installed.unhandledRejections) {
+    installed.unhandledRejections = true;
+    installRejectionHandler();
+  }
+  if (config.nativeExceptions && !installed.nativeExceptions) {
+    installed.nativeExceptions = true;
+    installNativeCrashHandler();
+  }
 
   // Always drained, even with native capture off: the records may predate that being turned off,
   // and leaving them on disk would mean reporting them at some arbitrary later launch instead.
-  drainPreviousLaunchCrashes();
+  if (!installed.drained) {
+    installed.drained = true;
+    drainPreviousLaunchCrashes();
+  }
 }
 
-/** Test-only; handlers are installed once per process. */
+/** Test-only; each tier installs once per process. */
 export function resetCrashHandlers() {
-  installed = false;
+  installed.jsErrors = false;
+  installed.unhandledRejections = false;
+  installed.nativeExceptions = false;
+  installed.drained = false;
 }
