@@ -2,14 +2,18 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { HeadersTab } from './headers-tab.component';
+import { InitiatorTab } from './initiator-tab.component';
 import { PayloadTab } from './payload-tab.component';
 import { PreviewTab } from './preview-tab.component';
 import { ResponseTab } from './response-tab.component';
 import { TimingTab } from './timing-tab.component';
+import { BottomSheet } from '../../../../core/components/ui/bottom-sheet.ui';
+import { ContextMenu, type ContextMenuItem } from '../../../../core/components/ui/context-menu.ui';
+import { IconButton } from '../../../../core/components/ui/icon-button.ui';
+import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
+import { SearchInput } from '../../../../core/components/ui/search-input.ui';
+import { SparkleIcon } from '../../../../core/components/ui/sparkle-icon.ui';
 import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
-import type { NetworkLogEntry } from '../../stores/network-log.store';
-import { buildEntryCopyMenuItems } from '../../utils/entry-menu-items.util';
-import { classifyPreview } from '../../utils/preview-kind.util';
 import {
   buildMatcher,
   DEFAULT_SEARCH_MODES,
@@ -17,15 +21,12 @@ import {
   type SearchModes,
 } from '../../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
-import { BottomSheet } from '../../../../core/components/ui/bottom-sheet.ui';
-import { ContextMenu, type ContextMenuItem } from '../../../../core/components/ui/context-menu.ui';
-import { IconButton } from '../../../../core/components/ui/icon-button.ui';
-import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
-import { SearchInput } from '../../../../core/components/ui/search-input.ui';
-import { SparkleIcon } from '../../../../core/components/ui/sparkle-icon.ui';
+import type { NetworkLogEntry } from '../../stores/network-log.store';
+import { buildEntryCopyMenuItems } from '../../utils/entry-menu-items.util';
+import { classifyPreview } from '../../utils/preview-kind.util';
 import { SandboxSheet } from '../sandbox';
 
-type Tab = 'headers' | 'payload' | 'preview' | 'response' | 'timing';
+type Tab = 'headers' | 'payload' | 'preview' | 'response' | 'timing' | 'initiator';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'headers', label: 'Headers' },
@@ -33,6 +34,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'preview', label: 'Preview' },
   { key: 'response', label: 'Response' },
   { key: 'timing', label: 'Timing' },
+  { key: 'initiator', label: 'Initiator' },
 ];
 
 export function DetailPanel({
@@ -104,7 +106,11 @@ export function DetailPanel({
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
               contentContainerStyle={styles.tabBarContent}>
-              {TABS.filter((t) => t.key !== 'payload' || active.requestBody).map((t) => (
+              {TABS.filter(
+                (t) =>
+                  (t.key !== 'payload' || active.requestBody) &&
+                  (t.key !== 'initiator' || active.initiator?.length)
+              ).map((t) => (
                 <TouchableOpacity
                   key={t.key}
                   onPress={() => setTab(t.key)}
@@ -158,6 +164,7 @@ export function DetailPanel({
             {tab === 'preview' && <PreviewTab entry={active} matcher={matcher} />}
             {tab === 'response' && <ResponseTab entry={active} matcher={matcher} />}
             {tab === 'timing' && <TimingTab entry={active} />}
+            {tab === 'initiator' && <InitiatorTab entry={active} />}
             <InsetPadding edge="bottom" />
           </View>
         </ScrollView>

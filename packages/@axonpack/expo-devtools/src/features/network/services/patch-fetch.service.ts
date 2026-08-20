@@ -1,3 +1,4 @@
+import { captureInitiatorFrames } from './capture-initiator.service';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
@@ -7,6 +8,19 @@ import {
   remainingDelayMs,
   withUserAgentHeader,
 } from '../utils/network-conditions.util';
+
+/**
+ * Expo's fetch lives in a module of its own, and `import { fetch } from 'expo/fetch'` never reads
+ * `globalThis.fetch` — so patching the global cannot see a single one of those calls. This is the
+ * innermost module rather than the `expo/fetch` subpath, because the subpath re-exports from here and
+ * patching this one covers both. The path is private and unversioned, which is why every use of it is
+ * guarded.
+ */
+const EXPO_FETCH_MODULE = 'expo/src/winter/fetch/fetch';
+
+type ExpoFetchModule = { fetch: typeof globalThis.fetch };
+
+declare const require: (id: string) => unknown;
 
 let isPatched = false;
 let requestCounter = 0;
@@ -72,14 +86,13 @@ function extractSize(
   return body?.length;
 }
 
-export function patchFetch() {
-  if (isPatched) return;
-  isPatched = true;
-
-  const originalFetch = globalThis.fetch;
-  rememberUnpatchedFetch(originalFetch);
-
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+/**
+ * Every wrapper is handed the *raw* function it is standing in front of, never another wrapper. Two
+ * of these can be live at once — one on the global, one on Expo's module — and if either called
+ * through the other, a single request would be logged twice.
+ */
+function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof globalThis.fetch {
+  return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const id = nextRequestId();
     const startedAt = Date.now();
     const conditions = networkConditionsStore.resolve();
@@ -101,8 +114,9 @@ export function patchFetch() {
       requestBody: previewBody(init?.body),
       requestHeaders: effectiveHeaders,
       startedAt,
-      source: 'fetch',
+      source,
       conditions,
+      initiator: captureInitiatorFrames(),
     });
 
     if (conditions.offline) {
@@ -116,7 +130,7 @@ export function patchFetch() {
     }
 
     try {
-      const response = await originalFetch(input, effectiveInit);
+      const response = await rawFetch(input, effectiveInit);
 
       let responseBody: string | undefined;
       try {
@@ -158,4 +172,39 @@ export function patchFetch() {
       throw error;
     }
   }) as typeof fetch;
+}
+
+/** Returns whether the export could be replaced — a getter-only property cannot be. */
+function patchExpoFetchModule(): boolean {
+  let expoFetch: ExpoFetchModule;
+  try {
+    expoFetch = require(EXPO_FETCH_MODULE) as ExpoFetchModule;
+  } catch {
+    return false;
+  }
+
+  if (typeof expoFetch?.fetch !== 'function') return false;
+
+  const descriptor = Object.getOwnPropertyDescriptor(expoFetch, 'fetch');
+  if (descriptor && !descriptor.writable && !descriptor.set) return false;
+
+  const rawExpoFetch = expoFetch.fetch;
+  try {
+    expoFetch.fetch = instrument(rawExpoFetch, 'expo/fetch');
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+export function patchFetch() {
+  if (isPatched) return;
+  isPatched = true;
+
+  const originalFetch = globalThis.fetch;
+  rememberUnpatchedFetch(originalFetch);
+
+  // The global goes first, so the module still holds its raw function when the next line reads it.
+  globalThis.fetch = instrument(originalFetch, 'fetch');
+  patchExpoFetchModule();
 }

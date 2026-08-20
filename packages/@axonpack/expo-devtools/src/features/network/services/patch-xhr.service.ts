@@ -1,3 +1,4 @@
+import { captureInitiatorFrames } from './capture-initiator.service';
 import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
@@ -223,6 +224,7 @@ export function patchXHR() {
       status: 'pending',
       requestBody: previewBody(body),
       requestHeaders: xhr.__networkLogHeaders,
+      initiator: captureInitiatorFrames(),
       startedAt,
       source: 'xhr',
       conditions,
