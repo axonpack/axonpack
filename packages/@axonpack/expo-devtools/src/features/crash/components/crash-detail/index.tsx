@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { BreadcrumbsTab } from './breadcrumbs-tab.component';
-import { DeviceTab } from './device-tab.component';
 import { RawTab } from './raw-tab.component';
-import { StackTab } from './stack-tab.component';
 import { SummaryTab } from './summary-tab.component';
 import { BottomSheet } from '../../../../core/components/ui/bottom-sheet.ui';
 import { ContextMenu } from '../../../../core/components/ui/context-menu.ui';
@@ -18,13 +16,13 @@ import { buildCrashMenuItems } from '../../utils/crash-menu-items.util';
 import { exportCrashReport } from '../../utils/export-crash-report.util';
 import { formatCrashTitle } from '../../utils/format-crash-report.util';
 
-type Tab = 'summary' | 'stack' | 'breadcrumbs' | 'device' | 'raw';
+// Stack and device live inside Summary as collapsible sections rather than tabs of their own: they
+// are what you read next after the message, and a tab hop lost that reading order.
+type Tab = 'summary' | 'breadcrumbs' | 'raw';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'summary', label: 'Summary' },
-  { key: 'stack', label: 'Stack' },
   { key: 'breadcrumbs', label: 'Breadcrumbs' },
-  { key: 'device', label: 'Device' },
   { key: 'raw', label: 'Raw' },
 ];
 
@@ -106,9 +104,7 @@ export function CrashDetailSheet({
         keyboardShouldPersistTaps="handled">
         <View>
           {tab === 'summary' && <SummaryTab record={active} />}
-          {tab === 'stack' && <StackTab record={active} />}
           {tab === 'breadcrumbs' && <BreadcrumbsTab record={active} />}
-          {tab === 'device' && <DeviceTab record={active} />}
           {tab === 'raw' && <RawTab record={active} />}
           <InsetPadding edge="bottom" />
         </View>

@@ -1,39 +1,40 @@
 import { Text, View } from 'react-native';
 
 import { useCrashDetailStyles } from './shared.styles';
+import { CollapsibleSection } from '../../../../core/components/ui/collapsible-section.ui';
 import { formatSize } from '../../../../core/utils/format-bytes.util';
 import type { CrashRecord } from '../../stores/crash.store';
 
-export function DeviceTab({ record }: { record: CrashRecord }) {
+export function DeviceSection({ record }: { record: CrashRecord }) {
   const styles = useCrashDetailStyles();
   const device = record.device;
 
-  if (!device) {
-    return <Text style={styles.emptyText}>No device information was recorded</Text>;
-  }
-
   const rows: [string, string | undefined][] = [
-    ['Platform', device.platform],
-    ['OS version', device.osVersion],
-    ['Model', device.model],
-    ['Brand', device.brand],
-    ['App version', device.appVersion],
-    ['Build', device.buildVersion],
-    ['Bundle id', device.bundleId],
-    ['Emulator', device.isEmulator === undefined ? undefined : device.isEmulator ? 'yes' : 'no'],
-    ['JS engine', device.jsEngine],
-    ['React Native', device.reactNativeVersion],
-    ['Total memory', device.totalMemoryBytes ? formatSize(device.totalMemoryBytes) : undefined],
+    ['Platform', device?.platform],
+    ['OS version', device?.osVersion],
+    ['Model', device?.model],
+    ['Brand', device?.brand],
+    ['App version', device?.appVersion],
+    ['Build', device?.buildVersion],
+    ['Bundle id', device?.bundleId],
+    ['Emulator', device?.isEmulator === undefined ? undefined : device.isEmulator ? 'yes' : 'no'],
+    ['JS engine', device?.jsEngine],
+    ['React Native', device?.reactNativeVersion],
+    ['Total memory', device?.totalMemoryBytes ? formatSize(device.totalMemoryBytes) : undefined],
     [
       'Available memory',
-      device.availableMemoryBytes ? formatSize(device.availableMemoryBytes) : undefined,
+      device?.availableMemoryBytes ? formatSize(device.availableMemoryBytes) : undefined,
     ],
   ];
 
   const present = rows.filter((row): row is [string, string] => row[1] !== undefined);
 
   return (
-    <View style={styles.section}>
+    <CollapsibleSection title="Device" count={present.length} initiallyExpanded={false}>
+      {present.length === 0 && (
+        <Text style={styles.emptyText}>No device information was recorded</Text>
+      )}
+
       {present.map(([label, value]) => (
         <View key={label} style={styles.infoRow}>
           <Text style={styles.infoLabel}>{label}</Text>
@@ -51,6 +52,6 @@ export function DeviceTab({ record }: { record: CrashRecord }) {
           JavaScript can see is recorded.
         </Text>
       )}
-    </View>
+    </CollapsibleSection>
   );
 }

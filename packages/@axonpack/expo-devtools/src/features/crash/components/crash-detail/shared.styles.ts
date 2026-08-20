@@ -53,7 +53,12 @@ export const useCrashDetailStyles = makeThemedStyles((COLORS) => ({
     color: COLORS.textSecondary,
   },
   frameBody: {
-    flex: 1,
+    alignItems: 'flex-start',
+  },
+  /** Keeps a short trace filling the panel width instead of hugging the left edge. */
+  frameScrollContent: {
+    flexGrow: 1,
+    paddingRight: 12,
   },
   frameFn: {
     fontFamily: 'monospace',
@@ -68,11 +73,5 @@ export const useCrashDetailStyles = makeThemedStyles((COLORS) => ({
   /** Vendor frames stay readable but stop competing with app frames for attention. */
   frameVendor: {
     opacity: 0.55,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginTop: 4,
   },
 }));

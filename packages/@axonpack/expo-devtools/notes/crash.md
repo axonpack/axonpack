@@ -56,7 +56,7 @@ Which tier caught a crash decides how much it can say:
 - **Non-fatal records are not persisted.** The app survived them, and re-reporting one at the next
   launch would be a bug.
 - **The sheet has two forms, and the wrong one in release is a real problem.** The full sheet is a
-  debugging tool — five tabs, a stack tree, raw JSON, this package's own logo. In front of somebody
+  debugging tool — tabs, a stack tree, raw JSON, this package's own logo. In front of somebody
   using the app that is a category error, so the compact notice is the default until `init()` has
   run.
 - **Dismissing the notice retires the whole backlog**, not just the report on screen. A launch can
@@ -74,7 +74,7 @@ Which tier caught a crash decides how much it can say:
 ## Won't do
 
 - **Symbolication.** A release bundle is minified and this package ships no source maps, so frames
-  point into the bundle. The Stack tab says so.
+  point into the bundle. The Stack section says so.
 - **Signal-level crashes.** Segfaults, `fatalError` and NDK crashes need an async-signal-safe
   handler that would fight Crashlytics, Sentry and Bugsnag over the same slot, and would yield
   unsymbolicated addresses anyway. Uncaught-exception handlers cover essentially every real React

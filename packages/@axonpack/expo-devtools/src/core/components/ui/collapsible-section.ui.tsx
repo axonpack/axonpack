@@ -9,18 +9,20 @@ import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util
 export function CollapsibleSection({
   title,
   count,
+  initiallyExpanded = true,
   headerRight,
   children,
 }: {
   title: string;
   count?: number;
+  initiallyExpanded?: boolean;
 
   headerRight?: ReactNode;
   children: ReactNode;
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
 
   return (
     <View>
