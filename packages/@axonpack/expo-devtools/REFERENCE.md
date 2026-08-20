@@ -24,12 +24,12 @@ button itself never appears inside the modal.
 
 ### Header row
 
-| Item         | What it does                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------ |
-| Tab bar      | **Network**, **Console**, **Performance**, **Storage**. Scrolls horizontally on a narrow screen. |
-| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s.  |
-| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                             |
-| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                     |
+| Item         | What it does                                                                                                                                               |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Crashes**, **Debug**. Scrolls horizontally on a narrow screen.                                   |
+| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports. |
+| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                       |
+| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                               |
 
 The tab you last had open is remembered for the life of the app process, so reopening the panel
 returns you to it. Only the active tab is mounted, so switching tabs and back resets that tab's
@@ -38,25 +38,30 @@ stores, not the views.
 
 ### Toolbar row
 
-Every tab has one. On the three tabs that record — Network, Console, Performance — it opens with the
-same two controls:
+On the three tabs that record — Network, Console, Performance — it opens with the same two controls:
 
 | Control    | What it does                                                                         |
 | ---------- | ------------------------------------------------------------------------------------ |
 | Record (⏺) | Pauses and resumes **capture** for that tab. Red when recording, hollow when paused. |
 | Clear (⊘)  | Throws away everything that tab has collected. Not undoable.                         |
 
-The Storage tab has neither, on purpose: it reads on demand rather than recording, so there is no
-stream to pause, and a clear button there would mean wiping your storage rather than dropping a log.
-It opens with Refresh instead.
+Not every tab has one. Storage has no record button, on purpose: it reads on demand rather than
+recording, so there is no stream to pause, and a clear button there would mean wiping your storage
+rather than dropping a log. It opens with Refresh instead. Crashes has a clear button but no record
+button — a crash is not a stream you can afford to have switched off. Debug has no toolbar at all:
+nothing there records or collects.
 
 Pausing and `.init()` are different switches, and the difference matters when you ship: until
 `.init()` runs, nothing is patched, observed or recorded anywhere. The record button only pauses a
 tab that `.init()` already turned on. There is no UI for the `.init()` gate, which is the point of it.
 
-Shipping safely takes two guards, not one. `.init()` controls **capture**; rendering
-`<DevtoolsOverlay />` controls **access**. The overlay does not check whether `.init()` ran, so an
-unguarded mount in a release build gives you a reachable panel over empty lists.
+`.init()` is the only gate, and it controls both **capture** and **access**: the overlay subscribes to
+whether `.init()` finished and draws nothing until it has, so an unguarded mount in a release build
+shows no button rather than a panel over empty lists. There is no config flag that says "off" —
+not calling `.init()` is what says it.
+
+The one thing it keeps rendering is the crash report sheet, which is meant to work in production.
+Guarding the mount as well is still worth doing; it just is not what keeps the panel out.
 
 ---
 
@@ -253,7 +258,7 @@ at, and it's the only route that works in a release build.
 The toolbar carries the record button, the clear button, then the section chips:
 
 ```
-[⏺] [⊘] │ (Statistics) (User timing) (Interactions) (Long tasks) (Limiter)
+[⏺] [⊘] │ (Statistics) (User timing) (Interactions) (Long tasks)
 ```
 
 Only the chosen section is mounted, which is deliberate: the charts stop re-rendering while you read
@@ -360,26 +365,6 @@ the suspect in `mark`/`measure`.
 Both this list and Interactions show a note when the platform's own buffer overflowed and discarded
 entries before the panel could read them.
 
-### Limiter
-
-Breaks things on purpose, so the numbers above can be trusted.
-
-| Field  | Options                                                                           |
-| ------ | --------------------------------------------------------------------------------- |
-| Thread | **JavaScript** (works everywhere) or **Main (UI)** (needs a dev build).           |
-| For    | `100ms`, `250ms`, `500ms`, `1s`, `3s`, or a custom value in ms.                   |
-| Block  | Blocks the chosen thread for that long.                                           |
-| Crash  | Crashes the chosen thread. Takes two taps: the first arms it, the second does it. |
-
-Blocking the JS thread shows up as a long task and drops the JS frame rate. Blocking the main thread
-freezes the screen while every JS number stays healthy. That gap is the blind spot the frame-rate card
-warns about, and this is how you see it for yourself. The crash paths are **not** gated on
-`__DEV__`, and they do **not** go through any store, so `.init()` is not what keeps them out of a
-release: they work as soon as the panel is on screen. What gates them is whether you rendered
-`<DevtoolsOverlay />` at all.
-
----
-
 ## Storage tab
 
 Every key in every store you registered, with its value, type and byte size.
@@ -476,6 +461,34 @@ anywhere in the tab, and no way to add a key that isn't already there.
   job, and squeezing `expo-sqlite` into a key-value adapter would serve neither.
 - **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
   their length is reported.
+
+## Debug tab
+
+Tools that break the app on purpose, so the numbers on the other tabs can be trusted. No toolbar:
+there is no stream to record and nothing to clear.
+
+### Block and crash a thread
+
+Moved here from the Performance tab, where these sat behind a fifth section chip. Every Performance
+section reports something that happened; these go out and cause it.
+
+| Field  | Options                                                                           |
+| ------ | --------------------------------------------------------------------------------- |
+| Thread | **JavaScript** (works everywhere) or **Main (UI)** (needs a dev build).           |
+| For    | `100ms`, `250ms`, `500ms`, `1s`, `3s`, or a custom value in ms.                   |
+| Block  | Blocks the chosen thread for that long.                                           |
+| Crash  | Crashes the chosen thread. Takes two taps: the first arms it, the second does it. |
+
+Blocking the JS thread shows up as a long task and drops the JS frame rate. Blocking the main thread
+freezes the screen while every JS number stays healthy. That gap is the blind spot the frame-rate card
+warns about, and this is how you see it for yourself. The crash paths are **not** gated on
+`__DEV__`, and they do **not** go through any store, so `.init()` is not what keeps them out of a
+release: they work as soon as the panel is on screen. What gates them is whether you rendered
+`<DevtoolsOverlay />` at all.
+
+Both crash paths are captured by the Crashes tab when crash reporting is on. A JS crash is reported
+before you let go of the button; a main-thread crash ends the process and is read back off disk at the
+next launch.
 
 ---
 
@@ -658,13 +671,13 @@ property if you override it.
 Everything else works in Expo Go. The native module is loaded optionally, so a missing module dims a
 control instead of breaking the panel.
 
-| Feature                            | Without a dev build                                        |
-| ---------------------------------- | ---------------------------------------------------------- |
-| Main-thread frame rate             | Reads `dev build`; the JS line still plots.                |
-| App memory · Device memory         | Card says `Needs a dev build`.                             |
-| Storage card (disk space)          | Card says `Needs a dev build`; Android only regardless.    |
-| Startup, measured block            | Falls back to the platform block, which may be all dashes. |
-| Limiter, Main (UI) block and crash | Buttons disabled with a note.                              |
+| Feature                     | Without a dev build                                        |
+| --------------------------- | ---------------------------------------------------------- |
+| Main-thread frame rate      | Reads `dev build`; the JS line still plots.                |
+| App memory · Device memory  | Card says `Needs a dev build`.                             |
+| Storage card (disk space)   | Card says `Needs a dev build`; Android only regardless.    |
+| Startup, measured block     | Falls back to the platform block, which may be all dashes. |
+| Debug tab, Main (UI) thread | Block and crash buttons disabled with a note.              |
 
 Platform-dependent regardless of build type: long tasks and interactions only appear if the native
 side implements those entry types, which varies by platform and React Native version. When they're

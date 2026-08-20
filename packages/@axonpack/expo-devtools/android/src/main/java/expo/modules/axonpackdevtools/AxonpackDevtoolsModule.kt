@@ -2,6 +2,7 @@ package expo.modules.axonpackdevtools
 
 import android.app.ActivityManager
 import android.content.Context
+import android.os.Build
 import android.os.Debug
 import android.os.Environment
 import android.os.Handler
@@ -12,6 +13,11 @@ import android.os.SystemClock
 import android.view.Choreographer
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * The only native code in this package, and it exists to *cause* problems rather than measure them:
@@ -66,6 +72,62 @@ private class UiFpsTracker : Choreographer.FrameCallback {
   }
 }
 
+
+/**
+ * Crash persistence.
+ *
+ * An uncaught Java or Kotlin exception takes the process down before JavaScript gets another turn, so
+ * a report has to be written from the dying thread — the one part of crash reporting JS cannot do for
+ * itself. Written as JSON Lines and appended: reading a file back in to rewrite it is the wrong thing
+ * to be doing in a crash handler.
+ *
+ * `Thread.setDefaultUncaughtExceptionHandler` runs in ordinary context, so normal file IO is safe
+ * here. NDK/native signal crashes are deliberately out of scope; catching those needs an
+ * async-signal-safe handler that would also fight Crashlytics and Sentry over the same slot.
+ */
+private const val CRASH_FILE_NAME = "axonpack-devtools-crashes.jsonl"
+
+private class CrashPersistingHandler(
+  private val file: File,
+  /** Whatever was installed before us — React Native's own, or a crash SDK's. */
+  private val previous: Thread.UncaughtExceptionHandler?,
+) : Thread.UncaughtExceptionHandler {
+
+  override fun uncaughtException(thread: Thread, throwable: Throwable) {
+    try {
+      file.appendText(describe(thread, throwable) + "\n")
+    } catch (_: Throwable) {
+      // A failed report must not change how the app dies.
+    }
+    // Always delegate: swallowing this would leave the process alive in an undefined state, and
+    // would take the app's real crash reporter down with it.
+    previous?.uncaughtException(thread, throwable)
+  }
+
+  private fun describe(thread: Thread, throwable: Throwable): String {
+    val trace = StringWriter()
+    throwable.printStackTrace(PrintWriter(trace))
+
+    val frames = JSONArray()
+    for (element in throwable.stackTrace) frames.put(element.toString())
+
+    return JSONObject()
+      .put("kind", "native-exception")
+      .put("name", throwable.javaClass.name)
+      .put("message", throwable.message ?: "")
+      .put("stack", trace.toString())
+      .put("timestamp", System.currentTimeMillis())
+      .put(
+        "native",
+        JSONObject()
+          .put("type", throwable.javaClass.name)
+          .put("thread", thread.name)
+          .put("frames", frames),
+      )
+      .toString()
+  }
+}
+
 class AxonpackDevtoolsModule : Module() {
   /** Captured when the module is constructed, which happens during native startup. */
   private val moduleInitEpochMs = System.currentTimeMillis().toDouble()
@@ -79,6 +141,11 @@ class AxonpackDevtoolsModule : Module() {
       .toDouble()
 
   private val uiFps = UiFpsTracker()
+
+  private var crashHandlerInstalled = false
+
+  private fun crashFile(): File? =
+    appContext.reactContext?.filesDir?.let { File(it, CRASH_FILE_NAME) }
 
   override fun definition() = ModuleDefinition {
     Name("AxonpackDevtools")
@@ -136,6 +203,67 @@ class AxonpackDevtoolsModule : Module() {
       mapOf(
         "totalBytes" to stat.totalBytes.toDouble(),
         "freeBytes" to stat.availableBytes.toDouble(),
+      )
+    }
+
+    /** Null until the app's files directory is reachable, which it always is once a context exists. */
+    Function("installCrashHandler") {
+      val file = crashFile()
+      if (file != null && !crashHandlerInstalled) {
+        crashHandlerInstalled = true
+        Thread.setDefaultUncaughtExceptionHandler(
+          CrashPersistingHandler(file, Thread.getDefaultUncaughtExceptionHandler())
+        )
+      }
+    }
+
+    /**
+     * Destructive by design: a record still in the file outlived the process that wrote it, which is
+     * the only evidence we have that the app actually died rather than carried on.
+     */
+    Function("drainPendingCrashes") { ->
+      val file = crashFile()
+      if (file == null || !file.exists()) {
+        emptyList<String>()
+      } else {
+        val lines = file.readLines().filter { it.isNotBlank() }
+        file.delete()
+        lines
+      }
+    }
+
+    /** Used for JS fatals, which RN may follow with the process going down before anyone reads them. */
+    Function("persistCrashRecord") { json: String ->
+      crashFile()?.appendText(json + "\n")
+    }
+
+    Function("getDeviceInfo") { ->
+      val context = appContext.reactContext
+      val packageInfo =
+        context?.packageManager?.getPackageInfo(context.packageName, 0)
+      val activityManager =
+        context?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+      val memory = ActivityManager.MemoryInfo()
+      activityManager?.getMemoryInfo(memory)
+
+      mapOf(
+        "platform" to "android",
+        "osVersion" to "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+        "model" to Build.MODEL,
+        "brand" to Build.MANUFACTURER,
+        "appVersion" to packageInfo?.versionName,
+        "buildVersion" to packageInfo?.let {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) it.longVersionCode.toString()
+          else @Suppress("DEPRECATION") it.versionCode.toString()
+        },
+        "bundleId" to context?.packageName,
+        // A heuristic, not a guarantee — there is no supported emulator query, and a wrong `false`
+        // is less misleading in a bug report than omitting the field.
+        "isEmulator" to (Build.FINGERPRINT.startsWith("generic") ||
+          Build.FINGERPRINT.contains("emulator") ||
+          Build.MODEL.contains("sdk_gphone")),
+        "totalMemoryBytes" to if (activityManager != null) memory.totalMem.toDouble() else null,
+        "availableMemoryBytes" to if (activityManager != null) memory.availMem.toDouble() else null,
       )
     }
 

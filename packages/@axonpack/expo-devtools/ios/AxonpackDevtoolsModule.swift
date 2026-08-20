@@ -79,6 +79,103 @@ private func appMemoryFootprintBytes() -> Double? {
   return Double(info.phys_footprint)
 }
 
+
+/**
+ Crash persistence.
+
+ An uncaught Objective-C exception takes the process down before JavaScript gets another turn, so a
+ report has to be written from the dying thread — this is the one thing in crash reporting that JS
+ cannot do for itself. Written as JSON Lines and appended: a crash handler is the wrong place to be
+ reading a file back in to rewrite it.
+
+ Deliberately **not** a POSIX signal handler. `NSSetUncaughtExceptionHandler` runs in ordinary
+ context, so normal Foundation calls are safe here; a `SIGSEGV` handler would have to be
+ async-signal-safe and would fight Crashlytics/Sentry over the same slot. Swift `fatalError` and
+ memory faults are therefore out of scope, and the package says so rather than implying coverage.
+ */
+private let crashFileName = "axonpack-devtools-crashes.jsonl"
+
+private func crashFileURL() -> URL? {
+  let manager = FileManager.default
+  guard
+    let directory = manager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+  else {
+    return nil
+  }
+  // Application Support is not created for you, and unlike Caches it is not purged under disk
+  // pressure — a crash report that evaporates before the next launch is worse than none.
+  if !manager.fileExists(atPath: directory.path) {
+    try? manager.createDirectory(at: directory, withIntermediateDirectories: true)
+  }
+  return directory.appendingPathComponent(crashFileName)
+}
+
+private func appendCrashLine(_ json: String) {
+  guard let url = crashFileURL(), let data = (json + "\n").data(using: .utf8) else { return }
+
+  if let handle = try? FileHandle(forWritingTo: url) {
+    defer { try? handle.close() }
+    _ = try? handle.seekToEnd()
+    try? handle.write(contentsOf: data)
+  } else {
+    try? data.write(to: url)
+  }
+}
+
+private func jsonEscape(_ value: String) -> String {
+  var escaped = ""
+  for character in value.unicodeScalars {
+    switch character {
+    case "\"": escaped += "\\\""
+    case "\\": escaped += "\\\\"
+    case "\n": escaped += "\\n"
+    case "\r": escaped += "\\r"
+    case "\t": escaped += "\\t"
+    default:
+      if character.value < 0x20 {
+        escaped += String(format: "\\u%04x", character.value)
+      } else {
+        escaped.unicodeScalars.append(character)
+      }
+    }
+  }
+  return escaped
+}
+
+/// The handler that was installed before ours, called after we persist so Crashlytics/Sentry — or
+/// React Native's own — still see the exception.
+private var previousExceptionHandler: (@convention(c) (NSException) -> Void)?
+
+private func writeExceptionRecord(_ exception: NSException) {
+  let frames = exception.callStackSymbols.map { "\"\(jsonEscape($0))\"" }.joined(separator: ",")
+  let json = """
+    {"kind":"native-exception",\
+    "name":"\(jsonEscape(exception.name.rawValue))",\
+    "message":"\(jsonEscape(exception.reason ?? ""))",\
+    "stack":null,\
+    "timestamp":\(Int(Date().timeIntervalSince1970 * 1000)),\
+    "native":{"type":"\(jsonEscape(exception.name.rawValue))","thread":"\(Thread.isMainThread ? "main" : "background")","frames":[\(frames)]}}
+    """
+  appendCrashLine(json)
+}
+
+/// A C function pointer, so it must capture nothing — everything it needs is in the file-scope
+/// globals above.
+private let axonpackExceptionHandler: @convention(c) (NSException) -> Void = { exception in
+  writeExceptionRecord(exception)
+  previousExceptionHandler?(exception)
+}
+
+private func deviceModelIdentifier() -> String {
+  var systemInfo = utsname()
+  uname(&systemInfo)
+  let mirror = Mirror(reflecting: systemInfo.machine)
+  return mirror.children.reduce(into: "") { identifier, element in
+    guard let value = element.value as? Int8, value != 0 else { return }
+    identifier += String(UnicodeScalar(UInt8(value)))
+  }
+}
+
 public class AxonpackDevtoolsModule: Module {
   /// Captured when the module is constructed, which happens during native startup.
   private let moduleInitEpochMs = Date().timeIntervalSince1970 * 1000
@@ -135,6 +232,52 @@ public class AxonpackDevtoolsModule: Module {
 
      Android has no equivalent restriction, so storage is reported there and simply absent here.
      */
+
+    Function("installCrashHandler") {
+      // Read the incumbent first: whoever installed before us keeps working, and installing twice
+      // would otherwise make us our own "previous" handler and loop.
+      if previousExceptionHandler == nil {
+        previousExceptionHandler = NSGetUncaughtExceptionHandler()
+        NSSetUncaughtExceptionHandler(axonpackExceptionHandler)
+      }
+    }
+
+    /// Destructive by design: a record still in the file outlived the process that wrote it, which is
+    /// the only evidence we have that the app actually died rather than carried on.
+    Function("drainPendingCrashes") { () -> [String] in
+      guard let url = crashFileURL(), let contents = try? String(contentsOf: url, encoding: .utf8)
+      else {
+        return []
+      }
+      try? FileManager.default.removeItem(at: url)
+      return contents.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+    }
+
+    /// Used for JS fatals, which RN may follow with the process going down before anyone reads them.
+    Function("persistCrashRecord") { (json: String) in
+      appendCrashLine(json)
+    }
+
+    Function("getDeviceInfo") { () -> [String: Any?] in
+      let bundle = Bundle.main.infoDictionary ?? [:]
+      #if targetEnvironment(simulator)
+        let simulator = true
+      #else
+        let simulator = false
+      #endif
+      return [
+        "platform": "ios",
+        "osVersion": UIDevice.current.systemVersion,
+        "model": deviceModelIdentifier(),
+        "brand": "Apple",
+        "appVersion": bundle["CFBundleShortVersionString"] as? String,
+        "buildVersion": bundle["CFBundleVersion"] as? String,
+        "bundleId": Bundle.main.bundleIdentifier,
+        "isEmulator": simulator,
+        "totalMemoryBytes": Double(ProcessInfo.processInfo.physicalMemory),
+        "availableMemoryBytes": Double(os_proc_available_memory()),
+      ]
+    }
 
     Function("blockMainThread") { (durationMs: Double) in
       DispatchQueue.main.async {
