@@ -700,7 +700,7 @@ bun run start   # Expo Go / dev client
 bun run ios     # or: bun run android (full native build)
 ```
 
-## Roadmap
+## What's built, and what isn't
 
-See [`ROADMAP.md`](./ROADMAP.md) for what's built, what the platform genuinely can't do (and why this
+See [the feature list](https://github.com/axonpack/axonpack/blob/main/packages/@axonpack/expo-devtools/notes/README.md) for what's built, what the platform genuinely can't do (and why this
 doesn't fake it), and what's still on the table.

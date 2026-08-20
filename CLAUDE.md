@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository overview
 
-Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS foundation libraries for React Native/Expo. See `docs/plan.md` for the roadmap (`@axonpack/lite-storage`, `@axonpack/expo-devtools`, `@axonpack/api-kit`, `@axonpack/i18n`). **Only `@axonpack/expo-devtools` is implemented so far**; `apps/` exists but is currently empty. `packages/linter` (npm name: `linter`, deliberately _not_ `@axonpack/*`-scoped) is separate from that roadmap — it's an internal, non-public shared oxlint base config, not a `@axonpack/*` product library. Only packages actually meant for npm carry the `@axonpack/` scope; right now that's `@axonpack/expo-devtools` alone.
+Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS foundation libraries for React Native/Expo (`@axonpack/lite-storage`, `@axonpack/expo-devtools`, `@axonpack/api-kit`, `@axonpack/i18n`). **Only `@axonpack/expo-devtools` is implemented so far**; `apps/` exists but is currently empty. `packages/linter` (npm name: `linter`, deliberately _not_ `@axonpack/*`-scoped) is separate from that roadmap — it's an internal, non-public shared oxlint base config, not a `@axonpack/*` product library. Only packages actually meant for npm carry the `@axonpack/` scope; right now that's `@axonpack/expo-devtools` alone.
 
 `README.md` is stale `create-turbo` boilerplate — it describes a `web`/`docs` Next.js setup and `@repo/ui`/`@repo/eslint-config`/`@repo/typescript-config` packages that don't exist in this repo. Don't rely on it.
 

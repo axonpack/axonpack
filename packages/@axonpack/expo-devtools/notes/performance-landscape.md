@@ -298,6 +298,6 @@ a technical one:
 ## Related
 
 - [`react-native-performance-apis.md`](./react-native-performance-apis.md) — the RN 0.86 platform surface
-- [`../../../packages/@axonpack/expo-devtools/ROADMAP.md`](../../../packages/@axonpack/expo-devtools/ROADMAP.md)
+- [the feature list](./README.md)
 - [Rozenite performance monitor plugin](https://www.rozenite.dev/docs/official-plugins/performance-monitor) —
   what `react-native-performance` pairs with now that Flipper is gone

@@ -93,7 +93,7 @@ The dispatch-point trick is what makes this work properly.
 
 ### Known limits
 
-Write into `ROADMAP.md`'s hard-limits section.
+Write into `notes/README.md`, under Won't do.
 
 - [x] Throttling delays when the JS-visible request resolves — it does not shape real bytes on the wire. Good for testing loading states, not a substitute for real-device network testing
 - [x] Upload throttling isn't modeled

@@ -102,7 +102,7 @@ Not used, and worth knowing about:
 
 ## Related
 
-- [`ROADMAP.md`](../../../packages/@axonpack/expo-devtools/ROADMAP.md) — the WebView resource-timing idea
+- [the feature list](./README.md) — the WebView resource-timing idea
 - W3C specs: [Performance Timeline](https://www.w3.org/TR/performance-timeline/),
   [User Timing](https://www.w3.org/TR/user-timing/), [Event Timing](https://www.w3.org/TR/event-timing/),
   [Long Tasks](https://w3c.github.io/longtasks/)

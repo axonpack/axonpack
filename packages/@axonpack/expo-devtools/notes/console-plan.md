@@ -145,7 +145,7 @@ No new config surface added to `create-devtools-client.client.ts`.
 
 ### Known quirks to watch for
 
-Write these into `ROADMAP.md`'s quirks section once built.
+Write these into `notes/README.md` once built.
 
 - [ ] Patch ordering — another tool (Reactotron, Flipper, Sentry) patching `console.*` after ours installs may wrap ours (fine) or replace it outright (capture silently stops); `patchConsole()` should be installed as early as possible
 - [ ] `LogBox` interaction — RN's `LogBox` also hooks `console.error`/`console.warn`; because our patch always calls through to the saved original, LogBox keeps functioning
