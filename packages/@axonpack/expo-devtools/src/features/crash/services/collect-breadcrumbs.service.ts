@@ -1,0 +1,43 @@
+import { consoleLogStore } from '../../console/stores/console-log.store';
+import type { CrashBreadcrumb } from '../stores/crash.store';
+import { networkLogStore } from '../../network/stores/network-log.store';
+
+/**
+ * The last thing the app did before it broke, assembled from ring buffers that already exist — which
+ * is the whole reason this is cheap enough to run inside an error handler. Nothing is recorded *for*
+ * crash reporting; a crash just reads what the Console and Network tabs were holding anyway.
+ *
+ * Off in production by default: a breadcrumb trail carries request URLs and whatever the app logged,
+ * which is a different privacy proposition from a stack trace.
+ */
+export function collectBreadcrumbs(): CrashBreadcrumb[] {
+  const crumbs: CrashBreadcrumb[] = [];
+
+  try {
+    for (const entry of consoleLogStore.getSnapshot()) {
+      crumbs.push({
+        at: entry.timestamp,
+        category: 'console',
+        level: entry.level,
+        message: entry.count > 1 ? `${entry.text} (x${entry.count})` : entry.text,
+      });
+    }
+  } catch {
+    // A breadcrumb trail is a nice-to-have; never let it cost us the record it decorates.
+  }
+
+  try {
+    for (const entry of networkLogStore.getSnapshot()) {
+      crumbs.push({
+        at: entry.startedAt,
+        category: 'network',
+        level: entry.status,
+        message: `${entry.method} ${entry.url}${entry.statusCode ? ` → ${entry.statusCode}` : ''}`,
+      });
+    }
+  } catch {
+    // As above.
+  }
+
+  return crumbs.sort((a, b) => b.at - a.at);
+}

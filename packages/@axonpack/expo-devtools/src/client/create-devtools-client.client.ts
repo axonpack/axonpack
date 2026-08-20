@@ -1,26 +1,26 @@
-import type { ThemeConfig, ThemeId } from '../constants/theme.const';
-import { configureRepl } from '../services/console/evaluate-expression.service';
-import { patchConsole } from '../services/console/patch-console.service';
+import type { ThemeConfig, ThemeId } from '../core/constants/theme.const';
+import { configureRepl } from '../features/console/services/evaluate-expression.service';
+import { patchConsole } from '../features/console/services/patch-console.service';
 import {
   getWebViewConsoleInjectedJavaScript,
   handleWebViewConsoleMessage,
-} from '../services/console/webview-console-logger.service';
-import { configureCrashCapture, setCrashContext } from '../services/crash/capture-crash.service';
-import { setCrashPopupDetail } from '../services/crash/crash-popup.service';
-import { disableDefaultLogBox } from '../services/crash/disable-logbox.service';
-import { installCrashHandlers } from '../services/crash/install-crash-handlers.service';
-import { patchFetch } from '../services/network/patch-fetch.service';
-import { patchXHR } from '../services/network/patch-xhr.service';
+} from '../features/console/services/webview-console-logger.service';
+import { configureCrashCapture, setCrashContext } from '../features/crash/services/capture-crash.service';
+import { setCrashPopupDetail } from '../features/crash/services/crash-popup.service';
+import { disableDefaultLogBox } from '../features/crash/services/disable-logbox.service';
+import { installCrashHandlers } from '../features/crash/services/install-crash-handlers.service';
+import { patchFetch } from '../features/network/services/patch-fetch.service';
+import { patchXHR } from '../features/network/services/patch-xhr.service';
 import {
   getWebViewConditionsRef,
   getWebViewUserAgent,
   shouldAllowWebViewRequest,
-} from '../services/network/webview-conditions.service';
+} from '../features/network/services/webview-conditions.service';
 import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
-} from '../services/network/webview-network-logger.service';
-import { startPerformanceCollectors } from '../services/performance/performance-collectors.service';
+} from '../features/network/services/webview-network-logger.service';
+import { startPerformanceCollectors } from '../features/performance/services/performance-collectors.service';
 import {
   clearRecordedMarks,
   clearRecordedMeasures,
@@ -28,20 +28,20 @@ import {
   recordMeasure,
   type MarkOptions,
   type MeasureOptions,
-} from '../services/performance/user-timing.service';
+} from '../features/performance/services/user-timing.service';
 import {
   resolveStorageAdapters,
   type StorageAdapterDefinition,
-} from '../services/storage/define-adapter.service';
-import { configureStorageReads } from '../services/storage/read-storage.service';
-import { consoleLogStore } from '../stores/console/console-log.store';
-import { crashStore, type CrashRecord } from '../stores/crash/crash.store';
-import { devtoolsReadyStore } from '../stores/devtools-ready.store';
-import { networkConditionsStore } from '../stores/network/network-conditions.store';
-import { networkLogStore } from '../stores/network/network-log.store';
-import { performanceStore } from '../stores/performance/performance.store';
-import { storageStore } from '../stores/storage/storage.store';
-import { themeStore } from '../stores/theme.store';
+} from '../features/storage/services/define-adapter.service';
+import { configureStorageReads } from '../features/storage/services/read-storage.service';
+import { consoleLogStore } from '../features/console/stores/console-log.store';
+import { crashStore, type CrashRecord } from '../features/crash/stores/crash.store';
+import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
+import { networkConditionsStore } from '../features/network/stores/network-conditions.store';
+import { networkLogStore } from '../features/network/stores/network-log.store';
+import { performanceStore } from '../features/performance/stores/performance.store';
+import { storageStore } from '../features/storage/stores/storage.store';
+import { themeStore } from '../core/stores/theme.store';
 
 type WebViewMessageEventLike = {
   nativeEvent: {

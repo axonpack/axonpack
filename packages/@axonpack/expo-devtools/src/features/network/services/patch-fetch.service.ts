@@ -1,0 +1,159 @@
+import { networkConditionsStore } from '../stores/network-conditions.store';
+import { networkLogStore } from '../stores/network-log.store';
+import {
+  computeThrottleDelayMs,
+  delay,
+  remainingDelayMs,
+  withUserAgentHeader,
+} from '../utils/network-conditions.util';
+
+let isPatched = false;
+let requestCounter = 0;
+
+function nextRequestId(): string {
+  requestCounter += 1;
+  return `fetch-${Date.now()}-${requestCounter}`;
+}
+
+function resolveMethod(input: RequestInfo | URL, init?: RequestInit): string {
+  if (init?.method) return init.method;
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.method;
+  return 'GET';
+}
+
+function resolveUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
+  return String(input);
+}
+
+function previewBody(body: BodyInit | null | undefined): string | undefined {
+  if (body == null) return undefined;
+  if (typeof body === 'string') return body;
+  if (typeof FormData !== 'undefined' && body instanceof FormData) return '[FormData]';
+  return '[binary body]';
+}
+
+function normalizeHeaders(headers: HeadersInit | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  const result: Record<string, string> = {};
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    headers.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
+  }
+  if (Array.isArray(headers)) {
+    for (const [key, value] of headers) result[key] = value;
+    return result;
+  }
+  return { ...(headers as Record<string, string>) };
+}
+
+function headersFromResponse(headers: Headers): Record<string, string> {
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result;
+}
+
+function extractMimeType(headers: Record<string, string>): string | undefined {
+  return headers['content-type']?.split(';')[0]?.trim().toLowerCase();
+}
+
+function extractSize(
+  headers: Record<string, string>,
+  body: string | undefined
+): number | undefined {
+  const contentLength = Number(headers['content-length']);
+  if (!Number.isNaN(contentLength) && headers['content-length']) return contentLength;
+  return body?.length;
+}
+
+export function patchFetch() {
+  if (isPatched) return;
+  isPatched = true;
+
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const id = nextRequestId();
+    const startedAt = Date.now();
+    const conditions = networkConditionsStore.resolve();
+    const requestHeaders = normalizeHeaders(
+      init?.headers ??
+        (typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined)
+    );
+
+    const effectiveHeaders = conditions.userAgent
+      ? withUserAgentHeader(requestHeaders, conditions.userAgent)
+      : requestHeaders;
+    const effectiveInit = conditions.userAgent ? { ...init, headers: effectiveHeaders } : init;
+
+    networkLogStore.add({
+      id,
+      method: resolveMethod(input, init).toUpperCase(),
+      url: resolveUrl(input),
+      status: 'pending',
+      requestBody: previewBody(init?.body),
+      requestHeaders: effectiveHeaders,
+      startedAt,
+      source: 'fetch',
+      conditions,
+    });
+
+    if (conditions.offline) {
+      const offlineError = new TypeError('Network request failed');
+      networkLogStore.update(id, {
+        status: 'error',
+        error: 'Network request failed (offline — simulated by devtools)',
+        duration: Date.now() - startedAt,
+      });
+      throw offlineError;
+    }
+
+    try {
+      const response = await originalFetch(input, effectiveInit);
+
+      let responseBody: string | undefined;
+      try {
+        responseBody = await response.clone().text();
+      } catch {
+        responseBody = undefined;
+      }
+
+      const responseHeaders = headersFromResponse(response.headers);
+      const size = extractSize(responseHeaders, responseBody);
+
+      if (conditions.throttle) {
+        await delay(
+          remainingDelayMs(
+            computeThrottleDelayMs(size, conditions.throttle),
+            Date.now() - startedAt
+          )
+        );
+      }
+
+      networkLogStore.update(id, {
+        status: 'success',
+        statusCode: response.status,
+        statusText: response.statusText,
+        responseBody,
+        responseHeaders,
+        mimeType: extractMimeType(responseHeaders),
+        size,
+        duration: Date.now() - startedAt,
+      });
+
+      return response;
+    } catch (error) {
+      networkLogStore.update(id, {
+        status: 'error',
+        error: error instanceof Error ? error.message : String(error),
+        duration: Date.now() - startedAt,
+      });
+      throw error;
+    }
+  }) as typeof fetch;
+}

@@ -1,7 +1,7 @@
 # Input styles
 
 Canonical text-input styling for `@axonpack/expo-devtools`, implemented by the shared search box
-(`packages/@axonpack/expo-devtools/src/components/ui/search-input.ui.tsx`). Use this as the
+(`packages/@axonpack/expo-devtools/src/core/components/ui/search-input.ui.tsx`). Use this as the
 reference when adding another text input anywhere in the devtools UI, so inputs stay visually
 consistent with the rest of the browser-devtools-style network view.
 
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     // Height, not padding: the row *is* the tap target that focuses the field, so it takes the
-    // platform floor from `constants/metrics.const.ts` rather than a padding that happened to look right.
+    // platform floor from `core/constants/metrics.const.ts` rather than a padding that happened to look right.
     minHeight: TOUCH_TARGET.min,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
@@ -69,17 +69,17 @@ const styles = StyleSheet.create({
 ```
 
 - **Docked bars are the one exception.** An input pinned to an edge of its panel — currently just
-  the Console tab's `>` prompt (`src/components/console/console-prompt.component.tsx`) — drops the
+  the Console tab's `>` prompt (`src/features/console/components/console-prompt.component.tsx`) — drops the
   border, radius and outer margins and takes a single hairline separator on the edge it docks
   against, spanning the full width. A rounded box floating against a panel edge reads as misaligned
   chrome. Everything else below still applies: `padding: 0` on the `TextInput`, colors from
   `COLORS`, `placeholderTextColor` of `COLORS.textSecondary`.
 - Border/radius/spacing live on the wrapping row, not the `TextInput` itself — the `TextInput`
   stays visually bare (`padding: 0`, no border) so the row is the only visible chrome.
-- Colors always come from `COLORS` (`src/constants/theme.const.ts`) — never hardcode hex values
+- Colors always come from `COLORS` (`src/core/constants/theme.const.ts`) — never hardcode hex values
   in an input's styles.
 - Sizes that decide whether something can be _hit_ come from `TOUCH_TARGET` / `HIT_SLOP`
-  (`src/constants/metrics.const.ts`) — never a literal. The panel's scale was tuned on a simulator,
+  (`src/core/constants/metrics.const.ts`) — never a literal. The panel's scale was tuned on a simulator,
   where a dp reads much larger than on a phone, and every control drifted under the platform floor
   once. `hitSlop` is a top-up, never the whole target: on Android a child's slop is clipped by its
   parent's bounds, so a bordered row still needs real height of its own.
@@ -94,7 +94,7 @@ Per this repo's file-naming convention (see the root `CLAUDE.md`):
   `StyleSheet.create`. Don't create a separate styles file for a single consumer.
 - **Reusable** — if an input is needed in more than one place, promote it to its own `*.ui.tsx`
   file, with the styles above co-located inside it. Per `CONVENTIONS.md`, an atomic primitive lives
-  flat in `src/components/ui/` — **not** under a feature subfolder — sibling to `chip.ui.tsx` /
+  flat in `src/core/components/ui/` — **not** under a feature subfolder — sibling to `chip.ui.tsx` /
   `icon-button.ui.tsx` / `setting-row.ui.tsx`. The search box described above has already made that
-  move: it is `src/components/ui/search-input.ui.tsx`, shared by the Network filter panel, the
+  move: it is `src/core/components/ui/search-input.ui.tsx`, shared by the Network filter panel, the
   Console filter panel and the request detail panel.

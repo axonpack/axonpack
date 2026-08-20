@@ -1,13 +1,13 @@
 import { createDevtoolsClient } from '../create-devtools-client.client';
-import { BUILT_IN_PALETTES } from '../../constants/theme.const';
-import { captureCrash, resetCrashCapture } from '../../services/crash/capture-crash.service';
-import { getCrashPopupDetail } from '../../services/crash/crash-popup.service';
-import { resetCrashHandlers } from '../../services/crash/install-crash-handlers.service';
-import { crashStore } from '../../stores/crash/crash.store';
-import { devtoolsReadyStore } from '../../stores/devtools-ready.store';
-import { themeStore } from '../../stores/theme.store';
+import { BUILT_IN_PALETTES } from '../../core/constants/theme.const';
+import { captureCrash, resetCrashCapture } from '../../features/crash/services/capture-crash.service';
+import { getCrashPopupDetail } from '../../features/crash/services/crash-popup.service';
+import { resetCrashHandlers } from '../../features/crash/services/install-crash-handlers.service';
+import { crashStore } from '../../features/crash/stores/crash.store';
+import { devtoolsReadyStore } from '../../core/stores/devtools-ready.store';
+import { themeStore } from '../../core/stores/theme.store';
 
-jest.mock('../../services/crash/native-crash.service', () => ({
+jest.mock('../../features/crash/services/native-crash.service', () => ({
   persistCrashRecord: () => {},
   isNativeCrashCaptureAvailable: () => false,
   installNativeCrashHandler: () => {},

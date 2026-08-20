@@ -1,5 +1,5 @@
 export { createDevtoolsClient } from './client/create-devtools-client.client';
-export type { BuiltInThemeId, Palette, ThemeConfig, ThemeId } from './constants/theme.const';
+export type { BuiltInThemeId, Palette, ThemeConfig, ThemeId } from './core/constants/theme.const';
 export type {
   DevtoolsClientConfig,
   DevtoolsConsoleConfig,
@@ -8,12 +8,12 @@ export type {
   DevtoolsStorageConfig,
   DevtoolsCrashConfig,
 } from './client/create-devtools-client.client';
-export { DevtoolsOverlay } from './components/devtools-overlay/devtools-overlay.component';
-export type { DevtoolsOverlayProps } from './components/devtools-overlay/devtools-overlay.component';
-export { CrashReportOverlay } from './components/crash/crash-report-overlay.component';
-export type { CrashPopupDetail } from './services/crash/crash-popup.service';
-export { DevtoolsErrorBoundary } from './components/crash/devtools-error-boundary.component';
-export type { DevtoolsErrorBoundaryProps } from './components/crash/devtools-error-boundary.component';
+export { DevtoolsOverlay } from './core/components/devtools-overlay/devtools-overlay.component';
+export type { DevtoolsOverlayProps } from './core/components/devtools-overlay/devtools-overlay.component';
+export { CrashReportOverlay } from './features/crash/components/crash-report-overlay.component';
+export type { CrashPopupDetail } from './features/crash/services/crash-popup.service';
+export { DevtoolsErrorBoundary } from './features/crash/components/devtools-error-boundary.component';
+export type { DevtoolsErrorBoundaryProps } from './features/crash/components/devtools-error-boundary.component';
 export type {
   CrashBreadcrumb,
   CrashBreadcrumbCategory,
@@ -21,26 +21,38 @@ export type {
   CrashKind,
   CrashNativeDetail,
   CrashRecord,
-} from './stores/crash/crash.store';
-export { formatCrashJson, formatCrashReport } from './utils/crash/format-crash-report.util';
-export type { ConsoleLogEntry, ConsoleLogLevel } from './stores/console/console-log.store';
-export type { ThrottlePresetId, ThrottleProfile } from './constants/network/throttle-presets.const';
-export type { UserAgentPresetId } from './constants/network/user-agent-presets.const';
-export type { ResolvedNetworkConditions } from './stores/network/network-conditions.store';
-export type { NetworkLogEntry, NetworkLogStatus } from './stores/network/network-log.store';
+} from './features/crash/stores/crash.store';
+export {
+  formatCrashJson,
+  formatCrashReport,
+} from './features/crash/utils/format-crash-report.util';
+export type { ConsoleLogEntry, ConsoleLogLevel } from './features/console/stores/console-log.store';
+export type {
+  ThrottlePresetId,
+  ThrottleProfile,
+} from './features/network/constants/throttle-presets.const';
+export type { UserAgentPresetId } from './features/network/constants/user-agent-presets.const';
+export type { ResolvedNetworkConditions } from './features/network/stores/network-conditions.store';
+export type {
+  NetworkLogEntry,
+  NetworkLogStatus,
+} from './features/network/stores/network-log.store';
 export type {
   LongTaskEntry,
   MemorySample,
   StartupTiming,
   UserTimingEntry,
-} from './stores/performance/performance.store';
-export type { MarkOptions, MeasureOptions } from './services/performance/user-timing.service';
+} from './features/performance/stores/performance.store';
+export type {
+  MarkOptions,
+  MeasureOptions,
+} from './features/performance/services/user-timing.service';
 export {
   asyncStorageAdapter,
   defineStorageAdapter,
   mmkvAdapter,
   secureStoreAdapter,
-} from './services/storage/define-adapter.service';
+} from './features/storage/services/define-adapter.service';
 export type {
   AsyncStorageLikeDriver,
   MmkvLikeDriver,
@@ -51,6 +63,6 @@ export type {
   StorageAdapterKind,
   StorageReadResult,
   StorageValueType,
-} from './services/storage/define-adapter.service';
-export type { StorageEntry, StorageAdapterState } from './stores/storage/storage.store';
-export type { StoredValueKind } from './utils/storage/classify-value.util';
+} from './features/storage/services/define-adapter.service';
+export type { StorageEntry, StorageAdapterState } from './features/storage/stores/storage.store';
+export type { StoredValueKind } from './features/storage/utils/classify-value.util';
