@@ -1,1 +1,0 @@
-../../../packages/@axonpack/expo-devtools/notes/search-and-filter-plan.md

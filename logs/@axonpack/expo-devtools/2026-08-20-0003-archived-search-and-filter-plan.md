@@ -1,5 +1,8 @@
 # Search & filter — implementation plan
 
+> **Archived plan.** Written 2026-08-17 for the search and filter rework. Archived here on
+> 2026-08-20: all seven asks shipped. Kept for the design record.
+
 Planning doc for reworking the Network tab's filter panel and promoting its search box into a shared,
 reusable input with match highlighting. Covers seven asks:
 

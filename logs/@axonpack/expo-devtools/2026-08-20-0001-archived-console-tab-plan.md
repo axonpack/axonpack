@@ -1,5 +1,9 @@
 # Console tab — implementation plan
 
+> **Archived plan.** Written 2026-08-06, before the Console tab existed. Archived here on
+> 2026-08-20: the tab shipped, so its checkboxes no longer say anything true — what the tab does now
+> is in the package feature list. Kept for the design record.
+
 Planning-only doc for a browser-devtools-style Console tab, built the same way `NetworkView` was.
 
 ## Business flow

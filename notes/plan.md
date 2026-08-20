@@ -3,8 +3,8 @@
 Free OSS foundation libraries for React Native / Expo. Priority order below is based on what's
 already duplicated across our apps.
 
-A package that exists keeps its own feature list, so its entry here is one line and a link. A package
-that does not exist yet keeps its intent bullets here until the day it does.
+A package that exists keeps its own notes, so its entry here is one line and a link. A package that
+does not exist yet keeps its intent bullets here until the day it does.
 
 ## @axonpack/lite-storage
 
@@ -29,8 +29,8 @@ db.execSync("PRAGMA busy_timeout = 5000;");
 _Shipped — the only implemented package._
 
 On-device, prod-safe debug tools with no desktop app: network, console, storage, performance and
-crash tabs behind a draggable dev button. Features and what is still missing:
-[feature list](../packages/@axonpack/expo-devtools/notes/README.md).
+crash tabs behind a draggable dev button. Its notes, area by area:
+[packages/@axonpack/expo-devtools/notes](../packages/@axonpack/expo-devtools/notes/README.md).
 
 ## @axonpack/api-kit
 

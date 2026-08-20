@@ -1,0 +1,85 @@
+# Crash reporting
+
+The errors that end a session, or nearly do, turned into a report you can read on the device — and
+the one subsystem here meant to survive into a release build.
+
+## Features
+
+- [x] Catches JS errors, unhandled promise rejections, render errors and native exceptions
+- [x] Keeps working in a release build without turning the rest of the devtools on
+- [x] A crash that killed the app is reported at the next launch
+- [x] A plain notice for people using the app, the full sheet for developers
+- [x] Report carries stack, component stack, breadcrumbs, device details and raw JSON
+- [x] Copy as Markdown or JSON, or share the whole report
+- [x] History of past reports with an unread count
+- [x] Rewrite or drop a report before it is stored or handed on
+- [x] Attach your own details — user, screen, feature flags — to every report
+- [x] Error boundary that shows a Try again screen instead of a blank one
+- [x] Optionally replace React Native's red box with the report sheet
+- [ ] Send reports to a backend, with queueing and retry
+- [ ] Group duplicate crashes instead of one row each
+- [ ] Capture the current route automatically
+
+## The four tiers
+
+Which tier caught a crash decides how much it can say:
+
+- **JS errors** — the global error handler, _wrapped_ rather than replaced. React Native installs
+  its own at startup; calling the previous one afterwards is what keeps LogBox, the red box and RN's
+  own native reporting alive.
+- **Unhandled promise rejections** — the Hermes rejection tracker. This is the tier that adds most
+  in a release build, because RN registers its own tracker only in development, so a rejection in
+  production is otherwise silent. It is a single-slot API, so ours displaces RN's in development;
+  re-emitting through `console.error` restores LogBox, which is a shallower path than importing RN's
+  internals.
+- **React render errors** — the exported error boundary. The only tier that produces a component
+  stack, which is usually the half worth reading, and it turns a white screen into a Try again
+  button.
+- **Uncaught native exceptions** — the platform's uncaught-exception handler on each side, chained
+  to whatever was installed before it.
+
+## Decisions worth knowing
+
+- **It has the only gate that isn't `init()`.** Setting the flag installs the handlers when the
+  client is _constructed_, so an app keeps its usual development-only `init()` call and still
+  reports crashes from release. That is the consent `init()` would have given, and it buys earlier
+  coverage: handlers installed at import catch what is thrown before `init()` would have run.
+- **Before `init()`, only the native tier is installed.** The JS tiers report errors the app
+  survived, which is a developer's concern, and the sheet there is in front of a user. A fatal JS
+  error still arrives, because React Native turns it into a native exception on its way to killing
+  the process.
+- **A dying process is written from native, on the dying thread**, as JSON Lines into the app's own
+  sandbox — Application Support on iOS rather than Caches, which the system may purge. It is drained
+  at the next launch, which is also the proof the process died: a record still in the file outlived
+  the run that wrote it. Persisting from native is also what keeps the no-storage-library rule
+  intact.
+- **Non-fatal records are not persisted.** The app survived them, and re-reporting one at the next
+  launch would be a bug.
+- **The sheet has two forms, and the wrong one in release is a real problem.** The full sheet is a
+  debugging tool — five tabs, a stack tree, raw JSON, this package's own logo. In front of somebody
+  using the app that is a category error, so the compact notice is the default until `init()` has
+  run.
+- **Dismissing the notice retires the whole backlog**, not just the report on screen. A launch can
+  drain a pile of records at once, and dismissing one used to put the next straight back up in the
+  same sheet with nothing animating between them: the exit button read as dead. The records are all
+  still in the store, unread, for the tab.
+- **Breadcrumbs cost almost nothing.** They are read from the console and network ring buffers that
+  already exist, so nothing is recorded _for_ crash reporting.
+- **Redaction runs before anything leaves the process** — the store, the disk and the consumer's
+  hook all see the redacted record, so there is no ordering in which the raw one escapes.
+- **Turning off RN's red box uninstalls LogBox** rather than muting it, because muting only hides
+  the toasts and an uncaught error still opens a full-screen box. The yellow warnings go with it:
+  LogBox is one component and the two cannot be separated.
+
+## Won't do
+
+- **Symbolication.** A release bundle is minified and this package ships no source maps, so frames
+  point into the bundle. The Stack tab says so.
+- **Signal-level crashes.** Segfaults, `fatalError` and NDK crashes need an async-signal-safe
+  handler that would fight Crashlytics, Sentry and Bugsnag over the same slot, and would yield
+  unsymbolicated addresses anyway. Uncaught-exception handlers cover essentially every real React
+  Native crash.
+- **Hang and ANR detection.** A frozen main thread is a different mechanism from an exception.
+- **Restarting the app from the notice.** iOS has no supported way for an app to relaunch or
+  terminate itself, so a Restart button could only ever have worked on half the devices it shipped
+  to.

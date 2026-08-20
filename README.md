@@ -33,7 +33,7 @@ dependency-light packages you drop in rather than a framework you adopt.
 > [!NOTE]
 > Early days. Only [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) is implemented so far.
 > `@axonpack/lite-storage`, `@axonpack/api-kit`, and `@axonpack/i18n` are planned. See its
-> [feature list](./packages/@axonpack/expo-devtools/notes/README.md) for what the one that exists does.
+> [notes](./packages/@axonpack/expo-devtools/notes/README.md) for what the one that exists does.
 
 ## Packages
 

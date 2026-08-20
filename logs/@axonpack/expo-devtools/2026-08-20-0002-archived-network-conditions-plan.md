@@ -1,5 +1,10 @@
 # Network conditions — implementation plan
 
+> **Archived plan.** Written 2026-08-06, before throttling and the user-agent override existed.
+> Archived here on 2026-08-20: both shipped. The two items it never finished — remembering the
+> choice between launches, and modelling upload speed — moved to the package feature list as open
+> work.
+
 Planning doc for adding throttling and user-agent override to the existing Network tab. Two settings only, both working for native and WebView.
 
 ## Business flow

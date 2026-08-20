@@ -29,7 +29,7 @@
     "android",
     "expo-module.config.json",
     "REFERENCE.md",
-    "notes/README.md"
+    "notes"
   ],
   "main": "build/index.js",
   "types": "build/index.d.ts",
