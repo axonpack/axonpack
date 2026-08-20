@@ -279,16 +279,6 @@ public class AxonpackDevtoolsModule: Module {
       ]
     }
 
-    /**
-     There is deliberately no `restartApp` here.
-
-     iOS offers no supported way for an app to relaunch or terminate itself. `exit(0)` and
-     `abort()` both work technically and both are documented App Store rejections — Apple's guidance
-     is that quitting is the user's decision, taken from the app switcher. Android has no such rule,
-     so restart is offered there and simply absent here; the crash sheet checks for the function and
-     shows a Close button instead when it is missing.
-     */
-
     Function("blockMainThread") { (durationMs: Double) in
       DispatchQueue.main.async {
         let deadline = Date().addingTimeInterval(durationMs / 1000)

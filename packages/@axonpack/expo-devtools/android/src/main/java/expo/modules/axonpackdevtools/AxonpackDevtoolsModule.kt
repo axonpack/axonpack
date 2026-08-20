@@ -2,7 +2,6 @@ package expo.modules.axonpackdevtools
 
 import android.app.ActivityManager
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.os.Debug
 import android.os.Environment
@@ -266,25 +265,6 @@ class AxonpackDevtoolsModule : Module() {
         "totalMemoryBytes" to if (activityManager != null) memory.totalMem.toDouble() else null,
         "availableMemoryBytes" to if (activityManager != null) memory.availMem.toDouble() else null,
       )
-    }
-
-    /**
-     * Relaunches the app: start the launcher activity on a fresh task, then end this process so the
-     * new one comes up clean. Killing the process is the point — a soft JS reload would leave behind
-     * whatever native state the crash happened in.
-     *
-     * There is deliberately no iOS counterpart; see the Swift module.
-     */
-    Function("restartApp") {
-      val context = appContext.reactContext
-      val intent = context?.packageManager?.getLaunchIntentForPackage(context.packageName)
-      if (intent != null) {
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        Handler(Looper.getMainLooper()).post {
-          context.startActivity(intent)
-          Runtime.getRuntime().exit(0)
-        }
-      }
     }
 
     Function("blockMainThread") { durationMs: Double ->

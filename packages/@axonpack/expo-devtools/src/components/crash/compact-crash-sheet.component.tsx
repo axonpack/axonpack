@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { TOUCH_TARGET } from '../../constants/metrics.const';
-import { canRestartApp, restartApp } from '../../services/crash/restart-app.service';
 import type { CrashRecord } from '../../stores/crash/crash.store';
 import { exportCrashReport } from '../../utils/crash/export-crash-report.util';
 import { formatCrashTime } from '../../utils/crash/format-crash-report.util';
@@ -65,7 +64,6 @@ export function CompactCrashSheet({
 
   const active = renderedRecord;
   const version = active.device?.appVersion;
-  const restartable = canRestartApp();
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -104,16 +102,9 @@ export function CompactCrashSheet({
             <Text style={styles.primaryLabel}>Share report</Text>
           </TouchableOpacity>
 
-          {/* Restart where it is genuinely possible, Close where it is not. iOS offers no supported
-              way for an app to relaunch itself, so offering the button there would be offering
-              something that cannot work. */}
-          <TouchableOpacity style={styles.button} onPress={restartable ? restartApp : onClose}>
-            <MaterialIcons
-              name={restartable ? 'restart-alt' : 'close'}
-              size={15}
-              color={COLORS.textSecondary}
-            />
-            <Text style={styles.label}>{restartable ? 'Restart app' : 'Close'}</Text>
+          <TouchableOpacity style={styles.button} onPress={onClose}>
+            <MaterialIcons name="close" size={15} color={COLORS.textSecondary} />
+            <Text style={styles.label}>Close</Text>
           </TouchableOpacity>
         </View>
 

@@ -9,7 +9,7 @@
 export type CrashPopupDetail = 'full' | 'compact';
 
 /**
- * `full` is the five-tab developer sheet; `compact` is a plain notice with Share and Restart.
+ * `full` is the five-tab developer sheet; `compact` is a plain notice with Share and Close.
  *
  * Compact rather than full is the right default the moment the devtools panel isn't shipping: the
  * full sheet carries this package's own branding, a raw JSON dump and a stack tree, none of which
