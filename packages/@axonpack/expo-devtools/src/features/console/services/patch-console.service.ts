@@ -1,3 +1,4 @@
+import { crashLinkStore } from '../../../core/stores/crash-link.store';
 import { consoleLogStore } from '../stores/console-log.store';
 import type { ConsoleLogLevel } from '../stores/console-log.store';
 import { getConsoleArgsText, toConsoleArgs } from '../utils/format-console-args.util';
@@ -13,6 +14,18 @@ let entryCounter = 0;
 function nextEntryId(): string {
   entryCounter += 1;
   return `console-${Date.now()}-${entryCounter}`;
+}
+
+/**
+ * An uncaught error reaches the console as React Native's own re-emit of the error it already
+ * reported as a crash, so the row can carry the report rather than duplicate it.
+ */
+function findCrashId(args: unknown[]): string | undefined {
+  for (const arg of args) {
+    const crashId = crashLinkStore.find(arg);
+    if (crashId !== undefined) return crashId;
+  }
+  return undefined;
 }
 
 export function patchConsole() {
@@ -33,6 +46,7 @@ export function patchConsole() {
           timestamp: Date.now(),
           count: 1,
           source: NATIVE_CONSOLE_SOURCE,
+          crashId: findCrashId(args),
         });
       } catch {}
 

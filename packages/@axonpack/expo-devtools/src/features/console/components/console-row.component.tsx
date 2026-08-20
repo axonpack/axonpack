@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { ConsoleArgCell } from './console-arg-cell.component';
 import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
+import { crashInspectionStore } from '../../../core/stores/crash-inspection.store';
 import type { Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { consoleLevelVisuals } from '../constants/console-levels.const';
@@ -16,6 +17,7 @@ function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: M
   const COLORS = useThemeColors();
   const visual = consoleLevelVisuals(COLORS)[entry.level];
   const recallable = entry.level === 'input';
+  const crashId = entry.crashId;
 
   const content = (
     <View style={[styles.row, visual.surface ? { backgroundColor: visual.surface } : null]}>
@@ -33,6 +35,9 @@ function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: M
               plainColor={entry.level === 'error' ? COLORS.error : undefined}
               selectable={!recallable}
               matcher={matcher}
+              onOpenReport={
+                crashId === undefined ? undefined : () => crashInspectionStore.open(crashId)
+              }
             />
           ))}
         </View>
@@ -69,7 +74,8 @@ export const ConsoleRow = memo(
     prev.entry.parts === next.entry.parts &&
     prev.entry.text === next.entry.text &&
     prev.entry.level === next.entry.level &&
-    prev.entry.source === next.entry.source
+    prev.entry.source === next.entry.source &&
+    prev.entry.crashId === next.entry.crashId
 );
 
 const useStyles = makeThemedStyles((COLORS) => ({

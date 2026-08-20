@@ -1,6 +1,7 @@
 import { collectBreadcrumbs } from './collect-breadcrumbs.service';
 import { readDeviceInfo } from './device-info.service';
 import { persistCrashRecord } from './native-crash.service';
+import { crashLinkStore } from '../../../core/stores/crash-link.store';
 import {
   crashStore,
   type CrashKind,
@@ -108,6 +109,9 @@ export function captureCrash(
     if (record === null) return null;
 
     crashStore.add(record);
+    // Before the handler returns: RN's `console.error` re-emit happens on the way out of it, and the
+    // console patch reads this to stamp the row it is about to write.
+    crashLinkStore.link(error, record.id);
 
     if (isFatalKind(kind) || options.persistNonFatal) persistCrashRecord(record);
 

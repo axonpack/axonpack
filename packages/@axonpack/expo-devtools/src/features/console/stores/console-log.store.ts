@@ -16,6 +16,8 @@ export type ConsoleLogEntry = {
   count: number;
 
   source?: string;
+  /** Set when this row is the console's echo of an error that also became a crash report. */
+  crashId?: string;
 };
 
 type ConsoleLogEvents = {
@@ -68,7 +70,13 @@ export const consoleLogStore = {
       newest.source === entry.source
     ) {
       entries = [
-        { ...newest, count: newest.count + 1, timestamp: entry.timestamp },
+        // The row shows the newest occurrence's time, so it should open the newest occurrence's report.
+        {
+          ...newest,
+          count: newest.count + 1,
+          timestamp: entry.timestamp,
+          crashId: entry.crashId ?? newest.crashId,
+        },
         ...entries.slice(1),
       ];
     } else {

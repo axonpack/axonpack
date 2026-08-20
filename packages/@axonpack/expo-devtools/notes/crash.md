@@ -87,6 +87,16 @@ Which tier caught a crash decides how much it can say:
   contacted unless the trace itself came from an http origin, so a release build asks nobody. The
   request goes through the **unpatched** `fetch` (`core/utils/unpatched-fetch.util.ts`) — the panel's
   own traffic must not appear in its own Network tab, or be throttled by its own conditions.
+- **A console error row opens the report for its own error.** Every uncaught JS error is reported
+  twice by design — once as a crash record, once as a console row, because RN's `ExceptionsManager`
+  re-emits through `console.error` specifically so that patched consoles see it. Rather than
+  suppress one, the row links to the other: the _same_ `Error` object reaches both paths, so a
+  `WeakMap` keyed on it (`core/stores/crash-link.store.ts`) gives an exact link with no timestamp or
+  message matching, and weak keys mean the link dies with the error. Tapping the message opens the
+  report **over the Console tab** — deliberately not a tab switch, which would cost the filters and
+  scroll position — while the disclosure arrow still expands the inline stack. `core/` mounts the
+  sheet and holds the selected id (`crash-inspection.store.ts`); the console side imports nothing
+  from this feature.
 - **Breadcrumbs cost almost nothing.** They are read from the console and network ring buffers that
   already exist, so nothing is recorded _for_ crash reporting.
 - **Redaction runs before anything leaves the process** — the store, the disk and the consumer's

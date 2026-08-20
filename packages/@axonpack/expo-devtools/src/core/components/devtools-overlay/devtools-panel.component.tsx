@@ -3,16 +3,17 @@ import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
 import { ThemePicker } from './theme-picker.component';
-import { consoleLogStore } from '../../../features/console/stores/console-log.store';
-import { crashStore } from '../../../features/crash/stores/crash.store';
-import { devtoolsTabStore } from '../../stores/devtools-tab.store';
-import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { ConsoleView } from '../../../features/console/components/console-view.component';
+import { consoleLogStore } from '../../../features/console/stores/console-log.store';
+import { CrashInspectionSheet } from '../../../features/crash/components/crash-inspection-sheet.component';
 import { CrashView } from '../../../features/crash/components/crash-view.component';
+import { crashStore } from '../../../features/crash/stores/crash.store';
 import { DebugView } from '../../../features/debug/components/debug-view.component';
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
 import { StorageView } from '../../../features/storage/components/storage-view.component';
+import { devtoolsTabStore } from '../../stores/devtools-tab.store';
+import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { IconButton } from '../ui/icon-button.ui';
 
 export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
@@ -74,6 +75,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
       </View>
 
       <View style={styles.tabPanel}>{tabContent}</View>
+
+      <CrashInspectionSheet />
     </KeyboardAvoidingView>
   );
 }

@@ -4,7 +4,7 @@
 
 - New **Crashes** tab: every crash the app has hit, with the unread count on the tab itself
 - **Crash report sheet** opens the moment a crash is caught, with the message, stack, component stack, breadcrumbs, device details and the raw record
-- **Stack frames name your files** — in development the stack is symbolicated against the dev server, so a frame reads `CrashDemo.tsx:79:25` instead of `index.bundle:104857:23`, with the failing source line and a caret above it, and library frames folded behind **See N more frames**
+- **Stack frames name your files** — in development the stack is symbolicated against the dev server, so a frame reads `CrashDemo.tsx:79:25` instead of `index.bundle:104857:23`, with the failing source line and a caret under the exact column — for a render error, both the throwing line and the element that rendered it — and library frames folded behind **See N more frames**
 - **Copy and share** any report as Markdown or JSON, straight to the share sheet
 - **Crashes that end the app** are saved to the device and reported the next time it opens
 - **Catches four kinds of crash**: fatal and non-fatal JavaScript errors, unhandled promise rejections, React render errors, and uncaught native exceptions on iOS and Android
@@ -15,6 +15,7 @@
 - **Turn off React Native's red box** with `crash.disableDefaultLogBox`, so a JavaScript error is reported in one place
 - **The floating devtools button now hides itself** unless the tools were started, so leaving it mounted in a release build shows nothing
 - **A plain crash notice outside development** — what broke, when, and a Share report button — rather than the developer sheet with its tabs and stack traces
+- **Tap an error in the Console tab** to read its full crash report without leaving the tab
 - **Breadcrumbs** replay the console and network activity leading up to a crash
 - **`redact`** rewrites or drops a report before it is stored, saved or handed to `onCrash`
 - **`setCrashContext`** attaches your own details — user, screen, feature flags — to every report

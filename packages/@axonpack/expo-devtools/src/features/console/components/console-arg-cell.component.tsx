@@ -9,14 +9,18 @@ export function ConsoleArgCell({
   plainColor,
   selectable,
   matcher = null,
+  onOpenReport,
 }: {
   arg: ConsoleArg;
   plainColor?: string;
 
   selectable?: boolean;
   matcher?: Matcher | null;
+  onOpenReport?: () => void;
 }) {
-  if (arg.kind === 'error') return <ErrorArgCell text={arg.text} stack={arg.stack} />;
+  if (arg.kind === 'error') {
+    return <ErrorArgCell text={arg.text} stack={arg.stack} onOpenReport={onOpenReport} />;
+  }
 
   if (arg.kind === 'json') {
     return (
