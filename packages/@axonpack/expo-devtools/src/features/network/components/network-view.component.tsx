@@ -229,7 +229,9 @@ export function NetworkView() {
         <IconButton
           name="file-download"
           color={COLORS.textSecondary}
-          onPress={() => exportNetworkLog(visibleLogs.filter((e) => e.kind === 'http'))}
+          // Everything the filters left, of every kind — a socket and a stream carry what they
+          // recorded, and dropping them was how the export used to lose them.
+          onPress={() => exportNetworkLog(visibleLogs)}
           label="Export"
         />
         <IconButton

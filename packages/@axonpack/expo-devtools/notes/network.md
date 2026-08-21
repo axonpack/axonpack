@@ -42,7 +42,7 @@ transfers.
 - [x] Request bodies as fields, with each uploaded file's name and size
 - [x] A form-data request copied as a cURL command that runs
 - [x] Save one response body to a file
-- [x] Export the filtered log as JSON to the share sheet
+- [x] Export every kind of entry, with its messages or events, under a schema version
 - [x] Sandbox: edit any captured request and send it for real
 - [x] Override a response with a chosen status and body, or block a request outright
 - [x] Server-sent event streams, with every event, whichever client opened them
@@ -50,9 +50,6 @@ transfers.
 - [x] What a compressed response cost on the wire, beside what the app was handed
 - [ ] Turn stream capture off independently, the way requests and sockets already can be
 - [ ] Capture requests made before the panel is set up
-- [ ] Export a socket or stream entry too, and version the file
-- [ ] Requests from a native HTTP client that never touches JavaScript
-- [ ] Throttle upload speed, not only download
 
 ## Next
 
@@ -272,6 +269,12 @@ Three paths, because no one of them can see the others' traffic:
 - **Throttling is simulated in JS**, by delaying the response and the body. It models download speed
   and latency because those are the two numbers a patch can honestly impose; nothing about it slows
   the native socket down.
+- **An export says what it is.** The file carries a schema version, the tool that wrote it, and a
+  summary, so one read years later is not a guess. Every kind of entry is in it now — a socket with the
+  messages that belong to it, a stream with its events — which used to be dropped: the export filtered
+  to plain requests, so a socket never appeared and a stream arrived without the events that are its
+  body. Response _bytes_ are the one thing deliberately left out, since a base64 copy of a video makes
+  a file nothing will open.
 
 ## Won't do
 
