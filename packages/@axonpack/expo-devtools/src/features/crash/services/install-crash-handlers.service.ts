@@ -113,8 +113,12 @@ function installRejectionHandler() {
 /**
  * Anything the native handler wrote is by definition from a run that already ended — the file is
  * drained at startup, so a record still in it outlived the process that made it.
+ *
+ * Exported and called separately from installing the handlers, because adopting a record now also
+ * writes a console row, and the console store is not recording yet at the point the handlers go in.
+ * Draining there dropped the row on the floor with nothing to show it had happened.
  */
-function drainPreviousLaunchCrashes() {
+export function drainPreviousLaunchCrashes() {
   for (const partial of drainNativeCrashRecords()) adoptPersistedCrash(partial);
 }
 
@@ -131,13 +135,17 @@ export function installCrashHandlers(config: CrashHandlerConfig) {
     installed.nativeExceptions = true;
     installNativeCrashHandler();
   }
+}
 
-  // Always drained, even with native capture off: the records may predate that being turned off,
-  // and leaving them on disk would mean reporting them at some arbitrary later launch instead.
-  if (!installed.drained) {
-    installed.drained = true;
-    drainPreviousLaunchCrashes();
-  }
+/**
+ * Always drained, even with native capture off: the records may predate that being turned off, and
+ * leaving them on disk would mean reporting them at some arbitrary later launch instead. Once per
+ * process, whoever asks first.
+ */
+export function drainOnce() {
+  if (installed.drained) return;
+  installed.drained = true;
+  drainPreviousLaunchCrashes();
 }
 
 /** Test-only; each tier installs once per process. */

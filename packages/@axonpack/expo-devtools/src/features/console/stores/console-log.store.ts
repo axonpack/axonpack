@@ -44,6 +44,8 @@ export type ConsoleLogEntry = {
    */
   crashName?: string;
   crashMessage?: string;
+  /** Written by a run that already ended, and read back at this one's startup. */
+  crashFromPreviousLaunch?: boolean;
   /**
    * The stack as the engine wrote it, when this row is one worth knowing the origin of. Raw, because
    * turning it into a file name is a request to the development server and most rows are never read.

@@ -11,7 +11,10 @@ import {
 } from '../features/crash/services/capture-crash.service';
 import { setCrashPopupDetail } from '../features/crash/services/crash-popup.service';
 import { disableDefaultLogBox } from '../features/crash/services/disable-logbox.service';
-import { installCrashHandlers } from '../features/crash/services/install-crash-handlers.service';
+import {
+  drainOnce,
+  installCrashHandlers,
+} from '../features/crash/services/install-crash-handlers.service';
 import { patchFetch } from '../features/network/services/patch-fetch.service';
 import { patchWebSocket } from '../features/network/services/patch-websocket.service';
 import { patchXHR } from '../features/network/services/patch-xhr.service';
@@ -124,8 +127,8 @@ export type DevtoolsCrashConfig = {
    * Which sheet that is. Defaults to `'auto'`: the full developer sheet when the devtools are
    * enabled, the compact one when they are not.
    *
-   * - `'full'` — tabs for Summary, Stack, Breadcrumbs, Device and Raw, with this package's own
-   *   branding on the header. A debugging tool.
+   * - `'full'` — the message, the stack and the device under Summary, a Breadcrumbs tab beside it,
+   *   and this package's own branding on the header. A debugging tool.
    * - `'compact'` — a plain notice: what broke, when, and Share / Copy / Dismiss. Nothing on it
    *   names this package, and the full record still travels with Share and Copy.
    *
@@ -266,6 +269,11 @@ export function createDevtoolsClient<
       nativeExceptions: crashHandlers?.nativeExceptions ?? true,
     });
 
+    // The factory-time path never reaches `init()`, so its drain has to happen here — there is no
+    // console to wait for in a build with no panel, and a record left on disk would be reported at
+    // some arbitrary later launch instead. `init()` drains after the console is recording.
+    if (!panelAvailable) drainOnce();
+
     if (turnOffLogBox) {
       // Installed after the handlers, so an error thrown while they were going in still reaches the
       // red box — this is the window where nothing of ours is listening yet.
@@ -299,6 +307,10 @@ export function createDevtoolsClient<
       if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
       if (consoleStartsPaused) consoleLogStore.setPaused(true);
       if (captureConsole) patchConsole();
+
+      // After the console is recording, not with the handlers: a crash from the last run writes a
+      // console row as well as a report now, and draining before this point threw that row away.
+      drainOnce();
       configureRepl(enableRepl, replContext);
 
       performanceStore.setHistorySize(historySize);

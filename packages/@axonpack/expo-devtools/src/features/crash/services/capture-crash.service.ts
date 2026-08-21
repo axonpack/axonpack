@@ -113,7 +113,7 @@ export function captureCrash(
     // handler that would have re-emitted is the one being withheld from, and a native exception
     // never passed through JavaScript at all. Doing it for every kind is what makes the console the
     // one place every error turns up, at one level, with one icon.
-    logCrashRow(error, record);
+    logCrashRow(record);
 
     // A native exception is the only kind that still ends the app, so it is the only one worth
     // writing down for the next launch to read. Every JavaScript tier is survived now, which means
@@ -159,6 +159,7 @@ export function adoptPersistedCrash(partial: Partial<CrashRecord>): CrashRecord 
   };
 
   crashStore.add(record);
+  logCrashRow(record);
   return record;
 }
 

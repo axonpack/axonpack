@@ -1,4 +1,8 @@
-import { installCrashHandlers, resetCrashHandlers } from '../install-crash-handlers.service';
+import {
+  drainOnce,
+  installCrashHandlers,
+  resetCrashHandlers,
+} from '../install-crash-handlers.service';
 import { crashStore } from '../../stores/crash.store';
 import { resetCrashCapture } from '../capture-crash.service';
 
@@ -134,6 +138,7 @@ describe('previous-launch records', () => {
     installFakeErrorUtils();
 
     installCrashHandlers(ALL_HANDLERS);
+    drainOnce();
 
     const [record] = crashStore.getSnapshot();
     expect(record?.fromPreviousLaunch).toBe(true);
@@ -143,8 +148,19 @@ describe('previous-launch records', () => {
   it('drains them even with native capture off, so they are never reported at a random later launch', () => {
     installFakeErrorUtils();
     installCrashHandlers({ ...ALL_HANDLERS, nativeExceptions: false });
+    drainOnce();
 
     expect(mockInstallNativeCrashHandler).not.toHaveBeenCalled();
+    expect(mockDrainNativeCrashRecords).toHaveBeenCalledTimes(1);
+  });
+
+  // Whoever asks first drains, and only once: the client asks from two places, because a build with
+  // no panel never reaches the one that waits for the console to start recording.
+  it('drains once however many times it is asked', () => {
+    installFakeErrorUtils();
+    drainOnce();
+    drainOnce();
+
     expect(mockDrainNativeCrashRecords).toHaveBeenCalledTimes(1);
   });
 });

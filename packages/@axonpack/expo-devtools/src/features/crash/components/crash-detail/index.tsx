@@ -17,7 +17,7 @@ import { formatCrashTitle } from '../../utils/format-crash-report.util';
 
 // Stack and device live inside Summary as collapsible sections rather than tabs of their own: they
 // are what you read next after the message, and a tab hop lost that reading order.
-type Tab = 'summary' | 'breadcrumbs' | 'raw';
+type Tab = 'summary' | 'breadcrumbs';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'summary', label: 'Summary' },

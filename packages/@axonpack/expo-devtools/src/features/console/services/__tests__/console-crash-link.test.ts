@@ -1,5 +1,6 @@
 import { patchConsole } from '../patch-console.service';
 import {
+  adoptPersistedCrash,
   captureCrash,
   configureCrashCapture,
   resetCrashCapture,
@@ -69,6 +70,22 @@ describe('console rows linked to a crash report', () => {
     expect(broke?.callSite?.length).toBeGreaterThan(0);
     // Nobody asks where a `log` came from, and a render loop would pay for a stack every frame.
     expect(chatter?.callSite).toBeUndefined();
+  });
+
+  // The kind that actually ends the app was the only one missing from the stream: it never goes
+  // through `captureCrash`, arriving instead off disk at the next launch.
+  it('writes a row for a crash read back from a previous launch, and says so', () => {
+    adoptPersistedCrash({
+      kind: 'native-exception',
+      name: 'java.lang.IllegalStateException',
+      message: 'boom',
+    });
+
+    const row = consoleLogStore.getSnapshot()[0];
+    expect(row?.level).toBe('crash');
+    expect(row?.crashKind).toBe('native-exception');
+    expect(row?.crashName).toBe('java.lang.IllegalStateException');
+    expect(row?.crashFromPreviousLaunch).toBe(true);
   });
 
   it('leaves an ordinary console error unlinked', () => {

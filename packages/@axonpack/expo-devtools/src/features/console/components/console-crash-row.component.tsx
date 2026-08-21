@@ -54,6 +54,9 @@ function ConsoleCrashRowBase({ entry }: { entry: ConsoleLogEntry }) {
 
         <View style={styles.badges}>
           {entry.crashKind && <InfoBadge label={CRASH_KIND_LABELS[entry.crashKind]} />}
+          {/* The one row in this stream that did not happen during it: read back off disk at
+              startup, from a run the process did not survive. */}
+          {entry.crashFromPreviousLaunch && <InfoBadge icon="history" label="Previous launch" />}
           {entry.crashBreadcrumbs ? (
             <InfoBadge icon="timeline" label={`${entry.crashBreadcrumbs}`} />
           ) : null}
@@ -83,6 +86,7 @@ export const ConsoleCrashRow = memo(
     prev.entry.crashName === next.entry.crashName &&
     prev.entry.crashMessage === next.entry.crashMessage &&
     prev.entry.crashBreadcrumbs === next.entry.crashBreadcrumbs &&
+    prev.entry.crashFromPreviousLaunch === next.entry.crashFromPreviousLaunch &&
     prev.entry.callSite === next.entry.callSite
 );
 

@@ -1,6 +1,6 @@
 import type { CrashRecord } from '../../crash/stores/crash.store';
 import { consoleLogStore } from '../stores/console-log.store';
-import { getConsoleArgsText, toConsoleArgs } from '../utils/format-console-args.util';
+import { getConsoleArgsText, type ConsoleArg } from '../utils/format-console-args.util';
 
 let counter = 0;
 
@@ -16,9 +16,13 @@ let counter = 0;
  * Nothing is forced past the record button. A paused console is one somebody asked to stop writing
  * to, and the Crash tab has the report either way.
  */
-export function logCrashRow(error: unknown, record: CrashRecord) {
+export function logCrashRow(record: CrashRecord) {
   counter += 1;
-  const parts = toConsoleArgs([error]);
+  // Built from the record rather than from a thrown value: a crash read back from disk never had an
+  // `Error` object in this process, and fabricating one to hand to the formatter would be pretence.
+  const parts: ConsoleArg[] = [
+    { kind: 'error', text: `${record.name}: ${record.message}`, stack: record.stack ?? undefined },
+  ];
 
   consoleLogStore.add({
     id: `crash-row-${counter}`,
@@ -32,5 +36,6 @@ export function logCrashRow(error: unknown, record: CrashRecord) {
     crashBreadcrumbs: record.breadcrumbs?.length,
     crashName: record.name,
     crashMessage: record.message,
+    crashFromPreviousLaunch: record.fromPreviousLaunch,
   });
 }
