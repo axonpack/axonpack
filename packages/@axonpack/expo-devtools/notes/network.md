@@ -84,8 +84,8 @@ Three paths, because no one of them can see the others' traffic:
   the call either way. Overriding a `fetch` answers it before anything leaves the device, so an
   endpoint that does not exist yet can be developed against and a failure reproduced without a server
   willing to produce one. Overriding an `XMLHttpRequest` cannot do that: nothing there can stand in
-  front of the native send and return a response, so the request goes out and what the app *reads
-  back* is replaced instead. The rule still decides what the app sees, but the round trip is still
+  front of the native send and return a response, so the request goes out and what the app _reads
+  back_ is replaced instead. The rule still decides what the app sees, but the round trip is still
   paid and the endpoint still has to exist. That difference is real and worth knowing before leaning
   on it — a request that must not happen at all should be blocked, not overridden.
 - **The row says when a rule answered.** A made-up answer that reads like the server's own is worse
