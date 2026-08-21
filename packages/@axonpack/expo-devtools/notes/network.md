@@ -203,6 +203,13 @@ Three paths, because no one of them can see the others' traffic:
   requested twice at once is genuinely ambiguous, and the closest start wins; a row that already has
   phases is never overwritten, and a reading that matches nothing is dropped rather than kept for
   later. Every request the process makes is reported, including ones from before recording started.
+- **One account of a request, never two.** Where the platform measured the phases, they are the whole
+  of what the Timing tab shows. The patches can time a request too — call to headers, then the rest —
+  but they start at a different moment and so can never agree: a JavaScript "wait" contains the queue,
+  the handshake and the send, while the platform's contains none of them. Showing both put two rows
+  named Waiting side by side with different figures, which reads as one of them being broken rather
+  than as two vantage points. The patches' numbers are the fallback now, for traffic no native stack
+  here reports on — a WebView's requests, a build without the native module, a platform not yet hooked.
 - **A compressed response has two sizes, and one number could only ever be one of them.** The tab
   showed whichever happened to be available — `content-length` when the server sent one, the body's
   own length when it did not — which for a gzipped response are wildly different figures under one
