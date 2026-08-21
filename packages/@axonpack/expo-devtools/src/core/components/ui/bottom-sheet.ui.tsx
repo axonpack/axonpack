@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-// import { AxonpackLogo } from './axonpack-logo.ui';
 import { IconButton } from './icon-button.ui';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
@@ -64,7 +63,6 @@ export function BottomSheet({
           <View style={styles.handle} />
         </View>
         <View style={styles.headerRow}>
-          {/* <AxonpackLogo size={18} /> */} {/* hide the Axonpack logo to save space*/}
           <View style={styles.headerContent}>{headerContent}</View>
           <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
         </View>

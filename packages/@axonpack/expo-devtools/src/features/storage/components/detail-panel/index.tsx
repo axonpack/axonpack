@@ -6,10 +6,12 @@ import { InfoTab } from './info-tab.component';
 import { RawTab } from './raw-tab.component';
 import { useDetailStyles } from './shared.styles';
 import { ValueTab } from './value-tab.component';
+import { BottomSheet } from '../../../../core/components/ui/bottom-sheet.ui';
+import { ContextMenu, type ContextMenuItem } from '../../../../core/components/ui/context-menu.ui';
+import { IconButton } from '../../../../core/components/ui/icon-button.ui';
+import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
+import { SearchInput } from '../../../../core/components/ui/search-input.ui';
 import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
-import { removeStorageKey } from '../../services/write-storage.service';
-import type { StorageAdapterState, StorageEntry } from '../../stores/storage.store';
-import { buildStorageCopyMenuItems } from '../../utils/entry-menu-items.util';
 import {
   buildMatcher,
   DEFAULT_SEARCH_MODES,
@@ -17,11 +19,9 @@ import {
   type SearchModes,
 } from '../../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
-import { BottomSheet } from '../../../../core/components/ui/bottom-sheet.ui';
-import { ContextMenu, type ContextMenuItem } from '../../../../core/components/ui/context-menu.ui';
-import { IconButton } from '../../../../core/components/ui/icon-button.ui';
-import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
-import { SearchInput } from '../../../../core/components/ui/search-input.ui';
+import { removeStorageKey } from '../../services/write-storage.service';
+import type { StorageAdapterState, StorageEntry } from '../../stores/storage.store';
+import { buildStorageCopyMenuItems } from '../../utils/entry-menu-items.util';
 
 type Tab = 'value' | 'raw' | 'edit' | 'info';
 
