@@ -20,6 +20,7 @@ import {
 } from '../features/crash/services/install-crash-handlers.service';
 import { crashStore, type CrashRecord } from '../features/crash/stores/crash.store';
 import { installNativeTimingReporter } from '../features/network/services/native-timing.service';
+import { observeNitroFetch } from '../features/network/services/nitro-fetch.service';
 import { patchFetch } from '../features/network/services/patch-fetch.service';
 import { patchWebSocket } from '../features/network/services/patch-websocket.service';
 import { patchXHR } from '../features/network/services/patch-xhr.service';
@@ -63,6 +64,12 @@ export type DevtoolsNetworkConfig = {
   includeXmlHttpRequest?: boolean;
   /** WebSocket connections and their messages. Defaults to `true`. */
   includeWebSocket?: boolean;
+  /**
+   * Traffic from `react-native-nitro-fetch`, read from the observer that library publishes rather than
+   * from a patch — a JSI client answers none. Defaults to `true`, and is a no-op unless the library is
+   * installed.
+   */
+  includeNitroFetch?: boolean;
   disabledByDefault?: boolean;
 };
 
@@ -201,6 +208,7 @@ export function createDevtoolsClient<
     includeFetch = true,
     includeXmlHttpRequest = true,
     includeWebSocket = true,
+    includeNitroFetch = true,
     disabledByDefault: networkStartsPaused = false,
   } = config?.network ?? {};
   const {
@@ -308,6 +316,7 @@ export function createDevtoolsClient<
       if (includeWebSocket) patchWebSocket();
       // The same switch covers a page's own sockets, which the native patch cannot see at all.
       setWebViewSocketCapture(includeWebSocket);
+      if (includeNitroFetch) observeNitroFetch();
       // Before the app's first request on purpose: on Android the phase listener goes in by replacing
       // React Native's OkHttp client factory, and that client is built once, on first use.
       if (includeFetch || includeXmlHttpRequest) installNativeTimingReporter();

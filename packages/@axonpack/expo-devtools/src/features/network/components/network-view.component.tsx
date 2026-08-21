@@ -33,6 +33,7 @@ import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { networkLogStore } from '../stores/network-log.store';
 import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
+import { replayNitroEntries } from '../services/nitro-fetch.service';
 import { exportNetworkLog } from '../utils/export-network-log.util';
 import {
   DEFAULT_NETWORK_FILTERS,
@@ -195,7 +196,14 @@ export function NetworkView() {
     <View style={styles.container}>
       <DevtoolsToolbar
         paused={paused}
-        onTogglePaused={() => networkLogStore.setPaused(!paused)}
+        onTogglePaused={() => {
+          const nextPaused = !paused;
+          networkLogStore.setPaused(nextPaused);
+          // A JSI client kept recording while this was paused, and nothing here was listening. Reading
+          // its buffer on resume is what makes the record button mean the same thing for that traffic
+          // as it does for everything else.
+          if (!nextPaused) replayNitroEntries();
+        }}
         onClear={networkLogStore.clear}
         clearLabel="Clear log">
         <ToolbarDivider />

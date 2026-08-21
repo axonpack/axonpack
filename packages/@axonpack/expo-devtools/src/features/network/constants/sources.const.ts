@@ -11,6 +11,8 @@ export const NETWORK_SOURCES = {
   xhr: 'xhr',
   /** React Native's WebSocket, which is the only socket this package can see. */
   webSocket: 'websocket',
+  /** A JSI client that answers no patch, and reports its own traffic instead. */
+  nitro: 'nitro-fetch',
 } as const;
 
 export type NetworkSource = (typeof NETWORK_SOURCES)[keyof typeof NETWORK_SOURCES];

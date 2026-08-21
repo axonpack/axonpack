@@ -44,6 +44,7 @@ transfers.
 - [x] Save one response body to a file
 - [x] Export every kind of entry, with its messages or events, under a schema version
 - [x] Throttle upload speed as well as download
+- [x] Requests from a JSI HTTP client, read from the observer it publishes
 - [x] Sandbox: edit any captured request and send it for real
 - [x] Override a response with a chosen status and body, or block a request outright
 - [x] Server-sent event streams, with every event, whichever client opened them
@@ -273,6 +274,11 @@ Three paths, because no one of them can see the others' traffic:
   modelled by holding the request back before it is sent, billed against the body's own size at the
   uplink speed. Latency is charged once, on the download side, because it belongs to the round trip
   rather than to either half. Nothing about any of it slows the native socket down.
+- **A JSI client is read, not intercepted.** `react-native-nitro-fetch` touches neither `fetch`, nor
+  `XMLHttpRequest`, nor React Native's networking, so no patch here can see it — and none is needed,
+  because it publishes a `NetworkInspector` of its own. Its entries arrive complete rather than as a
+  request and then a response, which is why such a row never shows progress, and why the throttle and
+  offline switches do not reach that traffic: nothing here stands in front of it to delay.
 - **An export says what it is.** The file carries a schema version, the tool that wrote it, and a
   summary, so one read years later is not a guess. Every kind of entry is in it now — a socket with the
   messages that belong to it, a stream with its events — which used to be dropped: the export filtered
