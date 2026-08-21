@@ -5,11 +5,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CallSite } from './call-site.component';
 import { ConsoleArgCell } from './console-arg-cell.component';
 import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
-import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
 import { crashInspectionStore } from '../../../core/stores/crash-inspection.store';
 import type { Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { CRASH_KIND_LABELS } from '../../crash/utils/format-crash-report.util';
 import type { ConsoleLogEntry } from '../stores/console-log.store';
 import { consolePromptStore } from '../stores/console-prompt.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../utils/formatters.util';
@@ -43,16 +41,6 @@ function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: M
               }
             />
           ))}
-          {entry.crashKind && (
-            // The same two chips the Crash tab's own row carries, so a crash reads the same in
-            // either place: what kind it was, and how much of a trail came with it.
-            <View style={styles.crashBadges}>
-              <InfoBadge label={CRASH_KIND_LABELS[entry.crashKind]} />
-              {entry.crashBreadcrumbs ? (
-                <InfoBadge icon="timeline" label={`${entry.crashBreadcrumbs}`} />
-              ) : null}
-            </View>
-          )}
         </View>
       </View>
 
@@ -67,17 +55,6 @@ function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: M
       </View>
     </View>
   );
-
-  // The whole row, not only the message inside it. `ErrorArgCell` puts the press on the message when
-  // there is a report, which left the icon, the chips, the location and every gap between them dead
-  // — a row that opens something should open it wherever it is tapped.
-  if (crashId !== undefined && !recallable) {
-    return (
-      <TouchableOpacity activeOpacity={0.6} onPress={() => crashInspectionStore.open(crashId)}>
-        {content}
-      </TouchableOpacity>
-    );
-  }
 
   if (!recallable) return content;
 
@@ -126,12 +103,6 @@ const useStyles = makeThemedStyles((COLORS) => ({
   body: {
     flex: 1,
     gap: 2,
-  },
-  crashBadges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    paddingTop: 2,
   },
   meta: {
     flexDirection: 'row',

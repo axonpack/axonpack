@@ -30,5 +30,7 @@ export function logCrashRow(error: unknown, record: CrashRecord) {
     crashId: record.id,
     crashKind: record.kind,
     crashBreadcrumbs: record.breadcrumbs?.length,
+    crashName: record.name,
+    crashMessage: record.message,
   });
 }

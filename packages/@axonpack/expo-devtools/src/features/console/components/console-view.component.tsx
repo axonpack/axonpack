@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { ConsolePrompt } from './console-prompt.component';
+import { ConsoleCrashRow } from './console-crash-row.component';
 import { ConsoleRow } from './console-row.component';
 import {
   DevtoolsToolbar,
@@ -108,9 +109,13 @@ export function ConsoleView() {
   );
 
   const renderConsoleRow = useCallback(
-    ({ item }: ListRenderItemInfo<ConsoleLogEntry>) => (
-      <ConsoleRow entry={item} matcher={matcher} />
-    ),
+    ({ item }: ListRenderItemInfo<ConsoleLogEntry>) =>
+      // A crash is laid out as a report rather than a line of output, so it has a row of its own.
+      item.level === 'crash' ? (
+        <ConsoleCrashRow entry={item} />
+      ) : (
+        <ConsoleRow entry={item} matcher={matcher} />
+      ),
     [matcher]
   );
 

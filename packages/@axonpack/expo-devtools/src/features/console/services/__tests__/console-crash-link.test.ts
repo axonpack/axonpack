@@ -108,7 +108,16 @@ describe('console rows linked to a crash report', () => {
     expect(consoleLogStore.getSnapshot()[0]?.crashKind).toBe('native-exception');
   });
 
-  // The row shows the same two chips the Crash tab's row does, and the trail length is one of them.
+  // The card lays the name over the message the way the Crash tab does, so it carries both apart.
+  it('carries the name and message separately, not only the joined text', () => {
+    captureCrash(new TypeError('nope'), 'js-fatal');
+
+    const row = consoleLogStore.getSnapshot()[0];
+    expect(row?.crashName).toBe('TypeError');
+    expect(row?.crashMessage).toBe('nope');
+  });
+
+  // The card shows the same chips the Crash tab's row does, and the trail length is one of them.
   it('carries how many breadcrumbs the report came with', () => {
     configureCrashCapture({ breadcrumbs: true });
     console.log('something happened first');
