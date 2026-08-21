@@ -102,8 +102,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   bar: {
     position: 'absolute',
-    height: 8,
-    borderRadius: 4,
+    height: '100%',
     minWidth: 2,
   },
   value: {
