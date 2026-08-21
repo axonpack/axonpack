@@ -58,27 +58,24 @@ transfers.
 
 The open list above is a menu, not an order. What is worth doing next, and why, roughly in that order:
 
-1. **Verify the phase timing on Android.** iOS is done — built and run on a simulator, with real
-   phases and byte counts arriving for both Expo's fetch and `XMLHttpRequest`. The Kotlin has still
-   never met a compiler, and three of the four bugs iOS turned up were the kind only a device finds,
-   so assume Android has its own.
-2. **Reach Expo's fetch on Android.** iOS now covers it; Android does not, because Expo's fetch there
-   has its own OkHttp client rather than React Native's.
-3. **Send the timeline, not the durations.** The waterfall places each phase where the ones before it
+1. **Socket phases on Android.** `WebSocketModule` builds its own `OkHttpClient.Builder()` and never
+   asks the provider, so the listener that covers requests cannot see a socket's connection. Requests
+   themselves are done: both platforms report phases, verified on a device and an emulator.
+2. **Send the timeline, not the durations.** The waterfall places each phase where the ones before it
    ended, and now prints that start as a number — but the platform reports durations, and butting them
    together assumes the phases are contiguous. They are not: on a real request the phases sum to
    1003 ms against a duration of 1114 ms and a JS-measured wait-to-first-byte of 889 ms, so roughly
    97 ms sits in gaps the stack does not attribute to any phase. iOS has every boundary as a date on
    the same transaction metrics, and OkHttp has a callback for each, so sending offsets instead of
    lengths would place every bar truthfully and let a gap read as a gap.
-4. **Requests from a native HTTP client that never touches JavaScript.** Now the largest hole in
+3. **Requests from a native HTTP client that never touches JavaScript.** Now the largest hole in
    capture rather than in display: a JSI client answers no patch, and the only way in is whatever
    observer API it publishes for itself.
-5. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
+4. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
    which is most of a cold start.
-6. **The smaller display gaps** — an XML response as a tree, a version and a socket-shaped entry in
+5. **The smaller display gaps** — an XML response as a tree, a version and a socket-shaped entry in
    the export, and a switch for stream capture beside the ones requests and sockets already have.
-7. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
+6. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
    row is still the single `size` field, which is the declared length when there is one and the body's
    length otherwise. Deciding what one column should say — and it should probably say what crossed the
    wire, the way a browser's does — is the rest of this job.
@@ -187,6 +184,14 @@ Three paths, because no one of them can see the others' traffic:
   whose phase fields are all stamped from three instants a patch already sees. The real measurements
   are one layer lower — `URLSessionTaskMetrics` on iOS, an OkHttp `EventListener` on Android — so the
   native module collects them there and JavaScript only attaches them to a row.
+- **The listener goes in with the application, not with `init()`.** Android's phases come from an
+  OkHttp `EventListener`, installed by replacing the client factory `OkHttpClientProvider` hands out —
+  which has to happen before anything asks for a client. Installed from JavaScript it reported a
+  successful install and then delivered nothing at all, because by the time JavaScript runs, startup
+  has already asked. So the package ships a `Package` class whose `ApplicationLifecycleListener` does
+  it from `Application.onCreate`; autolinking finds that class by its name and its import, with no
+  configuration for a consumer to add. One factory covers both `XMLHttpRequest` and Expo's own fetch,
+  since `ExpoFetchModule` derives its client from the same provider.
 - **The metrics go to the _session_ delegate, not the task delegate.** This is the distinction that
   cost the most: Expo's fetch was hooked at `ExpoURLSessionTask` first, which resolved, accepted the
   added method, and was never called — because that object is only the per-task delegate a proxy in
@@ -229,11 +234,14 @@ Three paths, because no one of them can see the others' traffic:
 - **Bytes are counted as bytes, never as characters.** `String.length` counts UTF-16 units, so it
   reads a two-byte `é` as one and a four-byte emoji as two. Measuring a decoded body that way and
   comparing it against a count off the wire would invent a saving for any body not written in ASCII.
-- **The wire count comes from below the decoder, on both platforms.** iOS reports both counts on the
-  same transaction metrics the phases come from. Android needs two vantage points, because OkHttp
-  gunzips transparently: a _network_ interceptor sits below that and sees the encoded body, while the
-  event listener sees what the caller reads. So the interceptor leaves its reading for the listener to
-  collect, keyed by URL, which is all the two sides share.
+- **The wire count comes from below the decoder, and each platform reports a different half.** iOS
+  has both counts on the same transaction metrics the phases come from. Android's event listener sits
+  below OkHttp's transparent gunzip, so what it counts is bytes off the socket — taken for the decoded
+  size at first, which made every Android response look uncompressed: the response iOS measured as
+  4,010 on the wire and 24,311 after decoding arrived here as 4,005 twice over. So Android sends the
+  wire count alone and the decoded size comes from the body JavaScript already stored. That also means
+  no interceptor is needed there — a chunked response carries no `Content-Length` to read anyway, and
+  the listener's own count is the number that was wanted.
 - **A phase that was not measured is absent, not zero.** A reused connection has no DNS, TCP or TLS
   phase at all, and three zeroes would read as a handshake that took no time — so the row says the
   connection was reused and shows only what happened.

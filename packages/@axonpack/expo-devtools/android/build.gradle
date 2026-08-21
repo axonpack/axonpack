@@ -13,3 +13,8 @@ android {
     versionName '2.0.0'
   }
 }
+
+dependencies {
+  compileOnly 'com.facebook.react:react-android'
+  compileOnly 'com.squareup.okhttp3:okhttp:4.9.2'
+}

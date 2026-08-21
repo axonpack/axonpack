@@ -11,16 +11,11 @@ import android.os.Process
 import android.os.StatFs
 import android.os.SystemClock
 import android.view.Choreographer
-import com.facebook.react.modules.network.OkHttpClientProvider
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
-import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
-import okhttp3.Call
-import okhttp3.Connection
-import okhttp3.EventListener
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -134,172 +129,6 @@ private class CrashPersistingHandler(
 }
 
 
-/**
- * Connection-phase timing.
- *
- * The phases inside a request — queueing, DNS, TCP, TLS — are measured by OkHttp and reported nowhere
- * JavaScript can reach. React Native's own `PerformanceResourceTiming` looks like the JS answer and is
- * not: it fills those fields from the same three instants a JS patch already sees, so queueing comes
- * out as zero and connection setup as the whole wait. OkHttp's `EventListener` is the real
- * measurement, and it is a documented extension point rather than a patch — one listener per call,
- * told when each phase begins and ends.
- *
- * Durations come from `nanoTime`, which is monotonic, while the one wall-clock reading is taken at the
- * start so JavaScript can line the record up with the row it belongs to.
- */
-private class PhaseEventListener(private val emit: (Map<String, Any?>) -> Unit) : EventListener() {
-  private var startedAtEpochMs = 0.0
-  private var callStart = 0L
-  private var dnsStart = 0L
-  private var dnsEnd = 0L
-  private var connectStart = 0L
-  private var secureStart = 0L
-  private var secureEnd = 0L
-  private var connectEnd = 0L
-  private var requestStart = 0L
-  private var requestEnd = 0L
-  private var responseStart = 0L
-  private var responseEnd = 0L
-  private var reusedConnection = true
-  private var protocol: String? = null
-  private var url: String? = null
-  private var decodedBytes = -1L
-
-  /** Null rather than zero for a phase that never happened — a reused connection has no handshake. */
-  private fun millis(from: Long, to: Long): Double? =
-      if (from == 0L || to == 0L || to < from) null else (to - from) / 1_000_000.0
-
-  override fun callStart(call: Call) {
-    startedAtEpochMs = System.currentTimeMillis().toDouble()
-    callStart = System.nanoTime()
-    url = call.request().url.toString()
-  }
-
-  override fun dnsStart(call: Call, domainName: String) {
-    dnsStart = System.nanoTime()
-  }
-
-  override fun dnsEnd(call: Call, domainName: String, inetAddressList: List<java.net.InetAddress>) {
-    dnsEnd = System.nanoTime()
-  }
-
-  override fun connectStart(
-      call: Call,
-      inetSocketAddress: java.net.InetSocketAddress,
-      proxy: java.net.Proxy
-  ) {
-    // Reaching here at all means a connection had to be opened for this call.
-    reusedConnection = false
-    connectStart = System.nanoTime()
-  }
-
-  override fun secureConnectStart(call: Call) {
-    secureStart = System.nanoTime()
-  }
-
-  override fun secureConnectEnd(call: Call, handshake: okhttp3.Handshake?) {
-    secureEnd = System.nanoTime()
-  }
-
-  override fun connectEnd(
-      call: Call,
-      inetSocketAddress: java.net.InetSocketAddress,
-      proxy: java.net.Proxy,
-      protocol: okhttp3.Protocol?
-  ) {
-    connectEnd = System.nanoTime()
-    this.protocol = protocol?.toString()
-  }
-
-  override fun connectionAcquired(call: Call, connection: Connection) {
-    if (protocol == null) protocol = connection.protocol().toString()
-  }
-
-  override fun requestHeadersStart(call: Call) {
-    requestStart = System.nanoTime()
-  }
-
-  override fun requestHeadersEnd(call: Call, request: okhttp3.Request) {
-    requestEnd = System.nanoTime()
-  }
-
-  override fun requestBodyEnd(call: Call, byteCount: Long) {
-    // A request with a body is not sent until the body is, so this is the later of the two.
-    requestEnd = System.nanoTime()
-  }
-
-  override fun responseHeadersStart(call: Call) {
-    responseStart = System.nanoTime()
-  }
-
-  override fun responseBodyEnd(call: Call, byteCount: Long) {
-    responseEnd = System.nanoTime()
-    // What the caller read, which is the decoded body: OkHttp gunzips transparently below this.
-    decodedBytes = byteCount
-  }
-
-  override fun callEnd(call: Call) {
-    report()
-  }
-
-  override fun callFailed(call: Call, ioe: IOException) {
-    // Still reported: how far a request got before it failed is the most useful thing about it.
-    report()
-  }
-
-  private fun report() {
-    val target = url ?: return
-    // Whichever phase came first is where the call stopped waiting to be worked on.
-    val workStart = listOf(dnsStart, connectStart, requestStart).firstOrNull { it != 0L }
-    emit(
-        mapOf(
-            "url" to target,
-            "startMs" to startedAtEpochMs,
-            "queuedMs" to millis(callStart, workStart ?: 0L),
-            "dnsMs" to millis(dnsStart, dnsEnd),
-            // TLS is measured on its own, so the connect phase stops where the handshake starts.
-            "tcpMs" to millis(connectStart, if (secureStart != 0L) secureStart else connectEnd),
-            "tlsMs" to millis(secureStart, secureEnd),
-            "sendMs" to millis(requestStart, requestEnd),
-            "waitMs" to millis(if (requestEnd != 0L) requestEnd else requestStart, responseStart),
-            "downloadMs" to millis(responseStart, responseEnd),
-            "reusedConnection" to reusedConnection,
-            "protocol" to protocol,
-            // The wire count comes from the interceptor below rather than from here, because by the
-            // time a body reaches this listener OkHttp has already decoded it.
-            "wireBytes" to WireSizes.take(target),
-            "decodedBytes" to if (decodedBytes >= 0) decodedBytes.toDouble() else null,
-            "measuredBy" to "okhttp",
-        ))
-  }
-}
-
-/**
- * How many bytes a response actually carried, before OkHttp decoded it.
- *
- * A *network* interceptor sits below transparent gzip and so sees the encoded body and the
- * `Content-Length` that describes it; an application interceptor — and the event listener above —
- * sees what the caller reads, already decoded. Both numbers are needed and only one is visible from
- * each side, so the interceptor leaves its reading here for the listener to collect.
- *
- * Keyed by URL and taken once, because that is all the two sides share. A reading nobody collects is
- * dropped when the map is at its cap rather than growing without bound.
- */
-private object WireSizes {
-  private const val MAX_PENDING = 64
-  private val pending = java.util.concurrent.ConcurrentHashMap<String, Long>()
-
-  fun put(url: String, bytes: Long) {
-    if (pending.size >= MAX_PENDING) pending.clear()
-    pending[url] = bytes
-  }
-
-  fun take(url: String): Double? = pending.remove(url)?.toDouble()
-}
-
-/** Whether the listener has been put in front of React Native's client factory already. */
-private var networkTimingInstalled = false
-
 class AxonpackDevtoolsModule : Module() {
   /** Captured when the module is constructed, which happens during native startup. */
   private val moduleInitEpochMs = System.currentTimeMillis().toDouble()
@@ -327,41 +156,15 @@ class AxonpackDevtoolsModule : Module() {
     Events("onNetworkPhases")
 
     /**
-     * Returns whether phases will actually be reported, which is what the Timing tab says out loud.
+     * Attaches the emitter and reports whether the phases will actually arrive.
      *
-     * The listener is installed by replacing React Native's OkHttp client *factory*, which is the
-     * documented seam — but `NetworkingModule` asks that factory for a client once, when JavaScript
-     * first touches networking. So this has to run before the app's first request, which is why the
-     * client installs it from `init()` and not when the panel opens. A request made before then is a
-     * row without phases rather than a wrong one.
+     * The listener itself went in when the application was created — see `NetworkTiming.kt` — because
+     * a factory set from here would be set after React Native had already built its client. All this
+     * does is give the readings somewhere to go.
      */
     Function("installNetworkTimingReporter") { ->
-      if (networkTimingInstalled) return@Function true
-      try {
-        OkHttpClientProvider.setOkHttpClientFactory {
-          OkHttpClientProvider.createClientBuilder()
-              // Below transparent gzip, which is the only place the encoded size is still visible.
-              .addNetworkInterceptor { chain ->
-                val response = chain.proceed(chain.request())
-                val wire =
-                    response.header("content-length")?.toLongOrNull()
-                        ?: response.body?.contentLength()?.takeIf { it >= 0 }
-                if (wire != null) WireSizes.put(response.request.url.toString(), wire)
-                response
-              }
-              .eventListenerFactory(
-                  object : EventListener.Factory {
-                    override fun create(call: Call): EventListener =
-                        PhaseEventListener { payload -> sendEvent("onNetworkPhases", payload) }
-                  })
-              .build()
-        }
-        networkTimingInstalled = true
-        true
-      } catch (error: Throwable) {
-        // An OkHttp or React Native this build does not match is a missing tier, not a failure.
-        false
-      }
+      NetworkPhaseReporter.emit = { payload -> sendEvent("onNetworkPhases", payload) }
+      NetworkPhaseReporter.installed
     }
 
     Function("startUiFpsTracking") { uiFps.start() }
