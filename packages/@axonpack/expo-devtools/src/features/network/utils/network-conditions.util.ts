@@ -11,6 +11,24 @@ export function computeThrottleDelayMs(
   return Math.round(profile.latencyMs + transferMs);
 }
 
+/**
+ * How long a request body would have taken to go up, which is applied *before* the request leaves.
+ *
+ * Not the mirror image of the download delay, and the difference is the honest part: a response can be
+ * withheld from the app after it arrives, so throttling it is a matter of holding what is already
+ * here. Nothing can be withheld on the way out — by the time a patch could act, the bytes are gone.
+ * So an upload is modelled by holding the request back before sending it, which is a real wait of the
+ * right length in the right place, and no latency is charged here because the download side already
+ * charges it once for the round trip.
+ */
+export function computeUploadDelayMs(
+  byteSize: number | undefined,
+  profile: ThrottleProfile
+): number {
+  if (!byteSize || profile.uploadKbps <= 0) return 0;
+  return Math.round((byteSize * 8) / profile.uploadKbps);
+}
+
 export function remainingDelayMs(targetMs: number, elapsedMs: number): number {
   return Math.max(0, targetMs - elapsedMs);
 }
@@ -23,8 +41,8 @@ export function delay(ms: number): Promise<void> {
 export function formatThrottleSummary(conditions: ResolvedNetworkConditions): string {
   const label = THROTTLE_PRESET_LABELS[conditions.throttleId];
   if (!conditions.throttle) return label;
-  const { downloadKbps, latencyMs } = conditions.throttle;
-  return `${label} · ${downloadKbps} kbps · ${latencyMs} ms latency`;
+  const { downloadKbps, uploadKbps, latencyMs } = conditions.throttle;
+  return `${label} · ${downloadKbps} down · ${uploadKbps} up kbps · ${latencyMs} ms latency`;
 }
 
 export function formatUserAgentSummary(conditions: ResolvedNetworkConditions): string {

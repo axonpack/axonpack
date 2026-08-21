@@ -59,6 +59,25 @@ export function ThrottleSelector() {
           </View>
 
           <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Upload (kbps)</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={String(custom.uploadKbps)}
+                onChangeText={(text) =>
+                  networkConditionsStore.setCustomThrottle({
+                    ...custom,
+                    uploadKbps: parsePositiveInt(text),
+                  })
+                }
+                keyboardType="number-pad"
+                placeholder="375"
+                placeholderTextColor={COLORS.textSecondary}
+              />
+            </View>
+          </View>
+
+          <View style={styles.field}>
             <Text style={styles.fieldLabel}>Latency (ms)</Text>
             <View style={styles.inputRow}>
               <TextInput

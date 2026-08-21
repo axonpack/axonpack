@@ -9,6 +9,7 @@ import { networkLogStore } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
 import {
   computeThrottleDelayMs,
+  computeUploadDelayMs,
   delay,
   remainingDelayMs,
   withUserAgentHeader,
@@ -311,6 +312,18 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
       throw offlineError;
     }
 
+    // Before the request leaves, not after it returns: an upload cannot be withheld once it is gone,
+    // so the wait it would have taken is spent here instead. See `computeUploadDelayMs`.
+    if (conditions.throttle) {
+      await delay(computeUploadDelayMs(describedBody.byteSize, conditions.throttle));
+    }
+
+    // When the request actually went out, which is what the download budget is measured against.
+    // Measuring from `startedAt` meant a held upload consumed the whole download allowance — a 1 MB
+    // body on a 3G uplink is held about eleven seconds, longer than any download target, so the
+    // response came back with no throttling applied to it at all.
+    const sentAt = Date.now();
+
     try {
       const response = await rawFetch(input, effectiveInit);
       // The promise resolves once the headers are in, before the body is read — so this is the wait,
@@ -356,10 +369,7 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
 
       if (conditions.throttle) {
         await delay(
-          remainingDelayMs(
-            computeThrottleDelayMs(size, conditions.throttle),
-            Date.now() - startedAt
-          )
+          remainingDelayMs(computeThrottleDelayMs(size, conditions.throttle), Date.now() - sentAt)
         );
       }
 

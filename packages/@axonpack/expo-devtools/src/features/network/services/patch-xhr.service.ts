@@ -7,7 +7,11 @@ import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
-import { computeThrottleDelayMs, remainingDelayMs } from '../utils/network-conditions.util';
+import {
+  computeThrottleDelayMs,
+  computeUploadDelayMs,
+  remainingDelayMs,
+} from '../utils/network-conditions.util';
 import { createEventStreamParser, type EventStreamParser } from '../utils/parse-event-stream.util';
 import { createProgressThrottle } from '../utils/progress-throttle.util';
 import { describeRequestBody } from '../utils/request-body.util';
@@ -513,6 +517,35 @@ export function patchXHR() {
 
     if (conditions.offline) {
       failAsOffline(this);
+      return;
+    }
+
+    // Held back rather than slowed: the bytes cannot be caught on the way out, so the time the uplink
+    // would have taken is spent before the send. This also staggers the upload-progress events the app
+    // sees, since they cannot start before the request does.
+    const uploadDelay = conditions.throttle
+      ? computeUploadDelayMs(describedBody.byteSize, conditions.throttle)
+      : 0;
+
+    if (uploadDelay > 0) {
+      setTimeout(() => {
+        // The download budget runs from when the request actually went out. Left at the moment the app
+        // called, a held upload consumed the whole allowance — a 1 MB body on a 3G uplink is held about
+        // eleven seconds, longer than any download target, so the response arrived unthrottled.
+        const state = throttleStates.get(this);
+        if (state) state.startedAt = Date.now();
+
+        // The app can abort while the request is held, which is routine on an unmounting screen.
+        // React Native's `abort()` resets the object to UNSENT, so sending afterwards throws "Request
+        // has not been opened" from inside a timer — and would put out a request already cancelled.
+        if (xhr.__networkLogCanceled || xhr.__networkLogBlocked) return;
+
+        try {
+          originalSend.call(this, body as XMLHttpRequestBodyInit | null);
+        } catch {
+          // A request the platform will not send is one this patch has nothing left to report on.
+        }
+      }, uploadDelay);
       return;
     }
 

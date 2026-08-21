@@ -43,6 +43,7 @@ transfers.
 - [x] A form-data request copied as a cURL command that runs
 - [x] Save one response body to a file
 - [x] Export every kind of entry, with its messages or events, under a schema version
+- [x] Throttle upload speed as well as download
 - [x] Sandbox: edit any captured request and send it for real
 - [x] Override a response with a chosen status and body, or block a request outright
 - [x] Server-sent event streams, with every event, whichever client opened them
@@ -266,9 +267,12 @@ Three paths, because no one of them can see the others' traffic:
 - **A phase that was not measured is absent, not zero.** A reused connection has no DNS, TCP or TLS
   phase at all, and three zeroes would read as a handshake that took no time — so the row says the
   connection was reused and shows only what happened.
-- **Throttling is simulated in JS**, by delaying the response and the body. It models download speed
-  and latency because those are the two numbers a patch can honestly impose; nothing about it slows
-  the native socket down.
+- **Throttling is simulated in JS, and the two directions are not mirror images.** A download is
+  throttled by _withholding_ what has already arrived, which is a real wait in the right place. Nothing
+  can be withheld on the way out — by the time a patch could act, the bytes are gone — so an upload is
+  modelled by holding the request back before it is sent, billed against the body's own size at the
+  uplink speed. Latency is charged once, on the download side, because it belongs to the round trip
+  rather than to either half. Nothing about any of it slows the native socket down.
 - **An export says what it is.** The file carries a schema version, the tool that wrote it, and a
   summary, so one read years later is not a guess. Every kind of entry is in it now — a socket with the
   messages that belong to it, a stream with its events — which used to be dropped: the export filtered

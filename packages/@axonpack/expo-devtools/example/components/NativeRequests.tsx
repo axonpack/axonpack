@@ -89,6 +89,24 @@ async function fetchImage() {
   };
 }
 
+/**
+ * Big enough for an upload throttle to be felt: at a 3G uplink of 768 kbps this body takes about ten
+ * seconds to go up, and the panel holds the request for that long before sending it.
+ */
+function largeJsonBody(): string {
+  return JSON.stringify({ note: 'upload throttle demo', filler: 'x'.repeat(1024 * 1024) });
+}
+
+async function postLargeBody() {
+  const body = largeJsonBody();
+  const response = await fetch(`${UPLOAD_URL}?via=large-body`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+  return { status: response.status, text: `sent ${body.length} bytes` };
+}
+
 async function fetchXml(url: string) {
   const response = await fetch(url, { headers: { Accept: 'application/xml, text/xml' } });
   const text = await response.text();
@@ -190,6 +208,17 @@ export function NativeRequests() {
           </View>
         </View>
       ))}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>Upload throttling</Text>
+        <View style={styles.group}>
+          <Button
+            title="POST a 1 MB body"
+            onPress={() => runRequest('large-upload', postLargeBody)}
+            disabled={loading !== null}
+          />
+        </View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>XML response</Text>

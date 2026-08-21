@@ -6,8 +6,13 @@ function reactNativeFormData(parts: [string, unknown][]): FormData {
 }
 
 describe('describeRequestBody', () => {
-  it('passes a string body through', () => {
-    expect(describeRequestBody('{"a":1}')).toEqual({ preview: '{"a":1}' });
+  it('passes a string body through, and measures it', () => {
+    // The size is what an upload's time on a throttled connection is billed against.
+    expect(describeRequestBody('{"a":1}')).toEqual({ preview: '{"a":1}', byteSize: 7 });
+  });
+
+  it('measures a body in bytes rather than characters', () => {
+    expect(describeRequestBody('héllo').byteSize).toBe(6);
   });
 
   it('has nothing to say about no body', () => {
@@ -18,6 +23,7 @@ describe('describeRequestBody', () => {
   it('reads a binary body as its length rather than a placeholder', () => {
     expect(describeRequestBody(new ArrayBuffer(24)).preview).toBe('[binary body, 24 bytes]');
     expect(describeRequestBody(new Uint8Array(8)).preview).toBe('[binary body, 8 bytes]');
+    expect(describeRequestBody(new ArrayBuffer(24)).byteSize).toBe(24);
   });
 });
 

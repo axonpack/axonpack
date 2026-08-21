@@ -1,3 +1,5 @@
+import { utf8ByteLength } from './response-size.util';
+
 export type RequestField =
   | { name: string; kind: 'text'; value: string }
   | { name: string; kind: 'file'; fileName?: string; contentType?: string; size?: number };
@@ -7,6 +9,12 @@ export type DescribedRequestBody = {
   preview?: string;
   /** Present only for a form-data body, where the parts are the interesting thing. */
   fields?: RequestField[];
+  /**
+   * How many bytes are going up, when that can be known: text is measured, a file part reports its own
+   * size, and a body that says nothing about its length reports nothing. Used to model an upload's
+   * time on a throttled connection, so a guess would be a wait of the wrong length.
+   */
+  byteSize?: number;
 };
 
 /**
@@ -72,17 +80,30 @@ function summarize(fields: RequestField[]): string {
  * What was sent, as something a panel can show. It used to be the string `[FormData]` for every
  * upload, which said nothing about the fields or the file inside it.
  */
+/** Bytes rather than characters, for the same reason the response side counts them: see `utf8ByteLength`. */
+function fieldsByteSize(fields: RequestField[]): number | undefined {
+  let total = 0;
+  for (const field of fields) {
+    if (field.kind === 'text') total += utf8ByteLength(field.value) + utf8ByteLength(field.name);
+    else if (field.size === undefined)
+      return undefined; // one unknown part makes the whole unknown
+    else total += field.size;
+  }
+  return total;
+}
+
 export function describeRequestBody(body: unknown): DescribedRequestBody {
   if (body == null) return {};
-  if (typeof body === 'string') return { preview: body };
+  if (typeof body === 'string') return { preview: body, byteSize: utf8ByteLength(body) };
 
   if (typeof FormData !== 'undefined' && body instanceof FormData) {
     const fields = formDataEntries(body).map(([name, value]) => describeField(name, value));
-    return { preview: summarize(fields), fields };
+    return { preview: summarize(fields), fields, byteSize: fieldsByteSize(fields) };
   }
 
   if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) {
-    return { preview: body.toString() };
+    const encoded = body.toString();
+    return { preview: encoded, byteSize: utf8ByteLength(encoded) };
   }
 
   if (typeof Blob !== 'undefined' && body instanceof Blob) {
@@ -92,15 +113,16 @@ export function describeRequestBody(body: unknown): DescribedRequestBody {
     const size = described.kind === 'file' ? described.size : undefined;
     return {
       preview: `[file ${name ?? 'unnamed'}${size !== undefined ? `, ${size} bytes` : ''}]`,
+      byteSize: size,
     };
   }
 
   if (typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer) {
-    return { preview: `[binary body, ${body.byteLength} bytes]` };
+    return { preview: `[binary body, ${body.byteLength} bytes]`, byteSize: body.byteLength };
   }
 
   if (ArrayBuffer.isView(body)) {
-    return { preview: `[binary body, ${body.byteLength} bytes]` };
+    return { preview: `[binary body, ${body.byteLength} bytes]`, byteSize: body.byteLength };
   }
 
   return { preview: '[binary body]' };
