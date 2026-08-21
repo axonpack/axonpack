@@ -10,6 +10,7 @@ transfers.
 - [x] Captures Expo's own fetch when it is imported directly, not only through the global
 - [x] Captures `XMLHttpRequest`, so third-party HTTP clients show up
 - [x] Captures requests made inside a WebView
+- [x] Turn plain requests and sockets off independently
 - [x] WebSocket connections, with every message sent and received
 - [x] Declared WebView names act as a typed allowlist
 - [x] Full request and response bodies, headers, size and content type
@@ -39,9 +40,8 @@ transfers.
 - [x] Export the filtered log as JSON to the share sheet
 - [x] Sandbox: edit any captured request and send it for real
 - [ ] Server-sent event streams, with every event
-- [ ] A connection waterfall — queued, connecting, waiting, downloading
+- [ ] Queued and connecting time, the two phases before the wait
 - [ ] Compressed and uncompressed response size
-- [ ] Keep headers apart that were sent more than once under the same name
 - [ ] WebSocket connections opened inside a WebView
 - [ ] Cookies for WebView requests
 - [ ] Real timing breakdown for WebView requests
@@ -49,7 +49,7 @@ transfers.
 - [ ] Block a request outright
 - [ ] An XML response as a tree
 - [ ] Name a row by its whole relative URL, not only the last segment
-- [ ] Turn plain requests, sockets and streams off independently
+- [ ] Turn stream capture off independently, the way requests and sockets already can be
 - [ ] Capture requests made before the panel is set up
 - [ ] Export a socket or stream entry too, and version the file
 - [ ] Requests from a native HTTP client that never touches JavaScript
@@ -128,6 +128,11 @@ Three paths, because no one of them can see the others' traffic:
 
 ## Won't do
 
+- **Telling apart headers that arrived more than once under the same name.** React Native hands
+  JavaScript one value per header, joining repeats with a comma before they get here, so the split is
+  gone before anything in this package can see it. `Set-Cookie` is the exception and the Cookies tab
+  undoes it there — a cookie always starts with `name=`, which is enough to tell a separator comma
+  from one inside an `Expires` date. No other header carries a marker that reliable.
 - **Separating DNS, TCP and TLS from one another.** The platform reports when a connection began and
   when it was ready, not the three phases inside that, so the waterfall above stops at one number for
   the whole handshake.
