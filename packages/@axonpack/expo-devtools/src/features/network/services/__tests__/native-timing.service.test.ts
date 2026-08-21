@@ -64,6 +64,26 @@ describe('applyNativeTiming', () => {
     expect(phases?.waitMs).toBe(40);
   });
 
+  // The bridge is what makes this necessary: a Swift `Bool` arrives as 0 or 1, so the UI's
+  // `=== true` check silently missed every reused connection until this was coerced.
+  it.each([
+    [1, true],
+    [0, false],
+    [true, true],
+    [false, false],
+  ])('reads %p from the bridge as %p', (sent, expected) => {
+    logRequest('https://example.test/reuse', 4000);
+
+    applyNativeTiming({
+      url: 'https://example.test/reuse',
+      startMs: 4000,
+      reusedConnection: sent,
+      measuredBy: 'urlsession',
+    });
+
+    expect(networkLogStore.getSnapshot()[0]?.phases?.reusedConnection).toBe(expected);
+  });
+
   // The stack reports every request the process makes, including ones from before recording started.
   it('drops a reading that matches no row', () => {
     applyNativeTiming({

@@ -253,12 +253,21 @@ private final class NetworkPhaseReporter {
 private let metricsSelector = NSSelectorFromString("URLSession:task:didFinishCollectingMetrics:")
 
 /**
- The delegate classes worth asking. React Native's is Objective-C and public, so it is reliable.
- Expo's is an internal Swift class reached by its runtime name — which is how the *global* `fetch` in
- an Expo app is timed at all, and which is simply missed if Expo renames it. Missing one is a stack
- without phases, never a crash.
+ The *session* delegate classes worth asking, which is the distinction that matters: URLSession reports
+ metrics to the delegate its session was created with, never to a per-task delegate that one forwards
+ to. React Native's is Objective-C and public, so it is reliable. Expo's fetch runs through a proxy in
+ `ExpoModulesCore`, reached by its Swift runtime name and simply missed if Expo renames it — both
+ spellings are tried, because a Swift class registers under a mangled symbol while the `Module.Class`
+ form is resolved by the runtime instead.
+
+ `Expo.ExpoURLSessionTask` was the first attempt and was wrong: it is the per-task delegate the proxy
+ forwards to, so it resolved, accepted the method, and was never called.
  */
-private let sessionDelegateClassNames = ["RCTHTTPRequestHandler", "Expo.ExpoURLSessionTask"]
+private let sessionDelegateClassNames = [
+  "RCTHTTPRequestHandler",
+  "ExpoModulesCore.URLSessionSessionDelegateProxy",
+  "_TtC15ExpoModulesCore30URLSessionSessionDelegateProxy",
+]
 
 private func addMetricsCollection(to className: String) -> Bool {
   guard let delegateClass = NSClassFromString(className) else { return false }
