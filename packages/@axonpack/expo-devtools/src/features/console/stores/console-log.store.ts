@@ -2,7 +2,16 @@ import { EventEmitter } from 'expo';
 
 import type { ConsoleArg } from '../utils/format-console-args.util';
 
-export type ConsoleLogLevel = 'log' | 'info' | 'warn' | 'error' | 'debug' | 'input' | 'result';
+export type ConsoleLogLevel =
+  | 'log'
+  | 'info'
+  | 'warn'
+  | 'error'
+  | 'debug'
+  | 'input'
+  | 'result'
+  /** A crash, written by the crash capture rather than by anything the app called. */
+  | 'crash';
 
 export type ConsoleLogEntry = {
   id: string;

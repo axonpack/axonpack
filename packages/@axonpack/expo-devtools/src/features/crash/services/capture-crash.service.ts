@@ -2,6 +2,7 @@ import { collectBreadcrumbs } from './collect-breadcrumbs.service';
 import { readDeviceInfo } from './device-info.service';
 import { persistCrashRecord } from './native-crash.service';
 import { crashLinkStore } from '../../../core/stores/crash-link.store';
+import { logCrashRow } from '../../console/services/log-crash-row.service';
 import {
   crashStore,
   type CrashKind,
@@ -105,9 +106,14 @@ export function captureCrash(
     if (record === null) return null;
 
     crashStore.add(record);
-    // Before the handler returns: RN's `console.error` re-emit happens on the way out of it, and the
-    // console patch reads this to stamp the row it is about to write.
+    // Before the handler returns: the link is what lets the console patch recognise React Native's
+    // own re-emit of this error and leave it alone, since the row below is already the one to show.
     crashLinkStore.link(error, record.id);
+    // Written here rather than left to that re-emit: a fatal error never reaches it, because the
+    // handler that would have re-emitted is the one being withheld from, and a native exception
+    // never passed through JavaScript at all. Doing it for every kind is what makes the console the
+    // one place every error turns up, at one level, with one icon.
+    logCrashRow(error, record.id, record.timestamp);
 
     // A native exception is the only kind that still ends the app, so it is the only one worth
     // writing down for the next launch to read. Every JavaScript tier is survived now, which means

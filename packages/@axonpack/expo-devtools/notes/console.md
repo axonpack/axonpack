@@ -9,6 +9,7 @@ that evaluates expressions against the running app.
 - [x] Captures the console inside a WebView
 - [x] Each argument gets its own cell; objects render as an inspectable tree
 - [x] Errors show the message with the stack behind a disclosure
+- [x] Every crash appears as a row of its own level, and opens its full report
 - [x] Repeated messages collapse into one row with a count
 - [x] Reads oldest-first like a terminal, with a jump-to-bottom button
 - [x] Filter by level with counts, search, and filter by source
@@ -32,6 +33,17 @@ Arguments are serialised **inside the page** for WebView rows, because `postMess
 function, an `undefined` and an `Error` would all arrive as nothing useful.
 
 ## Decisions worth knowing
+
+- **A crash is its own level, and the crash capture writes the row.** React Native re-emits an error
+  it is reporting through `console.error`, which used to be where the row came from — but a fatal
+  error never reaches that re-emit any more, since the handler doing the reporting is the one being
+  withheld from, and a native exception never passed through JavaScript at all. So the row is written
+  where the crash is recorded, which also means every kind arrives the same way and reads the same:
+  one icon, one filter chip, and the message opening the report rather than only the inline stack.
+  Where React Native does still re-emit, that echo is dropped — the same `Error` object is the proof
+  it is an echo, and one crash should be one row.
+- **Nothing is forced past the record button.** A paused console is one somebody asked to stop
+  writing to, and the crash is in the Crash tab either way.
 
 - **One cell per argument, one per line.** Chrome flows them inline and this did too for a while,
   but a phone's width rarely holds a string and an object side by side, so the inline version spent

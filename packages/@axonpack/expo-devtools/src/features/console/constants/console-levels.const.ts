@@ -2,7 +2,7 @@ import type { MaterialIconName } from '../../../core/components/ui/icon-button.u
 import type { Palette } from '../../../core/constants/theme.const';
 import type { ConsoleLogLevel } from '../stores/console-log.store';
 
-export const CONSOLE_LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
+export const CONSOLE_LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug', 'crash'];
 
 export const CONSOLE_LEVEL_LABELS: Record<ConsoleLogLevel, string> = {
   log: 'Logs',
@@ -10,6 +10,7 @@ export const CONSOLE_LEVEL_LABELS: Record<ConsoleLogLevel, string> = {
   warn: 'Warnings',
   error: 'Errors',
   debug: 'Debug',
+  crash: 'Crashes',
   input: 'Input',
   result: 'Result',
 };
@@ -28,6 +29,9 @@ export function consoleLevelVisuals(COLORS: Palette): Record<ConsoleLogLevel, Co
     warn: { icon: 'warning', color: COLORS.warning, surface: COLORS.warningSurface },
     error: { icon: 'cancel', color: COLORS.error, surface: COLORS.errorSurface },
     debug: { icon: 'bug-report', color: '#9334e6' },
+    // Its own icon rather than the error level's, because a crash is not something the app chose to
+    // log — it is the report of one, and the row opens that report.
+    crash: { icon: 'dangerous', color: COLORS.error, surface: COLORS.errorSurface },
     input: { icon: 'chevron-right', color: COLORS.accent },
     result: { icon: 'chevron-left', color: COLORS.textSecondary },
   };

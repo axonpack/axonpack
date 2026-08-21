@@ -4,9 +4,9 @@ import { crashStore } from '../../../crash/stores/crash.store';
 import { consoleLogStore } from '../../stores/console-log.store';
 
 /**
- * The link between a console row and a crash report rests on two things that are easy to break from
- * either side: the same `Error` object reaching both, and the crash being recorded *before* React
- * Native re-emits it through `console.error`. Both are asserted here rather than in the stores.
+ * A crash writes its own console row, and the `Error` object's identity is what lets the console
+ * patch recognise React Native's re-emit of the same error and leave it alone. Both halves are easy
+ * to break from either side, so both are asserted here rather than in the stores.
  */
 describe('console rows linked to a crash report', () => {
   beforeAll(() => {
@@ -21,16 +21,38 @@ describe('console rows linked to a crash report', () => {
     consoleLogStore.setEnabled(true);
   });
 
-  it('carries the id of the crash captured for the very same error', () => {
+  it('writes a row of its own, at the crash level, pointing at the report', () => {
     const error = new Error('payment gateway timed out');
 
-    // The order React Native uses: our handler captures, then delegates, and the delegate logs.
     const record = captureCrash(error, 'js-fatal');
-    console.error(error);
 
     const [entry] = consoleLogStore.getSnapshot();
     expect(record).not.toBeNull();
+    expect(entry?.level).toBe('crash');
     expect(entry?.crashId).toBe(record?.id);
+    // The thrown error itself, so the row renders as one — message, and the stack behind it.
+    expect(entry?.parts[0]).toMatchObject({ kind: 'error' });
+  });
+
+  // The row exists before the echo arrives, and one crash should be one row.
+  it('drops React Native own re-emit of an error already recorded', () => {
+    const error = new Error('payment gateway timed out');
+
+    captureCrash(error, 'js-fatal');
+    console.error(error);
+
+    expect(consoleLogStore.getSnapshot()).toHaveLength(1);
+    expect(consoleLogStore.getSnapshot()[0]?.level).toBe('crash');
+  });
+
+  it('writes nothing while the console is paused, since the Crash tab still has it', () => {
+    consoleLogStore.setPaused(true);
+    try {
+      captureCrash(new Error('boom'), 'js-fatal');
+      expect(consoleLogStore.getSnapshot()).toEqual([]);
+    } finally {
+      consoleLogStore.setPaused(false);
+    }
   });
 
   it('leaves an ordinary console error unlinked', () => {
@@ -54,9 +76,7 @@ describe('console rows linked to a crash report', () => {
     const second = new Error('boom');
 
     const firstRecord = captureCrash(first, 'js-error');
-    console.error(first);
     const secondRecord = captureCrash(second, 'js-error');
-    console.error(second);
 
     const entries = consoleLogStore.getSnapshot();
     expect(entries).toHaveLength(1);
