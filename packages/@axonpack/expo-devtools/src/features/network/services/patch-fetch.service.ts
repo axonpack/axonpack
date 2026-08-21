@@ -1,6 +1,5 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
-import { createProgressThrottle } from '../utils/progress-throttle.util';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import {
@@ -9,6 +8,7 @@ import {
   remainingDelayMs,
   withUserAgentHeader,
 } from '../utils/network-conditions.util';
+import { createProgressThrottle } from '../utils/progress-throttle.util';
 
 /**
  * Expo's fetch lives in a module of its own, and `import { fetch } from 'expo/fetch'` never reads
