@@ -32,6 +32,7 @@ export type NativeTimingPayload = {
   sendMs?: number | null;
   waitMs?: number | null;
   downloadMs?: number | null;
+  totalMs?: number | null;
   /** A `Bool` from Swift, a `Boolean` from Kotlin — either can arrive over the bridge as a number. */
   reusedConnection?: boolean | number | null;
   protocol?: string | null;
@@ -70,6 +71,7 @@ function toPhases(payload: NativeTimingPayload): NetworkPhases {
     sendMs: present(payload.sendMs),
     waitMs: present(payload.waitMs),
     downloadMs: present(payload.downloadMs),
+    totalMs: present(payload.totalMs),
     // Coerced, not passed through: a Swift `Bool` arrives over the bridge as 0 or 1, and `=== true`
     // in the UI is false for 1 — which silently cost the "connection reused" badge on every row.
     reusedConnection:

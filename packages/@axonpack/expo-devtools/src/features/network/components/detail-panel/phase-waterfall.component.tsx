@@ -12,12 +12,20 @@ const MEASURED_BY_LABELS: Record<NetworkPhases['measuredBy'], string> = {
   okhttp: 'OkHttp',
 };
 
-export function PhaseWaterfall({ phases }: { phases: NetworkPhases }) {
+export function PhaseWaterfall({
+  phases,
+  appDurationMs,
+}: {
+  phases: NetworkPhases;
+  /** What the patches timed, used only when the platform sent no total of its own. */
+  appDurationMs?: number;
+}) {
   const rowStyles = useRowStyles();
   const styles = useStyles();
   const COLORS = useThemeColors();
 
-  const measured = layOutPhases(phases);
+  const measured = layOutPhases(phases, appDurationMs);
+  const total = phases.totalMs ?? appDurationMs;
 
   return (
     <View style={rowStyles.section}>
@@ -26,6 +34,30 @@ export function PhaseWaterfall({ phases }: { phases: NetworkPhases }) {
         {phases.protocol !== undefined && <InfoBadge label={phases.protocol} />}
         {phases.reusedConnection === true && <InfoBadge icon="link" label="Connection reused" />}
       </View>
+
+      {total !== undefined && (
+        <View style={styles.row}>
+          <View style={styles.labelGroup}>
+            <Text style={styles.label} numberOfLines={1}>
+              Total
+            </Text>
+            {phases.totalMs === undefined && (
+              // Said out loud, because it is measured from a different moment than the phases are: the
+              // call leaving JavaScript rather than the stack picking the request up.
+              <Text style={styles.offset} numberOfLines={1}>
+                app clock
+              </Text>
+            )}
+          </View>
+          {/* The whole track, so the phases below can be read as parts of it. */}
+          <View style={styles.track}>
+            <View
+              style={[styles.bar, styles.totalBar, { backgroundColor: COLORS.textSecondary }]}
+            />
+          </View>
+          <Text style={styles.value}>{formatDuration(total)}</Text>
+        </View>
+      )}
 
       {measured.map((phase) => (
         <View key={phase.key} style={styles.row}>
@@ -99,6 +131,12 @@ const useStyles = makeThemedStyles((COLORS) => ({
     borderRadius: 4,
     backgroundColor: COLORS.toolbarBackground,
     overflow: 'hidden',
+  },
+  // Muted and full width: it is the scale the rest are measured against, not a phase of its own.
+  totalBar: {
+    left: 0,
+    width: '100%',
+    opacity: 0.45,
   },
   bar: {
     position: 'absolute',

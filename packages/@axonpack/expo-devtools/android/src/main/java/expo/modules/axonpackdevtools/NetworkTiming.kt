@@ -78,6 +78,7 @@ internal class PhaseEventListener : EventListener() {
   private var requestEnd = 0L
   private var responseStart = 0L
   private var responseEnd = 0L
+  private var callEnd = 0L
   private var reusedConnection = true
   private var protocol: String? = null
   private var url: String? = null
@@ -161,11 +162,13 @@ internal class PhaseEventListener : EventListener() {
   }
 
   override fun callEnd(call: Call) {
+    callEnd = System.nanoTime()
     report()
   }
 
   override fun callFailed(call: Call, ioe: IOException) {
     // Still reported: how far a request got before it failed is the most useful thing about it.
+    callEnd = System.nanoTime()
     report()
   }
 
@@ -189,6 +192,9 @@ internal class PhaseEventListener : EventListener() {
         "reusedConnection" to reusedConnection,
         "protocol" to protocol,
         "wireBytes" to if (wireBytes >= 0) wireBytes.toDouble() else null,
+        // The whole call, which is *not* the phases added up: OkHttp leaves gaps it attributes to no
+        // phase, and the waterfall needs the real duration to scale to.
+        "totalMs" to millis(callStart, callEnd),
         "measuredBy" to "okhttp",
       )
     )

@@ -256,6 +256,11 @@ private final class NetworkPhaseReporter {
       "waitMs": millisBetween(
         transaction.requestEndDate ?? transaction.requestStartDate, transaction.responseStartDate),
       "downloadMs": millisBetween(transaction.responseStartDate, transaction.responseEndDate),
+      // The whole request as the platform timed it, which is *not* the phases added up: the stack
+      // leaves gaps it attributes to no phase — between a lookup finishing and a connection starting,
+      // and between a connection being ready and the request going out. Sending it means the waterfall
+      // can scale to the real duration and show that unattributed time rather than absorbing it.
+      "totalMs": metrics.taskInterval.duration * 1000,
       "reusedConnection": transaction.isReusedConnection,
       "protocol": transaction.networkProtocolName,
       // The two sizes a compressed response has, counted on the socket and after decoding. Nothing in

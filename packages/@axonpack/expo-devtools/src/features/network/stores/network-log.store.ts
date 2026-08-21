@@ -27,6 +27,13 @@ export type NetworkPhases = {
   reusedConnection?: boolean;
   /** `h2`, `http/1.1` — whatever the stack negotiated. */
   protocol?: string;
+  /**
+   * The whole request as the platform timed it, which is deliberately *not* the phases added up: the
+   * stack leaves time attributed to no phase at all — between a lookup finishing and a connection
+   * starting, between a connection being ready and the request going out. Keeping it means the
+   * waterfall scales to the real duration and that time shows as the gap it is.
+   */
+  totalMs?: number;
   /** Which stack measured this. Only some of an app's traffic goes through each one. */
   measuredBy: 'urlsession' | 'okhttp';
 };

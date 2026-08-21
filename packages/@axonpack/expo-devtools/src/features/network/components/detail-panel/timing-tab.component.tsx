@@ -30,7 +30,7 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
 
       {entry.phases ? (
         <>
-          <PhaseWaterfall phases={entry.phases} />
+          <PhaseWaterfall phases={entry.phases} appDurationMs={entry.duration} />
           <Text style={styles.timingNote} selectable>
             Timed by the platform&apos;s own networking stack, which is the only thing that can see
             inside a request. The panel&apos;s patches can only tell when a call left and when it

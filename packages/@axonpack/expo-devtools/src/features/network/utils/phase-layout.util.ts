@@ -11,8 +11,8 @@ export const PHASES: { key: keyof NetworkPhases; label: string }[] = [
   { key: 'downloadMs', label: 'Downloading' },
 ];
 
-/** Where each phase starts and how long it ran, as fractions of the whole measured request. */
-export function layOutPhases(phases: NetworkPhases) {
+/** Where each phase starts and how long it ran, as fractions of the whole request. */
+export function layOutPhases(phases: NetworkPhases, fallbackTotalMs?: number) {
   const measured = PHASES.map((phase) => ({
     ...phase,
     value: phases[phase.key] as number | undefined,
@@ -20,7 +20,12 @@ export function layOutPhases(phases: NetworkPhases) {
     return typeof phase.value === 'number';
   });
 
-  const total = measured.reduce((sum, phase) => sum + phase.value, 0);
+  const measuredSum = measured.reduce((sum, phase) => sum + phase.value, 0);
+  // The platform's own duration first, the app's own as a fallback, and the phases added up when
+  // neither is there. Scaling to a real total is what leaves the time the stack attributed to no phase
+  // visible as empty track, rather than stretching the phases over a request they do not fill.
+  const claimed = phases.totalMs ?? fallbackTotalMs;
+  const total = claimed !== undefined && claimed >= measuredSum ? claimed : measuredSum;
 
   let elapsed = 0;
   return measured.map((phase) => {
