@@ -163,6 +163,7 @@ private class PhaseEventListener(private val emit: (Map<String, Any?>) -> Unit) 
   private var reusedConnection = true
   private var protocol: String? = null
   private var url: String? = null
+  private var decodedBytes = -1L
 
   /** Null rather than zero for a phase that never happened — a reused connection has no handshake. */
   private fun millis(from: Long, to: Long): Double? =
@@ -233,6 +234,8 @@ private class PhaseEventListener(private val emit: (Map<String, Any?>) -> Unit) 
 
   override fun responseBodyEnd(call: Call, byteCount: Long) {
     responseEnd = System.nanoTime()
+    // What the caller read, which is the decoded body: OkHttp gunzips transparently below this.
+    decodedBytes = byteCount
   }
 
   override fun callEnd(call: Call) {
@@ -262,9 +265,36 @@ private class PhaseEventListener(private val emit: (Map<String, Any?>) -> Unit) 
             "downloadMs" to millis(responseStart, responseEnd),
             "reusedConnection" to reusedConnection,
             "protocol" to protocol,
+            // The wire count comes from the interceptor below rather than from here, because by the
+            // time a body reaches this listener OkHttp has already decoded it.
+            "wireBytes" to WireSizes.take(target),
+            "decodedBytes" to if (decodedBytes >= 0) decodedBytes.toDouble() else null,
             "measuredBy" to "okhttp",
         ))
   }
+}
+
+/**
+ * How many bytes a response actually carried, before OkHttp decoded it.
+ *
+ * A *network* interceptor sits below transparent gzip and so sees the encoded body and the
+ * `Content-Length` that describes it; an application interceptor — and the event listener above —
+ * sees what the caller reads, already decoded. Both numbers are needed and only one is visible from
+ * each side, so the interceptor leaves its reading here for the listener to collect.
+ *
+ * Keyed by URL and taken once, because that is all the two sides share. A reading nobody collects is
+ * dropped when the map is at its cap rather than growing without bound.
+ */
+private object WireSizes {
+  private const val MAX_PENDING = 64
+  private val pending = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+  fun put(url: String, bytes: Long) {
+    if (pending.size >= MAX_PENDING) pending.clear()
+    pending[url] = bytes
+  }
+
+  fun take(url: String): Double? = pending.remove(url)?.toDouble()
 }
 
 /** Whether the listener has been put in front of React Native's client factory already. */
@@ -310,6 +340,15 @@ class AxonpackDevtoolsModule : Module() {
       try {
         OkHttpClientProvider.setOkHttpClientFactory {
           OkHttpClientProvider.createClientBuilder()
+              // Below transparent gzip, which is the only place the encoded size is still visible.
+              .addNetworkInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                val wire =
+                    response.header("content-length")?.toLongOrNull()
+                        ?: response.body?.contentLength()?.takeIf { it >= 0 }
+                if (wire != null) WireSizes.put(response.request.url.toString(), wire)
+                response
+              }
               .eventListenerFactory(
                   object : EventListener.Factory {
                     override fun create(call: Call): EventListener =

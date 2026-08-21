@@ -35,6 +35,9 @@ export type NativeTimingPayload = {
   /** A `Bool` from Swift, a `Boolean` from Kotlin — either can arrive over the bridge as a number. */
   reusedConnection?: boolean | number | null;
   protocol?: string | null;
+  /** Counted on the socket and after decoding — the pair no JS patch can tell apart. */
+  wireBytes?: number | null;
+  decodedBytes?: number | null;
   measuredBy: NetworkPhases['measuredBy'];
 };
 
@@ -91,7 +94,17 @@ export function applyNativeTiming(payload: NativeTimingPayload) {
   // makes, including the ones made before recording started and the panel's own.
   if (!entry) return;
 
-  networkLogStore.update(entry.id, { phases: report.phases });
+  const wireBytes = present(payload.wireBytes);
+  const decodedBytes = present(payload.decodedBytes);
+
+  networkLogStore.update(entry.id, {
+    phases: report.phases,
+    // Left off entirely when neither count arrived, so the entry never carries an empty object that
+    // reads as "measured, and both zero".
+    ...(wireBytes === undefined && decodedBytes === undefined
+      ? null
+      : { transfer: { wireBytes, decodedBytes } }),
+  });
 }
 
 export function installNativeTimingReporter() {

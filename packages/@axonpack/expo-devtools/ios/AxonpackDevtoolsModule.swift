@@ -222,6 +222,19 @@ private final class NetworkPhaseReporter {
       return
     }
 
+    // Summed across transactions rather than read off the last: a redirect chain is one request as far
+    // as the app is concerned, and every hop of it crossed the wire.
+    let wireTotal = metrics.transactionMetrics.reduce(Int64(0)) {
+      $0 + $1.countOfResponseBodyBytesReceived
+    }
+    let decodedTotal = metrics.transactionMetrics.reduce(Int64(0)) {
+      $0 + $1.countOfResponseBodyBytesAfterDecoding
+    }
+    let bodyBytes = (
+      wire: wireTotal > 0 ? Double(wireTotal) : nil,
+      decoded: decodedTotal > 0 ? Double(decodedTotal) : nil
+    )
+
     // Whichever of these the stack reached first is where the request stopped waiting to be worked
     // on, so the gap before it is the queue.
     let workStart =
@@ -245,6 +258,15 @@ private final class NetworkPhaseReporter {
       "downloadMs": millisBetween(transaction.responseStartDate, transaction.responseEndDate),
       "reusedConnection": transaction.isReusedConnection,
       "protocol": transaction.networkProtocolName,
+      // The two sizes a compressed response has, counted on the socket and after decoding. Nothing in
+      // JavaScript can tell these apart: the body it is handed is already decoded, and a
+      // `Content-Length` header describes the encoded one.
+      //
+      // Sent only when the platform actually counted them. It does not always: a response served from
+      // the URL cache crossed no wire at all, and some transports fill in the header counts while
+      // leaving the body counts at zero. Zero would read as "an empty body", a different claim.
+      "wireBytes": bodyBytes.wire,
+      "decodedBytes": bodyBytes.decoded,
       "measuredBy": "urlsession",
     ])
   }

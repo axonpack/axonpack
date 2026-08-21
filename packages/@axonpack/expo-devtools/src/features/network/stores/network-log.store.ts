@@ -81,6 +81,12 @@ export type NetworkLogEntry = {
   intercepted?: 'blocked' | 'overridden';
 
   /**
+   * The bytes the platform counted on the socket and after decoding. Measured rather than inferred,
+   * which is what makes a compression ratio worth showing — `size` above cannot be both numbers.
+   */
+  transfer?: { wireBytes?: number; decodedBytes?: number };
+
+  /**
    * What the platform's own networking stack measured, for the requests that go through one this
    * package can reach. Absent for everything else, and never inferred from the two numbers a patch
    * can see — a phase this did not measure is missing rather than zero.
