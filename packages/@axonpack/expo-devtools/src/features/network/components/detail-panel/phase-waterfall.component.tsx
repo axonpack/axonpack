@@ -10,6 +10,8 @@ import { layOutPhases } from '../../utils/phase-layout.util';
 const MEASURED_BY_LABELS: Record<NetworkPhases['measuredBy'], string> = {
   urlsession: 'URLSession',
   okhttp: 'OkHttp',
+  /** The page's own engine, which measures more of a request than either stack above. */
+  webview: 'the page',
 };
 
 export function PhaseWaterfall({

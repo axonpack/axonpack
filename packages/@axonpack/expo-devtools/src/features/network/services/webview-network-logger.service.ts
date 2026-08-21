@@ -1,3 +1,4 @@
+import { recordStreamEvents } from './record-stream-events.service';
 import {
   buildConditionsScript,
   CONDITIONS_GLOBAL,
@@ -30,8 +31,22 @@ type WebViewSocketPayload = {
   duration?: number;
 };
 
+/** One event of a stream the page opened, relayed as it happens. */
+type WebViewStreamPayload = {
+  /** Minted by the page, and the only thing tying a stream's events together. */
+  id: string;
+  event: 'connect' | 'open' | 'message' | 'error' | 'close';
+  url?: string;
+  startedAt?: number;
+  type?: string;
+  data?: string;
+  lastEventId?: string;
+  duration?: number;
+};
+
 type WebViewMessage =
   | { [MESSAGE_MARKER]: true; type: 'network'; source: string; payload: WebViewNetworkPayload }
+  | { [MESSAGE_MARKER]: true; type: 'eventsource'; source: string; payload: WebViewStreamPayload }
   | { [MESSAGE_MARKER]: true; type: 'websocket'; source: string; payload: WebViewSocketPayload }
   | { [MESSAGE_MARKER]: true; type: 'navigation'; source: string };
 
@@ -204,6 +219,78 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
       send(envelope('network', payload));
     }
 
+    /**
+     * What the page's own document can see. Not the same as what the request sent: the engine sets the
+     * Cookie header itself and JavaScript is not allowed to read it, and an HttpOnly cookie is
+     * invisible here by design. So this is reported as the page's jar and labelled as that.
+     */
+    function pageCookies() {
+      try {
+        return document.cookie || undefined;
+      } catch (e) {
+        return undefined;
+      }
+    }
+
+    /**
+     * The phases of a request as the *engine* measured them. A page has the real
+     * PerformanceResourceTiming — the one React Native only stubs — so a WebView request can report
+     * DNS, TCP and TLS for real, along with the encoded and decoded sizes.
+     *
+     * Zero means "not available" in that API rather than "took no time": every detailed field is zeroed
+     * for a cross-origin response whose server did not send Timing-Allow-Origin. So a zero is dropped
+     * rather than reported, the same way a phase the platform never measured is dropped everywhere else.
+     */
+    function positive(value) {
+      return typeof value === 'number' && value > 0 ? value : undefined;
+    }
+
+    function span(from, to) {
+      if (!from || !to || to < from) return undefined;
+      return to - from;
+    }
+
+    function relayResourceTiming(id, url) {
+      if (!window.performance || !performance.getEntriesByName) return;
+      // The entry is recorded when the response completes, which can be after the promise resolves —
+      // so it is looked for on the next turn rather than now.
+      setTimeout(function () {
+        var entries;
+        try {
+          entries = performance.getEntriesByName(url, 'resource');
+        } catch (e) {
+          return;
+        }
+        if (!entries || !entries.length) return;
+        var timing = entries[entries.length - 1];
+
+        var workStart = timing.domainLookupStart || timing.connectStart || timing.requestStart;
+        var phases = {
+          queuedMs: span(timing.fetchStart, workStart),
+          dnsMs: span(timing.domainLookupStart, timing.domainLookupEnd),
+          tcpMs: span(timing.connectStart, timing.secureConnectionStart || timing.connectEnd),
+          tlsMs: span(timing.secureConnectionStart, timing.connectEnd),
+          // No requestEnd exists in this API, so there is no sending phase to report — the wait is
+          // measured from the request starting, and says so by containing it.
+          waitMs: span(timing.requestStart, timing.responseStart),
+          downloadMs: span(timing.responseStart, timing.responseEnd),
+          protocol: timing.nextHopProtocol || undefined,
+          measuredBy: 'webview'
+        };
+
+        var wire = positive(timing.encodedBodySize);
+        var decoded = positive(timing.decodedBodySize);
+
+        post({
+          id: id,
+          phases: phases,
+          transfer: wire === undefined && decoded === undefined
+            ? undefined
+            : { wireBytes: wire, decodedBytes: decoded }
+        });
+      }, 0);
+    }
+
     var originalFetch = window.fetch;
     if (originalFetch) {
       window.fetch = function (input, init) {
@@ -216,7 +303,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
 
         // Reported from the page rather than stamped natively: an in-flight request keeps the
         // conditions the page had, even if a new set is pushed over before it finishes.
-        post({ id: id, method: String(method).toUpperCase(), url: url, status: 'pending', requestBody: previewBody(init && init.body), requestHeaders: requestHeaders, startedAt: startedAt, conditions: conditions() });
+        post({ id: id, method: String(method).toUpperCase(), url: url, status: 'pending', requestBody: previewBody(init && init.body), requestHeaders: requestHeaders, pageCookies: pageCookies(), startedAt: startedAt, conditions: conditions() });
 
         if (conditions().offline) {
           post({ id: id, status: 'error', error: 'Network request failed (offline — simulated by devtools)', duration: Date.now() - startedAt });
@@ -232,6 +319,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
               var size = extractSize(responseHeaders, text);
               return sleep(throttleRemainingMs(size, startedAt)).then(function () {
                 post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: size, duration: Date.now() - startedAt });
+                relayResourceTiming(id, url);
                 return response;
               });
             });
@@ -425,7 +513,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
           xhr.__bruinThrottle = { profile: activeConditions.throttle, startedAt: startedAt };
         }
 
-        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, startedAt: startedAt, conditions: activeConditions });
+        post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, pageCookies: pageCookies(), startedAt: startedAt, conditions: activeConditions });
 
         xhr.addEventListener('readystatechange', function () {
           if (xhr.readyState !== OriginalXHR.DONE) return;
@@ -454,6 +542,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
             error: isNetworkFailure ? 'Network request failed' : undefined,
             duration: Date.now() - startedAt
           });
+          relayResourceTiming(id, xhr.__bruinUrl || '');
         });
 
         if (activeConditions.offline) {
@@ -477,8 +566,96 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
     // WebSocket never reaches the native module the app's sockets go through. Inside the closure on
     // purpose — it relays through the same queued bridge and URL resolver as everything else here.
     ${captureSockets ? buildSocketPatch() : ''}
+
+    // Streams the page opens. A page has a real EventSource, which React Native does not ship at all —
+    // so this is the one transport whose page version needs no interpretation of a wire format.
+    ${buildEventSourcePatch()}
   })();
   true;`;
+}
+
+/**
+ * The page's `EventSource`, wrapped the same way its `WebSocket` is and for the same reasons: the
+ * wrapper hands back a real one and borrows its prototype, so every `instanceof` the page might do
+ * still passes.
+ *
+ * A stream from a page is a row of the same shape as one from the app — an HTTP request with events
+ * beside it — even though nothing here parses `text/event-stream`: the engine has already done that,
+ * and re-deriving events from the raw body would only be able to disagree with it.
+ */
+function buildEventSourcePatch(): string {
+  return `(function () {
+    var OriginalEventSource = window.EventSource;
+    if (!OriginalEventSource) return;
+
+    var streamCounter = 0;
+
+    function PatchedEventSource(url, config) {
+      var stream =
+        config === undefined ? new OriginalEventSource(url) : new OriginalEventSource(url, config);
+
+      streamCounter += 1;
+      var id = WEBVIEW_NAME + '-es-' + streamCounter;
+      var startedAt = Date.now();
+      var resolved = resolveUrl(url);
+
+      function relay(payload) {
+        payload.id = id;
+        send(envelope('eventsource', payload));
+      }
+
+      // An event stream is a GET that never says it finished, which is exactly how the row reads.
+      relay({ event: 'connect', url: resolved, startedAt: startedAt });
+
+      stream.addEventListener('open', function () {
+        relay({ event: 'open' });
+      });
+
+      // Every named event as well as the default one. \`message\` catches what has no name; anything
+      // else is only delivered to a listener asking for that name, which a wrapper cannot know in
+      // advance — so the page's own \`addEventListener\` is what tells us the names to watch.
+      stream.addEventListener('message', function (event) {
+        relay({ event: 'message', type: 'message', data: String(event.data), lastEventId: event.lastEventId || undefined });
+      });
+
+      var originalAddEventListener = stream.addEventListener;
+      var watched = { open: true, message: true, error: true };
+      stream.addEventListener = function (type, listener, options) {
+        if (!watched[type]) {
+          watched[type] = true;
+          originalAddEventListener.call(stream, type, function (event) {
+            relay({ event: 'message', type: type, data: String(event.data), lastEventId: event.lastEventId || undefined });
+          });
+        }
+        return originalAddEventListener.call(stream, type, listener, options);
+      };
+
+      stream.addEventListener('error', function () {
+        // The spec gives an error event no detail at all, and the stream may still reconnect — so this
+        // says one happened without calling the stream finished.
+        relay({ event: 'error' });
+      });
+
+      var originalClose = stream.close;
+      stream.close = function () {
+        relay({ event: 'close', duration: Date.now() - startedAt });
+        return originalClose.apply(stream, arguments);
+      };
+
+      return stream;
+    }
+
+    PatchedEventSource.prototype = OriginalEventSource.prototype;
+    PatchedEventSource.CONNECTING = OriginalEventSource.CONNECTING;
+    PatchedEventSource.OPEN = OriginalEventSource.OPEN;
+    PatchedEventSource.CLOSED = OriginalEventSource.CLOSED;
+
+    try {
+      window.EventSource = PatchedEventSource;
+    } catch (e) {
+      // A page that froze the global keeps its own stream, and this tab reports none.
+    }
+  })();`;
 }
 
 /**
@@ -634,6 +811,48 @@ function applySocketEvent(source: string, payload: WebViewSocketPayload) {
   networkLogStore.updateWebSocket(id, { status: 'error', error: payload.error ?? 'Socket error' });
 }
 
+/**
+ * A stream from a page, kept in the same shape as one from the app: an HTTP entry marked as a stream,
+ * with its events beside it. So the row, the Events tab and the filters all work on it unchanged.
+ */
+function applyStreamEvent(source: string, payload: WebViewStreamPayload) {
+  if (payload.event === 'connect') {
+    networkLogStore.add({
+      id: payload.id,
+      method: 'GET',
+      url: payload.url ?? '',
+      status: 'pending',
+      eventStream: true,
+      source,
+      startedAt: payload.startedAt ?? Date.now(),
+    });
+    return;
+  }
+
+  if (payload.event === 'message') {
+    recordStreamEvents(payload.id, [
+      {
+        type: payload.type ?? 'message',
+        data: payload.data ?? '',
+        ...(payload.lastEventId === undefined ? null : { lastEventId: payload.lastEventId }),
+      },
+    ]);
+    return;
+  }
+
+  if (payload.event === 'close') {
+    // Closing a stream is how a stream ends, the same as on the app's own side.
+    networkLogStore.update(payload.id, { status: 'success', duration: payload.duration });
+    return;
+  }
+
+  if (payload.event === 'error') {
+    // The spec gives an error event no detail, and the engine may still reconnect — so the row says
+    // one happened without claiming the stream is over.
+    networkLogStore.update(payload.id, { error: 'Stream error' });
+  }
+}
+
 export function handleWebViewNetworkMessage(
   event: WebViewMessageEventLike,
   allowedSources?: readonly string[]
@@ -669,6 +888,11 @@ export function handleWebViewNetworkMessage(
 
   if (message.type === 'websocket') {
     applySocketEvent(message.source, message.payload);
+    return true;
+  }
+
+  if (message.type === 'eventsource') {
+    applyStreamEvent(message.source, message.payload);
     return true;
   }
 

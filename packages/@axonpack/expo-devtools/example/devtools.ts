@@ -33,7 +33,7 @@ export const devtools = createDevtoolsClient({
   themes: {
     midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
   },
-  webviewSources: ['example-webview', 'test2'],
+  webviewSources: ['example-webview', 'test2', 'page-apis'],
   network: {
     disabledByDefault: false,
     includeFetch: true,

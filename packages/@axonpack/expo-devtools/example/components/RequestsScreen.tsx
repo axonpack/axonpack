@@ -7,6 +7,7 @@ import { NativeRequests } from './NativeRequests';
 import { TabBar } from './TabBar';
 import { WebSocketDemo } from './WebSocketDemo';
 import { WebViewDemo } from './WebViewDemo';
+import { WebViewPageApisDemo } from './WebViewPageApisDemo';
 
 const TABS = [
   { key: 'native' as const, label: 'Native' },
@@ -14,10 +15,13 @@ const TABS = [
   { key: 'socket' as const, label: 'Socket' },
   { key: 'stream' as const, label: 'Stream' },
   { key: 'expo' as const, label: 'expo/fetch' },
+  { key: 'page' as const, label: 'Page APIs' },
 ];
 
 export function RequestsScreen() {
-  const [tab, setTab] = useState<'native' | 'webview' | 'socket' | 'stream' | 'expo'>('native');
+  const [tab, setTab] = useState<'native' | 'webview' | 'socket' | 'stream' | 'expo' | 'page'>(
+    'native'
+  );
 
   return (
     <View style={styles.container}>
@@ -27,6 +31,7 @@ export function RequestsScreen() {
       {tab === 'socket' ? <WebSocketDemo /> : null}
       {tab === 'stream' ? <EventStreamDemo /> : null}
       {tab === 'expo' ? <ExpoFetchDemo /> : null}
+      {tab === 'page' ? <WebViewPageApisDemo /> : null}
     </View>
   );
 }

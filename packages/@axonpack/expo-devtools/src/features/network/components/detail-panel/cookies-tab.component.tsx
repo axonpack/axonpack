@@ -3,7 +3,12 @@ import { Text, View } from 'react-native';
 import { useRowStyles } from './shared.styles';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 import type { NetworkLogEntry } from '../../stores/network-log.store';
-import { requestCookies, responseCookies, type Cookie } from '../../utils/cookies.util';
+import {
+  parseCookieHeader,
+  requestCookies,
+  responseCookies,
+  type Cookie,
+} from '../../utils/cookies.util';
 
 /** The attributes worth a line, in the order a browser's cookie table shows them. */
 function attributes(cookie: Cookie): string[] {
@@ -53,7 +58,7 @@ export function CookiesTab({ entry }: { entry: NetworkLogEntry }) {
   const sent = requestCookies(entry.requestHeaders);
   const received = responseCookies(entry.responseHeaders);
 
-  if (sent.length === 0 && received.length === 0) {
+  if (sent.length === 0 && received.length === 0 && entry.pageCookies === undefined) {
     return <Text style={styles.empty}>This request sent no cookies, and set none.</Text>;
   }
 
@@ -61,11 +66,23 @@ export function CookiesTab({ entry }: { entry: NetworkLogEntry }) {
     <View>
       <CookieList title="Sent" cookies={sent} />
       <CookieList title="Set by the response" cookies={received} />
+      {entry.pageCookies !== undefined && (
+        <CookieList title="Visible to the page" cookies={parseCookieHeader(entry.pageCookies)} />
+      )}
       {/* Only what these headers carried is visible — the platform's own jar cannot be read. */}
       <Text style={styles.note}>
         Read from the Cookie and Set-Cookie headers of this request. A cookie the platform attached
         from an earlier response, without it appearing here, is not visible to this panel.
       </Text>
+      {entry.pageCookies !== undefined && (
+        // A page cannot read the Cookie header its own engine writes, and an HttpOnly cookie is
+        // invisible to it by design — so this list is what the document could see, not what went out.
+        <Text style={styles.note}>
+          The page&apos;s own cookies come from `document.cookie`, which is what that document could
+          read: cookies for another path or marked HttpOnly are absent from it, and it is not a
+          record of what this request sent.
+        </Text>
+      )}
     </View>
   );
 }

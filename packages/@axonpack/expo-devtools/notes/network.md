@@ -13,6 +13,9 @@ transfers.
 - [x] Turn plain requests and sockets off independently
 - [x] WebSocket connections, with every message sent and received
 - [x] Sockets a WebView page opens, with every frame in both directions
+- [x] Streams a WebView page opens, with every event the engine dispatched
+- [x] Real phases for a WebView request, measured by the page's own engine
+- [x] The cookies a WebView page could see when it made a request
 - [x] An XML response as a tree
 - [x] Declared WebView names act as a typed allowlist
 - [x] Full request and response bodies, headers, size and content type
@@ -159,6 +162,23 @@ Three paths, because no one of them can see the others' traffic:
   kept as a body either, since it has no size — the events are, up to 1,000 of them, the way a
   socket's messages are. And closing a stream is how a stream ends, so the abort underneath it is
   reported as an end rather than as a cancelled request.
+- **A page measures its own requests better than either native stack does.** A WebView page has the
+  real `PerformanceResourceTiming` — the one React Native only stubs — so a request from a page reports
+  DNS, TCP and TLS from the engine that performed them, along with `encodedBodySize` and
+  `decodedBodySize` for the compression pair. Zero means "not available" in that API rather than "took
+  no time": every detailed field is zeroed for a cross-origin response whose server sent no
+  `Timing-Allow-Origin`, so a zero is dropped the way an unmeasured phase is dropped everywhere else.
+  There is no `requestEnd` in that API, so a page's request has no sending phase and its wait contains
+  the sending instead.
+- **A page's cookies are the page's, not the request's.** `document.cookie` is all a page can read: the
+  engine writes the `Cookie` header itself and forbids JavaScript from seeing it, and an HttpOnly
+  cookie is invisible to a document by design. So it is stored in a field of its own and shown under
+  its own heading, never merged into the request headers where it would read as what was sent.
+- **A page's `EventSource` needs no wire parsing, and one thing about it cannot be known in advance.**
+  The engine has already turned `text/event-stream` into events, so the wrapper listens rather than
+  parses. But a _named_ event is only delivered to a listener that asked for that name — so the page's
+  own `addEventListener` is wrapped too, and a name it subscribes to is watched from then on. An event
+  type nobody in the page listens for is not reported, because nothing in the page received it either.
 - **A page's socket is wrapped, never subclassed.** The injected script replaces the page's
   `WebSocket` with a function that hands back a real one and points its own prototype at the original,
   so `socket instanceof WebSocket` stays true whichever of the two the page checks — and the statics

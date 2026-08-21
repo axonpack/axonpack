@@ -35,7 +35,7 @@ export type NetworkPhases = {
    */
   totalMs?: number;
   /** Which stack measured this. Only some of an app's traffic goes through each one. */
-  measuredBy: 'urlsession' | 'okhttp';
+  measuredBy: 'urlsession' | 'okhttp' | 'webview';
 };
 
 export type NetworkLogEntry = {
@@ -75,6 +75,12 @@ export type NetworkLogEntry = {
   progress?: { direction: 'upload' | 'download'; loaded: number; total?: number };
 
   source?: string;
+  /**
+   * What `document.cookie` held in the page when it made the request. Not the cookies the request
+   * *sent*: the engine writes that header itself and forbids JavaScript from reading it, and an
+   * HttpOnly cookie is invisible to a page by design. Kept separate from the headers for that reason.
+   */
+  pageCookies?: string;
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
 
