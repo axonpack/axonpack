@@ -39,14 +39,13 @@ transfers.
 - [x] Save one response body to a file
 - [x] Export the filtered log as JSON to the share sheet
 - [x] Sandbox: edit any captured request and send it for real
-- [x] Override a `fetch` response with a chosen status and body, or block one outright
+- [x] Override a response with a chosen status and body, or block a request outright
 - [ ] Server-sent event streams, with every event
 - [ ] Queued and connecting time, the two phases before the wait
 - [ ] Compressed and uncompressed response size
 - [ ] WebSocket connections opened inside a WebView
 - [ ] Cookies for WebView requests
 - [ ] Real timing breakdown for WebView requests
-- [ ] The same two for `XMLHttpRequest`, which is what third-party HTTP clients use
 - [ ] An XML response as a tree
 - [ ] Turn stream capture off independently, the way requests and sockets already can be
 - [ ] Capture requests made before the panel is set up
@@ -81,12 +80,20 @@ Three paths, because no one of them can see the others' traffic:
   ceiling, because holding an encoded copy of a video costs several times its own size and no panel
   is going to show it — past that the tab says the body was too big rather than showing an empty
   pane. Only the entry _count_ is capped otherwise, at 200.
-- **An overridden request is never sent, and the row says who answered.** The rule is answered
-  before the call goes out, so an endpoint that does not exist yet can still be developed against and
-  a failure can be reproduced without a server that produces one. It costs nothing to be honest about
-  it: the row carries a badge, because a made-up answer that reads like the server's own is worse
-  than no answer at all. Rules match the whole URL and nothing near it — one that catches more than
-  you meant is a request you cannot explain.
+- **A blocked request is never sent. An overridden one depends on how it was made.** Blocking stops
+  the call either way. Overriding a `fetch` answers it before anything leaves the device, so an
+  endpoint that does not exist yet can be developed against and a failure reproduced without a server
+  willing to produce one. Overriding an `XMLHttpRequest` cannot do that: nothing there can stand in
+  front of the native send and return a response, so the request goes out and what the app *reads
+  back* is replaced instead. The rule still decides what the app sees, but the round trip is still
+  paid and the endpoint still has to exist. That difference is real and worth knowing before leaning
+  on it — a request that must not happen at all should be blocked, not overridden.
+- **The row says when a rule answered.** A made-up answer that reads like the server's own is worse
+  than no answer at all, so an intercepted row carries a badge. On the `XMLHttpRequest` path the log
+  records what the app was handed rather than what the server said, because by then the two are the
+  same values.
+- **Rules match the whole URL and nothing near it.** One that catches more than you meant is a
+  request you cannot explain, and the row a rule is made from always knows its exact URL.
 - **An upload is replayed with `-F`, never as a raw body.** The boundary the platform generated is
   not in the headers a patch captured, so pasting the flattened parts back would send a body that
   contradicts its own `Content-Type`. Handing curl the parts and letting it write its own boundary is

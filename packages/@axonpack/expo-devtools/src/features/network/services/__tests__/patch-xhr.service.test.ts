@@ -1,4 +1,5 @@
 import { networkLogStore } from '../../stores/network-log.store';
+import { networkOverridesStore } from '../../stores/network-overrides.store';
 import { patchXHR } from '../patch-xhr.service';
 
 type ProgressLike = { loaded: number; total: number; lengthComputable: boolean };
@@ -271,5 +272,87 @@ describe('patchXHR progress', () => {
       direction: 'upload',
       loaded: 64,
     });
+  });
+});
+
+describe('patchXHR with a rule in the way', () => {
+  const original = globalThis.XMLHttpRequest;
+  const URL = 'https://example.test/ruled';
+
+  beforeAll(() => {
+    // @ts-expect-error deliberately swapping in a stand-in for the real class
+    globalThis.XMLHttpRequest = FakeXHR;
+    patchXHR();
+    networkLogStore.setEnabled(true);
+  });
+
+  afterAll(() => {
+    globalThis.XMLHttpRequest = original;
+    networkOverridesStore.clear();
+  });
+
+  beforeEach(() => {
+    networkLogStore.clear();
+    networkOverridesStore.clear();
+  });
+
+  function open(url = URL) {
+    const xhr = new FakeXHR();
+    xhr.open('GET', url);
+    return xhr;
+  }
+
+  it('never sends a blocked request, and records it as blocked rather than cancelled', () => {
+    networkOverridesStore.set({ url: URL, action: 'block' });
+    const xhr = open();
+    xhr.send();
+
+    expect(networkLogStore.getSnapshot()[0]).toMatchObject({
+      status: 'error',
+      intercepted: 'blocked',
+      error: 'Blocked by devtools',
+    });
+    expect(networkLogStore.getSnapshot()[0]?.canceled).toBeUndefined();
+  });
+
+  it('answers the app from the rule, over the real response', () => {
+    networkOverridesStore.set({ url: URL, action: 'respond', status: 503, body: 'nope' });
+    const xhr = open();
+    xhr.response = 'the real body';
+    xhr.status = 200;
+    xhr.send();
+
+    expect(xhr.status).toBe(503);
+    expect(xhr.responseText).toBe('nope');
+    expect(networkLogStore.getSnapshot()[0]?.intercepted).toBe('overridden');
+  });
+
+  // An app that asked for `json` expects an object, so handing it the string would break the code
+  // the override exists to exercise.
+  it('parses the body for a responseType of json', () => {
+    networkOverridesStore.set({ url: URL, action: 'respond', body: '{"ok":false}' });
+    const xhr = open();
+    xhr.responseType = 'json';
+    xhr.send();
+
+    expect(xhr.response).toEqual({ ok: false });
+  });
+
+  it('hands back the string when the body is not valid json', () => {
+    networkOverridesStore.set({ url: URL, action: 'respond', body: 'not json' });
+    const xhr = open();
+    xhr.responseType = 'json';
+    xhr.send();
+
+    expect(xhr.response).toBe('not json');
+  });
+
+  it('leaves a URL with no rule against it alone', () => {
+    networkOverridesStore.set({ url: URL, action: 'block' });
+    const xhr = open('https://example.test/other');
+    xhr.send();
+    xhr.finish();
+
+    expect(networkLogStore.getSnapshot()[0]?.intercepted).toBeUndefined();
   });
 });

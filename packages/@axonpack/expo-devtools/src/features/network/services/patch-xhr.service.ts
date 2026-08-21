@@ -3,6 +3,7 @@ import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
+import { networkOverridesStore } from '../stores/network-overrides.store';
 import { computeThrottleDelayMs, remainingDelayMs } from '../utils/network-conditions.util';
 import { createProgressThrottle } from '../utils/progress-throttle.util';
 import { describeRequestBody } from '../utils/request-body.util';
@@ -176,6 +177,43 @@ function patchSetReadyState() {
   };
 }
 
+/** Replaces a read-only property on the instance, which is all an override needs to be visible. */
+function defineReadable(xhr: XMLHttpRequest, name: string, get: () => unknown) {
+  try {
+    Object.defineProperty(xhr, name, { configurable: true, get });
+  } catch {
+    // A runtime that refuses is one where the override simply does not apply.
+  }
+}
+
+/**
+ * Answers the app from a rule instead of from the server.
+ *
+ * Unlike the `fetch` path, **the request still goes out** — there is no seam here that can stand in
+ * front of the native send and produce a response, so what is replaced is what the app *reads*
+ * afterwards. So an override cannot be used against an endpoint that does not exist, and it still
+ * costs the round trip. Blocking is the opposite: that one does prevent the call.
+ *
+ * Getters are installed at send, rather than assigned from a `readystatechange` listener, because a
+ * listener added here runs after the ones the app registered before calling send — it would have
+ * masked the values a moment too late, after the app had already read the real ones.
+ */
+function applyResponseOverride(xhr: XMLHttpRequest, status: number, body: string) {
+  defineReadable(xhr, 'status', () => status);
+  defineReadable(xhr, 'statusText', () => 'Overridden by devtools');
+  defineReadable(xhr, 'responseText', () => body);
+  defineReadable(xhr, 'response', () => {
+    // The app's own `responseType` is honoured rather than rewritten: an app that asked for `json`
+    // expects an object, and handing it the string would break the very code being tested.
+    if (xhr.responseType !== 'json') return body;
+    try {
+      return JSON.parse(body);
+    } catch {
+      return body;
+    }
+  });
+}
+
 function failAsOffline(xhr: XMLHttpRequest) {
   const internal = xhr as unknown as {
     __didCompleteResponse?: (requestId: unknown, error: string, timeOutError: boolean) => void;
@@ -242,6 +280,8 @@ export function patchXHR() {
       __networkLogHeaders?: Record<string, string>;
       /** Set by the abort listener, so the DONE handler does not relabel it a network failure. */
       __networkLogCanceled?: boolean;
+      /** Set when a rule blocked the request, so the abort it causes is not read as the app's own. */
+      __networkLogBlocked?: boolean;
       readyState: number;
       status: number;
       statusText: string;
@@ -320,6 +360,8 @@ export function patchXHR() {
     // An abort still reports readyState DONE with status 0, which is indistinguishable from a
     // network failure — so it has to be recorded from the event that says which one it was.
     this.addEventListener('abort', function onAbort() {
+      // A blocked request is aborted on purpose, and is already recorded as blocked.
+      if (xhr.__networkLogBlocked) return;
       xhr.__networkLogCanceled = true;
       networkLogStore.update(id, {
         status: 'error',
@@ -362,6 +404,25 @@ export function patchXHR() {
         duration: Date.now() - startedAt,
       });
     });
+
+    const override = networkOverridesStore.find(xhr.__networkLogUrl ?? '');
+
+    if (override?.action === 'block') {
+      xhr.__networkLogBlocked = true;
+      networkLogStore.update(id, {
+        status: 'error',
+        intercepted: 'blocked',
+        error: 'Blocked by devtools',
+        duration: Date.now() - startedAt,
+      });
+      failAsOffline(this);
+      return;
+    }
+
+    if (override?.action === 'respond') {
+      applyResponseOverride(this, override.status ?? 200, override.body ?? '');
+      networkLogStore.update(id, { intercepted: 'overridden' });
+    }
 
     if (conditions.offline) {
       failAsOffline(this);
