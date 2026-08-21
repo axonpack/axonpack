@@ -42,7 +42,7 @@ transfers.
 - [x] Override a response with a chosen status and body, or block a request outright
 - [x] Server-sent event streams, with every event, whichever client opened them
 - [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
-- [ ] Compressed and uncompressed response size
+- [x] What a compressed response cost on the wire, beside what the app was handed
 - [ ] WebSocket connections opened inside a WebView
 - [ ] Event streams opened inside a WebView
 - [ ] Cookies for WebView requests
@@ -58,21 +58,30 @@ transfers.
 
 The open list above is a menu, not an order. What is worth doing next, and why, roughly in that order:
 
-1. **Verify the phase timing on a device.** It is the newest thing here and the only part written
-   against native APIs that nothing has run yet: the Swift parses and the Kotlin has never met a
-   compiler. Both need a prebuild (`bun run ios`, `bun run android`) and a look at real rows. Until
-   that happens the waterfall is implemented, not proven.
-2. **Widen what the phases cover.** iOS reaches Expo's own fetch through a private Swift class name,
-   which is the _global_ `fetch` in an Expo app and so the path that matters most and holds up
-   least; Android does not reach it at all, because Expo's fetch there has its own OkHttp client.
-   Both are worth a second look before the feature is leant on.
-3. **Requests from a native HTTP client that never touches JavaScript.** Now the largest hole in
+1. **Verify the phase timing on Android.** iOS is done — built and run on a simulator, with real
+   phases and byte counts arriving for both Expo's fetch and `XMLHttpRequest`. The Kotlin has still
+   never met a compiler, and three of the four bugs iOS turned up were the kind only a device finds,
+   so assume Android has its own.
+2. **Reach Expo's fetch on Android.** iOS now covers it; Android does not, because Expo's fetch there
+   has its own OkHttp client rather than React Native's.
+3. **Send the timeline, not the durations.** The waterfall places each phase where the ones before it
+   ended, and now prints that start as a number — but the platform reports durations, and butting them
+   together assumes the phases are contiguous. They are not: on a real request the phases sum to
+   1003 ms against a duration of 1114 ms and a JS-measured wait-to-first-byte of 889 ms, so roughly
+   97 ms sits in gaps the stack does not attribute to any phase. iOS has every boundary as a date on
+   the same transaction metrics, and OkHttp has a callback for each, so sending offsets instead of
+   lengths would place every bar truthfully and let a gap read as a gap.
+4. **Requests from a native HTTP client that never touches JavaScript.** Now the largest hole in
    capture rather than in display: a JSI client answers no patch, and the only way in is whatever
    observer API it publishes for itself.
-4. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
+5. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
    which is most of a cold start.
-5. **The smaller display gaps** — an XML response as a tree, a version and a socket-shaped entry in
+6. **The smaller display gaps** — an XML response as a tree, a version and a socket-shaped entry in
    the export, and a switch for stream capture beside the ones requests and sockets already have.
+7. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
+   row is still the single `size` field, which is the declared length when there is one and the body's
+   length otherwise. Deciding what one column should say — and it should probably say what crossed the
+   wire, the way a browser's does — is the rest of this job.
 
 Two things on the open list are known to be blocked rather than merely undone, and the reasons are
 in Won't do: cookies and real phase timing for WebView traffic both need what a page's own engine
@@ -169,6 +178,20 @@ Three paths, because no one of them can see the others' traffic:
   whose phase fields are all stamped from three instants a patch already sees. The real measurements
   are one layer lower — `URLSessionTaskMetrics` on iOS, an OkHttp `EventListener` on Android — so the
   native module collects them there and JavaScript only attaches them to a row.
+- **The metrics go to the _session_ delegate, not the task delegate.** This is the distinction that
+  cost the most: Expo's fetch was hooked at `ExpoURLSessionTask` first, which resolved, accepted the
+  added method, and was never called — because that object is only the per-task delegate a proxy in
+  `ExpoModulesCore` forwards to, and URLSession reports metrics to the session's own delegate. A hook
+  that reports success and never fires is worse than one that fails loudly, which is why the install
+  now names the classes it actually reached.
+- **A byte count of zero is a claim, so it is never sent.** A response served from the URL cache
+  crossed no wire, and a 304 revalidation carries a couple of header bytes and no body at all — the
+  first readings off a device were exactly that, `2` and `0`, for a 24 kB body. Both counts are summed
+  across a redirect chain and dropped entirely when nothing was counted, so the tab says nothing rather
+  than reporting an empty body.
+- **A boolean from native arrives as a number.** `isReusedConnection` crosses the bridge as `0` or
+  `1`, so the `=== true` the UI checks was false for every reused connection until it was coerced.
+  Worth remembering for anything else this module ever sends.
 - **The metrics delegate method is added, never swizzled.** On iOS the phases arrive through an
   optional `URLSession` delegate method that neither React Native's request handler nor Expo's fetch
   implements, so it is added to those classes at runtime. Adding cannot alter or delay a request the
@@ -180,6 +203,21 @@ Three paths, because no one of them can see the others' traffic:
   requested twice at once is genuinely ambiguous, and the closest start wins; a row that already has
   phases is never overwritten, and a reading that matches nothing is dropped rather than kept for
   later. Every request the process makes is reported, including ones from before recording started.
+- **A compressed response has two sizes, and one number could only ever be one of them.** The tab
+  showed whichever happened to be available — `content-length` when the server sent one, the body's
+  own length when it did not — which for a gzipped response are wildly different figures under one
+  label. They are separated now: what crossed the connection, what the app was handed, and the saving
+  between them. The platform's byte counts are the only source that knows both for certain, so they
+  win; a declared length on an _encoded_ response is the wire size, since a header describes what was
+  sent rather than what arrived. Where only one number can be had, the line says which one it is.
+- **Bytes are counted as bytes, never as characters.** `String.length` counts UTF-16 units, so it
+  reads a two-byte `é` as one and a four-byte emoji as two. Measuring a decoded body that way and
+  comparing it against a count off the wire would invent a saving for any body not written in ASCII.
+- **The wire count comes from below the decoder, on both platforms.** iOS reports both counts on the
+  same transaction metrics the phases come from. Android needs two vantage points, because OkHttp
+  gunzips transparently: a _network_ interceptor sits below that and sees the encoded body, while the
+  event listener sees what the caller reads. So the interceptor leaves its reading for the listener to
+  collect, keyed by URL, which is all the two sides share.
 - **A phase that was not measured is absent, not zero.** A reused connection has no DNS, TCP or TLS
   phase at all, and three zeroes would read as a handshake that took no time — so the row says the
   connection was reused and shows only what happened.
