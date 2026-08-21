@@ -2,6 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 
 import { buildCurlCommand } from './curl.util';
 import { buildFetchCommand, buildNodeFetchCommand } from './fetch-snippet.util';
+import { shareResponseBody } from './share-response-body.util';
 import type { ContextMenuItem } from '../../../core/components/ui/context-menu.ui';
 import type { NetworkLogEntry } from '../stores/network-log.store';
 
@@ -27,6 +28,17 @@ export function buildEntryCopyMenuItems(entry: NetworkLogEntry): ContextMenuItem
           {
             label: 'Copy response',
             onPress: () => Clipboard.setStringAsync(entry.responseBody as string),
+          },
+        ]
+      : []),
+    // Offered for bytes as well as text, which is the only way to get an image or a PDF out.
+    ...(entry.responseBody !== undefined || entry.responseBase64 !== undefined
+      ? [
+          {
+            label: 'Share response body',
+            onPress: () => {
+              shareResponseBody(entry).catch(() => {});
+            },
           },
         ]
       : []),

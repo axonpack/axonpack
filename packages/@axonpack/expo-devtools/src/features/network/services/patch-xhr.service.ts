@@ -5,6 +5,7 @@ import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import { computeThrottleDelayMs, remainingDelayMs } from '../utils/network-conditions.util';
 import { createProgressThrottle } from '../utils/progress-throttle.util';
+import { describeRequestBody } from '../utils/request-body.util';
 import {
   sniffContentTypeFromBytes,
   sniffContentTypeFromText,
@@ -120,13 +121,6 @@ function readResponseBody(xhr: ResponseBodySource): ReadBody {
 function nextRequestId(): string {
   requestCounter += 1;
   return `xhr-${Date.now()}-${requestCounter}`;
-}
-
-function previewBody(body: unknown): string | undefined {
-  if (body == null) return undefined;
-  if (typeof body === 'string') return body;
-  if (typeof FormData !== 'undefined' && body instanceof FormData) return '[FormData]';
-  return '[binary body]';
 }
 
 function parseResponseHeaders(raw: string): Record<string, string> {
@@ -269,12 +263,15 @@ export function patchXHR() {
       throttleStates.set(this, { profile: conditions.throttle, startedAt });
     }
 
+    const describedBody = describeRequestBody(body);
+
     networkLogStore.add({
       id,
       method: (xhr.__networkLogMethod ?? 'GET').toUpperCase(),
       url: xhr.__networkLogUrl ?? '',
       status: 'pending',
-      requestBody: previewBody(body),
+      requestBody: describedBody.preview,
+      requestFields: describedBody.fields,
       requestHeaders: xhr.__networkLogHeaders,
       initiator: captureInitiatorFrames(),
       startedAt,

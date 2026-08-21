@@ -33,6 +33,9 @@ transfers.
 - [x] Initiator — which code made the request, with the source line around it
 - [x] Preview an image, an HTML page or an SVG as it renders, from the bytes that came back
 - [x] Copy the URL, copy as cURL, copy the payload or the response
+- [x] Request bodies as fields, with each uploaded file's name and size
+- [x] A form-data request copied as a cURL command that runs
+- [x] Save one response body to a file
 - [x] Export the filtered log as JSON to the share sheet
 - [x] Sandbox: edit any captured request and send it for real
 - [ ] Server-sent event streams, with every event
@@ -45,9 +48,6 @@ transfers.
 - [ ] Override a response — a chosen status and body instead of the real one
 - [ ] Block a request outright
 - [ ] An XML response as a tree
-- [ ] Request bodies as fields, with each uploaded file's name and size
-- [ ] A form-data request copied as a cURL command that runs
-- [ ] Save one response body to a file
 - [ ] Name a row by its whole relative URL, not only the last segment
 - [ ] Turn plain requests, sockets and streams off independently
 - [ ] Capture requests made before the panel is set up
@@ -83,6 +83,11 @@ Three paths, because no one of them can see the others' traffic:
   ceiling, because holding an encoded copy of a video costs several times its own size and no panel
   is going to show it — past that the tab says the body was too big rather than showing an empty
   pane. Only the entry _count_ is capped otherwise, at 200.
+- **An upload is replayed with `-F`, never as a raw body.** The boundary the platform generated is
+  not in the headers a patch captured, so pasting the flattened parts back would send a body that
+  contradicts its own `Content-Type`. Handing curl the parts and letting it write its own boundary is
+  the only version of that command that runs — and the file parts name a path on whoever runs it,
+  because a name is all the request itself carried.
 - **What the server said about a body always wins.** The bytes are asked what they are only when
   nothing declared a type, which is common enough from a hand-rolled server; guessing over a
   declared type would make the tab lie about what arrived. The same goes for length: the payload is

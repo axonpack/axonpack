@@ -10,6 +10,7 @@ import {
   withUserAgentHeader,
 } from '../utils/network-conditions.util';
 import { createProgressThrottle } from '../utils/progress-throttle.util';
+import { describeRequestBody } from '../utils/request-body.util';
 import {
   isTextLikeContentType,
   sniffContentTypeFromBytes,
@@ -147,13 +148,6 @@ async function captureBody(
   }
 }
 
-function previewBody(body: BodyInit | null | undefined): string | undefined {
-  if (body == null) return undefined;
-  if (typeof body === 'string') return body;
-  if (typeof FormData !== 'undefined' && body instanceof FormData) return '[FormData]';
-  return '[binary body]';
-}
-
 function normalizeHeaders(headers: HeadersInit | undefined): Record<string, string> | undefined {
   if (!headers) return undefined;
   const result: Record<string, string> = {};
@@ -210,13 +204,15 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
       ? withUserAgentHeader(requestHeaders, conditions.userAgent)
       : requestHeaders;
     const effectiveInit = conditions.userAgent ? { ...init, headers: effectiveHeaders } : init;
+    const describedBody = describeRequestBody(init?.body);
 
     networkLogStore.add({
       id,
       method: resolveMethod(input, init).toUpperCase(),
       url: resolveUrl(input),
       status: 'pending',
-      requestBody: previewBody(init?.body),
+      requestBody: describedBody.preview,
+      requestFields: describedBody.fields,
       requestHeaders: effectiveHeaders,
       startedAt,
       source,

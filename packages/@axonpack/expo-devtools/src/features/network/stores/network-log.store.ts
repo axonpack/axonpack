@@ -2,6 +2,7 @@ import { EventEmitter } from 'expo';
 
 import type { ResolvedNetworkConditions } from './network-conditions.store';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
+import type { RequestField } from '../utils/request-body.util';
 
 export type NetworkLogStatus = 'pending' | 'success' | 'error';
 
@@ -15,6 +16,8 @@ export type NetworkLogEntry = {
   statusCode?: number;
   statusText?: string;
   requestBody?: string;
+  /** The parts of a form-data body, where a one-line preview cannot show what was uploaded. */
+  requestFields?: RequestField[];
   responseBody?: string;
   /**
    * A response that is not text, base64-encoded. Kept beside `responseBody` rather than replacing it,
