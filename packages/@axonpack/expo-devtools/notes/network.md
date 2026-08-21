@@ -41,7 +41,7 @@ transfers.
 - [x] Sandbox: edit any captured request and send it for real
 - [x] Override a response with a chosen status and body, or block a request outright
 - [x] Server-sent event streams, with every event, whichever client opened them
-- [ ] Queued and connecting time, the two phases before the wait
+- [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
 - [ ] Compressed and uncompressed response size
 - [ ] WebSocket connections opened inside a WebView
 - [ ] Event streams opened inside a WebView
@@ -140,10 +140,25 @@ Three paths, because no one of them can see the others' traffic:
   source excerpt needs the development server, so it happens when the Initiator tab is opened and not
   before — and a release build, where nothing answers, says so rather than showing bundle offsets as
   if they were source.
-- **Phase timing will come from the platform, not from the patches.** A patch can only see when a
-  call left and when it came back. The phases in between are reported by React Native's own
-  performance timeline, which covers what goes through its networking stack — so a request made by
-  Expo's own fetch has a duration but no phases, and the tab has to say which it is showing.
+- **Phases come from the platform's HTTP stack, and from nowhere above it.** React Native's own
+  performance timeline was the obvious source and turned out to be empty: it reports a resource entry
+  whose phase fields are all stamped from three instants a patch already sees. The real measurements
+  are one layer lower — `URLSessionTaskMetrics` on iOS, an OkHttp `EventListener` on Android — so the
+  native module collects them there and JavaScript only attaches them to a row.
+- **The metrics delegate method is added, never swizzled.** On iOS the phases arrive through an
+  optional `URLSession` delegate method that neither React Native's request handler nor Expo's fetch
+  implements, so it is added to those classes at runtime. Adding cannot alter or delay a request the
+  way standing in front of an existing method could, and a class that already implements it is left
+  alone — another tool collecting the same metrics keeps working, and this package reports nothing for
+  that stack rather than fighting for it.
+- **A reading is matched to a row by URL and time, because nothing shares an id.** The native stack
+  knows a task and the patches know a call, and no identifier crosses between them. So the same URL
+  requested twice at once is genuinely ambiguous, and the closest start wins; a row that already has
+  phases is never overwritten, and a reading that matches nothing is dropped rather than kept for
+  later. Every request the process makes is reported, including ones from before recording started.
+- **A phase that was not measured is absent, not zero.** A reused connection has no DNS, TCP or TLS
+  phase at all, and three zeroes would read as a handshake that took no time — so the row says the
+  connection was reused and shows only what happened.
 - **Throttling is simulated in JS**, by delaying the response and the body. It models download speed
   and latency because those are the two numbers a patch can honestly impose; nothing about it slows
   the native socket down.
@@ -155,9 +170,26 @@ Three paths, because no one of them can see the others' traffic:
   gone before anything in this package can see it. `Set-Cookie` is the exception and the Cookies tab
   undoes it there — a cookie always starts with `name=`, which is enough to tell a separator comma
   from one inside an `Expires` date. No other header carries a marker that reliable.
-- **Separating DNS, TCP and TLS from one another.** The platform reports when a connection began and
-  when it was ready, not the three phases inside that, so the waterfall above stops at one number for
-  the whole handshake.
+- ~~**Queueing and connection setup, as phases before the wait.**~~ Being built, from native — see
+  the feature list above and the decision below. The finding that sent it there is kept because it is
+  the reason the implementation looks the way it does: not for want of an API. React
+  Native has `PerformanceResourceTiming` with `fetchStart`, `connectStart`, `connectEnd` and
+  `responseStart` on it, and a `'resource'` entry type this package already knows how to observe. The
+  fields are filled from three instants rather than measured. `reportRequestStart` stamps `fetchStart`
+  and `requestStart` from one `now`; both platforms then call `reportConnectionTiming` in the same
+  breath as `reportRequestStart`, so `connectStart` lands in the same tick; and `reportResponseStart`
+  stamps `connectEnd` and `responseStart` from one `now` again. Queueing therefore computes to zero
+  and connection setup to the entire wait, which the tab already shows under its own name. On top of
+  that, both `enableNetworkEventReporting` and `enableResourceTimingAPI` are native feature flags
+  that default to off — Expo does not turn them on — so a default app emits no resource entries at
+  all, and Expo's own fetch never enters React Native's networking stack to be reported on anyway.
+  Real phases exist one layer further down, in `URLSessionTaskTransactionMetrics` on iOS and an
+  OkHttp `EventListener` on Android, and reaching them means intercepting the platform's HTTP stack
+  from native code rather than reading a JS API. That is where the phases now come from.
+- **Separating DNS, TCP and TLS from one another.** A stronger version of the line above, and true
+  whichever way the one above is settled: the JS class has no `domainLookupStart` and no
+  `secureConnectionStart` at all, so even a connection phase that was measured would arrive as one
+  number for the whole handshake.
 - **The cookie jar itself.** React Native exposes none. Cookies are only ever what a captured
   request's own headers carried, so one the platform attached on its own from an earlier response is
   invisible.

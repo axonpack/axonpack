@@ -6,6 +6,31 @@ import type { RequestField } from '../utils/request-body.util';
 
 export type NetworkLogStatus = 'pending' | 'success' | 'error';
 
+/**
+ * The phases of a request as the native HTTP stack timed them, in milliseconds. Every one is optional
+ * because each comes from a callback the platform only makes when that phase happened: a reused
+ * connection has no DNS, TCP or TLS phase at all, and a plain-HTTP request has no TLS.
+ */
+export type NetworkPhases = {
+  /** Waiting for the stack to start work on it — the connection pool and the request queue. */
+  queuedMs?: number;
+  dnsMs?: number;
+  tcpMs?: number;
+  tlsMs?: number;
+  /** Sending the request, headers and body. */
+  sendMs?: number;
+  /** Sent, waiting for the first byte back. */
+  waitMs?: number;
+  downloadMs?: number;
+  /** No connection phases means the socket was already open, which is worth saying rather than
+   * leaving three blanks that read like a failure to measure. */
+  reusedConnection?: boolean;
+  /** `h2`, `http/1.1` — whatever the stack negotiated. */
+  protocol?: string;
+  /** Which stack measured this. Only some of an app's traffic goes through each one. */
+  measuredBy: 'urlsession' | 'okhttp';
+};
+
 export type NetworkLogEntry = {
   /** Discriminates a request from a socket in the one list the tab shows. */
   kind: 'http';
@@ -54,6 +79,13 @@ export type NetworkLogEntry = {
 
   /** Set when the panel stood in for the server, so a row never passes off a rule as a real answer. */
   intercepted?: 'blocked' | 'overridden';
+
+  /**
+   * What the platform's own networking stack measured, for the requests that go through one this
+   * package can reach. Absent for everything else, and never inferred from the two numbers a patch
+   * can see — a phase this did not measure is missing rather than zero.
+   */
+  phases?: NetworkPhases;
 
   /**
    * Set when the response came back as `text/event-stream`. The row stays one HTTP request, because

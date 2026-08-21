@@ -1,8 +1,10 @@
 import { Text, View } from 'react-native';
 
+import { PhaseWaterfall } from './phase-waterfall.component';
 import { useRowStyles } from './shared.styles';
-import type { NetworkLogEntry } from '../../stores/network-log.store';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
+import { isNativePhaseTimingActive } from '../../services/native-timing.service';
+import type { NetworkLogEntry } from '../../stores/network-log.store';
 
 export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
   const rowStyles = useRowStyles();
@@ -43,11 +45,17 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
           {entry.duration !== undefined ? `${entry.duration} ms` : '(pending)'}
         </Text>
       </View>
-      <Text style={styles.timingNote} selectable>
-        Waiting is the time until the response headers arrived, and downloading is the rest — the
-        two a patch can see from JS. The phases inside the wait, DNS against TCP against TLS, happen
-        in the native networking stack below it and are not broken out here.
-      </Text>
+      {entry.phases ? (
+        <PhaseWaterfall phases={entry.phases} />
+      ) : (
+        <Text style={styles.timingNote} selectable>
+          {isNativePhaseTimingActive()
+            ? // Reported for the stacks this package can hook, and no others — so a request that
+              // went out another way has the two numbers above and nothing under them.
+              'The phases inside the wait were not reported for this request. Only traffic through a native stack this package hooks is timed that way.'
+            : 'Waiting is the time until the response headers arrived, and downloading is the rest — the two a patch can see from JS. The phases inside the wait are measured by the native networking stack, which this build has no hook into.'}
+        </Text>
+      )}
     </View>
   );
 }

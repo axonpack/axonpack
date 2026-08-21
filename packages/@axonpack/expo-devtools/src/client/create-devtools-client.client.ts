@@ -15,6 +15,7 @@ import {
   drainOnce,
   installCrashHandlers,
 } from '../features/crash/services/install-crash-handlers.service';
+import { installNativeTimingReporter } from '../features/network/services/native-timing.service';
 import { patchFetch } from '../features/network/services/patch-fetch.service';
 import { patchWebSocket } from '../features/network/services/patch-websocket.service';
 import { patchXHR } from '../features/network/services/patch-xhr.service';
@@ -304,6 +305,9 @@ export function createDevtoolsClient<
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
       if (includeWebSocket) patchWebSocket();
+      // Before the app's first request on purpose: on Android the phase listener goes in by replacing
+      // React Native's OkHttp client factory, and that client is built once, on first use.
+      if (includeFetch || includeXmlHttpRequest) installNativeTimingReporter();
       if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
       if (consoleStartsPaused) consoleLogStore.setPaused(true);
       if (captureConsole) patchConsole();
