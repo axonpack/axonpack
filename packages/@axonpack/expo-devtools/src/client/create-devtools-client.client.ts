@@ -1,10 +1,13 @@
 import type { ThemeConfig, ThemeId } from '../core/constants/theme.const';
+import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
+import { themeStore } from '../core/stores/theme.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
 import { patchConsole } from '../features/console/services/patch-console.service';
 import {
   getWebViewConsoleInjectedJavaScript,
   handleWebViewConsoleMessage,
 } from '../features/console/services/webview-console-logger.service';
+import { consoleLogStore } from '../features/console/stores/console-log.store';
 import {
   configureCrashCapture,
   setCrashContext,
@@ -15,6 +18,7 @@ import {
   drainOnce,
   installCrashHandlers,
 } from '../features/crash/services/install-crash-handlers.service';
+import { crashStore, type CrashRecord } from '../features/crash/stores/crash.store';
 import { installNativeTimingReporter } from '../features/network/services/native-timing.service';
 import { patchFetch } from '../features/network/services/patch-fetch.service';
 import { patchWebSocket } from '../features/network/services/patch-websocket.service';
@@ -27,7 +31,10 @@ import {
 import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
+  setWebViewSocketCapture,
 } from '../features/network/services/webview-network-logger.service';
+import { networkConditionsStore } from '../features/network/stores/network-conditions.store';
+import { networkLogStore } from '../features/network/stores/network-log.store';
 import { startPerformanceCollectors } from '../features/performance/services/performance-collectors.service';
 import {
   clearRecordedMarks,
@@ -37,19 +44,13 @@ import {
   type MarkOptions,
   type MeasureOptions,
 } from '../features/performance/services/user-timing.service';
+import { performanceStore } from '../features/performance/stores/performance.store';
 import {
   resolveStorageAdapters,
   type StorageAdapterDefinition,
 } from '../features/storage/services/define-adapter.service';
 import { configureStorageReads } from '../features/storage/services/read-storage.service';
-import { consoleLogStore } from '../features/console/stores/console-log.store';
-import { crashStore, type CrashRecord } from '../features/crash/stores/crash.store';
-import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
-import { networkConditionsStore } from '../features/network/stores/network-conditions.store';
-import { networkLogStore } from '../features/network/stores/network-log.store';
-import { performanceStore } from '../features/performance/stores/performance.store';
 import { storageStore } from '../features/storage/stores/storage.store';
-import { themeStore } from '../core/stores/theme.store';
 
 type WebViewMessageEventLike = {
   nativeEvent: {
@@ -305,6 +306,8 @@ export function createDevtoolsClient<
       if (includeFetch) patchFetch();
       if (includeXmlHttpRequest) patchXHR();
       if (includeWebSocket) patchWebSocket();
+      // The same switch covers a page's own sockets, which the native patch cannot see at all.
+      setWebViewSocketCapture(includeWebSocket);
       // Before the app's first request on purpose: on Android the phase listener goes in by replacing
       // React Native's OkHttp client factory, and that client is built once, on first use.
       if (includeFetch || includeXmlHttpRequest) installNativeTimingReporter();

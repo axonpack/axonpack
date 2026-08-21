@@ -10,9 +10,40 @@ const MESSAGE_MARKER = '__bruinDevtoolsNetwork';
 
 type WebViewNetworkPayload = Partial<NetworkLogEntry> & Pick<NetworkLogEntry, 'id' | 'status'>;
 
+/**
+ * A socket the page opened, relayed one event at a time. The page's own engine is the only place
+ * these exist: React Native's `WebSocketModule` never sees them, so the native patch is blind here
+ * in exactly the way it is for the page's fetch and XHR.
+ */
+type WebViewSocketPayload = {
+  /** The page's own counter for the socket, which is all that ties its events together. */
+  socketId: number;
+  event: 'connect' | 'open' | 'message' | 'close' | 'error';
+  url?: string;
+  protocols?: string[];
+  direction?: 'sent' | 'received';
+  data?: string;
+  messageType?: 'text' | 'binary';
+  code?: number;
+  reason?: string;
+  error?: string;
+  duration?: number;
+};
+
 type WebViewMessage =
   | { [MESSAGE_MARKER]: true; type: 'network'; source: string; payload: WebViewNetworkPayload }
+  | { [MESSAGE_MARKER]: true; type: 'websocket'; source: string; payload: WebViewSocketPayload }
   | { [MESSAGE_MARKER]: true; type: 'navigation'; source: string };
+
+/**
+ * Off when the consumer turned sockets off, since a page's socket is a socket: the same switch that
+ * silences React Native's own has to silence these, or the option only half works.
+ */
+let captureSockets = true;
+
+export function setWebViewSocketCapture(enabled: boolean) {
+  captureSockets = enabled;
+}
 
 type WebViewMessageEventLike = {
   nativeEvent: {
@@ -441,8 +472,166 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
         return originalSend.apply(this, arguments);
       };
     }
+
+    // Sockets the page opens. Nothing above can see these: a page runs in its own engine, and its own
+    // WebSocket never reaches the native module the app's sockets go through. Inside the closure on
+    // purpose — it relays through the same queued bridge and URL resolver as everything else here.
+    ${captureSockets ? buildSocketPatch() : ''}
   })();
   true;`;
+}
+
+/**
+ * The page's `WebSocket`, wrapped rather than subclassed, because the wrapper has to keep passing
+ * every `instanceof` the page might do. Assigning the original prototype to the wrapper is what
+ * preserves both directions of that check; the statics are copied because they are read as
+ * `WebSocket.OPEN` rather than off an instance.
+ *
+ * Only reads. Nothing here delays, blocks or rewrites a frame — the throttle and offline switches
+ * apply to requests, and a socket that stalled because the panel said so would be a lie about the
+ * page's own behaviour.
+ */
+function buildSocketPatch(): string {
+  return `(function () {
+    var OriginalWebSocket = window.WebSocket;
+    if (!OriginalWebSocket) return;
+
+    var socketCounter = 0;
+
+    function describeFrame(data) {
+      if (typeof data === 'string') return { messageType: 'text', data: data };
+      // A blob's bytes are only readable asynchronously, so only its shape is reported — the same
+      // answer the native path gives for the same reason.
+      if (typeof Blob !== 'undefined' && data instanceof Blob) {
+        return { messageType: 'binary', data: '[binary ' + data.size + ' bytes]' };
+      }
+      if (data && typeof data.byteLength === 'number') {
+        return { messageType: 'binary', data: '[binary ' + data.byteLength + ' bytes]' };
+      }
+      return { messageType: 'text', data: String(data) };
+    }
+
+    function PatchedWebSocket(url, protocols) {
+      var socket =
+        protocols === undefined
+          ? new OriginalWebSocket(url)
+          : new OriginalWebSocket(url, protocols);
+
+      socketCounter += 1;
+      var socketId = socketCounter;
+      var startedAt = Date.now();
+
+      function relay(event, extra) {
+        var payload = extra || {};
+        payload.socketId = socketId;
+        payload.event = event;
+        send(envelope('websocket', payload));
+      }
+
+      relay('connect', {
+        url: resolveUrl(url),
+        protocols:
+          protocols === undefined ? undefined : [].concat(protocols).map(function (p) { return String(p); })
+      });
+
+      socket.addEventListener('open', function () { relay('open'); });
+
+      socket.addEventListener('message', function (event) {
+        var frame = describeFrame(event.data);
+        relay('message', { direction: 'received', data: frame.data, messageType: frame.messageType });
+      });
+
+      socket.addEventListener('close', function (event) {
+        relay('close', {
+          code: event && typeof event.code === 'number' ? event.code : undefined,
+          reason: event && event.reason ? String(event.reason) : undefined,
+          duration: Date.now() - startedAt
+        });
+      });
+
+      // A socket error carries no detail anywhere, by design of the spec — the row says one happened.
+      socket.addEventListener('error', function () { relay('error', { error: 'Socket error' }); });
+
+      var originalSend = socket.send;
+      socket.send = function (data) {
+        var frame = describeFrame(data);
+        relay('message', { direction: 'sent', data: frame.data, messageType: frame.messageType });
+        return originalSend.apply(socket, arguments);
+      };
+
+      return socket;
+    }
+
+    // Instances come from the original constructor, so sharing its prototype keeps
+    // \`socket instanceof WebSocket\` true whichever of the two the page checks against.
+    PatchedWebSocket.prototype = OriginalWebSocket.prototype;
+    PatchedWebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
+    PatchedWebSocket.OPEN = OriginalWebSocket.OPEN;
+    PatchedWebSocket.CLOSING = OriginalWebSocket.CLOSING;
+    PatchedWebSocket.CLOSED = OriginalWebSocket.CLOSED;
+
+    try {
+      window.WebSocket = PatchedWebSocket;
+    } catch (e) {
+      // A page that froze the global keeps its own socket, and this tab reports none.
+    }
+  })();`;
+}
+
+let socketMessageCounter = 0;
+
+/**
+ * One relayed socket event, applied to the same store the app's own sockets write to — a page's
+ * socket is a row in the same list, told apart only by its source.
+ *
+ * The entry id is built from the page's counter rather than sent, so every event of one socket lands
+ * on one row without the page having to be trusted with an id of ours.
+ */
+function applySocketEvent(source: string, payload: WebViewSocketPayload) {
+  const id = `ws-${source}-${payload.socketId}`;
+
+  if (payload.event === 'connect') {
+    networkLogStore.addWebSocket({
+      id,
+      socketId: payload.socketId,
+      url: payload.url ?? '',
+      method: 'WS',
+      source,
+      protocols: payload.protocols,
+      status: 'connecting',
+      startedAt: Date.now(),
+    });
+    return;
+  }
+
+  if (payload.event === 'message') {
+    socketMessageCounter += 1;
+    networkLogStore.addWebSocketMessage(id, {
+      id: `wvm-${socketMessageCounter}`,
+      direction: payload.direction ?? 'received',
+      data: payload.data ?? '',
+      messageType: payload.messageType ?? 'text',
+      timestamp: Date.now(),
+    });
+    return;
+  }
+
+  if (payload.event === 'open') {
+    networkLogStore.updateWebSocket(id, { status: 'open' });
+    return;
+  }
+
+  if (payload.event === 'close') {
+    networkLogStore.updateWebSocket(id, {
+      status: 'closed',
+      closeCode: payload.code,
+      closeReason: payload.reason,
+      duration: payload.duration,
+    });
+    return;
+  }
+
+  networkLogStore.updateWebSocket(id, { status: 'error', error: payload.error ?? 'Socket error' });
 }
 
 export function handleWebViewNetworkMessage(
@@ -475,6 +664,11 @@ export function handleWebViewNetworkMessage(
   if (message.type === 'navigation') {
     pushConditionsToWebView(message.source);
     networkLogStore.notifyNavigation();
+    return true;
+  }
+
+  if (message.type === 'websocket') {
+    applySocketEvent(message.source, message.payload);
     return true;
   }
 

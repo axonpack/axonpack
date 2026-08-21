@@ -12,6 +12,7 @@ transfers.
 - [x] Captures requests made inside a WebView
 - [x] Turn plain requests and sockets off independently
 - [x] WebSocket connections, with every message sent and received
+- [x] Sockets a WebView page opens, with every frame in both directions
 - [x] Declared WebView names act as a typed allowlist
 - [x] Full request and response bodies, headers, size and content type
 - [x] Binary response bodies, as bytes and as hex
@@ -43,7 +44,6 @@ transfers.
 - [x] Server-sent event streams, with every event, whichever client opened them
 - [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
 - [x] What a compressed response cost on the wire, beside what the app was handed
-- [ ] WebSocket connections opened inside a WebView
 - [ ] Event streams opened inside a WebView
 - [ ] Cookies for WebView requests
 - [ ] Real timing breakdown for WebView requests
@@ -158,6 +158,15 @@ Three paths, because no one of them can see the others' traffic:
   kept as a body either, since it has no size — the events are, up to 1,000 of them, the way a
   socket's messages are. And closing a stream is how a stream ends, so the abort underneath it is
   reported as an end rather than as a cancelled request.
+- **A page's socket is wrapped, never subclassed.** The injected script replaces the page's
+  `WebSocket` with a function that hands back a real one and points its own prototype at the original,
+  so `socket instanceof WebSocket` stays true whichever of the two the page checks — and the statics
+  come across too, because they are read as `WebSocket.OPEN` rather than off an instance. The
+  interception is read-only: the throttle and offline switches apply to requests, and a frame the panel
+  delayed would be a lie about how the page behaves.
+- **The page counts its own sockets, and this side names them.** A relayed event carries the page's
+  counter, and the row id is built from that plus the source — so every event of one socket finds one
+  row without a page ever being handed an id of ours to quote back.
 - **Relative URLs are resolved against the page's own location** for WebView traffic, since real
   pages request plenty of relative paths.
 - **Preserve Log defaults to on**, unlike a browser. A WebView navigation is the only "page load" we
