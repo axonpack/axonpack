@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { PhaseWaterfall } from './phase-waterfall.component';
 import { useRowStyles } from './shared.styles';
+import { formatDuration } from '../../../../core/utils/format-duration.util';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 import { isNativePhaseTimingActive } from '../../services/native-timing.service';
 import type { NetworkLogEntry } from '../../stores/network-log.store';
@@ -24,7 +25,7 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
           Waiting (TTFB)
         </Text>
         <Text style={rowStyles.headerValue} selectable>
-          {entry.ttfb !== undefined ? `${entry.ttfb} ms` : '—'}
+          {formatDuration(entry.ttfb)}
         </Text>
       </View>
       {entry.ttfb !== undefined && entry.duration !== undefined && (
@@ -33,7 +34,7 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
             Downloading
           </Text>
           <Text style={rowStyles.headerValue} selectable>
-            {`${Math.max(0, entry.duration - entry.ttfb)} ms`}
+            {formatDuration(Math.max(0, entry.duration - entry.ttfb))}
           </Text>
         </View>
       )}
@@ -42,7 +43,7 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
           Duration
         </Text>
         <Text style={rowStyles.headerValue} selectable>
-          {entry.duration !== undefined ? `${entry.duration} ms` : '(pending)'}
+          {entry.duration === undefined ? '(pending)' : formatDuration(entry.duration)}
         </Text>
       </View>
       {entry.phases ? (

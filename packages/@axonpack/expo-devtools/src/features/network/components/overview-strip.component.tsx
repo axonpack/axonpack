@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { formatDuration } from '../../../core/utils/format-duration.util';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import type { NetworkLogEntry } from '../stores/network-log.store';
 import { isErrorStatus } from '../utils/formatters.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 
 const BUCKET_COUNT = 36;
 const MAX_BAR_HEIGHT = 20;
@@ -43,10 +44,6 @@ function buildOverview(entries: NetworkLogEntry[]): {
 
 function formatClockTime(ms: number): string {
   return new Date(ms).toLocaleTimeString();
-}
-
-function formatSpan(ms: number): string {
-  return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
 export function OverviewStrip({
@@ -102,7 +99,7 @@ export function OverviewStrip({
             {formatClockTime(activeRange.start)} – {formatClockTime(activeRange.end)}
           </Text>
         ) : (
-          <Text style={styles.timeLabel}>{formatSpan(max - min)} total</Text>
+          <Text style={styles.timeLabel}>{formatDuration(max - min)} total</Text>
         )}
         <Text style={styles.timeLabel}>{formatClockTime(max)}</Text>
       </View>

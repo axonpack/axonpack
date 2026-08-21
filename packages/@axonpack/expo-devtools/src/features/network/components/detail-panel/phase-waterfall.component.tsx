@@ -2,19 +2,10 @@ import { Text, View } from 'react-native';
 
 import { useRowStyles } from './shared.styles';
 import { InfoBadge } from '../../../../core/components/ui/info-badge.ui';
+import { formatDuration } from '../../../../core/utils/format-duration.util';
 import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import type { NetworkPhases } from '../../stores/network-log.store';
-
-/** In the order they happen, which is the only order a waterfall can be read in. */
-const PHASES: { key: keyof NetworkPhases; label: string }[] = [
-  { key: 'queuedMs', label: 'Queued' },
-  { key: 'dnsMs', label: 'DNS' },
-  { key: 'tcpMs', label: 'TCP' },
-  { key: 'tlsMs', label: 'TLS' },
-  { key: 'sendMs', label: 'Sending' },
-  { key: 'waitMs', label: 'Waiting' },
-  { key: 'downloadMs', label: 'Downloading' },
-];
+import { layOutPhases } from '../../utils/phase-layout.util';
 
 const MEASURED_BY_LABELS: Record<NetworkPhases['measuredBy'], string> = {
   urlsession: 'URLSession',
@@ -26,15 +17,7 @@ export function PhaseWaterfall({ phases }: { phases: NetworkPhases }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
 
-  const measured = PHASES.map((phase) => ({
-    ...phase,
-    value: phases[phase.key] as number | undefined,
-  })).filter((phase) => phase.value !== undefined);
-
-  // The bars are relative to the longest phase rather than to the total: the interesting phase is
-  // usually a handshake of a few milliseconds beside a wait of hundreds, and scaling to the total
-  // leaves it invisible.
-  const longest = measured.reduce((max, phase) => Math.max(max, phase.value ?? 0), 0);
+  const measured = layOutPhases(phases);
 
   return (
     <View style={rowStyles.section}>
@@ -46,21 +29,29 @@ export function PhaseWaterfall({ phases }: { phases: NetworkPhases }) {
 
       {measured.map((phase) => (
         <View key={phase.key} style={styles.row}>
-          <Text style={styles.label} numberOfLines={1}>
-            {phase.label}
-          </Text>
+          <View style={styles.labelGroup}>
+            <Text style={styles.label} numberOfLines={1}>
+              {phase.label}
+            </Text>
+            {phase.offsetMs > 0 && (
+              <Text style={styles.offset} numberOfLines={1}>
+                {`+${formatDuration(phase.offsetMs)}`}
+              </Text>
+            )}
+          </View>
           <View style={styles.track}>
             <View
               style={[
                 styles.bar,
                 {
                   backgroundColor: COLORS.accent,
-                  width: longest > 0 ? `${Math.max(2, ((phase.value ?? 0) / longest) * 100)}%` : 2,
+                  left: `${phase.offsetPercent}%`,
+                  width: `${phase.widthPercent}%`,
                 },
               ]}
             />
           </View>
-          <Text style={styles.value}>{`${phase.value} ms`}</Text>
+          <Text style={styles.value}>{formatDuration(phase.value)}</Text>
         </View>
       ))}
 
@@ -87,12 +78,21 @@ const useStyles = makeThemedStyles((COLORS) => ({
     gap: 8,
     paddingVertical: 4,
   },
+  labelGroup: {
+    width: 92,
+  },
   label: {
-    width: 84,
     fontSize: 12,
     fontWeight: '600',
     color: COLORS.keyAccent,
   },
+
+  offset: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    fontVariant: ['tabular-nums'],
+  },
+
   track: {
     flex: 1,
     height: 8,
@@ -101,11 +101,13 @@ const useStyles = makeThemedStyles((COLORS) => ({
     overflow: 'hidden',
   },
   bar: {
+    position: 'absolute',
     height: 8,
     borderRadius: 4,
+    minWidth: 2,
   },
   value: {
-    width: 66,
+    width: 78,
     textAlign: 'right',
     fontSize: 12,
     color: COLORS.textPrimary,

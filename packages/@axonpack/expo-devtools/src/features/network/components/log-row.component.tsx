@@ -9,6 +9,7 @@ import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
 import { JsonIcon } from '../../../core/components/ui/json-icon.ui';
 import { HIT_SLOP } from '../../../core/constants/metrics.const';
 import { formatSize } from '../../../core/utils/format-bytes.util';
+import { formatDuration } from '../../../core/utils/format-duration.util';
 import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { getResponseTypeVisual, RESOURCE_TYPE_ICONS } from '../constants/resource-type-icons.const';
@@ -81,8 +82,7 @@ function LogRowBase({
             : (entry.statusCode ?? entry.error ?? '')}
         </Text>
         <Text style={styles.timing} numberOfLines={1}>
-          {entry.duration !== undefined ? `${entry.duration}ms` : '–'} ·{' '}
-          {new Date(entry.startedAt).toLocaleTimeString()}
+          {formatDuration(entry.duration)} · {new Date(entry.startedAt).toLocaleTimeString()}
         </Text>
       </View>
       <View style={styles.urlRow}>
