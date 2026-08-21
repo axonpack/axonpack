@@ -196,6 +196,8 @@ export function patchXHR() {
       __networkLogMethod?: string;
       __networkLogUrl?: string;
       __networkLogHeaders?: Record<string, string>;
+      /** Set by the abort listener, so the DONE handler does not relabel it a network failure. */
+      __networkLogCanceled?: boolean;
       readyState: number;
       status: number;
       statusText: string;
@@ -230,6 +232,25 @@ export function patchXHR() {
       conditions,
     });
 
+    // Headers arrive one state before the body is complete, which is the only point in an XHR's
+    // life where the wait can be told apart from the download.
+    this.addEventListener('readystatechange', function onHeadersReceived() {
+      if (xhr.readyState !== XMLHttpRequest.HEADERS_RECEIVED) return;
+      networkLogStore.update(id, { ttfb: Date.now() - startedAt });
+    });
+
+    // An abort still reports readyState DONE with status 0, which is indistinguishable from a
+    // network failure — so it has to be recorded from the event that says which one it was.
+    this.addEventListener('abort', function onAbort() {
+      xhr.__networkLogCanceled = true;
+      networkLogStore.update(id, {
+        status: 'error',
+        canceled: true,
+        error: 'Canceled',
+        duration: Date.now() - startedAt,
+      });
+    });
+
     this.addEventListener('readystatechange', function onReadyStateChange() {
       if (xhr.readyState !== XMLHttpRequest.DONE) return;
 
@@ -241,6 +262,8 @@ export function patchXHR() {
       } catch {
         responseHeaders = undefined;
       }
+
+      if (xhr.__networkLogCanceled) return;
 
       networkLogStore.update(id, {
         status: isNetworkFailure ? 'error' : 'success',

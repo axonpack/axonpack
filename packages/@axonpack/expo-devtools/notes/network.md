@@ -22,6 +22,9 @@ transfers.
 - [x] Override the user agent, for native requests and inside a WebView
 - [x] Group rows by source, denser or roomier rows, timeline overview strip
 - [x] Request detail: headers, pretty-printed JSON preview, raw body, timing
+- [x] Waiting and downloading, split out from the total
+- [x] Tell a cancelled request apart from a failed one
+- [x] Cookies a request sent, and the ones a response set
 - [x] Initiator — which code made the request, with the source line around it
 - [x] Preview an image, an HTML page or an SVG as it renders
 - [x] Copy the URL, copy as cURL, copy the payload or the response
@@ -29,12 +32,9 @@ transfers.
 - [x] Sandbox: edit any captured request and send it for real
 - [ ] Server-sent event streams, with every event
 - [ ] A connection waterfall — queued, connecting, waiting, downloading
-- [ ] Time to the first byte, split out from the total
 - [ ] Compressed and uncompressed response size
 - [ ] Upload and download progress while a request is still in flight
-- [ ] Tell a cancelled request apart from a failed one
 - [ ] Keep headers apart that were sent more than once under the same name
-- [ ] Cookies a request sent, and the ones a response set
 - [ ] WebSocket connections opened inside a WebView
 - [ ] Cookies for WebView requests
 - [ ] Real timing breakdown for WebView requests

@@ -2,6 +2,7 @@ import { networkLogStore } from '../../stores/network-log.store';
 import { patchXHR } from '../patch-xhr.service';
 
 class FakeXHR {
+  static readonly HEADERS_RECEIVED = 2;
   static readonly DONE = 4;
   readyState = FakeXHR.DONE;
   status = 200;
@@ -9,7 +10,9 @@ class FakeXHR {
   responseType = '';
   response: unknown = '';
 
-  #listeners: (() => void)[] = [];
+  // Keyed by type, because the patch registers three listeners and firing all of them for every
+  // event made an aborted request out of a completed one.
+  #listeners: Record<string, (() => void)[]> = {};
 
   get responseText(): string {
     if (this.responseType !== '' && this.responseType !== 'text') {
@@ -29,13 +32,23 @@ class FakeXHR {
   getResponseHeader() {
     return null;
   }
-  addEventListener(_type: string, listener: () => void) {
-    this.#listeners.push(listener);
+  addEventListener(type: string, listener: () => void) {
+    (this.#listeners[type] ??= []).push(listener);
   }
-  abort() {}
+  abort() {
+    this.emit('abort');
+  }
 
+  emit(type: string) {
+    for (const listener of this.#listeners[type] ?? []) listener.call(this);
+  }
+
+  /** Headers first, then completion — the order a real request reports them in. */
   finish() {
-    for (const listener of this.#listeners) listener.call(this);
+    this.readyState = FakeXHR.HEADERS_RECEIVED;
+    this.emit('readystatechange');
+    this.readyState = FakeXHR.DONE;
+    this.emit('readystatechange');
   }
 }
 
@@ -91,5 +104,57 @@ describe('patchXHR response body reads', () => {
   it('serializes a parsed json responseType, which also used to throw', () => {
     runRequest('json', { ok: true });
     expect(networkLogStore.getSnapshot()[0]?.responseBody).toBe('{"ok":true}');
+  });
+});
+
+describe('patchXHR timing and cancellation', () => {
+  const original = globalThis.XMLHttpRequest;
+
+  beforeAll(() => {
+    // @ts-expect-error deliberately swapping in a stand-in for the real class
+    globalThis.XMLHttpRequest = FakeXHR;
+    patchXHR();
+    networkLogStore.setEnabled(true);
+  });
+
+  afterAll(() => {
+    globalThis.XMLHttpRequest = original;
+  });
+
+  beforeEach(() => {
+    networkLogStore.clear();
+  });
+
+  it('records the wait separately from the total', () => {
+    runRequest('', '{}');
+
+    const entry = networkLogStore.getSnapshot()[0];
+    expect(entry?.ttfb).toBeDefined();
+    expect(entry?.duration).toBeGreaterThanOrEqual(entry?.ttfb ?? 0);
+  });
+
+  it('marks an aborted request cancelled rather than failed', () => {
+    const xhr = new FakeXHR();
+    xhr.open();
+    xhr.send();
+    xhr.abort();
+
+    expect(networkLogStore.getSnapshot()[0]).toMatchObject({
+      status: 'error',
+      canceled: true,
+      error: 'Canceled',
+    });
+  });
+
+  // An abort reports DONE with status 0 straight after, which reads exactly like a network failure.
+  it('keeps the cancelled label when completion follows the abort', () => {
+    const xhr = new FakeXHR();
+    xhr.status = 0;
+    xhr.open();
+    xhr.send();
+    xhr.abort();
+    xhr.finish();
+
+    expect(networkLogStore.getSnapshot()[0]).toMatchObject({ canceled: true, error: 'Canceled' });
   });
 });

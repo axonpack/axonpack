@@ -42,6 +42,21 @@ function resolveUrl(input: RequestInfo | URL): string {
   return String(input);
 }
 
+/**
+ * A cancelled request rejects like a failed one. `AbortError` covers a signal the app aborted and
+ * `TimeoutError` a deadline it set; the message check is the fallback for runtimes that report
+ * neither — RN has shipped more than one shape of this error.
+ */
+function isAbortError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const { name, message } = error as { name?: string; message?: string };
+  return (
+    name === 'AbortError' ||
+    name === 'TimeoutError' ||
+    message?.toLowerCase().includes('abort') === true
+  );
+}
+
 function previewBody(body: BodyInit | null | undefined): string | undefined {
   if (body == null) return undefined;
   if (typeof body === 'string') return body;
@@ -131,6 +146,9 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
 
     try {
       const response = await rawFetch(input, effectiveInit);
+      // The promise resolves once the headers are in, before the body is read — so this is the wait,
+      // and whatever follows is the download.
+      const ttfb = Date.now() - startedAt;
 
       let responseBody: string | undefined;
       try {
@@ -159,14 +177,17 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
         responseHeaders,
         mimeType: extractMimeType(responseHeaders),
         size,
+        ttfb,
         duration: Date.now() - startedAt,
       });
 
       return response;
     } catch (error) {
+      const canceled = isAbortError(error);
       networkLogStore.update(id, {
         status: 'error',
-        error: error instanceof Error ? error.message : String(error),
+        canceled,
+        error: canceled ? 'Canceled' : error instanceof Error ? error.message : String(error),
         duration: Date.now() - startedAt,
       });
       throw error;

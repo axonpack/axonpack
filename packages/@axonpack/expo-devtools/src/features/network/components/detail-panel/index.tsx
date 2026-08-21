@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { CookiesTab } from './cookies-tab.component';
 import { HeadersTab } from './headers-tab.component';
 import { InitiatorTab } from './initiator-tab.component';
 import { PayloadTab } from './payload-tab.component';
@@ -26,7 +27,7 @@ import { buildEntryCopyMenuItems } from '../../utils/entry-menu-items.util';
 import { classifyPreview } from '../../utils/preview-kind.util';
 import { SandboxSheet } from '../sandbox';
 
-type Tab = 'headers' | 'payload' | 'preview' | 'response' | 'timing' | 'initiator';
+type Tab = 'headers' | 'payload' | 'preview' | 'response' | 'timing' | 'cookies' | 'initiator';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'headers', label: 'Headers' },
@@ -34,6 +35,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'preview', label: 'Preview' },
   { key: 'response', label: 'Response' },
   { key: 'timing', label: 'Timing' },
+  { key: 'cookies', label: 'Cookies' },
   { key: 'initiator', label: 'Initiator' },
 ];
 
@@ -164,6 +166,7 @@ export function DetailPanel({
             {tab === 'preview' && <PreviewTab entry={active} matcher={matcher} />}
             {tab === 'response' && <ResponseTab entry={active} matcher={matcher} />}
             {tab === 'timing' && <TimingTab entry={active} />}
+            {tab === 'cookies' && <CookiesTab entry={active} />}
             {tab === 'initiator' && <InitiatorTab entry={active} />}
             <InsetPadding edge="bottom" />
           </View>

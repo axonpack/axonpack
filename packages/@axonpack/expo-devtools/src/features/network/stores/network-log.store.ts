@@ -19,6 +19,10 @@ export type NetworkLogEntry = {
   error?: string;
   startedAt: number;
   duration?: number;
+  /** Time until the response headers arrived — the wait, as opposed to the body download. */
+  ttfb?: number;
+  /** An aborted request is not a failed one, and the difference is usually the app's own doing. */
+  canceled?: boolean;
 
   source?: string;
   requestHeaders?: Record<string, string>;
