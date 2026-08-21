@@ -65,6 +65,7 @@ export function ResponsePanel({
       <CollapsibleSection title="Response Body">
         <ResponseBodyPreview
           body={result.body}
+          base64={undefined}
           mimeType={result.headers['content-type']}
           url={result.url}
           emptyText="Empty response body"

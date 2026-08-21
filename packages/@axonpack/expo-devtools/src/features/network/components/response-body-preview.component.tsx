@@ -23,6 +23,7 @@ function wrapSvgDocument(svg: string): string {
 
 export function ResponseBodyPreview({
   body,
+  base64,
   mimeType,
   url,
   emptyText,
@@ -30,6 +31,8 @@ export function ResponseBodyPreview({
   matcher = null,
 }: {
   body: string | undefined;
+  /** The captured bytes, when the body was not text. Preferred over the URL — see below. */
+  base64: string | undefined;
   mimeType: string | undefined;
   url: string;
   emptyText: string;
@@ -40,7 +43,11 @@ export function ResponseBodyPreview({
   const kind = classifyPreview(mimeType);
 
   if (kind === 'image') {
-    return <Image source={{ uri: url }} style={styles.image} resizeMode="contain" />;
+    // The captured bytes first, and the URL only as a fallback. Re-requesting the URL sends a second
+    // request without the original's headers — which an authenticated endpoint refuses — and our own
+    // patches log it, so opening a preview used to add a row to the log you were reading.
+    const uri = base64 && mimeType ? `data:${mimeType};base64,${base64}` : url;
+    return <Image source={{ uri }} style={styles.image} resizeMode="contain" />;
   }
 
   if (!body) return <Text style={emptyTextStyle}>{emptyText}</Text>;

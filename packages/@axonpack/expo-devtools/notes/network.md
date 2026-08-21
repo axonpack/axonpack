@@ -13,6 +13,10 @@ transfers.
 - [x] WebSocket connections, with every message sent and received
 - [x] Declared WebView names act as a typed allowlist
 - [x] Full request and response bodies, headers, size and content type
+- [x] Binary response bodies, as bytes and as hex
+- [x] Say when a body was too large to keep, or could not be read at all
+- [x] Content type worked out from the body when nothing declares it
+- [x] Response size worked out from the payload when nothing declares it
 - [x] Requests bucketed by resource type, the way a browser does
 - [x] Pause and resume recording, clear the log, reverse the order
 - [x] Keep or auto-clear the log when a WebView navigates
@@ -27,7 +31,7 @@ transfers.
 - [x] Tell a cancelled request apart from a failed one
 - [x] Cookies a request sent, and the ones a response set
 - [x] Initiator — which code made the request, with the source line around it
-- [x] Preview an image, an HTML page or an SVG as it renders
+- [x] Preview an image, an HTML page or an SVG as it renders, from the bytes that came back
 - [x] Copy the URL, copy as cURL, copy the payload or the response
 - [x] Export the filtered log as JSON to the share sheet
 - [x] Sandbox: edit any captured request and send it for real
@@ -40,15 +44,10 @@ transfers.
 - [ ] Real timing breakdown for WebView requests
 - [ ] Override a response — a chosen status and body instead of the real one
 - [ ] Block a request outright
-- [ ] Binary response bodies, as bytes and as hex
-- [ ] Preview an image from the captured response instead of requesting it again
 - [ ] An XML response as a tree
 - [ ] Request bodies as fields, with each uploaded file's name and size
 - [ ] A form-data request copied as a cURL command that runs
 - [ ] Save one response body to a file
-- [ ] Say when a body was too large to keep, or could not be read at all
-- [ ] Content type worked out from the body when nothing declares it
-- [ ] Response size worked out from the payload when nothing declares it
 - [ ] Name a row by its whole relative URL, not only the last segment
 - [ ] Turn plain requests, sockets and streams off independently
 - [ ] Capture requests made before the panel is set up
@@ -79,8 +78,15 @@ Three paths, because no one of them can see the others' traffic:
   message wearing our marker, including one nobody here wrote. It sits at the top level of the
   config rather than under `network` because the Console tab captures from a declared WebView too,
   and the list has to be one list.
-- **Bodies are stored whole.** No truncation, by design: a request you can't read the body of is a
-  request you can't debug. Only the entry _count_ is capped, at 200.
+- **Text bodies are stored whole; bytes are not.** No truncation for text, by design: a request you
+  can't read the body of is a request you can't debug. A body that isn't text is kept as bytes up to a
+  ceiling, because holding an encoded copy of a video costs several times its own size and no panel
+  is going to show it — past that the tab says the body was too big rather than showing an empty
+  pane. Only the entry _count_ is capped otherwise, at 200.
+- **What the server said about a body always wins.** The bytes are asked what they are only when
+  nothing declared a type, which is common enough from a hand-rolled server; guessing over a
+  declared type would make the tab lie about what arrived. The same goes for length: the payload is
+  measured only when no header gave one.
 - **A rendered preview is an opaque surface.** A bitmap goes to the platform's image view; HTML and
   SVG go to a WebView — SVG included, because the image view cannot draw one. Neither surface can be
   searched or highlighted the way text can, which is why the raw body stays a tab of its own.

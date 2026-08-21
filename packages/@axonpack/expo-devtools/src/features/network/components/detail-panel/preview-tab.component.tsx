@@ -23,6 +23,7 @@ export function PreviewTab({
       )}
       <ResponseBodyPreview
         body={entry.responseBody}
+        base64={entry.responseBase64}
         mimeType={entry.mimeType}
         url={entry.url}
         emptyText="No preview available"

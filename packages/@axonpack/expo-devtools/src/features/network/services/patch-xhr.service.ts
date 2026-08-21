@@ -1,10 +1,14 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
+import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
-import { createProgressThrottle } from '../utils/progress-throttle.util';
-
 import { computeThrottleDelayMs, remainingDelayMs } from '../utils/network-conditions.util';
+import { createProgressThrottle } from '../utils/progress-throttle.util';
+import {
+  sniffContentTypeFromBytes,
+  sniffContentTypeFromText,
+} from '../utils/sniff-content-type.util';
 
 /** The three fields of a DOM progress event this needs, without depending on the DOM's own type. */
 type ProgressEventLike = { loaded: number; total: number; lengthComputable: boolean };
@@ -39,36 +43,77 @@ type ResponseBodySource = {
   response: unknown;
 };
 
-function describeNonTextResponse(xhr: ResponseBodySource): string | undefined {
+/**
+ * Past this the bytes are not kept — the same ceiling the fetch patch uses, for the same reason: a
+ * base64 copy costs several times the size of what it copies.
+ */
+const MAX_BINARY_BODY_BYTES = 512 * 1024;
+
+type ReadBody = {
+  responseBody?: string;
+  responseBase64?: string;
+  bodyOmitted?: 'too-large' | 'unreadable';
+  sniffedType?: string;
+  size?: number;
+};
+
+/**
+ * An `arraybuffer` response used to be recorded as `[ArrayBuffer 24 bytes]` — enough to know it
+ * happened, not enough to see what came back. The bytes are kept now, and asked what they are when
+ * no header said.
+ */
+function readNonTextResponse(xhr: ResponseBodySource): ReadBody {
   try {
     const response: unknown = xhr.response;
-    if (response == null) return undefined;
-    if (typeof response === 'string') return response;
-    if (typeof Blob !== 'undefined' && response instanceof Blob) {
-      return `[Blob ${response.size} bytes${response.type ? `, ${response.type}` : ''}]`;
-    }
+    if (response == null) return {};
+    if (typeof response === 'string') return { responseBody: response, size: response.length };
+
     if (typeof ArrayBuffer !== 'undefined' && response instanceof ArrayBuffer) {
-      return `[ArrayBuffer ${response.byteLength} bytes]`;
+      if (response.byteLength > MAX_BINARY_BODY_BYTES) {
+        return { bodyOmitted: 'too-large', size: response.byteLength };
+      }
+      const bytes = new Uint8Array(response);
+      return {
+        responseBase64: encodeBytesToBase64(bytes),
+        sniffedType: sniffContentTypeFromBytes(bytes),
+        size: bytes.byteLength,
+      };
     }
-    if (typeof response === 'object') return JSON.stringify(response);
-    return String(response);
+
+    // A Blob's bytes are only reachable asynchronously, and the request has already finished by the
+    // time this runs, so its shape is all that can be reported.
+    if (typeof Blob !== 'undefined' && response instanceof Blob) {
+      return {
+        bodyOmitted: 'unreadable',
+        size: response.size,
+        sniffedType: response.type || undefined,
+      };
+    }
+
+    if (typeof response === 'object') return { responseBody: JSON.stringify(response) };
+    return { responseBody: String(response) };
   } catch {
-    return undefined;
+    return { bodyOmitted: 'unreadable' };
   }
 }
 
-function readResponseBody(xhr: ResponseBodySource): string | undefined {
+function readResponseBody(xhr: ResponseBodySource): ReadBody {
   let responseType: string | undefined;
   try {
     responseType = xhr.responseType;
   } catch {
-    return undefined;
+    return { bodyOmitted: 'unreadable' };
   }
-  if (responseType !== '' && responseType !== 'text') return describeNonTextResponse(xhr);
+  if (responseType !== '' && responseType !== 'text') return readNonTextResponse(xhr);
   try {
-    return typeof xhr.responseText === 'string' ? xhr.responseText : undefined;
+    if (typeof xhr.responseText !== 'string') return { bodyOmitted: 'unreadable' };
+    return {
+      responseBody: xhr.responseText,
+      sniffedType: sniffContentTypeFromText(xhr.responseText),
+      size: xhr.responseText.length,
+    };
   } catch {
-    return undefined;
+    return { bodyOmitted: 'unreadable' };
   }
 }
 
@@ -291,7 +336,7 @@ export function patchXHR() {
       if (xhr.readyState !== XMLHttpRequest.DONE) return;
 
       const isNetworkFailure = xhr.status === 0;
-      const responseBody = readResponseBody(xhr);
+      const body = readResponseBody(xhr);
       let responseHeaders: Record<string, string> | undefined;
       try {
         responseHeaders = parseResponseHeaders(this.getAllResponseHeaders());
@@ -301,14 +346,21 @@ export function patchXHR() {
 
       if (xhr.__networkLogCanceled) return;
 
+      const declaredType = responseHeaders ? extractMimeType(responseHeaders) : undefined;
+
       networkLogStore.update(id, {
         status: isNetworkFailure ? 'error' : 'success',
         statusCode: xhr.status,
         statusText: xhr.statusText,
-        responseBody,
+        responseBody: body.responseBody,
+        responseBase64: body.responseBase64,
+        bodyOmitted: body.bodyOmitted,
         responseHeaders,
-        mimeType: responseHeaders ? extractMimeType(responseHeaders) : undefined,
-        size: responseHeaders ? extractSize(responseHeaders, responseBody) : responseBody?.length,
+        // A declared type wins; the sniffed one only fills the gap where nothing said.
+        mimeType: declaredType ?? body.sniffedType,
+        size:
+          (responseHeaders ? extractSize(responseHeaders, body.responseBody) : undefined) ??
+          body.size,
         error: isNetworkFailure ? 'Network request failed' : undefined,
         duration: Date.now() - startedAt,
       });

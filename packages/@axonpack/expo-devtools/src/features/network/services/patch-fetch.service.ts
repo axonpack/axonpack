@@ -1,4 +1,5 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
+import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
@@ -9,6 +10,11 @@ import {
   withUserAgentHeader,
 } from '../utils/network-conditions.util';
 import { createProgressThrottle } from '../utils/progress-throttle.util';
+import {
+  isTextLikeContentType,
+  sniffContentTypeFromBytes,
+  sniffContentTypeFromText,
+} from '../utils/sniff-content-type.util';
 
 /**
  * Expo's fetch lives in a module of its own, and `import { fetch } from 'expo/fetch'` never reads
@@ -85,6 +91,60 @@ async function trackDownloadProgress(clone: Response, id: string, total?: number
   }
 
   networkLogStore.update(id, { progress: { direction: 'download', loaded, total } });
+}
+
+/**
+ * Past this, the bytes are not kept. Text bodies are still stored whole — a request whose body you
+ * cannot read is one you cannot debug — but a base64 copy of a video costs several times its own
+ * size in memory, and no panel is going to show it.
+ */
+const MAX_BINARY_BODY_BYTES = 512 * 1024;
+
+type CapturedBody = {
+  responseBody?: string;
+  responseBase64?: string;
+  bodyOmitted?: 'too-large' | 'unreadable';
+  /** What the bytes turned out to be, when no header said. */
+  sniffedType?: string;
+  size?: number;
+};
+
+/**
+ * Reads the body once, as whatever it is. The declared content type decides, and when nothing
+ * declared one the bytes are asked instead — a response with no `Content-Type` is common from a
+ * hand-rolled server, and calling it text shows an image as mojibake.
+ */
+async function captureBody(
+  response: Response,
+  declaredType: string | undefined
+): Promise<CapturedBody> {
+  if (isTextLikeContentType(declaredType)) {
+    try {
+      const text = await response.clone().text();
+      return {
+        responseBody: text,
+        sniffedType: declaredType ? undefined : sniffContentTypeFromText(text),
+        size: text.length,
+      };
+    } catch {
+      return { bodyOmitted: 'unreadable' };
+    }
+  }
+
+  try {
+    const buffer = await response.clone().arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    if (bytes.byteLength > MAX_BINARY_BODY_BYTES) {
+      return { bodyOmitted: 'too-large', size: bytes.byteLength };
+    }
+    return {
+      responseBase64: encodeBytesToBase64(bytes),
+      sniffedType: declaredType ? undefined : sniffContentTypeFromBytes(bytes),
+      size: bytes.byteLength,
+    };
+  } catch {
+    return { bodyOmitted: 'unreadable' };
+  }
 }
 
 function previewBody(body: BodyInit | null | undefined): string | undefined {
@@ -191,15 +251,10 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
         // A stream that cannot be read is a progress bar we do not draw, not a failed request.
       });
 
-      let responseBody: string | undefined;
-      try {
-        responseBody = await response.clone().text();
-      } catch {
-        responseBody = undefined;
-      }
-
       const responseHeaders = headersFromResponse(response.headers);
-      const size = extractSize(responseHeaders, responseBody);
+      const declaredType = extractMimeType(responseHeaders);
+      const captured = await captureBody(response, declaredType);
+      const size = extractSize(responseHeaders, captured.responseBody) ?? captured.size;
 
       if (conditions.throttle) {
         await delay(
@@ -214,9 +269,11 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
         status: 'success',
         statusCode: response.status,
         statusText: response.statusText,
-        responseBody,
         responseHeaders,
-        mimeType: extractMimeType(responseHeaders),
+        responseBody: captured.responseBody,
+        responseBase64: captured.responseBase64,
+        bodyOmitted: captured.bodyOmitted,
+        mimeType: declaredType ?? captured.sniffedType,
         size,
         ttfb,
         duration: Date.now() - startedAt,

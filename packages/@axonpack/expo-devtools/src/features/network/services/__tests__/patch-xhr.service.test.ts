@@ -40,8 +40,11 @@ class FakeXHR {
   open() {}
   send() {}
   setRequestHeader() {}
+  /** Settable, so a test can describe a response that declared no type at all. */
+  headers = 'content-type: application/json';
+
   getAllResponseHeaders() {
-    return 'content-type: application/json';
+    return this.headers;
   }
   getResponseHeader() {
     return null;
@@ -75,10 +78,11 @@ class FakeXHR {
   }
 }
 
-function runRequest(responseType: string, response: unknown) {
+function runRequest(responseType: string, response: unknown, headers?: string) {
   const xhr = new FakeXHR();
   xhr.responseType = responseType;
   xhr.response = response;
+  if (headers !== undefined) xhr.headers = headers;
   xhr.open();
   xhr.send();
   xhr.finish();
@@ -119,9 +123,39 @@ describe('patchXHR response body reads', () => {
     expect(entry?.statusCode).toBe(200);
   });
 
-  it('describes a non-text response instead of dropping it', () => {
+  // It used to record the string `[ArrayBuffer 24 bytes]` — enough to know a body came back, not
+  // enough to see what it was.
+  it('keeps the bytes of a non-text response', () => {
     runRequest('arraybuffer', new ArrayBuffer(24));
-    expect(networkLogStore.getSnapshot()[0]?.responseBody).toBe('[ArrayBuffer 24 bytes]');
+
+    const entry = networkLogStore.getSnapshot()[0];
+    expect(entry?.responseBody).toBeUndefined();
+    expect(entry?.responseBase64).toBe('A'.repeat(32));
+    expect(entry?.size).toBe(24);
+  });
+
+  it('says so rather than keeping the bytes of a body past the cap', () => {
+    runRequest('arraybuffer', new ArrayBuffer(600 * 1024));
+
+    const entry = networkLogStore.getSnapshot()[0];
+    expect(entry?.bodyOmitted).toBe('too-large');
+    expect(entry?.responseBase64).toBeUndefined();
+    expect(entry?.size).toBe(600 * 1024);
+  });
+
+  it('works out the type of a body no header described', () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    runRequest('arraybuffer', png.buffer, '');
+
+    expect(networkLogStore.getSnapshot()[0]?.mimeType).toBe('image/png');
+  });
+
+  // The other half of the same rule: what the server said is never second-guessed.
+  it('prefers a declared type over what the bytes look like', () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    runRequest('arraybuffer', png.buffer, 'content-type: application/octet-stream');
+
+    expect(networkLogStore.getSnapshot()[0]?.mimeType).toBe('application/octet-stream');
   });
 
   it('serializes a parsed json responseType, which also used to throw', () => {

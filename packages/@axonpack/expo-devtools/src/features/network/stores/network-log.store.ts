@@ -16,6 +16,16 @@ export type NetworkLogEntry = {
   statusText?: string;
   requestBody?: string;
   responseBody?: string;
+  /**
+   * A response that is not text, base64-encoded. Kept beside `responseBody` rather than replacing it,
+   * because a text body is what almost every request has and reading it should stay direct.
+   */
+  responseBase64?: string;
+  /**
+   * Why the body is absent, when it is. Said out loud rather than left as an empty pane: a response
+   * too big to keep and one that could not be read are different facts, and both are worth knowing.
+   */
+  bodyOmitted?: 'too-large' | 'unreadable';
   error?: string;
   startedAt: number;
   duration?: number;
