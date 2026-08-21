@@ -8,7 +8,7 @@ import { ContextMenu } from '../../../../core/components/ui/context-menu.ui';
 import { CopyIconButton } from '../../../../core/components/ui/copy-icon-button.ui';
 import { IconButton } from '../../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
-import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../../core/constants/metrics.const';
 import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import type { CrashRecord } from '../../stores/crash.store';
 import { buildCrashMenuItems } from '../../utils/crash-menu-items.util';
@@ -75,14 +75,14 @@ export function CrashDetailSheet({
           <IconButton
             name="ios-share"
             color={COLORS.textSecondary}
-            hitSlop={12}
+            hitSlop={HIT_SLOP.default}
             onPress={() => exportCrashReport(active)}
             label="Share report"
           />
           <IconButton
             name="more-vert"
             color={COLORS.textSecondary}
-            hitSlop={12}
+            hitSlop={HIT_SLOP.default}
             onPress={(event) =>
               setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })
             }

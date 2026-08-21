@@ -12,8 +12,8 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { ConsolePrompt } from './console-prompt.component';
 import { ConsoleCrashRow } from './console-crash-row.component';
+import { ConsolePrompt } from './console-prompt.component';
 import { ConsoleRow } from './console-row.component';
 import {
   DevtoolsToolbar,
@@ -23,7 +23,7 @@ import { Chip } from '../../../core/components/ui/chip.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
-import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import {
   buildMatcher,
@@ -254,7 +254,10 @@ export function ConsoleView() {
         />
 
         {showScrollToBottom && (
-          <TouchableOpacity style={styles.scrollToBottom} onPress={scrollToBottom} hitSlop={8}>
+          <TouchableOpacity
+            style={styles.scrollToBottom}
+            onPress={scrollToBottom}
+            hitSlop={HIT_SLOP.default}>
             <MaterialIcons name="arrow-downward" size={18} color="#ffffff" />
           </TouchableOpacity>
         )}

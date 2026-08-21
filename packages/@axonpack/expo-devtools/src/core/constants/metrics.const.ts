@@ -6,6 +6,6 @@ export const TOUCH_TARGET = {
 } as const;
 
 export const HIT_SLOP = {
-  default: 8,
-  dense: 10,
+  default: 4,
+  dense: 6,
 } as const;

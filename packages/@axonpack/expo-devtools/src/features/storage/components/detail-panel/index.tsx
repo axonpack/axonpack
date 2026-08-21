@@ -11,7 +11,7 @@ import { ContextMenu, type ContextMenuItem } from '../../../../core/components/u
 import { IconButton } from '../../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../../core/components/ui/search-input.ui';
-import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../../core/constants/metrics.const';
 import {
   buildMatcher,
   DEFAULT_SEARCH_MODES,
@@ -122,7 +122,7 @@ export function DetailPanel({
           <IconButton
             name="more-vert"
             color={COLORS.textSecondary}
-            hitSlop={12}
+            hitSlop={HIT_SLOP.default}
             onPress={(event) =>
               setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })
             }

@@ -12,6 +12,7 @@ import { DebugView } from '../../../features/debug/components/debug-view.compone
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
 import { StorageView } from '../../../features/storage/components/storage-view.component';
+import { HIT_SLOP } from '../../constants/metrics.const';
 import { devtoolsTabStore } from '../../stores/devtools-tab.store';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { IconButton } from '../ui/icon-button.ui';
@@ -74,7 +75,12 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
           badges={{ console: consoleErrorCount, crashes: unseenCrashCount }}
         />
         <ThemePicker />
-        <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
+        <IconButton
+          name="close"
+          color={COLORS.textSecondary}
+          onPress={onClose}
+          hitSlop={HIT_SLOP.default}
+        />
       </View>
 
       <View style={styles.tabPanel}>{tabContent}</View>

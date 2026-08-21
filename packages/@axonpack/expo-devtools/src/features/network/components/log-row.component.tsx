@@ -7,6 +7,7 @@ import { HighlightedText } from '../../../core/components/ui/highlighted-text.ui
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
 import { JsonIcon } from '../../../core/components/ui/json-icon.ui';
+import { HIT_SLOP } from '../../../core/constants/metrics.const';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
@@ -144,7 +145,12 @@ function LogRowBase({
             </>
           )}
         </View>
-        <IconButton name="more-vert" color={COLORS.textSecondary} hitSlop={10} onPress={openMenu} />
+        <IconButton
+          name="more-vert"
+          color={COLORS.textSecondary}
+          hitSlop={HIT_SLOP.default}
+          onPress={openMenu}
+        />
       </View>
 
       <ContextMenu
