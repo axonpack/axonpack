@@ -1,3 +1,5 @@
+import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
+
 export type SandboxTab = 'request' | 'response';
 
 export type AuthType = 'none' | 'bearer' | 'apikey';
@@ -155,7 +157,17 @@ export async function sendSandboxRequest({
       headers,
       body: allowsBody && body ? body : undefined,
     });
-    const text = await response.text();
+    const declaredType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+    // A stream has no end to read to, so asking for its text here would never return. The sandbox
+    // sends through the same patched `fetch` as the app, which means this request is a row in the log
+    // with its own events — so this pane says where they are rather than hanging waiting for them.
+    const isEventStream = declaredType === EVENT_STREAM_MIME_TYPE;
+    // Cancelled rather than left unread: one branch of a stream nobody reads buffers every byte the
+    // other branch pulls, and the panel's own reader is pulling.
+    if (isEventStream) response.body?.cancel().catch(() => {});
+    const text = isEventStream
+      ? 'This response is an event stream. Its events are on its own row in the network log — the sandbox does not follow a stream.'
+      : await response.text();
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;

@@ -40,10 +40,11 @@ transfers.
 - [x] Export the filtered log as JSON to the share sheet
 - [x] Sandbox: edit any captured request and send it for real
 - [x] Override a response with a chosen status and body, or block a request outright
-- [ ] Server-sent event streams, with every event
+- [x] Server-sent event streams, with every event, whichever client opened them
 - [ ] Queued and connecting time, the two phases before the wait
 - [ ] Compressed and uncompressed response size
 - [ ] WebSocket connections opened inside a WebView
+- [ ] Event streams opened inside a WebView
 - [ ] Cookies for WebView requests
 - [ ] Real timing breakdown for WebView requests
 - [ ] An XML response as a tree
@@ -114,6 +115,16 @@ Three paths, because no one of them can see the others' traffic:
   already captured, because a body is kept as text and an image does not survive that; the second
   request is logged like any other, and drawing the captured bytes is open work above that waits on
   bodies being able to hold binary at all.
+- **A stream is the request it arrived on, and its events are its body.** `text/event-stream` is
+  recognised on the response rather than on any one client library, so a stream is captured whichever
+  of the two transports every SSE client is built on it used — `react-native-sse` and anything else
+  built on `XMLHttpRequest`, or a streaming `fetch`. It is one row rather than a second entry kind
+  beside sockets because on the wire it is one HTTP request, whose status code, headers and cookies
+  all still mean what they say. Nothing about it is awaited: reading a body with no end as text would
+  hold the app's own `await fetch(...)` open for as long as the stream lived. The raw stream is not
+  kept as a body either, since it has no size — the events are, up to 1,000 of them, the way a
+  socket's messages are. And closing a stream is how a stream ends, so the abort underneath it is
+  reported as an end rather than as a cancelled request.
 - **Relative URLs are resolved against the page's own location** for WebView traffic, since real
   pages request plenty of relative paths.
 - **Preserve Log defaults to on**, unlike a browser. A WebView navigation is the only "page load" we

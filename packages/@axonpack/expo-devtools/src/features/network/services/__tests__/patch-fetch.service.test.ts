@@ -15,11 +15,18 @@ jest.mock(
 const expoFetchModule = jest.requireMock<FetchModule>('expo/src/winter/fetch/fetch');
 const rawExpoFetch = expoFetchModule.fetch;
 
+/**
+ * What the stubbed network answers with. Indirect because the patch wraps whatever function is on
+ * the global at the moment it runs, and it only runs once per process — so a later test cannot swap
+ * the global itself without losing the wrapper.
+ */
+let respond: () => Promise<Response> = async () => new Response('from the global');
+
 describe('patchFetch', () => {
   beforeAll(() => {
     networkLogStore.setEnabled(true);
     // Stubbed before patching, so the wrapper stands in front of this and not the real network.
-    globalThis.fetch = (async () => new Response('from the global')) as typeof globalThis.fetch;
+    globalThis.fetch = (async () => respond()) as typeof globalThis.fetch;
     patchFetch();
   });
 
@@ -106,5 +113,92 @@ describe('patchFetch with a rule in the way', () => {
     await globalThis.fetch('https://example.test/other');
 
     expect(networkLogStore.getSnapshot()[0]?.intercepted).toBeUndefined();
+  });
+});
+
+describe('patchFetch event streams', () => {
+  /** A body that stays open, so a test can say when — and whether — the next chunk lands. */
+  function openStreamResponse() {
+    let push: (chunk: string) => void = () => {};
+    let close: () => void = () => {};
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        push = (chunk) => controller.enqueue(new TextEncoder().encode(chunk));
+        close = () => controller.close();
+      },
+    });
+    const response = new Response(stream, {
+      headers: { 'content-type': 'text/event-stream' },
+    });
+    return { response, push, close };
+  }
+
+  /** The store writes happen off a reader we do not await, so a turn of the loop has to be given. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  beforeEach(() => networkLogStore.clear());
+
+  // The reason this path needed its own branch at all: reading the body as text is how every other
+  // response is captured, and on a stream that call only returns when the stream ends — which held
+  // the app's own `await fetch(...)` open for the entire life of the stream.
+  afterAll(() => {
+    respond = async () => new Response('from the global');
+  });
+
+  it('hands the response back without waiting for the stream to end', async () => {
+    const { response } = openStreamResponse();
+    respond = async () => response;
+
+    const returned = await globalThis.fetch('https://example.test/stream');
+
+    expect(returned.status).toBe(200);
+    expect(networkLogStore.getSnapshot()[0]).toMatchObject({
+      eventStream: true,
+      status: 'success',
+      statusCode: 200,
+      mimeType: 'text/event-stream',
+    });
+  });
+
+  // The decoder is Expo's, not React Native's, so a runtime without Expo's winter globals reaches
+  // this. The stream is still a row — it just cannot say what went down it.
+  it('says the stream was unreadable where the runtime has no TextDecoder', async () => {
+    const decoder = globalThis.TextDecoder;
+    const { response, push } = openStreamResponse();
+    respond = async () => response;
+
+    // @ts-expect-error standing in for a runtime that never installed it
+    delete globalThis.TextDecoder;
+    try {
+      await globalThis.fetch('https://example.test/stream-no-decoder');
+      push('data: one\n\n');
+      await settle();
+    } finally {
+      globalThis.TextDecoder = decoder;
+    }
+
+    const entry = networkLogStore.getSnapshot()[0]!;
+    expect(entry.eventStream).toBe(true);
+    expect(entry.bodyOmitted).toBe('unreadable');
+    expect(networkLogStore.getStreamEvents(entry.id)).toHaveLength(0);
+  });
+
+  it('records the events as they arrive, and keeps no body of its own', async () => {
+    const { response, push, close } = openStreamResponse();
+    respond = async () => response;
+
+    await globalThis.fetch('https://example.test/stream-events');
+    const id = networkLogStore.getSnapshot()[0]!.id;
+
+    push('event: token\ndata: one\n\n');
+    await settle();
+    expect(networkLogStore.getStreamEvents(id)).toMatchObject([{ type: 'token', data: 'one' }]);
+
+    push('data: two\n\n');
+    close();
+    await settle();
+
+    expect(networkLogStore.getStreamEvents(id)).toHaveLength(2);
+    expect(networkLogStore.getSnapshot()[0]?.responseBody).toBeUndefined();
   });
 });

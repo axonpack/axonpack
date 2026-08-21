@@ -181,6 +181,9 @@ export function NetworkView() {
           entry={item}
           bigRows={bigRows}
           matcher={matcher}
+          eventCount={
+            item.eventStream ? networkLogStore.getStreamEvents(item.id).length : undefined
+          }
           onPress={setSelectedEntry}
           onOverride={setOverrideUrl}
         />

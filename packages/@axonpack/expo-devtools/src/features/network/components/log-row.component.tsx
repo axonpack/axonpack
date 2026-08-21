@@ -36,12 +36,15 @@ function LogRowBase({
   entry,
   bigRows,
   matcher,
+  eventCount,
   onPress,
   onOverride,
 }: {
   entry: NetworkLogEntry;
   bigRows: boolean;
   matcher: Matcher | null;
+  /** How many events have arrived, for a row that is a stream. Passed in, as a socket's count is. */
+  eventCount?: number;
 
   onPress: (entry: NetworkLogEntry) => void;
   onOverride?: (url: string) => void;
@@ -69,7 +72,11 @@ function LogRowBase({
         <Text style={[styles.method, { color: methodColor }]}>{entry.method}</Text>
         <Text style={[styles.status, { color: statusColor }]}>
           {entry.status === 'pending'
-            ? formatInFlight(entry.progress)
+            ? // An open stream is not a request part-way through its body, so it says what it is
+              // rather than reporting progress towards an end it does not have.
+              entry.eventStream
+              ? 'STREAM'
+              : formatInFlight(entry.progress)
             : (entry.statusCode ?? entry.error ?? '')}
         </Text>
         <Text style={styles.timing} numberOfLines={1}>
@@ -127,7 +134,13 @@ function LogRowBase({
                 label={RESOURCE_TYPE_LABELS[resourceType]}
               />
               {entry.source && <InfoBadge icon="hub" label={formatSource(entry.source)} />}
-              <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
+              {entry.eventStream ? (
+                // In place of the size, which a stream has none of: how many events have arrived is
+                // the number that moves, and the one worth watching from the list.
+                <InfoBadge icon="stream" label={`${eventCount ?? 0} events`} />
+              ) : (
+                <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
+              )}
             </>
           )}
         </View>
@@ -238,5 +251,9 @@ export const LogRow = memo(
     // The store replaces this object on every reading, so identity is the whole comparison — leaving
     // it out froze the row at PENDING while the body was still arriving.
     prev.entry.progress === next.entry.progress &&
-    prev.entry.intercepted === next.entry.intercepted
+    prev.entry.intercepted === next.entry.intercepted &&
+    prev.entry.eventStream === next.entry.eventStream &&
+    // For the same reason as `progress` above: this is the number that keeps moving on an open
+    // stream, and leaving it out froze the count at whatever it was when the row first rendered.
+    prev.eventCount === next.eventCount
 );

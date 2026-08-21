@@ -56,6 +56,13 @@ export type NetworkLogEntry = {
   intercepted?: 'blocked' | 'overridden';
 
   /**
+   * Set when the response came back as `text/event-stream`. The row stays one HTTP request, because
+   * on the wire that is what it is — the events live beside it the way a socket's messages do, and
+   * the raw stream is not kept as a body: it has no size, and the events are the readable form of it.
+   */
+  eventStream?: boolean;
+
+  /**
    * The call stack as it was when the request went out, unsymbolicated. Kept raw because turning it
    * into file names needs the dev server, which is a cost worth paying only for the one request
    * somebody opens.
@@ -71,6 +78,17 @@ export type WebSocketMessage = {
   data: string;
   /** A blob arrives as `binary`: only its bytes are relayed, never a `Blob` we could re-read. */
   messageType: 'text' | 'binary';
+  timestamp: number;
+};
+
+/** One dispatched event out of a `text/event-stream` response. */
+export type ServerSentEvent = {
+  id: string;
+  /** `message` unless the block named one, exactly as `EventSource` would have dispatched it. */
+  type: string;
+  data: string;
+  /** The stream's own `id:`, when it sent one — what a client would resume from. */
+  lastEventId?: string;
   timestamp: number;
 };
 
@@ -109,12 +127,19 @@ const MAX_ENTRIES = 200;
  */
 const MAX_MESSAGES_PER_SOCKET = 1000;
 
+/** The same ceiling, for the same reason: a stream can run for as long as the app is open. */
+const MAX_EVENTS_PER_STREAM = 1000;
+
 /** Returned for a socket nobody has sent on, so the reference stays stable between renders. */
 const NO_MESSAGES: readonly WebSocketMessage[] = [];
+
+/** The same, for a stream that has not dispatched anything yet. */
+const NO_EVENTS: readonly ServerSentEvent[] = [];
 
 let entries: NetworkLogEntry[] = [];
 let socketEntries: WebSocketLogEntry[] = [];
 let socketMessages = new Map<string, WebSocketMessage[]>();
+let streamEvents = new Map<string, ServerSentEvent[]>();
 /**
  * Rebuilt on every change rather than derived per read: `useSyncExternalStore` compares snapshots by
  * identity, so a fresh array out of the getter would re-render for ever.
@@ -168,6 +193,7 @@ export const networkLogStore = {
       entries = [];
       socketEntries = [];
       socketMessages = new Map();
+      streamEvents = new Map();
       remerge();
       emitter.emit('change');
     }
@@ -223,6 +249,25 @@ export const networkLogStore = {
     remerge();
     emitter.emit('change');
   },
+  getStreamEvents(id: string): readonly ServerSentEvent[] {
+    return streamEvents.get(id) ?? NO_EVENTS;
+  },
+  /**
+   * Keyed by the id of the request the stream arrived on, since a stream *is* that request — there is
+   * no second entry to hang it off, which is the one way this differs from a socket's messages.
+   */
+  addStreamEvent(id: string, event: ServerSentEvent) {
+    if (!enabled || paused) return;
+    const existing = streamEvents.get(id) ?? [];
+    const next = [...existing, event];
+    streamEvents = new Map(streamEvents).set(
+      id,
+      next.length > MAX_EVENTS_PER_STREAM ? next.slice(-MAX_EVENTS_PER_STREAM) : next
+    );
+    // The row shows how many events have arrived, so the list snapshot has to change with it.
+    remerge();
+    emitter.emit('change');
+  },
   update(id: string, patch: Partial<NetworkLogEntry>) {
     if (!enabled) return;
     entries = entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
@@ -233,6 +278,7 @@ export const networkLogStore = {
     entries = [];
     socketEntries = [];
     socketMessages = new Map();
+    streamEvents = new Map();
     remerge();
     emitter.emit('change');
   },

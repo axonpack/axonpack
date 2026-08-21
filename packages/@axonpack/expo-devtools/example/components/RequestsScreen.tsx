@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { EventStreamDemo } from './EventStreamDemo';
 import { NativeRequests } from './NativeRequests';
 import { TabBar } from './TabBar';
 import { WebSocketDemo } from './WebSocketDemo';
@@ -10,10 +11,11 @@ const TABS = [
   { key: 'native' as const, label: 'Native' },
   { key: 'webview' as const, label: 'WebView' },
   { key: 'socket' as const, label: 'Socket' },
+  { key: 'stream' as const, label: 'Stream' },
 ];
 
 export function RequestsScreen() {
-  const [tab, setTab] = useState<'native' | 'webview' | 'socket'>('native');
+  const [tab, setTab] = useState<'native' | 'webview' | 'socket' | 'stream'>('native');
 
   return (
     <View style={styles.container}>
@@ -21,6 +23,7 @@ export function RequestsScreen() {
       {tab === 'native' ? <NativeRequests /> : null}
       {tab === 'webview' ? <WebViewDemo /> : null}
       {tab === 'socket' ? <WebSocketDemo /> : null}
+      {tab === 'stream' ? <EventStreamDemo /> : null}
     </View>
   );
 }

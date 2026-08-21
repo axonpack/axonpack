@@ -1,6 +1,8 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
+import { recordStreamEvents } from './record-stream-events.service';
 import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
+import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
@@ -10,6 +12,7 @@ import {
   remainingDelayMs,
   withUserAgentHeader,
 } from '../utils/network-conditions.util';
+import { createEventStreamParser } from '../utils/parse-event-stream.util';
 import { createProgressThrottle } from '../utils/progress-throttle.util';
 import { describeRequestBody } from '../utils/request-body.util';
 import {
@@ -93,6 +96,43 @@ async function trackDownloadProgress(clone: Response, id: string, total?: number
   }
 
   networkLogStore.update(id, { progress: { direction: 'download', loaded, total } });
+}
+
+/**
+ * Reads a stream as it arrives and records each event. Like the progress tracker above it reads its
+ * own clone and is never awaited — but here that is not an optimisation: `text()` on a body with no
+ * end would hold the app's own `await fetch(...)` open for as long as the stream lived.
+ *
+ * `TextDecoder` is Expo's, installed by its runtime rather than React Native's. Where it is missing
+ * the request is still recorded as a stream, just without its events: a hand-rolled decoder that
+ * mangled anything past ASCII would be worse than saying nothing. A chunk is handed over as a
+ * `DataView` because a stream's `Uint8Array` is often a window onto a larger buffer.
+ */
+async function readEventStream(clone: Response, id: string, startedAt: number) {
+  const reader = clone.body?.getReader();
+  if (!reader) return;
+
+  if (typeof TextDecoder === 'undefined') {
+    // Said rather than left as an empty list: a stream with no events looks the same as one nobody
+    // could read, and on a runtime with no decoder it is always the second.
+    networkLogStore.update(id, { bodyOmitted: 'unreadable' });
+    return;
+  }
+
+  const decoder = new TextDecoder();
+  const parser = createEventStreamParser();
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    const view = new DataView(value.buffer, value.byteOffset, value.byteLength);
+    recordStreamEvents(id, parser.push(decoder.decode(view, { stream: true })));
+  }
+
+  // Flushes whatever multi-byte character the last chunk cut in half.
+  recordStreamEvents(id, parser.push(decoder.decode()));
+  networkLogStore.update(id, { duration: Date.now() - startedAt });
 }
 
 /**
@@ -276,6 +316,29 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
       // and whatever follows is the download.
       const ttfb = Date.now() - startedAt;
 
+      const responseHeaders = headersFromResponse(response.headers);
+      const declaredType = extractMimeType(responseHeaders);
+
+      if (declaredType === EVENT_STREAM_MIME_TYPE) {
+        // Nothing about a stream can be awaited, so everything the response has to say is recorded
+        // now and the events follow as they arrive. The progress tracker is skipped rather than run
+        // beside this: bytes-so-far of an endless body says less than the event count does, and one
+        // reader on one clone is one less tee of a live stream.
+        networkLogStore.update(id, {
+          status: 'success',
+          statusCode: response.status,
+          statusText: response.statusText,
+          responseHeaders,
+          mimeType: declaredType,
+          eventStream: true,
+          ttfb,
+        });
+        readEventStream(response.clone(), id, startedAt).catch(() => {
+          // A stream that cannot be read is a row without its events, not a failed request.
+        });
+        return response;
+      }
+
       const declaredLength = Number(response.headers.get('content-length'));
       // Not awaited: awaiting it would hold the request until the body was complete, which is the
       // wait it exists to make visible.
@@ -287,8 +350,6 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
         // A stream that cannot be read is a progress bar we do not draw, not a failed request.
       });
 
-      const responseHeaders = headersFromResponse(response.headers);
-      const declaredType = extractMimeType(responseHeaders);
       const captured = await captureBody(response, declaredType);
       const size = extractSize(responseHeaders, captured.responseBody) ?? captured.size;
 

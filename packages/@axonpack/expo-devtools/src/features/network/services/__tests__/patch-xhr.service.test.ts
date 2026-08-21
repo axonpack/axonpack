@@ -18,6 +18,7 @@ class FakeUploadTarget {
 
 class FakeXHR {
   static readonly HEADERS_RECEIVED = 2;
+  static readonly LOADING = 3;
   static readonly DONE = 4;
   readyState = FakeXHR.DONE;
   status = 200;
@@ -47,8 +48,12 @@ class FakeXHR {
   getAllResponseHeaders() {
     return this.headers;
   }
-  getResponseHeader() {
-    return null;
+  getResponseHeader(name: string) {
+    const prefix = `${name.toLowerCase()}:`;
+    const line = this.headers
+      .split(/[\r\n]+/)
+      .find((entry) => entry.trim().toLowerCase().startsWith(prefix));
+    return line === undefined ? null : line.slice(line.indexOf(':') + 1).trim();
   }
   /** Its own event target, exactly as the DOM has it — upload progress is reported nowhere else. */
   readonly upload = new FakeUploadTarget();
@@ -68,6 +73,13 @@ class FakeXHR {
 
   emit(type: string) {
     for (const listener of this.#listeners[type] ?? []) listener.call(this);
+  }
+
+  /** Appends to the body and reports it the way React Native reports an incremental read. */
+  streamChunk(chunk: string) {
+    this.response = `${this.response as string}${chunk}`;
+    this.readyState = FakeXHR.LOADING;
+    this.emit('readystatechange');
   }
 
   /** Headers first, then completion — the order a real request reports them in. */
@@ -354,5 +366,105 @@ describe('patchXHR with a rule in the way', () => {
     xhr.finish();
 
     expect(networkLogStore.getSnapshot()[0]?.intercepted).toBeUndefined();
+  });
+});
+
+describe('patchXHR event streams', () => {
+  const original = globalThis.XMLHttpRequest;
+
+  beforeAll(() => {
+    // @ts-expect-error deliberately swapping in a stand-in for the real class
+    globalThis.XMLHttpRequest = FakeXHR;
+    patchXHR();
+    networkLogStore.setEnabled(true);
+  });
+
+  afterAll(() => {
+    globalThis.XMLHttpRequest = original;
+  });
+
+  beforeEach(() => {
+    networkLogStore.clear();
+  });
+
+  /** Opened and answered, with the headers in but the body still arriving. */
+  function openStream() {
+    const xhr = new FakeXHR();
+    xhr.headers = 'content-type: text/event-stream';
+    xhr.open();
+    xhr.send();
+    xhr.readyState = FakeXHR.HEADERS_RECEIVED;
+    xhr.emit('readystatechange');
+    return xhr;
+  }
+
+  function firstEntry() {
+    return networkLogStore.getSnapshot()[0];
+  }
+
+  it('marks the row a stream as soon as the headers say so', () => {
+    openStream();
+
+    const entry = firstEntry();
+    expect(entry?.eventStream).toBe(true);
+    // Nothing about a stream's response waits for its end, because its end may be the session's.
+    expect(entry).toMatchObject({ statusCode: 200, mimeType: 'text/event-stream' });
+  });
+
+  it('records each event as its chunk arrives', () => {
+    const xhr = openStream();
+
+    xhr.streamChunk('event: token\ndata: one\n\n');
+    expect(networkLogStore.getStreamEvents(firstEntry()!.id)).toMatchObject([
+      { type: 'token', data: 'one' },
+    ]);
+
+    xhr.streamChunk('data: two\n\n');
+    expect(networkLogStore.getStreamEvents(firstEntry()!.id)).toHaveLength(2);
+  });
+
+  // The chunk boundary is the network's business, not the app's, so a block split across two reads
+  // has to come out as the one event it is.
+  it('reads an event split across two chunks as one event', () => {
+    const xhr = openStream();
+
+    xhr.streamChunk('data: half');
+    xhr.streamChunk(' and half\n\n');
+
+    expect(networkLogStore.getStreamEvents(firstEntry()!.id)).toMatchObject([
+      { type: 'message', data: 'half and half' },
+    ]);
+  });
+
+  it('keeps no raw body for a stream, since its events are the body', () => {
+    const xhr = openStream();
+    xhr.streamChunk('data: one\n\n');
+    xhr.readyState = FakeXHR.DONE;
+    xhr.emit('readystatechange');
+
+    const entry = firstEntry();
+    expect(entry?.responseBody).toBeUndefined();
+    expect(entry?.status).toBe('success');
+  });
+
+  // `close()` on a stream aborts the request underneath it, which every other row would call a
+  // cancellation.
+  it('treats a closed stream as one that ended, not one that was cancelled', () => {
+    const xhr = openStream();
+    xhr.streamChunk('data: one\n\n');
+    xhr.abort();
+
+    const entry = firstEntry();
+    expect(entry?.status).toBe('success');
+    expect(entry?.canceled).toBeUndefined();
+    expect(networkLogStore.getStreamEvents(entry!.id)).toHaveLength(1);
+  });
+
+  it('leaves an ordinary response alone', () => {
+    runRequest('text', '{"ok":true}');
+
+    const entry = firstEntry();
+    expect(entry?.eventStream).toBeUndefined();
+    expect(entry?.responseBody).toBe('{"ok":true}');
   });
 });

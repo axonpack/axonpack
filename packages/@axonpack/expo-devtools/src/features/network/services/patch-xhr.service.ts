@@ -1,10 +1,13 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
+import { recordStreamEvents } from './record-stream-events.service';
 import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
+import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
 import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
 import { computeThrottleDelayMs, remainingDelayMs } from '../utils/network-conditions.util';
+import { createEventStreamParser, type EventStreamParser } from '../utils/parse-event-stream.util';
 import { createProgressThrottle } from '../utils/progress-throttle.util';
 import { describeRequestBody } from '../utils/request-body.util';
 import {
@@ -134,6 +137,17 @@ function parseResponseHeaders(raw: string): Record<string, string> {
     if (key) result[key] = value;
   }
   return result;
+}
+
+/** Undefined rather than empty when the runtime refuses, which is what a failed read means here. */
+function readResponseHeaders(xhr: {
+  getAllResponseHeaders(): string;
+}): Record<string, string> | undefined {
+  try {
+    return parseResponseHeaders(xhr.getAllResponseHeaders());
+  } catch {
+    return undefined;
+  }
 }
 
 function extractMimeType(headers: Record<string, string>): string | undefined {
@@ -288,6 +302,8 @@ export function patchXHR() {
       responseText: string;
       responseType: string;
       response: unknown;
+      getResponseHeader(name: string): string | null;
+      getAllResponseHeaders(): string;
     };
     const id = xhr.__networkLogId ?? nextRequestId();
     const startedAt = Date.now();
@@ -318,6 +334,34 @@ export function patchXHR() {
       source: 'xhr',
       conditions,
     });
+
+    /**
+     * Set once the headers say the body is a stream. Its presence is also what tells the handlers
+     * below that this request never gets a body of its own — see `readStreamDelta`.
+     */
+    let parser: EventStreamParser | null = null;
+    let consumed = 0;
+
+    /**
+     * Reads whatever has been appended to `responseText` since the last look. React Native delivers
+     * a growing `responseText` at `LOADING` for as long as something is listening for
+     * `readystatechange` or `progress`, which this patch always is — so a stream arrives here in
+     * chunks with no extra machinery, whichever client library opened it.
+     */
+    function readStreamDelta() {
+      if (parser === null) return;
+      let text: string;
+      try {
+        text = xhr.responseText;
+      } catch {
+        // A `responseType` whose text cannot be read is a stream whose events cannot be parsed.
+        return;
+      }
+      if (typeof text !== 'string' || text.length <= consumed) return;
+      const chunk = text.slice(consumed);
+      consumed = text.length;
+      recordStreamEvents(id, parser.push(chunk));
+    }
 
     // Both directions report through the DOM's own progress events, so nothing has to be inferred
     // from byte counts. Readings are throttled: a large body fires hundreds of them, and each one
@@ -355,6 +399,29 @@ export function patchXHR() {
     this.addEventListener('readystatechange', function onHeadersReceived() {
       if (xhr.readyState !== XMLHttpRequest.HEADERS_RECEIVED) return;
       networkLogStore.update(id, { ttfb: Date.now() - startedAt });
+
+      let declaredType: string | null = null;
+      try {
+        declaredType = xhr.getResponseHeader('content-type');
+      } catch {}
+      if (declaredType?.split(';')[0]?.trim().toLowerCase() !== EVENT_STREAM_MIME_TYPE) return;
+
+      parser = createEventStreamParser();
+      // Everything a stream's response has to say is already said by now, and a stream can stay open
+      // for the rest of the session — so it is recorded here rather than waiting for an end.
+      networkLogStore.update(id, {
+        eventStream: true,
+        statusCode: xhr.status,
+        statusText: xhr.statusText,
+        responseHeaders: readResponseHeaders(xhr),
+        mimeType: EVENT_STREAM_MIME_TYPE,
+      });
+    });
+
+    // The one state every other response ignores: for a stream it is where the body actually arrives.
+    this.addEventListener('readystatechange', function onStreamChunk() {
+      if (xhr.readyState !== XMLHttpRequest.LOADING) return;
+      readStreamDelta();
     });
 
     // An abort still reports readyState DONE with status 0, which is indistinguishable from a
@@ -363,6 +430,15 @@ export function patchXHR() {
       // A blocked request is aborted on purpose, and is already recorded as blocked.
       if (xhr.__networkLogBlocked) return;
       xhr.__networkLogCanceled = true;
+
+      // Closing a stream is how a stream ends: the app calls `close()`, which aborts the request
+      // underneath it. Calling that a cancelled request would report a normal end as a failure.
+      if (parser !== null) {
+        readStreamDelta();
+        networkLogStore.update(id, { status: 'success', duration: Date.now() - startedAt });
+        return;
+      }
+
       networkLogStore.update(id, {
         status: 'error',
         canceled: true,
@@ -375,15 +451,25 @@ export function patchXHR() {
       if (xhr.readyState !== XMLHttpRequest.DONE) return;
 
       const isNetworkFailure = xhr.status === 0;
-      const body = readResponseBody(xhr);
-      let responseHeaders: Record<string, string> | undefined;
-      try {
-        responseHeaders = parseResponseHeaders(this.getAllResponseHeaders());
-      } catch {
-        responseHeaders = undefined;
-      }
+      const responseHeaders = readResponseHeaders(xhr);
 
       if (xhr.__networkLogCanceled) return;
+
+      if (parser !== null) {
+        readStreamDelta();
+        // No `responseBody`: the events are the body, and they are already recorded. Keeping the raw
+        // stream text as well would be a second unbounded copy of the same bytes, which is exactly
+        // what the cap on events exists to avoid.
+        networkLogStore.update(id, {
+          status: isNetworkFailure ? 'error' : 'success',
+          responseHeaders,
+          error: isNetworkFailure ? 'Network request failed' : undefined,
+          duration: Date.now() - startedAt,
+        });
+        return;
+      }
+
+      const body = readResponseBody(xhr);
 
       const declaredType = responseHeaders ? extractMimeType(responseHeaders) : undefined;
 
