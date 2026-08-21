@@ -2,7 +2,7 @@ import type { MaterialIconName } from '../../../core/components/ui/icon-button.u
 import type { Palette } from '../../../core/constants/theme.const';
 import type { ConsoleLogLevel } from '../stores/console-log.store';
 
-export const CONSOLE_LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
+export const CONSOLE_LEVELS: ConsoleLogLevel[] = ['log', 'info', 'warn', 'error', 'debug', 'crash'];
 
 export const CONSOLE_LEVEL_LABELS: Record<ConsoleLogLevel, string> = {
   log: 'Logs',
@@ -10,6 +10,7 @@ export const CONSOLE_LEVEL_LABELS: Record<ConsoleLogLevel, string> = {
   warn: 'Warnings',
   error: 'Errors',
   debug: 'Debug',
+  crash: 'Crashes',
   input: 'Input',
   result: 'Result',
 };
@@ -28,6 +29,12 @@ export function consoleLevelVisuals(COLORS: Palette): Record<ConsoleLogLevel, Co
     warn: { icon: 'warning', color: COLORS.warning, surface: COLORS.warningSurface },
     error: { icon: 'cancel', color: COLORS.error, surface: COLORS.errorSurface },
     debug: { icon: 'bug-report', color: '#9334e6' },
+    /**
+     * The filter chip's icon, and the fallback for a row with no kind on it. A row that has one wears
+     * the Crash tab's icon for that kind instead — `dangerous` belongs to a fatal JS error alone, and
+     * a level standing for five kinds should not claim any one of them.
+     */
+    crash: { icon: 'report', color: COLORS.error, surface: COLORS.errorSurface },
     input: { icon: 'chevron-right', color: COLORS.accent },
     result: { icon: 'chevron-left', color: COLORS.textSecondary },
   };

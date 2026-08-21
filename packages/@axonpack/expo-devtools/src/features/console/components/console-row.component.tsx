@@ -2,20 +2,21 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { CallSite } from './call-site.component';
 import { ConsoleArgCell } from './console-arg-cell.component';
 import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
 import { crashInspectionStore } from '../../../core/stores/crash-inspection.store';
 import type { Matcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { consoleLevelVisuals } from '../constants/console-levels.const';
 import type { ConsoleLogEntry } from '../stores/console-log.store';
 import { consolePromptStore } from '../stores/console-prompt.store';
 import { formatConsoleSource, NATIVE_CONSOLE_SOURCE } from '../utils/formatters.util';
+import { resolveRowVisual } from '../utils/row-visual.util';
 
 function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: Matcher | null }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const visual = consoleLevelVisuals(COLORS)[entry.level];
+  const visual = resolveRowVisual(entry, COLORS);
   const recallable = entry.level === 'input';
   const crashId = entry.crashId;
 
@@ -44,6 +45,7 @@ function ConsoleRowBase({ entry, matcher }: { entry: ConsoleLogEntry; matcher: M
       </View>
 
       <View style={styles.meta}>
+        {entry.callSite?.length ? <CallSite id={entry.id} frames={entry.callSite} /> : null}
         {entry.source && entry.source !== NATIVE_CONSOLE_SOURCE && (
           <Text style={styles.metaText}>{formatConsoleSource(entry.source)}</Text>
         )}
@@ -75,7 +77,10 @@ export const ConsoleRow = memo(
     prev.entry.text === next.entry.text &&
     prev.entry.level === next.entry.level &&
     prev.entry.source === next.entry.source &&
-    prev.entry.crashId === next.entry.crashId
+    prev.entry.crashId === next.entry.crashId &&
+    prev.entry.crashKind === next.entry.crashKind &&
+    prev.entry.crashBreadcrumbs === next.entry.crashBreadcrumbs &&
+    prev.entry.callSite === next.entry.callSite
 );
 
 const useStyles = makeThemedStyles((COLORS) => ({

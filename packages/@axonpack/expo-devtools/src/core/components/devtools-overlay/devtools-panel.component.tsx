@@ -12,6 +12,7 @@ import { DebugView } from '../../../features/debug/components/debug-view.compone
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
 import { StorageView } from '../../../features/storage/components/storage-view.component';
+import { HIT_SLOP } from '../../constants/metrics.const';
 import { devtoolsTabStore } from '../../stores/devtools-tab.store';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { IconButton } from '../ui/icon-button.ui';
@@ -27,8 +28,11 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
   );
   const crashRecords = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
 
+  // Crashes as well as errors: a crash is its own level now, and counting only `error` quietly
+  // stopped the badge reporting the very rows most worth walking over to.
   const consoleErrorCount = useMemo(
-    () => consoleEntries.filter((entry) => entry.level === 'error').length,
+    () =>
+      consoleEntries.filter((entry) => entry.level === 'error' || entry.level === 'crash').length,
     [consoleEntries]
   );
 
@@ -71,7 +75,12 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
           badges={{ console: consoleErrorCount, crashes: unseenCrashCount }}
         />
         <ThemePicker />
-        <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
+        <IconButton
+          name="close"
+          color={COLORS.textSecondary}
+          onPress={onClose}
+          hitSlop={HIT_SLOP.default}
+        />
       </View>
 
       <View style={styles.tabPanel}>{tabContent}</View>

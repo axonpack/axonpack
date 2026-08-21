@@ -1,9 +1,10 @@
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { useSandboxStyles } from './shared.styles';
-import type { SandboxResult } from '../../utils/sandbox.util';
-import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
 import { CollapsibleSection } from '../../../../core/components/ui/collapsible-section.ui';
+import { formatDuration } from '../../../../core/utils/format-duration.util';
+import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-styles.util';
+import type { SandboxResult } from '../../utils/sandbox.util';
 import { ResponseBodyPreview } from '../response-body-preview.component';
 
 export function ResponsePanel({
@@ -48,7 +49,7 @@ export function ResponsePanel({
         <Text style={[styles.statusLine, { color: statusColor }]}>
           {result.status} {result.statusText}
         </Text>
-        <Text style={styles.durationText}>{result.duration} ms</Text>
+        <Text style={styles.durationText}>{formatDuration(result.duration)}</Text>
       </View>
       <CollapsibleSection title="Response Headers" count={Object.keys(result.headers).length}>
         {Object.entries(result.headers).map(([key, value]) => (
@@ -65,6 +66,7 @@ export function ResponsePanel({
       <CollapsibleSection title="Response Body">
         <ResponseBodyPreview
           body={result.body}
+          base64={undefined}
           mimeType={result.headers['content-type']}
           url={result.url}
           emptyText="Empty response body"

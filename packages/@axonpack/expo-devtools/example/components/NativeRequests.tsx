@@ -5,6 +5,16 @@ import { ActivityIndicator, Button, ScrollView, StyleSheet, Text, View } from 'r
 
 const BASE_URL = 'https://jsonplaceholder.typicode.com';
 const UPLOAD_URL = 'https://httpbin.org/post';
+/**
+ * Two XML bodies of different sizes, from two hosts — so the tree has something real to render and one
+ * host being down does not take the demo with it. The first is small enough to read whole; the second
+ * is a live feed with attributes, CDATA and namespaces in it.
+ */
+const XML_URLS = {
+  small: 'https://httpbin.org/xml',
+  feed: 'https://feeds.bbci.co.uk/news/rss.xml',
+};
+
 const IMAGE_URL =
   'https://camo.githubusercontent.com/5e45bc648dba68520ce949a53690af6bcef2880f84a1d46cbb1636649afd6d84/68747470733a2f2f796176757a63656c696b65722e6769746875622e696f2f73616d706c652d696d616765732f696d6167652d313032312e6a7067';
 
@@ -76,6 +86,33 @@ async function fetchImage() {
   return {
     status: response.status,
     text: `${response.headers.get('content-type')} · ${response.headers.get('content-length') ?? '?'} bytes`,
+  };
+}
+
+/**
+ * Big enough for an upload throttle to be felt: at a 3G uplink of 768 kbps this body takes about ten
+ * seconds to go up, and the panel holds the request for that long before sending it.
+ */
+function largeJsonBody(): string {
+  return JSON.stringify({ note: 'upload throttle demo', filler: 'x'.repeat(1024 * 1024) });
+}
+
+async function postLargeBody() {
+  const body = largeJsonBody();
+  const response = await fetch(`${UPLOAD_URL}?via=large-body`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+  return { status: response.status, text: `sent ${body.length} bytes` };
+}
+
+async function fetchXml(url: string) {
+  const response = await fetch(url, { headers: { Accept: 'application/xml, text/xml' } });
+  const text = await response.text();
+  return {
+    status: response.status,
+    text: `${response.headers.get('content-type')} · ${text.length} chars`,
   };
 }
 
@@ -171,6 +208,35 @@ export function NativeRequests() {
           </View>
         </View>
       ))}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>Upload throttling</Text>
+        <View style={styles.group}>
+          <Button
+            title="POST a 1 MB body"
+            onPress={() => runRequest('large-upload', postLargeBody)}
+            disabled={loading !== null}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>XML response</Text>
+        <View style={styles.group}>
+          <Button
+            title="Fetch a small XML document"
+            onPress={() => runRequest('xml-small', () => fetchXml(XML_URLS.small))}
+            disabled={loading !== null}
+          />
+        </View>
+        <View style={styles.group}>
+          <Button
+            title="Fetch an RSS feed"
+            onPress={() => runRequest('xml-feed', () => fetchXml(XML_URLS.feed))}
+            disabled={loading !== null}
+          />
+        </View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionHeader}>Preview tab</Text>

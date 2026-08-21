@@ -1,13 +1,8 @@
 import type { Palette } from '../../../core/constants/theme.const';
+import { formatDuration } from '../../../core/utils/format-duration.util';
 
-export function formatMs(value: number | undefined): string {
-  if (value === undefined) return '–';
-
-  if (Math.abs(value) < 0.01) return '0 ms';
-  if (value < 1) return `${value.toFixed(2)} ms`;
-  if (value < 1000) return `${Math.round(value)} ms`;
-  return `${(value / 1000).toFixed(2)} s`;
-}
+/** One rule for every duration the panel shows, so the tabs agree with each other. */
+export const formatMs = formatDuration;
 
 export function getLongTaskColor(duration: number, COLORS: Palette): string {
   if (duration >= 200) return COLORS.error;

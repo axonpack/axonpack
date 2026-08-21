@@ -5,8 +5,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { DevtoolsPanel } from './devtools-panel.component';
 import { CrashReportOverlay } from '../../../features/crash/components/crash-report-overlay.component';
-import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { markFirstRender } from '../../../features/performance/services/read-startup-timing.service';
+import { HIT_SLOP } from '../../constants/metrics.const';
 import { devtoolsReadyStore } from '../../stores/devtools-ready.store';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
@@ -81,7 +81,6 @@ export function DevtoolsOverlay({
     })
   );
 
-  const slop = Math.max(0, (TOUCH_TARGET.min - size) / 2);
   const glyphSize = Math.round(size * GLYPH_RATIO);
 
   /**
@@ -107,7 +106,7 @@ export function DevtoolsOverlay({
             transform: [{ translateX: pan.x }, { translateY: pan.y }],
           },
         ]}
-        hitSlop={{ top: slop, bottom: slop, left: slop, right: slop }}
+        hitSlop={HIT_SLOP.default}
         {...panResponder.panHandlers}>
         {IconComponent ? (
           <IconComponent size={glyphSize} />

@@ -1,7 +1,8 @@
 import { Platform, Share } from 'react-native';
 
-import type { NetworkLogEntry } from '../stores/network-log.store';
+import { buildNetworkExport } from './build-network-export.util';
 import { encodeBase64 } from '../../../core/utils/base64.util';
+import { networkLogStore, type NetworkEntry } from '../stores/network-log.store';
 
 function fileName(): string {
   return `network-log-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
@@ -15,8 +16,18 @@ function fileName(): string {
  * attachment to offer Files and Mail; Android's `Share` accepts only text, so it receives the JSON
  * itself. Either way the log leaves the app in one step.
  */
-export async function exportNetworkLog(entries: NetworkLogEntry[]) {
-  const text = JSON.stringify(entries, null, 2);
+export async function exportNetworkLog(entries: readonly NetworkEntry[]) {
+  // The messages and events are looked up here rather than passed in: the caller has a list of rows,
+  // and what belongs to each row lives beside it in the store.
+  const file = buildNetworkExport(
+    entries,
+    {
+      messagesFor: networkLogStore.getWebSocketMessages,
+      eventsFor: networkLogStore.getStreamEvents,
+    },
+    new Date().toISOString()
+  );
+  const text = JSON.stringify(file, null, 2);
 
   try {
     if (Platform.OS === 'ios') {

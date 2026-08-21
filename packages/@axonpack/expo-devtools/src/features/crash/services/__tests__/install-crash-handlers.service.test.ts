@@ -1,4 +1,8 @@
-import { installCrashHandlers, resetCrashHandlers } from '../install-crash-handlers.service';
+import {
+  drainOnce,
+  installCrashHandlers,
+  resetCrashHandlers,
+} from '../install-crash-handlers.service';
 import { crashStore } from '../../stores/crash.store';
 import { resetCrashCapture } from '../capture-crash.service';
 
@@ -49,7 +53,7 @@ function installFakeErrorUtils(existing?: ErrorHandler) {
 }
 
 describe('the JS error handler', () => {
-  it('captures a fatal error and still calls the handler React Native installed', () => {
+  it('captures a fatal error and withholds it, so the app is not ended', () => {
     const rnHandler = jest.fn();
     const currentHandler = installFakeErrorUtils(rnHandler);
 
@@ -57,7 +61,9 @@ describe('the JS error handler', () => {
     currentHandler()?.(new Error('boom'), true);
 
     expect(crashStore.getSnapshot()[0]?.kind).toBe('js-fatal');
-    expect(rnHandler).toHaveBeenCalledTimes(1);
+    // Not calling this is the whole mechanism: it reports the error to the native side, and that
+    // report is what ends the process.
+    expect(rnHandler).not.toHaveBeenCalled();
   });
 
   it('records a non-fatal error as a non-fatal kind', () => {
@@ -67,6 +73,16 @@ describe('the JS error handler', () => {
     currentHandler()?.(new Error('boom'), false);
 
     expect(crashStore.getSnapshot()[0]?.kind).toBe('js-error');
+  });
+
+  it('passes a non-fatal error on, which only ever gets logged', () => {
+    const rnHandler = jest.fn();
+    const currentHandler = installFakeErrorUtils(rnHandler);
+
+    installCrashHandlers(ALL_HANDLERS);
+    currentHandler()?.(new Error('boom'), false);
+
+    expect(rnHandler).toHaveBeenCalledTimes(1);
   });
 
   it('is left alone when the app turns that tier off', () => {
@@ -122,6 +138,7 @@ describe('previous-launch records', () => {
     installFakeErrorUtils();
 
     installCrashHandlers(ALL_HANDLERS);
+    drainOnce();
 
     const [record] = crashStore.getSnapshot();
     expect(record?.fromPreviousLaunch).toBe(true);
@@ -131,8 +148,19 @@ describe('previous-launch records', () => {
   it('drains them even with native capture off, so they are never reported at a random later launch', () => {
     installFakeErrorUtils();
     installCrashHandlers({ ...ALL_HANDLERS, nativeExceptions: false });
+    drainOnce();
 
     expect(mockInstallNativeCrashHandler).not.toHaveBeenCalled();
+    expect(mockDrainNativeCrashRecords).toHaveBeenCalledTimes(1);
+  });
+
+  // Whoever asks first drains, and only once: the client asks from two places, because a build with
+  // no panel never reaches the one that waits for the console to start recording.
+  it('drains once however many times it is asked', () => {
+    installFakeErrorUtils();
+    drainOnce();
+    drainOnce();
+
     expect(mockDrainNativeCrashRecords).toHaveBeenCalledTimes(1);
   });
 });

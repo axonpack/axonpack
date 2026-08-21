@@ -1,4 +1,5 @@
 import type { Palette } from '../../../core/constants/theme.const';
+import { isNativeSource } from '../constants/sources.const';
 import type { NetworkLogStatus } from '../stores/network-log.store';
 
 export function isErrorStatus(status: NetworkLogStatus, statusCode?: number): boolean {
@@ -112,8 +113,13 @@ export function getMethodColor(method: string, COLORS: Palette): string {
   }
 }
 
+/**
+ * A source this package minted reads as itself; anything else is a WebView name the consumer
+ * declared, and says which WebView it came from. Checked against the list rather than against two
+ * literals, which is what used to label React Native's own sockets as WebView traffic.
+ */
 export function formatSource(source: string): string {
-  if (source === 'fetch' || source === 'xhr') return source;
+  if (isNativeSource(source)) return source;
   return `WebView::[${source}]`;
 }
 

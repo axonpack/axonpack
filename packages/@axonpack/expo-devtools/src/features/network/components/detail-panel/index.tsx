@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { CookiesTab } from './cookies-tab.component';
+import { EventsTab } from './events-tab.component';
 import { HeadersTab } from './headers-tab.component';
 import { InitiatorTab } from './initiator-tab.component';
 import { PayloadTab } from './payload-tab.component';
@@ -13,7 +15,7 @@ import { IconButton } from '../../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../../core/components/ui/search-input.ui';
 import { SparkleIcon } from '../../../../core/components/ui/sparkle-icon.ui';
-import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../../core/constants/metrics.const';
 import {
   buildMatcher,
   DEFAULT_SEARCH_MODES,
@@ -26,14 +28,17 @@ import { buildEntryCopyMenuItems } from '../../utils/entry-menu-items.util';
 import { classifyPreview } from '../../utils/preview-kind.util';
 import { SandboxSheet } from '../sandbox';
 
-type Tab = 'headers' | 'payload' | 'preview' | 'response' | 'timing' | 'initiator';
+type Tab =
+  'headers' | 'payload' | 'preview' | 'response' | 'events' | 'timing' | 'cookies' | 'initiator';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'headers', label: 'Headers' },
   { key: 'payload', label: 'Payload' },
   { key: 'preview', label: 'Preview' },
   { key: 'response', label: 'Response' },
+  { key: 'events', label: 'Events' },
   { key: 'timing', label: 'Timing' },
+  { key: 'cookies', label: 'Cookies' },
   { key: 'initiator', label: 'Initiator' },
 ];
 
@@ -109,7 +114,11 @@ export function DetailPanel({
               {TABS.filter(
                 (t) =>
                   (t.key !== 'payload' || active.requestBody) &&
-                  (t.key !== 'initiator' || active.initiator?.length)
+                  (t.key !== 'initiator' || active.initiator?.length) &&
+                  // A stream's events are its body, so Events stands where Response and Preview
+                  // would be — showing those empty would suggest the body went missing.
+                  (t.key !== 'events' || active.eventStream) &&
+                  ((t.key !== 'response' && t.key !== 'preview') || !active.eventStream)
               ).map((t) => (
                 <TouchableOpacity
                   key={t.key}
@@ -124,7 +133,7 @@ export function DetailPanel({
             <IconButton
               name="more-vert"
               color={COLORS.textSecondary}
-              hitSlop={12}
+              hitSlop={HIT_SLOP.default}
               onPress={(event) =>
                 setMenuAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })
               }
@@ -163,7 +172,9 @@ export function DetailPanel({
             {tab === 'payload' && <PayloadTab entry={active} matcher={matcher} />}
             {tab === 'preview' && <PreviewTab entry={active} matcher={matcher} />}
             {tab === 'response' && <ResponseTab entry={active} matcher={matcher} />}
+            {tab === 'events' && <EventsTab entry={active} />}
             {tab === 'timing' && <TimingTab entry={active} />}
+            {tab === 'cookies' && <CookiesTab entry={active} />}
             {tab === 'initiator' && <InitiatorTab entry={active} />}
             <InsetPadding edge="bottom" />
           </View>

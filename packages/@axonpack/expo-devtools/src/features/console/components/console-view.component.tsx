@@ -12,6 +12,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
+import { ConsoleCrashRow } from './console-crash-row.component';
 import { ConsolePrompt } from './console-prompt.component';
 import { ConsoleRow } from './console-row.component';
 import {
@@ -22,7 +23,7 @@ import { Chip } from '../../../core/components/ui/chip.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
-import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import {
   buildMatcher,
@@ -108,9 +109,13 @@ export function ConsoleView() {
   );
 
   const renderConsoleRow = useCallback(
-    ({ item }: ListRenderItemInfo<ConsoleLogEntry>) => (
-      <ConsoleRow entry={item} matcher={matcher} />
-    ),
+    ({ item }: ListRenderItemInfo<ConsoleLogEntry>) =>
+      // A crash is laid out as a report rather than a line of output, so it has a row of its own.
+      item.level === 'crash' ? (
+        <ConsoleCrashRow entry={item} />
+      ) : (
+        <ConsoleRow entry={item} matcher={matcher} />
+      ),
     [matcher]
   );
 
@@ -139,7 +144,9 @@ export function ConsoleView() {
         clearLabel="Clear console"
         trailing={
           <View style={styles.headerSummary}>
-            {(['warn', 'error'] as const).map((level) => {
+            {/* Crash included, and in severity order: the strip is what tells you to walk over to
+                this tab, so leaving out the worst rows defeated it. */}
+            {(['warn', 'error', 'crash'] as const).map((level) => {
               const { icon, color } = consoleLevelVisuals(COLORS)[level];
               if (!countsByLevel[level] || !icon) return null;
               return (
@@ -247,7 +254,10 @@ export function ConsoleView() {
         />
 
         {showScrollToBottom && (
-          <TouchableOpacity style={styles.scrollToBottom} onPress={scrollToBottom} hitSlop={8}>
+          <TouchableOpacity
+            style={styles.scrollToBottom}
+            onPress={scrollToBottom}
+            hitSlop={HIT_SLOP.default}>
             <MaterialIcons name="arrow-downward" size={18} color="#ffffff" />
           </TouchableOpacity>
         )}

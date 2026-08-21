@@ -48,6 +48,16 @@ function installJsErrorHandler() {
   const previous = errorUtils.getGlobalHandler?.();
   errorUtils.setGlobalHandler((error, isFatal) => {
     captureCrash(error, isFatal ? 'js-fatal' : 'js-error');
+
+    // A fatal error stops here. React Native's own handler is what reports it to the native side,
+    // and that report is what ends the process — so not calling it is the whole of how the app keeps
+    // running. In development that handler draws the red box instead of reporting anything, which is
+    // why the same error has never ended the app there; this makes a release build behave the way
+    // development always has.
+    if (isFatal) return;
+
+    // A non-fatal one is passed on untouched: the default handler only logs it, so keeping it back
+    // would cost the warning and save nothing.
     previous?.(error, isFatal);
   });
 }
@@ -103,8 +113,12 @@ function installRejectionHandler() {
 /**
  * Anything the native handler wrote is by definition from a run that already ended — the file is
  * drained at startup, so a record still in it outlived the process that made it.
+ *
+ * Exported and called separately from installing the handlers, because adopting a record now also
+ * writes a console row, and the console store is not recording yet at the point the handlers go in.
+ * Draining there dropped the row on the floor with nothing to show it had happened.
  */
-function drainPreviousLaunchCrashes() {
+export function drainPreviousLaunchCrashes() {
   for (const partial of drainNativeCrashRecords()) adoptPersistedCrash(partial);
 }
 
@@ -121,13 +135,17 @@ export function installCrashHandlers(config: CrashHandlerConfig) {
     installed.nativeExceptions = true;
     installNativeCrashHandler();
   }
+}
 
-  // Always drained, even with native capture off: the records may predate that being turned off,
-  // and leaving them on disk would mean reporting them at some arbitrary later launch instead.
-  if (!installed.drained) {
-    installed.drained = true;
-    drainPreviousLaunchCrashes();
-  }
+/**
+ * Always drained, even with native capture off: the records may predate that being turned off, and
+ * leaving them on disk would mean reporting them at some arbitrary later launch instead. Once per
+ * process, whoever asks first.
+ */
+export function drainOnce() {
+  if (installed.drained) return;
+  installed.drained = true;
+  drainPreviousLaunchCrashes();
 }
 
 /** Test-only; each tier installs once per process. */

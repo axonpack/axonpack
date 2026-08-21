@@ -176,6 +176,143 @@ private func deviceModelIdentifier() -> String {
   }
 }
 
+
+/**
+ Connection-phase timing.
+
+ The phases inside a request — queueing, DNS, TCP, TLS — are measured by URLSession and reported
+ nowhere JavaScript can reach. React Native's own `PerformanceResourceTiming` looks like the JS
+ answer and is not: it fills those fields from the same three instants a JS patch already sees, so it
+ reports queueing as zero and connection setup as the whole wait. `URLSessionTaskMetrics` is the real
+ measurement, and it arrives through an *optional* delegate method that the session delegates in an
+ app do not implement.
+
+ So the method is **added** to those delegate classes at runtime rather than swizzled over them.
+ Adding is strictly observational: nothing existing is replaced, no request can be altered or delayed,
+ and a class that already implements the method is left alone rather than fought over — another tool
+ collecting the same metrics keeps working, and this one reports nothing for that stack.
+ */
+private func millisBetween(_ start: Date?, _ end: Date?) -> Double? {
+  guard let start, let end else { return nil }
+  let elapsed = end.timeIntervalSince(start) * 1000
+  return elapsed >= 0 ? elapsed : nil
+}
+
+private final class NetworkPhaseReporter {
+  static let shared = NetworkPhaseReporter()
+
+  /// Set while the reporter is installed, and the only thing that decides whether metrics are sent.
+  var emit: (([String: Any?]) -> Void)?
+  /// Whether the delegate method is in place. Adding it twice fails by design, so this remembers.
+  private(set) var installed = false
+
+  func markInstalled() {
+    installed = true
+  }
+
+  func record(_ metrics: URLSessionTaskMetrics) {
+    guard let emit else { return }
+    // The last transaction is the one that produced the response; any earlier ones are redirects,
+    // each of which the app saw as part of the same request.
+    guard
+      let transaction = metrics.transactionMetrics.last,
+      let url = transaction.request.url?.absoluteString,
+      let fetchStart = transaction.fetchStartDate
+    else {
+      return
+    }
+
+    // Summed across transactions rather than read off the last: a redirect chain is one request as far
+    // as the app is concerned, and every hop of it crossed the wire.
+    let wireTotal = metrics.transactionMetrics.reduce(Int64(0)) {
+      $0 + $1.countOfResponseBodyBytesReceived
+    }
+    let decodedTotal = metrics.transactionMetrics.reduce(Int64(0)) {
+      $0 + $1.countOfResponseBodyBytesAfterDecoding
+    }
+    let bodyBytes = (
+      wire: wireTotal > 0 ? Double(wireTotal) : nil,
+      decoded: decodedTotal > 0 ? Double(decodedTotal) : nil
+    )
+
+    // Whichever of these the stack reached first is where the request stopped waiting to be worked
+    // on, so the gap before it is the queue.
+    let workStart =
+      transaction.domainLookupStartDate ?? transaction.connectStartDate
+      ?? transaction.requestStartDate
+
+    emit([
+      "url": url,
+      "startMs": fetchStart.timeIntervalSince1970 * 1000,
+      "queuedMs": millisBetween(fetchStart, workStart),
+      "dnsMs": millisBetween(transaction.domainLookupStartDate, transaction.domainLookupEndDate),
+      // TLS is measured separately below, so the connect phase stops where the handshake starts.
+      "tcpMs": millisBetween(
+        transaction.connectStartDate,
+        transaction.secureConnectionStartDate ?? transaction.connectEndDate),
+      "tlsMs": millisBetween(
+        transaction.secureConnectionStartDate, transaction.secureConnectionEndDate),
+      "sendMs": millisBetween(transaction.requestStartDate, transaction.requestEndDate),
+      "waitMs": millisBetween(
+        transaction.requestEndDate ?? transaction.requestStartDate, transaction.responseStartDate),
+      "downloadMs": millisBetween(transaction.responseStartDate, transaction.responseEndDate),
+      // The whole request as the platform timed it, which is *not* the phases added up: the stack
+      // leaves gaps it attributes to no phase — between a lookup finishing and a connection starting,
+      // and between a connection being ready and the request going out. Sending it means the waterfall
+      // can scale to the real duration and show that unattributed time rather than absorbing it.
+      "totalMs": metrics.taskInterval.duration * 1000,
+      "reusedConnection": transaction.isReusedConnection,
+      "protocol": transaction.networkProtocolName,
+      // The two sizes a compressed response has, counted on the socket and after decoding. Nothing in
+      // JavaScript can tell these apart: the body it is handed is already decoded, and a
+      // `Content-Length` header describes the encoded one.
+      //
+      // Sent only when the platform actually counted them. It does not always: a response served from
+      // the URL cache crossed no wire at all, and some transports fill in the header counts while
+      // leaving the body counts at zero. Zero would read as "an empty body", a different claim.
+      "wireBytes": bodyBytes.wire,
+      "decodedBytes": bodyBytes.decoded,
+      "measuredBy": "urlsession",
+    ])
+  }
+}
+
+private let metricsSelector = NSSelectorFromString("URLSession:task:didFinishCollectingMetrics:")
+
+/**
+ The *session* delegate classes worth asking, which is the distinction that matters: URLSession reports
+ metrics to the delegate its session was created with, never to a per-task delegate that one forwards
+ to. React Native's is Objective-C and public, so it is reliable. Expo's fetch runs through a proxy in
+ `ExpoModulesCore`, reached by its Swift runtime name and simply missed if Expo renames it — both
+ spellings are tried, because a Swift class registers under a mangled symbol while the `Module.Class`
+ form is resolved by the runtime instead.
+
+ `Expo.ExpoURLSessionTask` was the first attempt and was wrong: it is the per-task delegate the proxy
+ forwards to, so it resolved, accepted the method, and was never called.
+ */
+private let sessionDelegateClassNames = [
+  "RCTHTTPRequestHandler",
+  "ExpoModulesCore.URLSessionSessionDelegateProxy",
+  "_TtC15ExpoModulesCore30URLSessionSessionDelegateProxy",
+]
+
+private func addMetricsCollection(to className: String) -> Bool {
+  guard let delegateClass = NSClassFromString(className) else { return false }
+  // Already there: either a future React Native implements it, or another tool got here first.
+  if class_getInstanceMethod(delegateClass, metricsSelector) != nil { return false }
+
+  let collect:
+    @convention(block) (AnyObject, URLSession, URLSessionTask, URLSessionTaskMetrics) -> Void = {
+      _, _, _, metrics in
+      NetworkPhaseReporter.shared.record(metrics)
+    }
+
+  // "v@:@@@" — returns void, takes self, the selector, and the three objects the delegate method is
+  // handed. URLSession asks `respondsToSelector:` before calling, so adding the method is all it takes.
+  return class_addMethod(
+    delegateClass, metricsSelector, imp_implementationWithBlock(collect), "v@:@@@")
+}
+
 public class AxonpackDevtoolsModule: Module {
   /// Captured when the module is constructed, which happens during native startup.
   private let moduleInitEpochMs = Date().timeIntervalSince1970 * 1000
@@ -184,6 +321,25 @@ public class AxonpackDevtoolsModule: Module {
 
   public func definition() -> ModuleDefinition {
     Name("AxonpackDevtools")
+
+    Events("onNetworkPhases")
+
+    /**
+     Returns whether phases will actually be reported, which is what the Timing tab says out loud.
+     False means no delegate class could be reached — an app whose networking this build cannot see —
+     and the tab keeps to the two numbers a patch measures rather than implying more.
+     */
+    Function("installNetworkTimingReporter") { () -> Bool in
+      NetworkPhaseReporter.shared.emit = { [weak self] payload in
+        self?.sendEvent("onNetworkPhases", payload)
+      }
+      if NetworkPhaseReporter.shared.installed { return true }
+
+      let hooked = sessionDelegateClassNames.filter { addMetricsCollection(to: $0) }
+      if hooked.isEmpty { return false }
+      NetworkPhaseReporter.shared.markInstalled()
+      return true
+    }
 
     // Started and stopped by the view, not at init: a display link on the main runloop keeps the screen
     // awake for as long as it lives.

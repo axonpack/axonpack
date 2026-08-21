@@ -12,14 +12,16 @@ describe('formatMs', () => {
     expect(formatMs(-0.0001)).toBe('0 ms');
   });
 
-  it('keeps sub-millisecond precision but rounds past 1ms', () => {
-    expect(formatMs(0.4)).toBe('0.40 ms');
-    expect(formatMs(47.6)).toBe('48 ms');
+  it('keeps sub-millisecond precision, and one decimal above it', () => {
+    expect(formatMs(0.4)).toBe('0.4 ms');
+    expect(formatMs(47.6)).toBe('47.6 ms');
   });
 
-  it('switches to seconds at 1000ms', () => {
-    expect(formatMs(999)).toBe('999 ms');
-    expect(formatMs(1000)).toBe('1.00 s');
+  // Shared with every other duration the panel shows: seconds once a reading passes 100 ms, because
+  // that is where the millisecond stops being the unit anyone reads.
+  it('switches to seconds at 100ms', () => {
+    expect(formatMs(99)).toBe('99 ms');
+    expect(formatMs(100)).toBe('0.1 s');
     expect(formatMs(2350)).toBe('2.35 s');
   });
 });

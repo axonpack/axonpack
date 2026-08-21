@@ -14,7 +14,7 @@ export type CrashKindVisual = {
 export function getCrashKindVisual(kind: CrashKind, COLORS: Palette): CrashKindVisual {
   switch (kind) {
     case 'js-fatal':
-      return { icon: 'dangerous', color: COLORS.error };
+      return { icon: 'info', color: COLORS.error };
     case 'native-exception':
       return { icon: 'memory', color: COLORS.error };
     case 'react-render':

@@ -128,6 +128,7 @@ private class CrashPersistingHandler(
   }
 }
 
+
 class AxonpackDevtoolsModule : Module() {
   /** Captured when the module is constructed, which happens during native startup. */
   private val moduleInitEpochMs = System.currentTimeMillis().toDouble()
@@ -152,6 +153,20 @@ class AxonpackDevtoolsModule : Module() {
 
     // Started and stopped by the view, not at init: a frame callback keeps the main thread busy for as
     // long as it lives.
+    Events("onNetworkPhases")
+
+    /**
+     * Attaches the emitter and reports whether the phases will actually arrive.
+     *
+     * The listener itself went in when the application was created — see `NetworkTiming.kt` — because
+     * a factory set from here would be set after React Native had already built its client. All this
+     * does is give the readings somewhere to go.
+     */
+    Function("installNetworkTimingReporter") { ->
+      NetworkPhaseReporter.emit = { payload -> sendEvent("onNetworkPhases", payload) }
+      NetworkPhaseReporter.installed
+    }
+
     Function("startUiFpsTracking") { uiFps.start() }
     Function("stopUiFpsTracking") { uiFps.stop() }
     /** -1 until the first window closes, so "not measured" stays distinct from a real zero. */

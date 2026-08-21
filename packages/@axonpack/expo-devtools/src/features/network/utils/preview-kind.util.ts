@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 /** How the Preview tab renders a body — `image` and `webview` are opaque surfaces that cannot be searched. */
-export type PreviewKind = 'image' | 'webview' | 'text';
+export type PreviewKind = 'image' | 'webview' | 'xml' | 'text';
 
 export function classifyPreview(mimeType: string | undefined): PreviewKind {
   const type = mimeType?.toLowerCase() ?? '';
@@ -10,5 +10,7 @@ export function classifyPreview(mimeType: string | undefined): PreviewKind {
   }
   if (type.startsWith('image/')) return 'image';
   if (type.includes('html')) return 'webview';
+  // After the SVG and HTML checks above, which are XML too but have a rendering of their own.
+  if (type.includes('xml')) return 'xml';
   return 'text';
 }

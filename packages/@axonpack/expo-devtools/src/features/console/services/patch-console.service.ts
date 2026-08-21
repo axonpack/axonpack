@@ -1,3 +1,4 @@
+import { captureCallSite } from './capture-call-site.service';
 import { crashLinkStore } from '../../../core/stores/crash-link.store';
 import { consoleLogStore } from '../stores/console-log.store';
 import type { ConsoleLogLevel } from '../stores/console-log.store';
@@ -7,6 +8,8 @@ import { NATIVE_CONSOLE_SOURCE } from '../utils/formatters.util';
 type PatchedLevel = Extract<ConsoleLogLevel, 'log' | 'info' | 'warn' | 'error' | 'debug'>;
 
 const LEVELS: PatchedLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
+
+const LEVELS_WITH_CALL_SITE = new Set<PatchedLevel>(['warn', 'error']);
 
 let isPatched = false;
 let entryCounter = 0;
@@ -37,6 +40,13 @@ export function patchConsole() {
 
     console[level] = (...args: unknown[]) => {
       try {
+        // React Native re-emits an error it is reporting through `console.error`, so a crash already
+        // recorded would otherwise arrive here and be written a second time — once as the crash row
+        // and once as an ordinary error. The link says this is that echo, and the crash row is the
+        // better of the two: it carries the report and the icon that says what it is.
+        const crashId = findCrashId(args);
+        if (crashId !== undefined) return original?.(...args);
+
         const parts = toConsoleArgs(args);
         consoleLogStore.add({
           id: nextEntryId(),
@@ -46,7 +56,9 @@ export function patchConsole() {
           timestamp: Date.now(),
           count: 1,
           source: NATIVE_CONSOLE_SOURCE,
-          crashId: findCrashId(args),
+          // Only the levels somebody goes looking for the origin of. A log in a render loop would
+          // otherwise pay for a stack on every frame, and nobody asks where a `log` came from.
+          callSite: LEVELS_WITH_CALL_SITE.has(level) ? captureCallSite() : undefined,
         });
       } catch {}
 

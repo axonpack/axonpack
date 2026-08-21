@@ -12,6 +12,7 @@ import {
 
 import { DetailPanel } from './detail-panel';
 import { LogRow } from './log-row.component';
+import { OverrideEditor } from './override-editor.component';
 import { OverviewStrip, type TimeRange } from './overview-strip.component';
 import { SocketDetailPanel } from './socket-detail-panel.component';
 import { SocketRow } from './socket-row.component';
@@ -32,6 +33,7 @@ import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { networkLogStore } from '../stores/network-log.store';
 import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
+import { replayNitroEntries } from '../services/nitro-fetch.service';
 import { exportNetworkLog } from '../utils/export-network-log.util';
 import {
   DEFAULT_NETWORK_FILTERS,
@@ -73,6 +75,7 @@ export function NetworkView() {
   const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
+  const [overrideUrl, setOverrideUrl] = useState<string | null>(null);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -175,7 +178,16 @@ export function NetworkView() {
           onPress={setSelectedEntry}
         />
       ) : (
-        <LogRow entry={item} bigRows={bigRows} matcher={matcher} onPress={setSelectedEntry} />
+        <LogRow
+          entry={item}
+          bigRows={bigRows}
+          matcher={matcher}
+          eventCount={
+            item.eventStream ? networkLogStore.getStreamEvents(item.id).length : undefined
+          }
+          onPress={setSelectedEntry}
+          onOverride={setOverrideUrl}
+        />
       ),
     [bigRows, matcher]
   );
@@ -184,7 +196,14 @@ export function NetworkView() {
     <View style={styles.container}>
       <DevtoolsToolbar
         paused={paused}
-        onTogglePaused={() => networkLogStore.setPaused(!paused)}
+        onTogglePaused={() => {
+          const nextPaused = !paused;
+          networkLogStore.setPaused(nextPaused);
+          // A JSI client kept recording while this was paused, and nothing here was listening. Reading
+          // its buffer on resume is what makes the record button mean the same thing for that traffic
+          // as it does for everything else.
+          if (!nextPaused) replayNitroEntries();
+        }}
         onClear={networkLogStore.clear}
         clearLabel="Clear log">
         <ToolbarDivider />
@@ -218,7 +237,9 @@ export function NetworkView() {
         <IconButton
           name="file-download"
           color={COLORS.textSecondary}
-          onPress={() => exportNetworkLog(visibleLogs.filter((e) => e.kind === 'http'))}
+          // Everything the filters left, of every kind — a socket and a stream carry what they
+          // recorded, and dropping them was how the export used to lose them.
+          onPress={() => exportNetworkLog(visibleLogs)}
           label="Export"
         />
         <IconButton
@@ -436,6 +457,8 @@ export function NetworkView() {
         onClose={() => setSelectedEntry(null)}
         stackedHeaders={stackedHeaders}
       />
+
+      <OverrideEditor url={overrideUrl} onClose={() => setOverrideUrl(null)} />
 
       <SocketDetailPanel
         entry={selectedEntry?.kind === 'websocket' ? selectedEntry : null}

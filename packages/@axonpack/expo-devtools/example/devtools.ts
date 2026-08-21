@@ -33,7 +33,7 @@ export const devtools = createDevtoolsClient({
   themes: {
     midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
   },
-  webviewSources: ['example-webview', 'test2'],
+  webviewSources: ['example-webview', 'test2', 'page-apis'],
   network: {
     disabledByDefault: false,
     includeFetch: true,
@@ -58,9 +58,7 @@ export const devtools = createDevtoolsClient({
       ...record,
       message: record.message.replace(/token[=:]\s*\S+/gi, 'token=[redacted]'),
     }),
-    onCrash: (record) => {
-      console.warn(`[crash] ${record.kind}: ${record.name}`);
-    },
+    onCrash: (record) => {},
   },
   storage: {
     adapters: [

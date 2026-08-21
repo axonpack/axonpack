@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-import { AxonpackLogo } from './axonpack-logo.ui';
 import { IconButton } from './icon-button.ui';
+import { HIT_SLOP } from '../../constants/metrics.const';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 const OFFSCREEN_Y = 400;
@@ -64,9 +64,13 @@ export function BottomSheet({
           <View style={styles.handle} />
         </View>
         <View style={styles.headerRow}>
-          <AxonpackLogo size={18} />
           <View style={styles.headerContent}>{headerContent}</View>
-          <IconButton name="close" color={COLORS.textSecondary} onPress={onClose} hitSlop={12} />
+          <IconButton
+            name="close"
+            color={COLORS.textSecondary}
+            onPress={onClose}
+            hitSlop={HIT_SLOP.default}
+          />
         </View>
         {children}
       </Animated.View>
