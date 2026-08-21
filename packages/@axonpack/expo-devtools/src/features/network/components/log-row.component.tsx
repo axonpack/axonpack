@@ -2,9 +2,16 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
+import { ContextMenu } from '../../../core/components/ui/context-menu.ui';
+import { HighlightedText } from '../../../core/components/ui/highlighted-text.ui';
+import { IconButton } from '../../../core/components/ui/icon-button.ui';
+import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
+import { JsonIcon } from '../../../core/components/ui/json-icon.ui';
+import { formatSize } from '../../../core/utils/format-bytes.util';
+import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { getResponseTypeVisual, RESOURCE_TYPE_ICONS } from '../constants/resource-type-icons.const';
 import type { NetworkLogEntry } from '../stores/network-log.store';
-import { formatSize } from '../../../core/utils/format-bytes.util';
 import { buildEntryCopyMenuItems } from '../utils/entry-menu-items.util';
 import {
   formatSource,
@@ -13,13 +20,17 @@ import {
   getStatusColor,
 } from '../utils/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../utils/resource-type.util';
-import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { ContextMenu } from '../../../core/components/ui/context-menu.ui';
-import { HighlightedText } from '../../../core/components/ui/highlighted-text.ui';
-import { IconButton } from '../../../core/components/ui/icon-button.ui';
-import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
-import { JsonIcon } from '../../../core/components/ui/json-icon.ui';
+
+/**
+ * While a request is in flight its status cell has nothing to report, so it carries how far the body
+ * has got instead — a percentage when a length was declared, bytes when it was not.
+ */
+function formatInFlight(progress: NetworkLogEntry['progress']): string {
+  if (!progress) return 'PENDING';
+  const arrow = progress.direction === 'upload' ? '↑' : '↓';
+  if (progress.total === undefined) return `${arrow} ${formatSize(progress.loaded)}`;
+  return `${arrow} ${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%`;
+}
 
 function LogRowBase({
   entry,
@@ -55,7 +66,9 @@ function LogRowBase({
       <View style={styles.topRow}>
         <Text style={[styles.method, { color: methodColor }]}>{entry.method}</Text>
         <Text style={[styles.status, { color: statusColor }]}>
-          {entry.status === 'pending' ? 'PENDING' : (entry.statusCode ?? entry.error ?? '')}
+          {entry.status === 'pending'
+            ? formatInFlight(entry.progress)
+            : (entry.statusCode ?? entry.error ?? '')}
         </Text>
         <Text style={styles.timing} numberOfLines={1}>
           {entry.duration !== undefined ? `${entry.duration}ms` : '–'} ·{' '}
@@ -208,5 +221,8 @@ export const LogRow = memo(
     prev.entry.source === next.entry.source &&
     prev.entry.requestBody === next.entry.requestBody &&
     prev.entry.responseBody === next.entry.responseBody &&
-    prev.entry.requestHeaders === next.entry.requestHeaders
+    prev.entry.requestHeaders === next.entry.requestHeaders &&
+    // The store replaces this object on every reading, so identity is the whole comparison — leaving
+    // it out froze the row at PENDING while the body was still arriving.
+    prev.entry.progress === next.entry.progress
 );

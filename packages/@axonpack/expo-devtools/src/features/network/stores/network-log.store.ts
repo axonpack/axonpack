@@ -23,6 +23,11 @@ export type NetworkLogEntry = {
   ttfb?: number;
   /** An aborted request is not a failed one, and the difference is usually the app's own doing. */
   canceled?: boolean;
+  /**
+   * How far the body has got while the request is still in flight. The latest reading only, which is
+   * what a progress bar needs; `total` is absent when nothing declared a length.
+   */
+  progress?: { direction: 'upload' | 'download'; loaded: number; total?: number };
 
   source?: string;
   requestHeaders?: Record<string, string>;

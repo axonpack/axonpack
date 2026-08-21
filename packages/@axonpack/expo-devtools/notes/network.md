@@ -23,6 +23,7 @@ transfers.
 - [x] Group rows by source, denser or roomier rows, timeline overview strip
 - [x] Request detail: headers, pretty-printed JSON preview, raw body, timing
 - [x] Waiting and downloading, split out from the total
+- [x] Upload and download progress while a request is still in flight
 - [x] Tell a cancelled request apart from a failed one
 - [x] Cookies a request sent, and the ones a response set
 - [x] Initiator — which code made the request, with the source line around it
@@ -33,7 +34,6 @@ transfers.
 - [ ] Server-sent event streams, with every event
 - [ ] A connection waterfall — queued, connecting, waiting, downloading
 - [ ] Compressed and uncompressed response size
-- [ ] Upload and download progress while a request is still in flight
 - [ ] Keep headers apart that were sent more than once under the same name
 - [ ] WebSocket connections opened inside a WebView
 - [ ] Cookies for WebView requests
@@ -97,6 +97,11 @@ Three paths, because no one of them can see the others' traffic:
 - **Preserve Log defaults to on**, unlike a browser. A WebView navigation is the only "page load" we
   can see, and native fetch entries have no page to belong to — clearing them on someone else's
   navigation would throw away the log for no reason the user asked for.
+- **Progress readings are throttled, and the last one always lands.** A body of any size fires
+  progress per chunk, and each reading is a write to the log and a re-render of the row it is on, so
+  they are dropped to one per interval. The final reading is never dropped, so the figure a finished
+  request settles on is exact rather than merely recent. Only the latest is kept — a progress bar has
+  no use for the history, and keeping it would make each row grow for as long as it downloads.
 - **The initiator stack is captured cheaply and read expensively.** Every request keeps the call
   stack as the engine wrote it, which costs one thrown error. Turning that into file names and a
   source excerpt needs the development server, so it happens when the Initiator tab is opened and not

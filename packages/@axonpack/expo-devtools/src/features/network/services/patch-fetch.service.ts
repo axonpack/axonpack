@@ -1,5 +1,6 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
+import { createProgressThrottle } from '../utils/progress-throttle.util';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import {
@@ -55,6 +56,35 @@ function isAbortError(error: unknown): boolean {
     name === 'TimeoutError' ||
     message?.toLowerCase().includes('abort') === true
   );
+}
+
+/**
+ * Counts the body through as it arrives, so a slow download reports progress rather than appearing
+ * finished all at once. Reads its own clone and never the response the app gets back, and is
+ * deliberately not awaited — awaiting it here would hold the request until the body was complete,
+ * which is exactly the wait it exists to make visible.
+ *
+ * Bytes are counted, not kept: the body itself is still read as text elsewhere, because decoding
+ * chunks by hand would need a TextDecoder that React Native does not reliably provide.
+ */
+async function trackDownloadProgress(clone: Response, id: string, total?: number) {
+  const reader = clone.body?.getReader();
+  if (!reader) return;
+
+  const throttle = createProgressThrottle();
+  let loaded = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    loaded += value.byteLength;
+    if (throttle(Date.now())) {
+      networkLogStore.update(id, { progress: { direction: 'download', loaded, total } });
+    }
+  }
+
+  networkLogStore.update(id, { progress: { direction: 'download', loaded, total } });
 }
 
 function previewBody(body: BodyInit | null | undefined): string | undefined {
@@ -149,6 +179,17 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
       // The promise resolves once the headers are in, before the body is read — so this is the wait,
       // and whatever follows is the download.
       const ttfb = Date.now() - startedAt;
+
+      const declaredLength = Number(response.headers.get('content-length'));
+      // Not awaited: awaiting it would hold the request until the body was complete, which is the
+      // wait it exists to make visible.
+      trackDownloadProgress(
+        response.clone(),
+        id,
+        Number.isNaN(declaredLength) || declaredLength <= 0 ? undefined : declaredLength
+      ).catch(() => {
+        // A stream that cannot be read is a progress bar we do not draw, not a failed request.
+      });
 
       let responseBody: string | undefined;
       try {

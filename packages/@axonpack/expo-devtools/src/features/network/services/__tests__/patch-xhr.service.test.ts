@@ -1,6 +1,20 @@
 import { networkLogStore } from '../../stores/network-log.store';
 import { patchXHR } from '../patch-xhr.service';
 
+type ProgressLike = { loaded: number; total: number; lengthComputable: boolean };
+
+class FakeUploadTarget {
+  #listeners: ((event: ProgressLike) => void)[] = [];
+
+  addEventListener(_type: string, listener: (event: ProgressLike) => void) {
+    this.#listeners.push(listener);
+  }
+
+  emitProgress(event: ProgressLike) {
+    for (const listener of this.#listeners) listener(event);
+  }
+}
+
 class FakeXHR {
   static readonly HEADERS_RECEIVED = 2;
   static readonly DONE = 4;
@@ -32,8 +46,17 @@ class FakeXHR {
   getResponseHeader() {
     return null;
   }
-  addEventListener(type: string, listener: () => void) {
-    (this.#listeners[type] ??= []).push(listener);
+  /** Its own event target, exactly as the DOM has it — upload progress is reported nowhere else. */
+  readonly upload = new FakeUploadTarget();
+
+  addEventListener(type: string, listener: (event?: unknown) => void) {
+    (this.#listeners[type] ??= []).push(listener as () => void);
+  }
+
+  emitProgress(type: string, event: ProgressLike) {
+    for (const listener of this.#listeners[type] ?? []) {
+      (listener as unknown as (e: ProgressLike) => void).call(this, event);
+    }
   }
   abort() {
     this.emit('abort');
@@ -156,5 +179,63 @@ describe('patchXHR timing and cancellation', () => {
     xhr.finish();
 
     expect(networkLogStore.getSnapshot()[0]).toMatchObject({ canceled: true, error: 'Canceled' });
+  });
+});
+
+describe('patchXHR progress', () => {
+  const original = globalThis.XMLHttpRequest;
+
+  beforeAll(() => {
+    // @ts-expect-error deliberately swapping in a stand-in for the real class
+    globalThis.XMLHttpRequest = FakeXHR;
+    patchXHR();
+    networkLogStore.setEnabled(true);
+  });
+
+  afterAll(() => {
+    globalThis.XMLHttpRequest = original;
+  });
+
+  beforeEach(() => {
+    networkLogStore.clear();
+  });
+
+  it('reports a download as a fraction of a declared length', () => {
+    const xhr = new FakeXHR();
+    xhr.open();
+    xhr.send();
+    xhr.emitProgress('progress', { loaded: 512, total: 2048, lengthComputable: true });
+
+    expect(networkLogStore.getSnapshot()[0]?.progress).toEqual({
+      direction: 'download',
+      loaded: 512,
+      total: 2048,
+    });
+  });
+
+  // Nothing declared a length, so there is no percentage to show — only how far it has got.
+  it('leaves the total out when the length is not computable', () => {
+    const xhr = new FakeXHR();
+    xhr.open();
+    xhr.send();
+    xhr.emitProgress('progress', { loaded: 300, total: 0, lengthComputable: false });
+
+    expect(networkLogStore.getSnapshot()[0]?.progress).toEqual({
+      direction: 'download',
+      loaded: 300,
+      total: undefined,
+    });
+  });
+
+  it('reports the request body going up, from the upload target', () => {
+    const xhr = new FakeXHR();
+    xhr.open();
+    xhr.send();
+    xhr.upload.emitProgress({ loaded: 64, total: 64, lengthComputable: true });
+
+    expect(networkLogStore.getSnapshot()[0]?.progress).toMatchObject({
+      direction: 'upload',
+      loaded: 64,
+    });
   });
 });

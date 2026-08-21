@@ -2,7 +2,12 @@ import { captureInitiatorFrames } from './capture-initiator.service';
 import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
+import { createProgressThrottle } from '../utils/progress-throttle.util';
+
 import { computeThrottleDelayMs, remainingDelayMs } from '../utils/network-conditions.util';
+
+/** The three fields of a DOM progress event this needs, without depending on the DOM's own type. */
+type ProgressEventLike = { loaded: number; total: number; lengthComputable: boolean };
 
 let isPatched = false;
 let requestCounter = 0;
@@ -230,6 +235,37 @@ export function patchXHR() {
       startedAt,
       source: 'xhr',
       conditions,
+    });
+
+    // Both directions report through the DOM's own progress events, so nothing has to be inferred
+    // from byte counts. Readings are throttled: a large body fires hundreds of them, and each one
+    // would otherwise write to the store and re-render the list.
+    const downloadThrottle = createProgressThrottle();
+    this.addEventListener('progress', function onDownloadProgress(event: ProgressEventLike) {
+      const now = Date.now();
+      if (!downloadThrottle(now, event.loaded === event.total)) return;
+      networkLogStore.update(id, {
+        progress: {
+          direction: 'download',
+          loaded: event.loaded,
+          total: event.lengthComputable ? event.total : undefined,
+        },
+      });
+    });
+
+    const uploadThrottle = createProgressThrottle();
+    // `upload` is a separate event target, and the only place a request body's progress is reported.
+    // fetch has no equivalent on any platform, so this is XHR's alone.
+    this.upload?.addEventListener('progress', (event: ProgressEventLike) => {
+      const now = Date.now();
+      if (!uploadThrottle(now, event.loaded === event.total)) return;
+      networkLogStore.update(id, {
+        progress: {
+          direction: 'upload',
+          loaded: event.loaded,
+          total: event.lengthComputable ? event.total : undefined,
+        },
+      });
     });
 
     // Headers arrive one state before the body is complete, which is the only point in an XHR's
