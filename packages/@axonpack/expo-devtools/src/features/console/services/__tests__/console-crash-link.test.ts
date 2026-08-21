@@ -1,5 +1,9 @@
 import { patchConsole } from '../patch-console.service';
-import { captureCrash, resetCrashCapture } from '../../../crash/services/capture-crash.service';
+import {
+  captureCrash,
+  configureCrashCapture,
+  resetCrashCapture,
+} from '../../../crash/services/capture-crash.service';
 import { crashStore } from '../../../crash/stores/crash.store';
 import { consoleLogStore } from '../../stores/console-log.store';
 
@@ -30,6 +34,8 @@ describe('console rows linked to a crash report', () => {
     expect(record).not.toBeNull();
     expect(entry?.level).toBe('crash');
     expect(entry?.crashId).toBe(record?.id);
+    // Carried so the row can wear the same icon the Crash tab gives that kind.
+    expect(entry?.crashKind).toBe('js-fatal');
     // The thrown error itself, so the row renders as one — message, and the stack behind it.
     expect(entry?.parts[0]).toMatchObject({ kind: 'error' });
   });
@@ -53,6 +59,16 @@ describe('console rows linked to a crash report', () => {
     } finally {
       consoleLogStore.setPaused(false);
     }
+  });
+
+  it('records where an error was logged from, and not where a plain log was', () => {
+    console.error('something broke');
+    console.log('just chatter');
+
+    const [chatter, broke] = consoleLogStore.getSnapshot();
+    expect(broke?.callSite?.length).toBeGreaterThan(0);
+    // Nobody asks where a `log` came from, and a render loop would pay for a stack every frame.
+    expect(chatter?.callSite).toBeUndefined();
   });
 
   it('leaves an ordinary console error unlinked', () => {
@@ -84,5 +100,21 @@ describe('console rows linked to a crash report', () => {
     // The row shows the newest occurrence's time, so it must open the newest occurrence's report.
     expect(entries[0]?.crashId).toBe(secondRecord?.id);
     expect(entries[0]?.crashId).not.toBe(firstRecord?.id);
+  });
+
+  it('carries the kind, so a native exception is not drawn as a fatal JS error', () => {
+    captureCrash(new Error('objc threw'), 'native-exception');
+
+    expect(consoleLogStore.getSnapshot()[0]?.crashKind).toBe('native-exception');
+  });
+
+  // The row shows the same two chips the Crash tab's row does, and the trail length is one of them.
+  it('carries how many breadcrumbs the report came with', () => {
+    configureCrashCapture({ breadcrumbs: true });
+    console.log('something happened first');
+    captureCrash(new Error('boom'), 'js-fatal');
+
+    const row = consoleLogStore.getSnapshot().find((entry) => entry.level === 'crash');
+    expect(row?.crashBreadcrumbs).toBeGreaterThan(0);
   });
 });

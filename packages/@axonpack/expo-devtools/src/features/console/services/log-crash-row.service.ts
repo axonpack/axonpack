@@ -1,3 +1,4 @@
+import type { CrashRecord } from '../../crash/stores/crash.store';
 import { consoleLogStore } from '../stores/console-log.store';
 import { getConsoleArgsText, toConsoleArgs } from '../utils/format-console-args.util';
 
@@ -15,7 +16,7 @@ let counter = 0;
  * Nothing is forced past the record button. A paused console is one somebody asked to stop writing
  * to, and the Crash tab has the report either way.
  */
-export function logCrashRow(error: unknown, crashId: string, timestamp: number) {
+export function logCrashRow(error: unknown, record: CrashRecord) {
   counter += 1;
   const parts = toConsoleArgs([error]);
 
@@ -24,8 +25,10 @@ export function logCrashRow(error: unknown, crashId: string, timestamp: number) 
     level: 'crash',
     parts,
     text: getConsoleArgsText(parts),
-    timestamp,
+    timestamp: record.timestamp,
     count: 1,
-    crashId,
+    crashId: record.id,
+    crashKind: record.kind,
+    crashBreadcrumbs: record.breadcrumbs?.length,
   });
 }

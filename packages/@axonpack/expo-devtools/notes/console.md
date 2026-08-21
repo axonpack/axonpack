@@ -10,6 +10,7 @@ that evaluates expressions against the running app.
 - [x] Each argument gets its own cell; objects render as an inspectable tree
 - [x] Errors show the message with the stack behind a disclosure
 - [x] Every crash appears as a row of its own level, and opens its full report
+- [x] Warnings and errors say which file and line they came from
 - [x] Repeated messages collapse into one row with a count
 - [x] Reads oldest-first like a terminal, with a jump-to-bottom button
 - [x] Filter by level with counts, search, and filter by source
@@ -19,7 +20,6 @@ that evaluates expressions against the running app.
 - [x] Tap a past command to load it back into the prompt
 - [ ] Command history cycling and a live result preview while typing
 - [ ] `%s` / `%d` / `%o` format specifiers
-- [ ] Call site — which file logged this
 - [ ] Console entries included in Export
 
 ## How it captures
@@ -33,6 +33,13 @@ Arguments are serialised **inside the page** for WebView rows, because `postMess
 function, an `undefined` and an `Error` would all arrive as nothing useful.
 
 ## Decisions worth knowing
+
+- **The origin is captured for warnings and errors only, and named later.** Throwing an error to read
+  its stack is cheap; turning that stack into a file name is a request to the development server, so
+  the stack is kept raw and only named once a row is on screen asking for it. Doing it for every level
+  would have a log inside a render loop paying for a stack on every frame, and nobody goes looking for
+  where a `log` came from. In a release build nothing answers, so the row shows the bundle offset it
+  has rather than pretending to a file name.
 
 - **A crash is its own level, and the crash capture writes the row.** React Native re-emits an error
   it is reporting through `console.error`, which used to be where the row came from — but a fatal

@@ -139,7 +139,9 @@ export function ConsoleView() {
         clearLabel="Clear console"
         trailing={
           <View style={styles.headerSummary}>
-            {(['warn', 'error'] as const).map((level) => {
+            {/* Crash included, and in severity order: the strip is what tells you to walk over to
+                this tab, so leaving out the worst rows defeated it. */}
+            {(['warn', 'error', 'crash'] as const).map((level) => {
               const { icon, color } = consoleLevelVisuals(COLORS)[level];
               if (!countsByLevel[level] || !icon) return null;
               return (

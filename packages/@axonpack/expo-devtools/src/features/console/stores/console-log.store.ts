@@ -1,5 +1,7 @@
 import { EventEmitter } from 'expo';
 
+import type { StackFrame } from '../../../core/utils/parse-stack.util';
+import type { CrashKind } from '../../crash/stores/crash.store';
 import type { ConsoleArg } from '../utils/format-console-args.util';
 
 export type ConsoleLogLevel =
@@ -27,6 +29,19 @@ export type ConsoleLogEntry = {
   source?: string;
   /** Set when this row is the console's echo of an error that also became a crash report. */
   crashId?: string;
+  /**
+   * Which kind of crash, so the row can carry the same icon the Crash tab gives it. A level has one
+   * icon and a crash has five, and a native exception wearing the fatal-JS one would be a row that
+   * misreports what happened.
+   */
+  crashKind?: CrashKind;
+  /** How many breadcrumbs the report has, so the row can say so the way the Crash tab's row does. */
+  crashBreadcrumbs?: number;
+  /**
+   * The stack as the engine wrote it, when this row is one worth knowing the origin of. Raw, because
+   * turning it into a file name is a request to the development server and most rows are never read.
+   */
+  callSite?: StackFrame[];
 };
 
 type ConsoleLogEvents = {

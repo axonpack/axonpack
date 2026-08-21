@@ -29,9 +29,12 @@ export function consoleLevelVisuals(COLORS: Palette): Record<ConsoleLogLevel, Co
     warn: { icon: 'warning', color: COLORS.warning, surface: COLORS.warningSurface },
     error: { icon: 'cancel', color: COLORS.error, surface: COLORS.errorSurface },
     debug: { icon: 'bug-report', color: '#9334e6' },
-    // Its own icon rather than the error level's, because a crash is not something the app chose to
-    // log — it is the report of one, and the row opens that report.
-    crash: { icon: 'dangerous', color: COLORS.error, surface: COLORS.errorSurface },
+    /**
+     * The filter chip's icon, and the fallback for a row with no kind on it. A row that has one wears
+     * the Crash tab's icon for that kind instead — `dangerous` belongs to a fatal JS error alone, and
+     * a level standing for five kinds should not claim any one of them.
+     */
+    crash: { icon: 'report', color: COLORS.error, surface: COLORS.errorSurface },
     input: { icon: 'chevron-right', color: COLORS.accent },
     result: { icon: 'chevron-left', color: COLORS.textSecondary },
   };

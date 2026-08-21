@@ -27,8 +27,11 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
   );
   const crashRecords = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
 
+  // Crashes as well as errors: a crash is its own level now, and counting only `error` quietly
+  // stopped the badge reporting the very rows most worth walking over to.
   const consoleErrorCount = useMemo(
-    () => consoleEntries.filter((entry) => entry.level === 'error').length,
+    () =>
+      consoleEntries.filter((entry) => entry.level === 'error' || entry.level === 'crash').length,
     [consoleEntries]
   );
 

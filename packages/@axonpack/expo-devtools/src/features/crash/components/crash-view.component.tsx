@@ -1,3 +1,4 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
@@ -116,11 +117,16 @@ export function CrashView() {
         onClear={() => crashStore.clear()}
         clearLabel="Clear reports"
         trailing={
-          <Text style={styles.count}>
-            {visible.length === records.length
-              ? `${records.length}`
-              : `${visible.length} / ${records.length}`}
-          </Text>
+          // Iconed rather than a bare number, matching the Console tab's own strip: a digit on its
+          // own beside a row of buttons does not say what it is counting.
+          <View style={styles.countRow}>
+            <MaterialIcons name="report" size={13} color={COLORS.error} />
+            <Text style={styles.count}>
+              {visible.length === records.length
+                ? `${records.length}`
+                : `${visible.length} / ${records.length}`}
+            </Text>
+          </View>
         }>
         <IconButton
           name="done-all"
@@ -193,6 +199,11 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+  },
+  countRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   count: {
     fontSize: 11,
