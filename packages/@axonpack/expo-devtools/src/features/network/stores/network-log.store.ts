@@ -52,6 +52,9 @@ export type NetworkLogEntry = {
 
   conditions?: ResolvedNetworkConditions;
 
+  /** Set when the panel stood in for the server, so a row never passes off a rule as a real answer. */
+  intercepted?: 'blocked' | 'overridden';
+
   /**
    * The call stack as it was when the request went out, unsymbolicated. Kept raw because turning it
    * into file names needs the dev server, which is a cost worth paying only for the one request

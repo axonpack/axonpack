@@ -39,21 +39,19 @@ transfers.
 - [x] Save one response body to a file
 - [x] Export the filtered log as JSON to the share sheet
 - [x] Sandbox: edit any captured request and send it for real
+- [x] Override a `fetch` response with a chosen status and body, or block one outright
 - [ ] Server-sent event streams, with every event
 - [ ] Queued and connecting time, the two phases before the wait
 - [ ] Compressed and uncompressed response size
 - [ ] WebSocket connections opened inside a WebView
 - [ ] Cookies for WebView requests
 - [ ] Real timing breakdown for WebView requests
-- [ ] Override a response — a chosen status and body instead of the real one
-- [ ] Block a request outright
+- [ ] The same two for `XMLHttpRequest`, which is what third-party HTTP clients use
 - [ ] An XML response as a tree
-- [ ] Name a row by its whole relative URL, not only the last segment
 - [ ] Turn stream capture off independently, the way requests and sockets already can be
 - [ ] Capture requests made before the panel is set up
 - [ ] Export a socket or stream entry too, and version the file
 - [ ] Requests from a native HTTP client that never touches JavaScript
-- [ ] Remember the throttling and user-agent choice between launches
 - [ ] Throttle upload speed, not only download
 
 ## Where requests come from
@@ -83,6 +81,12 @@ Three paths, because no one of them can see the others' traffic:
   ceiling, because holding an encoded copy of a video costs several times its own size and no panel
   is going to show it — past that the tab says the body was too big rather than showing an empty
   pane. Only the entry _count_ is capped otherwise, at 200.
+- **An overridden request is never sent, and the row says who answered.** The rule is answered
+  before the call goes out, so an endpoint that does not exist yet can still be developed against and
+  a failure can be reproduced without a server that produces one. It costs nothing to be honest about
+  it: the row carries a badge, because a made-up answer that reads like the server's own is worse
+  than no answer at all. Rules match the whole URL and nothing near it — one that catches more than
+  you meant is a request you cannot explain.
 - **An upload is replayed with `-F`, never as a raw body.** The boundary the platform generated is
   not in the headers a patch captured, so pasting the flattened parts back would send a body that
   contradicts its own `Content-Type`. Handing curl the parts and letting it write its own boundary is

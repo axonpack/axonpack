@@ -3,6 +3,7 @@ import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
+import { networkOverridesStore } from '../stores/network-overrides.store';
 import {
   computeThrottleDelayMs,
   delay,
@@ -219,6 +220,45 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
       conditions,
       initiator: captureInitiatorFrames(),
     });
+
+    // Consulted after the entry is logged, so a blocked or overridden request is still a row — one
+    // that never appeared would look like the app not having asked at all.
+    const override = networkOverridesStore.find(resolveUrl(input));
+
+    if (override?.action === 'block') {
+      networkLogStore.update(id, {
+        status: 'error',
+        intercepted: 'blocked',
+        error: 'Blocked by devtools',
+        duration: Date.now() - startedAt,
+      });
+      throw new TypeError('Network request failed');
+    }
+
+    if (override?.action === 'respond') {
+      const status = override.status ?? 200;
+      const contentType = override.contentType ?? 'application/json';
+      const body = override.body ?? '';
+      // Built here instead of after a real request, so the network is never reached at all — an
+      // overridden endpoint does not have to exist.
+      networkLogStore.update(id, {
+        status: status >= 400 ? 'error' : 'success',
+        intercepted: 'overridden',
+        statusCode: status,
+        statusText: 'Overridden by devtools',
+        responseBody: body,
+        responseHeaders: { 'content-type': contentType },
+        mimeType: contentType.split(';')[0]?.trim().toLowerCase(),
+        size: body.length,
+        ttfb: 0,
+        duration: Date.now() - startedAt,
+      });
+      return new Response(body, {
+        status,
+        statusText: 'Overridden by devtools',
+        headers: { 'content-type': contentType },
+      });
+    }
 
     if (conditions.offline) {
       const offlineError = new TypeError('Network request failed');

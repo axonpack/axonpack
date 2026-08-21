@@ -1,4 +1,5 @@
 import { networkLogStore } from '../../stores/network-log.store';
+import { networkOverridesStore } from '../../stores/network-overrides.store';
 import { patchFetch } from '../patch-fetch.service';
 
 type FetchModule = { fetch: typeof globalThis.fetch };
@@ -51,5 +52,59 @@ describe('patchFetch', () => {
       source: 'fetch',
       status: 'success',
     });
+  });
+});
+
+describe('patchFetch with a rule in the way', () => {
+  const BLOCKED = 'https://example.test/blocked';
+  const OVERRIDDEN = 'https://example.test/overridden';
+
+  beforeEach(() => {
+    networkLogStore.clear();
+    networkOverridesStore.clear();
+  });
+
+  afterAll(() => networkOverridesStore.clear());
+
+  it('fails a blocked request the way the platform would, and says who did it', async () => {
+    networkOverridesStore.set({ url: BLOCKED, action: 'block' });
+
+    await expect(globalThis.fetch(BLOCKED)).rejects.toThrow(TypeError);
+
+    expect(networkLogStore.getSnapshot()[0]).toMatchObject({
+      status: 'error',
+      intercepted: 'blocked',
+      error: 'Blocked by devtools',
+    });
+  });
+
+  it('answers an overridden request without reaching the network', async () => {
+    networkOverridesStore.set({
+      url: OVERRIDDEN,
+      action: 'respond',
+      status: 503,
+      contentType: 'text/plain',
+      body: 'nope',
+    });
+
+    const response = await globalThis.fetch(OVERRIDDEN);
+
+    expect(response.status).toBe(503);
+    expect(await response.text()).toBe('nope');
+    expect(networkLogStore.getSnapshot()[0]).toMatchObject({
+      status: 'error',
+      intercepted: 'overridden',
+      statusCode: 503,
+      responseBody: 'nope',
+      mimeType: 'text/plain',
+    });
+  });
+
+  it('leaves a request with no rule against it alone', async () => {
+    networkOverridesStore.set({ url: BLOCKED, action: 'block' });
+
+    await globalThis.fetch('https://example.test/other');
+
+    expect(networkLogStore.getSnapshot()[0]?.intercepted).toBeUndefined();
   });
 });

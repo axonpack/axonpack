@@ -12,6 +12,7 @@ import {
 
 import { DetailPanel } from './detail-panel';
 import { LogRow } from './log-row.component';
+import { OverrideEditor } from './override-editor.component';
 import { OverviewStrip, type TimeRange } from './overview-strip.component';
 import { SocketDetailPanel } from './socket-detail-panel.component';
 import { SocketRow } from './socket-row.component';
@@ -73,6 +74,7 @@ export function NetworkView() {
   const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
+  const [overrideUrl, setOverrideUrl] = useState<string | null>(null);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -175,7 +177,13 @@ export function NetworkView() {
           onPress={setSelectedEntry}
         />
       ) : (
-        <LogRow entry={item} bigRows={bigRows} matcher={matcher} onPress={setSelectedEntry} />
+        <LogRow
+          entry={item}
+          bigRows={bigRows}
+          matcher={matcher}
+          onPress={setSelectedEntry}
+          onOverride={setOverrideUrl}
+        />
       ),
     [bigRows, matcher]
   );
@@ -436,6 +444,8 @@ export function NetworkView() {
         onClose={() => setSelectedEntry(null)}
         stackedHeaders={stackedHeaders}
       />
+
+      <OverrideEditor url={overrideUrl} onClose={() => setOverrideUrl(null)} />
 
       <SocketDetailPanel
         entry={selectedEntry?.kind === 'websocket' ? selectedEntry : null}

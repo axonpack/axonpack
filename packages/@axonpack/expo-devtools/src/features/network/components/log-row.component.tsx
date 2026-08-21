@@ -37,12 +37,14 @@ function LogRowBase({
   bigRows,
   matcher,
   onPress,
+  onOverride,
 }: {
   entry: NetworkLogEntry;
   bigRows: boolean;
   matcher: Matcher | null;
 
   onPress: (entry: NetworkLogEntry) => void;
+  onOverride?: (url: string) => void;
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
@@ -87,6 +89,16 @@ function LogRowBase({
           />
         )}
         <View style={styles.urlTextGroup}>
+          {entry.intercepted !== undefined && (
+            // Said on the row itself: a rule that answered instead of the server must never read as one
+            // of the server's own answers.
+            <View style={styles.badges}>
+              <InfoBadge
+                icon={entry.intercepted === 'blocked' ? 'block' : 'edit'}
+                label={entry.intercepted === 'blocked' ? 'Blocked here' : 'Overridden here'}
+              />
+            </View>
+          )}
           {bigRows && (
             <HighlightedText
               text={displayName}
@@ -124,7 +136,7 @@ function LogRowBase({
 
       <ContextMenu
         anchor={menuAnchor}
-        items={buildEntryCopyMenuItems(entry)}
+        items={buildEntryCopyMenuItems(entry, onOverride)}
         onClose={() => setMenuAnchor(null)}
       />
     </TouchableOpacity>
@@ -208,6 +220,7 @@ export const LogRow = memo(
     // Compiled once per query upstream, so identity is a safe stand-in for the query itself.
     prev.matcher === next.matcher &&
     prev.onPress === next.onPress &&
+    prev.onOverride === next.onOverride &&
     prev.entry.id === next.entry.id &&
     prev.entry.method === next.entry.method &&
     prev.entry.url === next.entry.url &&
@@ -224,5 +237,6 @@ export const LogRow = memo(
     prev.entry.requestHeaders === next.entry.requestHeaders &&
     // The store replaces this object on every reading, so identity is the whole comparison — leaving
     // it out froze the row at PENDING while the body was still arriving.
-    prev.entry.progress === next.entry.progress
+    prev.entry.progress === next.entry.progress &&
+    prev.entry.intercepted === next.entry.intercepted
 );
