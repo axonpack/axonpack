@@ -33,7 +33,7 @@ export const devtools = createDevtoolsClient({
   themes: {
     midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
   },
-  webviewSources: ['example-webview', 'test2'],
+  webviewSources: ['example-webview', 'test2', 'page-apis'],
   network: {
     disabledByDefault: false,
     includeFetch: true,
@@ -45,6 +45,20 @@ export const devtools = createDevtoolsClient({
       appInfo: { name: 'devtools-example', platform: 'expo', tabs: ['requests', 'console'] },
       double: (value: number) => value * 2,
     },
+  },
+  /**
+   * `enableWhileDevtoolsDisabled` is what a real app would pair with `enabled: __DEV__`: `init()` is
+   * then safe to call unconditionally, and a release build installs the crash handlers and nothing
+   * else — no panel, no REPL, no request bodies. The example leaves the rest on so every tab works.
+   */
+  crash: {
+    enableWhileDevtoolsDisabled: true,
+    breadcrumbs: true,
+    redact: (record) => ({
+      ...record,
+      message: record.message.replace(/token[=:]\s*\S+/gi, 'token=[redacted]'),
+    }),
+    onCrash: (record) => {},
   },
   storage: {
     adapters: [
