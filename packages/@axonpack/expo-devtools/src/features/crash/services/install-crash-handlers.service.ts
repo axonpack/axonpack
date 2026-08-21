@@ -5,6 +5,8 @@ export type CrashHandlerConfig = {
   jsErrors: boolean;
   unhandledRejections: boolean;
   nativeExceptions: boolean;
+  /** Keep the process running through a fatal JS error instead of letting React Native end it. */
+  surviveFatalJsErrors?: boolean;
 };
 
 type ErrorHandler = (error: unknown, isFatal: boolean) => void;
@@ -41,13 +43,22 @@ const installed = {
  * LogBox, the red box and RN's own native reporting working — and, for a fatal error, what lets the
  * process end the way React Native intends.
  */
-function installJsErrorHandler() {
+function installJsErrorHandler(surviveFatal: boolean) {
   const errorUtils = (globalThis as ErrorUtilsHost).ErrorUtils;
   if (!errorUtils?.setGlobalHandler) return;
 
   const previous = errorUtils.getGlobalHandler?.();
   errorUtils.setGlobalHandler((error, isFatal) => {
-    captureCrash(error, isFatal ? 'js-fatal' : 'js-error');
+    captureCrash(error, isFatal ? 'js-fatal' : 'js-error', {
+      survived: isFatal && surviveFatal,
+    });
+
+    // Withholding a fatal error is the whole of the mechanism: React Native's own handler is what
+    // reports it to the native side, and that report is what ends the process. A non-fatal one is
+    // always passed on — the default handler only logs it, so keeping it back would cost the
+    // warning and save nothing.
+    if (isFatal && surviveFatal) return;
+
     previous?.(error, isFatal);
   });
 }
@@ -111,7 +122,7 @@ function drainPreviousLaunchCrashes() {
 export function installCrashHandlers(config: CrashHandlerConfig) {
   if (config.jsErrors && !installed.jsErrors) {
     installed.jsErrors = true;
-    installJsErrorHandler();
+    installJsErrorHandler(config.surviveFatalJsErrors ?? false);
   }
   if (config.unhandledRejections && !installed.unhandledRejections) {
     installed.unhandledRejections = true;

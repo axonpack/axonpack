@@ -69,6 +69,29 @@ describe('the JS error handler', () => {
     expect(crashStore.getSnapshot()[0]?.kind).toBe('js-error');
   });
 
+  it('withholds a fatal error from React Native when asked to survive it', () => {
+    const rnHandler = jest.fn();
+    const currentHandler = installFakeErrorUtils(rnHandler);
+
+    installCrashHandlers({ ...ALL_HANDLERS, surviveFatalJsErrors: true });
+    currentHandler()?.(new Error('boom'), true);
+
+    expect(crashStore.getSnapshot()[0]?.kind).toBe('js-fatal');
+    // Not calling this is the whole mechanism: it is what reports the error to the native side, and
+    // that report is what ends the process.
+    expect(rnHandler).not.toHaveBeenCalled();
+  });
+
+  it('still passes a non-fatal error on while surviving fatal ones', () => {
+    const rnHandler = jest.fn();
+    const currentHandler = installFakeErrorUtils(rnHandler);
+
+    installCrashHandlers({ ...ALL_HANDLERS, surviveFatalJsErrors: true });
+    currentHandler()?.(new Error('boom'), false);
+
+    expect(rnHandler).toHaveBeenCalledTimes(1);
+  });
+
   it('is left alone when the app turns that tier off', () => {
     const rnHandler = jest.fn();
     const currentHandler = installFakeErrorUtils(rnHandler);

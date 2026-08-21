@@ -80,7 +80,17 @@ function isFatalKind(kind: CrashKind): boolean {
 export function captureCrash(
   error: unknown,
   kind: CrashKind,
-  extra?: { componentStack?: string | null; native?: CrashNativeDetail }
+  extra?: {
+    componentStack?: string | null;
+    native?: CrashNativeDetail;
+    /**
+     * The error was fatal by React Native's reckoning, but the process was kept running anyway. Such
+     * a record is deliberately **not** persisted: the panel is alive to show it now, and a record
+     * read back at the next launch is presented as a crash the process did not survive — which this
+     * one did.
+     */
+    survived?: boolean;
+  }
 ): CrashRecord | null {
   if (!crashStore.isEnabled()) return null;
   if (!options.jsTiers && kind !== 'native-exception') return null;
@@ -113,7 +123,9 @@ export function captureCrash(
     // console patch reads this to stamp the row it is about to write.
     crashLinkStore.link(error, record.id);
 
-    if (isFatalKind(kind) || options.persistNonFatal) persistCrashRecord(record);
+    if ((isFatalKind(kind) && !extra?.survived) || options.persistNonFatal) {
+      persistCrashRecord(record);
+    }
 
     try {
       options.onCrash?.(record);

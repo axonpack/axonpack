@@ -16,6 +16,7 @@ the one subsystem here meant to survive into a release build.
 - [x] Attach your own details — user, screen, feature flags — to every report
 - [x] Error boundary that shows a Try again screen instead of a blank one
 - [x] Optionally replace React Native's red box with the report sheet
+- [x] Optionally keep the app running through a fatal JS error instead of ending it
 - [ ] Send reports to a backend, with queueing and retry
 - [ ] Group duplicate crashes instead of one row each
 - [ ] Capture the current route automatically
@@ -39,6 +40,17 @@ Which tier caught a crash decides how much it can say:
   to whatever was installed before it.
 
 ## Decisions worth knowing
+
+- **Surviving a fatal JS error is off by default, and that default is not timidity.** React Native
+  reports a fatal error to the native side, and that report is what ends the process. Withholding it
+  keeps the app running — but the JavaScript thread was interrupted part-way through, possibly
+  mid-render, so component state, the native view tree and the app's own state may no longer agree.
+  What follows is an app that looks alive and is quietly wrong: a screen that will not re-render, a
+  queue that stopped draining, a write applied by half. A crash is loud; corrupted state is silent.
+  So it is worth having for a demo, a test pass, or a bug that takes ten minutes to reach, and worth
+  thinking twice about anywhere else. A record captured this way is not written to disk either — the
+  panel is alive to show it now, and a persisted one is read back at the next launch as a crash the
+  process did not survive, which this one did.
 
 - **It has the only gate that isn't `init()`.** Setting the flag installs the handlers when the
   client is _constructed_, so an app keeps its usual development-only `init()` call and still
