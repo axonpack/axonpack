@@ -4,6 +4,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SocketMessageRow } from './socket-message-row.component';
 import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
 import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
+import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import {
@@ -54,7 +55,14 @@ export function SocketDetailPanel({
       {messages.length === 0 ? (
         <Text style={styles.empty}>No messages yet.</Text>
       ) : (
-        <FlatList data={messages} keyExtractor={keyExtractor} renderItem={renderMessage} />
+        <FlatList
+          data={messages}
+          keyExtractor={keyExtractor}
+          renderItem={renderMessage}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListFooterComponent=<InsetPadding edge="bottom" />
+        />
       )}
     </BottomSheet>
   );
@@ -80,6 +88,13 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
+  },
+  list: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  listContent: {
+    paddingBottom: 8,
   },
   empty: {
     padding: 16,
