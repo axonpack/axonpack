@@ -13,6 +13,7 @@ transfers.
 - [x] Turn plain requests and sockets off independently
 - [x] WebSocket connections, with every message sent and received
 - [x] Sockets a WebView page opens, with every frame in both directions
+- [x] An XML response as a tree
 - [x] Declared WebView names act as a typed allowlist
 - [x] Full request and response bodies, headers, size and content type
 - [x] Binary response bodies, as bytes and as hex
@@ -44,10 +45,6 @@ transfers.
 - [x] Server-sent event streams, with every event, whichever client opened them
 - [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
 - [x] What a compressed response cost on the wire, beside what the app was handed
-- [ ] Event streams opened inside a WebView
-- [ ] Cookies for WebView requests
-- [ ] Real timing breakdown for WebView requests
-- [ ] An XML response as a tree
 - [ ] Turn stream capture off independently, the way requests and sockets already can be
 - [ ] Capture requests made before the panel is set up
 - [ ] Export a socket or stream entry too, and version the file
@@ -134,6 +131,13 @@ Three paths, because no one of them can see the others' traffic:
   nothing declared a type, which is common enough from a hand-rolled server; guessing over a
   declared type would make the tab lie about what arrived. The same goes for length: the payload is
   measured only when no header gave one.
+- **XML is shown as a tree, parsed here rather than by the platform.** React Native has no
+  `DOMParser`, so a browser panel's approach — hand `documentElement` to a renderer — is not available.
+  The parser is small on purpose: it answers what a response viewer asks, and is not a validator, so a
+  document that will not parse says why and leaves the raw body to be read instead. Whitespace between
+  sibling elements is dropped as the indentation it is, while text with anything else in it survives so
+  mixed content keeps its fragments; CDATA is kept apart from text and never decoded, since that block
+  is the one place markup is deliberately not markup.
 - **A rendered preview is an opaque surface.** A bitmap goes to the platform's image view; HTML and
   SVG go to a WebView — SVG included, because the image view cannot draw one. Neither surface can be
   searched or highlighted the way text can, which is why the raw body stays a tab of its own.
