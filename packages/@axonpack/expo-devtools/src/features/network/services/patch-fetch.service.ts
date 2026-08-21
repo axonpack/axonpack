@@ -3,6 +3,7 @@ import { recordStreamEvents } from './record-stream-events.service';
 import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
 import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
+import { NETWORK_SOURCES } from '../constants/sources.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
@@ -406,7 +407,7 @@ function patchExpoFetchModule(): boolean {
 
   const rawExpoFetch = expoFetch.fetch;
   try {
-    expoFetch.fetch = instrument(rawExpoFetch, 'expo/fetch');
+    expoFetch.fetch = instrument(rawExpoFetch, NETWORK_SOURCES.expoFetch);
   } catch {
     return false;
   }
@@ -421,6 +422,6 @@ export function patchFetch() {
   rememberUnpatchedFetch(originalFetch);
 
   // The global goes first, so the module still holds its raw function when the next line reads it.
-  globalThis.fetch = instrument(originalFetch, 'fetch');
+  globalThis.fetch = instrument(originalFetch, NETWORK_SOURCES.fetch);
   patchExpoFetchModule();
 }

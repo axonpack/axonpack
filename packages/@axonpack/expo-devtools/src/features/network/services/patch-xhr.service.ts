@@ -2,6 +2,7 @@ import { captureInitiatorFrames } from './capture-initiator.service';
 import { recordStreamEvents } from './record-stream-events.service';
 import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
+import { NETWORK_SOURCES } from '../constants/sources.const';
 import type { ThrottleProfile } from '../constants/throttle-presets.const';
 import { networkConditionsStore } from '../stores/network-conditions.store';
 import { networkLogStore } from '../stores/network-log.store';
@@ -331,7 +332,7 @@ export function patchXHR() {
       requestHeaders: xhr.__networkLogHeaders,
       initiator: captureInitiatorFrames(),
       startedAt,
-      source: 'xhr',
+      source: NETWORK_SOURCES.xhr,
       conditions,
     });
 

@@ -2,6 +2,7 @@ import { NativeEventEmitter, Platform, TurboModuleRegistry, type NativeModule } 
 // Type-only, so nothing of this private path survives compilation into the bundle.
 import type { TurboModule } from 'react-native/Libraries/TurboModule/RCTExport';
 
+import { NETWORK_SOURCES } from '../constants/sources.const';
 import { networkLogStore } from '../stores/network-log.store';
 
 /**
@@ -110,7 +111,7 @@ export function patchWebSocket() {
       socketId,
       url,
       method: 'WS',
-      source: 'websocket',
+      source: NETWORK_SOURCES.webSocket,
       protocols: protocols ?? undefined,
       status: 'connecting',
       startedAt: Date.now(),
