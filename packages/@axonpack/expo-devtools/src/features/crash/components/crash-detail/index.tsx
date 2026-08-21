@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { BreadcrumbsTab } from './breadcrumbs-tab.component';
-import { RawTab } from './raw-tab.component';
 import { SummaryTab } from './summary-tab.component';
 import { BottomSheet } from '../../../../core/components/ui/bottom-sheet.ui';
 import { ContextMenu } from '../../../../core/components/ui/context-menu.ui';
@@ -23,7 +22,6 @@ type Tab = 'summary' | 'breadcrumbs' | 'raw';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'summary', label: 'Summary' },
   { key: 'breadcrumbs', label: 'Breadcrumbs' },
-  { key: 'raw', label: 'Raw' },
 ];
 
 export function CrashDetailSheet({
@@ -105,7 +103,6 @@ export function CrashDetailSheet({
         <View>
           {tab === 'summary' && <SummaryTab record={active} />}
           {tab === 'breadcrumbs' && <BreadcrumbsTab record={active} />}
-          {tab === 'raw' && <RawTab record={active} />}
           <InsetPadding edge="bottom" />
         </View>
       </ScrollView>
