@@ -104,7 +104,13 @@ export type DevtoolsCrashConfig = {
    * React Native turns it into a native exception on the way to killing the process.
    */
   handlers?: {
-    /** `ErrorUtils` global handler — fatal and non-fatal JS errors. */
+    /**
+     * `ErrorUtils` global handler — fatal and non-fatal JS errors.
+     *
+     * Installing it also stops a fatal error from ending the app: React Native is what reports one to
+     * the native side, and this handler is what withholds it. Turning the tier off hands that back,
+     * so the app crashes the way it would without this package.
+     */
     jsErrors?: boolean;
     /**
      * Unhandled promise rejections — the tier that adds the most in a development build, since React
@@ -127,30 +133,6 @@ export type DevtoolsCrashConfig = {
    * wants the stack on screen.
    */
   popupDetail?: 'auto' | 'full' | 'compact';
-  /**
-   * Keep the app running through a fatal JS error, instead of letting it end the process. Defaults to
-   * `false`, which is React Native's own behaviour.
-   *
-   * The error is reported to the native side by React Native's own handler, and that report is what
-   * kills the app. Setting this withholds a **fatal** error from that handler — nothing else changes,
-   * and a non-fatal one is still passed on.
-   *
-   * React Native ends the process on purpose, and the reason is worth reading before turning this on:
-   * the JavaScript thread was interrupted part-way through, possibly mid-render, so component state,
-   * the native view tree and the app's own state may no longer agree. Surviving that gives an app
-   * that looks alive and is quietly wrong — a screen that will not re-render, a queue that stopped
-   * draining, a write applied by half. A crash is loud; corrupted state is silent and much harder to
-   * account for afterwards.
-   *
-   * So this belongs in a development or internal build, where losing the session costs more than
-   * running on in a doubtful state — a demo, a test pass, reproducing a bug that takes ten minutes to
-   * reach. Two things it cannot do: a real native crash is unaffected, and neither is anything thrown
-   * before `init()` installed the handlers.
-   *
-   * In development it also takes the red box for fatal errors with it, since that is drawn by the very
-   * handler being withheld from. This package's own crash sheet is what stands in for it.
-   */
-  surviveFatalJsErrors?: boolean;
   /**
    * Turn off React Native's own LogBox, so a JS error is reported here and nowhere else. Defaults to
    * `false`.
@@ -240,7 +222,6 @@ export function createDevtoolsClient<
     handlers: crashHandlers,
     popupDetail: crashPopupDetail = 'auto',
     disableDefaultLogBox: turnOffLogBox = false,
-    surviveFatalJsErrors = false,
     breadcrumbs: crashBreadcrumbs = true,
     maxRecords: maxCrashRecords = 25,
     persistNonFatal = false,
@@ -283,7 +264,6 @@ export function createDevtoolsClient<
       jsErrors: panelAvailable && (crashHandlers?.jsErrors ?? true),
       unhandledRejections: panelAvailable && (crashHandlers?.unhandledRejections ?? true),
       nativeExceptions: crashHandlers?.nativeExceptions ?? true,
-      surviveFatalJsErrors,
     });
 
     if (turnOffLogBox) {

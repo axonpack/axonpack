@@ -16,7 +16,7 @@ the one subsystem here meant to survive into a release build.
 - [x] Attach your own details — user, screen, feature flags — to every report
 - [x] Error boundary that shows a Try again screen instead of a blank one
 - [x] Optionally replace React Native's red box with the report sheet
-- [x] Optionally keep the app running through a fatal JS error instead of ending it
+- [x] A fatal JS error is reported without ending the app, the way it never ends one in development
 - [ ] Send reports to a backend, with queueing and retry
 - [ ] Group duplicate crashes instead of one row each
 - [ ] Capture the current route automatically
@@ -41,16 +41,24 @@ Which tier caught a crash decides how much it can say:
 
 ## Decisions worth knowing
 
-- **Surviving a fatal JS error is off by default, and that default is not timidity.** React Native
-  reports a fatal error to the native side, and that report is what ends the process. Withholding it
-  keeps the app running — but the JavaScript thread was interrupted part-way through, possibly
-  mid-render, so component state, the native view tree and the app's own state may no longer agree.
-  What follows is an app that looks alive and is quietly wrong: a screen that will not re-render, a
-  queue that stopped draining, a write applied by half. A crash is loud; corrupted state is silent.
-  So it is worth having for a demo, a test pass, or a bug that takes ten minutes to reach, and worth
-  thinking twice about anywhere else. A record captured this way is not written to disk either — the
-  panel is alive to show it now, and a persisted one is read back at the next launch as a crash the
-  process did not survive, which this one did.
+- **A fatal JS error does not end the app, and there is no switch for that.** React Native decides
+  this by build: in development it hands the error to the red box and tells the native side nothing,
+  and in a release build it reports it, which is what ends the process. The same error, the same
+  fatality — only the branch differs. So a release build crashing on something development has always
+  survived is a difference in reporting, not in severity, and this closes it: the error is captured,
+  shown and not reported onward. Turning the `jsErrors` tier off hands the decision back to React
+  Native.
+- **A record for one is never written to disk.** Persisting exists so a crash can be reported at the
+  next launch, where the sheet presents it as one the process did not survive. That is now true of a
+  native exception and nothing else — the panel is alive to show every JavaScript record itself, and
+  writing one down would report it a second time and describe it wrongly.
+- **What survives is the process, not necessarily the state.** The JavaScript thread was interrupted
+  part-way through, possibly mid-render, so component state, the native view tree and the app's own
+  state may afterwards disagree — a screen that will not re-render, a queue that stopped draining, a
+  write applied by half. This is why the report is put on screen rather than filed quietly: an app
+  carrying on in a doubtful state is only safe to trust if whoever is looking at it knows it happened.
+  A `DevtoolsErrorBoundary` around a subtree is the stronger tool where it fits, because unmounting
+  that subtree actually discards the broken state instead of stepping over it.
 
 - **It has the only gate that isn't `init()`.** Setting the flag installs the handlers when the
   client is _constructed_, so an app keeps its usual development-only `init()` call and still

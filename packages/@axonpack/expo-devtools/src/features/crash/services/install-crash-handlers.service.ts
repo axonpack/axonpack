@@ -5,8 +5,6 @@ export type CrashHandlerConfig = {
   jsErrors: boolean;
   unhandledRejections: boolean;
   nativeExceptions: boolean;
-  /** Keep the process running through a fatal JS error instead of letting React Native end it. */
-  surviveFatalJsErrors?: boolean;
 };
 
 type ErrorHandler = (error: unknown, isFatal: boolean) => void;
@@ -43,22 +41,23 @@ const installed = {
  * LogBox, the red box and RN's own native reporting working — and, for a fatal error, what lets the
  * process end the way React Native intends.
  */
-function installJsErrorHandler(surviveFatal: boolean) {
+function installJsErrorHandler() {
   const errorUtils = (globalThis as ErrorUtilsHost).ErrorUtils;
   if (!errorUtils?.setGlobalHandler) return;
 
   const previous = errorUtils.getGlobalHandler?.();
   errorUtils.setGlobalHandler((error, isFatal) => {
-    captureCrash(error, isFatal ? 'js-fatal' : 'js-error', {
-      survived: isFatal && surviveFatal,
-    });
+    captureCrash(error, isFatal ? 'js-fatal' : 'js-error');
 
-    // Withholding a fatal error is the whole of the mechanism: React Native's own handler is what
-    // reports it to the native side, and that report is what ends the process. A non-fatal one is
-    // always passed on — the default handler only logs it, so keeping it back would cost the
-    // warning and save nothing.
-    if (isFatal && surviveFatal) return;
+    // A fatal error stops here. React Native's own handler is what reports it to the native side,
+    // and that report is what ends the process — so not calling it is the whole of how the app keeps
+    // running. In development that handler draws the red box instead of reporting anything, which is
+    // why the same error has never ended the app there; this makes a release build behave the way
+    // development always has.
+    if (isFatal) return;
 
+    // A non-fatal one is passed on untouched: the default handler only logs it, so keeping it back
+    // would cost the warning and save nothing.
     previous?.(error, isFatal);
   });
 }
@@ -122,7 +121,7 @@ function drainPreviousLaunchCrashes() {
 export function installCrashHandlers(config: CrashHandlerConfig) {
   if (config.jsErrors && !installed.jsErrors) {
     installed.jsErrors = true;
-    installJsErrorHandler(config.surviveFatalJsErrors ?? false);
+    installJsErrorHandler();
   }
   if (config.unhandledRejections && !installed.unhandledRejections) {
     installed.unhandledRejections = true;

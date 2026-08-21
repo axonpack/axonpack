@@ -49,7 +49,7 @@ function installFakeErrorUtils(existing?: ErrorHandler) {
 }
 
 describe('the JS error handler', () => {
-  it('captures a fatal error and still calls the handler React Native installed', () => {
+  it('captures a fatal error and withholds it, so the app is not ended', () => {
     const rnHandler = jest.fn();
     const currentHandler = installFakeErrorUtils(rnHandler);
 
@@ -57,7 +57,9 @@ describe('the JS error handler', () => {
     currentHandler()?.(new Error('boom'), true);
 
     expect(crashStore.getSnapshot()[0]?.kind).toBe('js-fatal');
-    expect(rnHandler).toHaveBeenCalledTimes(1);
+    // Not calling this is the whole mechanism: it reports the error to the native side, and that
+    // report is what ends the process.
+    expect(rnHandler).not.toHaveBeenCalled();
   });
 
   it('records a non-fatal error as a non-fatal kind', () => {
@@ -69,24 +71,11 @@ describe('the JS error handler', () => {
     expect(crashStore.getSnapshot()[0]?.kind).toBe('js-error');
   });
 
-  it('withholds a fatal error from React Native when asked to survive it', () => {
+  it('passes a non-fatal error on, which only ever gets logged', () => {
     const rnHandler = jest.fn();
     const currentHandler = installFakeErrorUtils(rnHandler);
 
-    installCrashHandlers({ ...ALL_HANDLERS, surviveFatalJsErrors: true });
-    currentHandler()?.(new Error('boom'), true);
-
-    expect(crashStore.getSnapshot()[0]?.kind).toBe('js-fatal');
-    // Not calling this is the whole mechanism: it is what reports the error to the native side, and
-    // that report is what ends the process.
-    expect(rnHandler).not.toHaveBeenCalled();
-  });
-
-  it('still passes a non-fatal error on while surviving fatal ones', () => {
-    const rnHandler = jest.fn();
-    const currentHandler = installFakeErrorUtils(rnHandler);
-
-    installCrashHandlers({ ...ALL_HANDLERS, surviveFatalJsErrors: true });
+    installCrashHandlers(ALL_HANDLERS);
     currentHandler()?.(new Error('boom'), false);
 
     expect(rnHandler).toHaveBeenCalledTimes(1);

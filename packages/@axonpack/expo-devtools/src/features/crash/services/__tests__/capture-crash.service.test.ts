@@ -58,9 +58,16 @@ describe('captureCrash', () => {
 });
 
 describe('captureCrash persistence', () => {
-  it('persists a fatal record, since the process may not survive to show it', () => {
-    captureCrash(new Error('x'), 'js-fatal');
+  it('persists a native exception, the one kind that still ends the app', () => {
+    captureCrash(new Error('x'), 'native-exception');
     expect(mockPersistCrashRecord).toHaveBeenCalledTimes(1);
+  });
+
+  // The process survives every JavaScript tier now, so the panel is alive to show the record. Writing
+  // it down would report it again at the next launch, as a crash the process did not survive.
+  it('does not persist a fatal JS error, which no longer ends the app', () => {
+    captureCrash(new Error('x'), 'js-fatal');
+    expect(mockPersistCrashRecord).not.toHaveBeenCalled();
   });
 
   it('does not persist a non-fatal record by default', () => {
