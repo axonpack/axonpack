@@ -54,6 +54,30 @@ transfers.
 - [ ] Requests from a native HTTP client that never touches JavaScript
 - [ ] Throttle upload speed, not only download
 
+## Next
+
+The open list above is a menu, not an order. What is worth doing next, and why, roughly in that order:
+
+1. **Verify the phase timing on a device.** It is the newest thing here and the only part written
+   against native APIs that nothing has run yet: the Swift parses and the Kotlin has never met a
+   compiler. Both need a prebuild (`bun run ios`, `bun run android`) and a look at real rows. Until
+   that happens the waterfall is implemented, not proven.
+2. **Widen what the phases cover.** iOS reaches Expo's own fetch through a private Swift class name,
+   which is the _global_ `fetch` in an Expo app and so the path that matters most and holds up
+   least; Android does not reach it at all, because Expo's fetch there has its own OkHttp client.
+   Both are worth a second look before the feature is leant on.
+3. **Requests from a native HTTP client that never touches JavaScript.** Now the largest hole in
+   capture rather than in display: a JSI client answers no patch, and the only way in is whatever
+   observer API it publishes for itself.
+4. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
+   which is most of a cold start.
+5. **The smaller display gaps** — an XML response as a tree, a version and a socket-shaped entry in
+   the export, and a switch for stream capture beside the ones requests and sockets already have.
+
+Two things on the open list are known to be blocked rather than merely undone, and the reasons are
+in Won't do: cookies and real phase timing for WebView traffic both need what a page's own engine
+does not hand out.
+
 ## Where requests come from
 
 Three paths, because no one of them can see the others' traffic:
