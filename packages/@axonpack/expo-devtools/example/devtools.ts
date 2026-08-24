@@ -36,8 +36,10 @@ export const devtools = createDevtoolsClient({
   webviewSources: ['example-webview', 'test2', 'page-apis'],
   network: {
     disabledByDefault: false,
-    includeFetch: true,
-    includeXmlHttpRequest: true,
+    // By kind of traffic, not by transport: requests, sockets and streams, however they were made.
+    http: true,
+    websocket: true,
+    sse: true,
   },
   console: {
     disabledByDefault: false,

@@ -60,6 +60,17 @@ export function setWebViewSocketCapture(enabled: boolean) {
   captureSockets = enabled;
 }
 
+/**
+ * The same, for a page's streams. Unlike the app's own, a page's stream exists only through this
+ * wrapper — there is no HTTP request underneath it that anything here can see — so turning streams
+ * off hides it altogether rather than leaving a row with no events.
+ */
+let captureStreams = true;
+
+export function setWebViewStreamCapture(enabled: boolean) {
+  captureStreams = enabled;
+}
+
 type WebViewMessageEventLike = {
   nativeEvent: {
     data: string;
@@ -585,7 +596,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
 
     // Streams the page opens. A page has a real EventSource, which React Native does not ship at all —
     // so this is the one transport whose page version needs no interpretation of a wire format.
-    ${buildEventSourcePatch()}
+    ${captureStreams ? buildEventSourcePatch() : ''}
   })();
   true;`;
 }
@@ -832,6 +843,9 @@ function applySocketEvent(source: string, payload: WebViewSocketPayload) {
  * with its events beside it. So the row, the Events tab and the filters all work on it unchanged.
  */
 function applyStreamEvent(source: string, payload: WebViewStreamPayload) {
+  // A page injected before the switch was flipped keeps relaying, so the answer is checked here too.
+  if (!captureStreams) return;
+
   if (payload.event === 'connect') {
     networkLogStore.add({
       id: payload.id,

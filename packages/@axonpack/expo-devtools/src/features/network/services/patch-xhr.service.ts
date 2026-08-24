@@ -1,5 +1,8 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
-import { recordStreamEvents } from './record-stream-events.service';
+import {
+  isStreamCaptureEnabled,
+  recordStreamEvents,
+} from './record-stream-events.service';
 import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
 import { NETWORK_SOURCES } from '../constants/sources.const';
@@ -355,6 +358,9 @@ export function patchXHR() {
      */
     function readStreamDelta() {
       if (parser === null) return;
+      // The parser is still made when capture is off, because its presence is also what tells the
+      // abort handler that a closed stream ended rather than a request being cancelled.
+      if (!isStreamCaptureEnabled()) return;
       let text: string;
       try {
         text = xhr.responseText;

@@ -626,8 +626,9 @@ go out at full speed.
 | `defaultTheme`                       | `string`                      | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                 |
 | `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                              |
 | `webviewSources`                     | `string[]`                    | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs.         |
-| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                           |
-| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest`. This is what catches axios and most other HTTP libraries.           |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests — `fetch`, Expo's fetch, `XMLHttpRequest`, a JSI client, a page's own. |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages, the app's own and a page's.                 |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events, whichever client opened them.             |
 | `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.          |
 | `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.               |
 | `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                             |

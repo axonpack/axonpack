@@ -1,6 +1,7 @@
 import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
+  setWebViewStreamCapture,
 } from '../webview-network-logger.service';
 import { networkLogStore } from '../../stores/network-log.store';
 
@@ -188,6 +189,33 @@ describe('a stream opened by a WebView page', () => {
     stream.close();
 
     expect(stream.closed).toBe(true);
+  });
+});
+
+// A page's stream has no HTTP request underneath it that anything here can see — its row is minted by
+// the wrapper — so turning streams off has to keep the wrapper out of the page altogether.
+describe('a page with streams turned off', () => {
+  beforeAll(() => networkLogStore.setEnabled(true));
+  afterEach(() => setWebViewStreamCapture(true));
+
+  it('is never handed the wrapper', () => {
+    setWebViewStreamCapture(false);
+
+    // The comment above the block names the API, so the wrapper itself is what is looked for.
+    expect(getWebViewInjectedJavaScriptBeforeContentLoaded('shop')).not.toContain(
+      'PatchedEventSource'
+    );
+  });
+
+  it('is ignored if it relays one anyway, having been injected before the switch', () => {
+    setWebViewStreamCapture(false);
+    networkLogStore.clear();
+
+    handleWebViewNetworkMessage(
+      event('eventsource', { id: 'shop-es-off', event: 'connect', url: 'https://page.test/live' })
+    );
+
+    expect(networkLogStore.getSnapshot()).toEqual([]);
   });
 });
 

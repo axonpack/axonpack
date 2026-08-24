@@ -60,7 +60,7 @@ const devtools = createDevtoolsClient({
   theme: "dark", // built-in 'light'/'dark', or one of `themes` below
   themes: { midnight: { base: "dark", colors: { accent: "#a78bfa" } } },
   webviewSources: ["my-webview"], // top-level: both tabs capture from a WebView
-  network: { includeFetch, includeXmlHttpRequest, disabledByDefault },
+  network: { http, websocket, sse, disabledByDefault }, // by kind of traffic, not by transport
   console: { capture, repl, context, disabledByDefault },
 });
 devtools.init(); // call once at app startup — installs the fetch/XHR/console patches

@@ -76,6 +76,13 @@ type NitroModule = {
 let unsubscribe: (() => void) | null = null;
 
 /**
+ * One observer reports both kinds this client carries, so which of them is wanted is decided here
+ * rather than by whether the observer is attached: requests and sockets are separate switches for the
+ * consumer, and a single subscription cannot honour half of one.
+ */
+let capturing = { http: true, websocket: true };
+
+/**
  * That library stamps its entries with `performance.now()` — milliseconds since the process started,
  * not since the epoch. Every row here is stamped in epoch milliseconds, so the two have to be lined
  * up: without this a nitro row claimed to have started in 1970, which sorted it to the bottom of the
@@ -120,9 +127,10 @@ function headersToRecord(headers: NitroHeader[] | undefined): Record<string, str
  */
 export function applyNitroEntry(entry: NitroEntry) {
   if (entry.type === 'websocket') {
-    applyNitroSocket(entry);
+    if (capturing.websocket) applyNitroSocket(entry);
     return;
   }
+  if (!capturing.http) return;
   // Checked rather than trusted: the entry comes from an untyped require, so a kind this version of
   // the library reports and this one does not know is skipped instead of half-recorded.
   if (entry.type !== 'http') return;
@@ -263,7 +271,9 @@ export function replayNitroEntries() {
   }
 }
 
-export function observeNitroFetch() {
+export function observeNitroFetch(kinds: { http: boolean; websocket: boolean }) {
+  capturing = kinds;
+  if (!kinds.http && !kinds.websocket) return;
   if (unsubscribe !== null) return;
 
   const module = loadNitro();
@@ -286,4 +296,5 @@ export function observeNitroFetch() {
 export function stopObservingNitroFetch() {
   unsubscribe?.();
   unsubscribe = null;
+  capturing = { http: true, websocket: true };
 }

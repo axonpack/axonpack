@@ -10,7 +10,7 @@ transfers.
 - [x] Captures Expo's own fetch when it is imported directly, not only through the global
 - [x] Captures `XMLHttpRequest`, so third-party HTTP clients show up
 - [x] Captures requests made inside a WebView
-- [x] Turn plain requests and sockets off independently
+- [x] Turn requests, sockets and streams off independently, by kind rather than by transport
 - [x] WebSocket connections, with every message sent and received
 - [x] Sockets a WebView page opens, with every frame in both directions
 - [x] Streams a WebView page opens, with every event the engine dispatched
@@ -50,8 +50,6 @@ transfers.
 - [x] Server-sent event streams, with every event, whichever client opened them
 - [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
 - [x] What a compressed response cost on the wire, beside what the app was handed
-- [ ] Turn stream capture off independently, the way requests and sockets already can be
-- [ ] Capture requests made before the panel is set up
 - [ ] Sort the log by size, by duration or by status, not only oldest or newest first
 - [ ] Filter by how large or how slow a request was, and by a status expression rather than one band
 - [ ] Pick more than one method or source at once, and show only what is in flight or overridden
@@ -81,9 +79,7 @@ The open list above is a menu, not an order. What is worth doing next, and why, 
    a chip per status band cannot say `>= 400`, there is no size or duration threshold at all, and
    method and source take one value each where a comparison usually wants two. One panel's worth of
    work, and the cheapest thing on this list per row it saves reading.
-6. **A switch for stream capture**, beside the ones requests and sockets already have — the last
-   inconsistency in the config, and a chatty stream is exactly what someone would want to mute.
-7. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
+6. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
    row is still the single `size` field, which is the declared length when there is one and the body's
    length otherwise. Deciding what one column should say — and it should probably say what crossed the
    wire, the way a browser's does — is the rest of this job.
@@ -109,6 +105,17 @@ Three paths, because no one of them can see the others' traffic:
 
 ## Decisions worth knowing
 
+- **The switches name the traffic, not the transport.** `http`, `websocket` and `sse` — a request is a
+  request whether it left through `fetch`, through Expo's own fetch, through `XMLHttpRequest`, from a
+  JSI client or from inside a page, and someone turning requests off means all of them. The old flags
+  were named after the mechanisms instead, which put this package's five capture paths in the
+  consumer's config and left `sse` with nowhere to go: it has no path of its own on the app's side at
+  all. Turning streams off is the one switch whose effect differs by where the stream came from, for a
+  reason that is not a compromise: the app's own stream is still recognised — its endless body has to
+  be, or it would be read as a response — so its row stays and only the events are dropped, while a
+  page's stream exists only through the wrapper this injects, so that one disappears with the wrapper.
+  A JSI client is the other asymmetry: one observer reports both of its kinds, so it is told which are
+  wanted rather than being attached for one and not the other.
 - **Declared WebView names are the allowlist.** They are a `const` type parameter, so passing an
   undeclared name is a compile error, and the same list is checked at runtime — any page can post a
   message wearing our marker, including one nobody here wrote. It sits at the top level of the

@@ -504,8 +504,9 @@ it.
 | `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                         |
 | `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
 | `webviewSources`                     | `readonly string[]`           | `undefined` | Names of `<WebView>`s allowed to report in, for both the Network and Console tabs.    |
-| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                   |
-| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest`. This is what catches axios and most HTTP libraries.         |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                           |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                     |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                   |
 | `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                          |
 | `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.            |
 | `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt.                                                                  |
