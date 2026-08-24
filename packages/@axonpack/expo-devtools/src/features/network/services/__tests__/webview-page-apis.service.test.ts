@@ -41,6 +41,54 @@ class FakeEventSource {
 
 type Relayed = { type: string; payload: Record<string, unknown> };
 
+/**
+ * Enough of a page's own XHR for the injected patch to wrap, built fresh per run: the patch replaces
+ * methods on the prototype it is handed, so one shared class would arrive already patched by the
+ * previous test.
+ */
+function createFakeXHRClass() {
+  return class FakePageXHR {
+    static readonly HEADERS_RECEIVED = 2;
+    static readonly DONE = 4;
+
+    readyState = 0;
+    status = 0;
+    statusText = '';
+    responseText = '';
+    responseType = '';
+    listeners: Record<string, ((event: unknown) => void)[]> = {};
+
+    open() {}
+    send() {}
+    removeEventListener() {}
+
+    addEventListener(type: string, listener: (event: unknown) => void) {
+      (this.listeners[type] ??= []).push(listener);
+    }
+
+    getAllResponseHeaders() {
+      return 'content-type: application/json';
+    }
+
+    getResponseHeader() {
+      return 'application/json';
+    }
+
+    /** The two states the patch reads, driven the way an engine would drive them. */
+    reach(state: number) {
+      this.readyState = state;
+      if (state === FakePageXHR.DONE) {
+        this.status = 200;
+        this.statusText = 'OK';
+        this.responseText = '{"ok":true}';
+      }
+      for (const listener of this.listeners.readystatechange ?? []) {
+        listener({ currentTarget: this });
+      }
+    }
+  };
+}
+
 /** Enough of a Response for the page-side patch to read: headers, a status, and a cloneable body. */
 function fakeResponse() {
   return {
@@ -58,6 +106,7 @@ function runInFakePage(resourceEntry?: Record<string, number | string>) {
   const posted: Relayed[] = [];
   const win: Record<string, unknown> = {
     EventSource: FakeEventSource,
+    XMLHttpRequest: createFakeXHRClass(),
     fetch: () => Promise.resolve(fakeResponse()),
     location: { href: 'https://page.test/shop' },
     navigator: {},
@@ -81,6 +130,7 @@ function runInFakePage(resourceEntry?: Record<string, number | string>) {
   return {
     posted,
     EventSourceCtor: win.EventSource as typeof FakeEventSource,
+    XHRCtor: win.XMLHttpRequest as ReturnType<typeof createFakeXHRClass>,
     fetch: win.fetch as (url: string) => Promise<unknown>,
   };
 }
@@ -247,6 +297,43 @@ describe('what the page can see of a request', () => {
   });
 });
 
+// A page's request is timed by its engine where the engine will say, and from JavaScript where it
+// won't — which is most cross-origin traffic. Without this the Timing tab had one number for those.
+describe('what a page can time itself', () => {
+  beforeAll(() => networkLogStore.setEnabled(true));
+
+  it('reports the wait from its own fetch resolving', async () => {
+    const { posted, fetch } = runInFakePage();
+
+    await fetch('https://api.test/thing');
+
+    const done = posted
+      .filter((message) => message.type === 'network')
+      .map((message) => message.payload)
+      .find((payload) => payload.status === 'success');
+    expect(typeof done?.ttfb).toBe('number');
+    expect(typeof done?.duration).toBe('number');
+  });
+
+  it('reports the wait when its own XHR has the headers, before the body is in', () => {
+    const { posted, XHRCtor } = runInFakePage();
+    const xhr = new XHRCtor();
+
+    xhr.open();
+    xhr.send();
+    xhr.reach(2);
+
+    const networkPayloads = () =>
+      posted.filter((message) => message.type === 'network').map((message) => message.payload);
+    // Second message, and it carries nothing but the reading: the row it patches is already open.
+    expect(networkPayloads()[1]).toMatchObject({ ttfb: expect.any(Number) });
+    expect(networkPayloads()[1]?.status).toBeUndefined();
+
+    xhr.reach(4);
+    expect(networkPayloads()[2]).toMatchObject({ status: 'success', statusCode: 200 });
+  });
+});
+
 describe('the engine’s own resource timing', () => {
   beforeAll(() => networkLogStore.setEnabled(true));
 
@@ -285,5 +372,32 @@ describe('the engine’s own resource timing', () => {
       measuredBy: 'webview',
     });
     expect(timing?.payload.transfer).toEqual({ wireBytes: 900, decodedBytes: 7000 });
+  });
+
+  // Every detailed field is zeroed for a cross-origin response whose server sent no
+  // Timing-Allow-Origin, and a zero there means "not available" rather than "took no time".
+  it('sends nothing at all when the entry measured nothing', async () => {
+    const { posted, fetch } = runInFakePage({
+      fetchStart: 100,
+      domainLookupStart: 0,
+      domainLookupEnd: 0,
+      connectStart: 0,
+      secureConnectionStart: 0,
+      connectEnd: 0,
+      requestStart: 0,
+      responseStart: 0,
+      responseEnd: 0,
+      encodedBodySize: 0,
+      decodedBodySize: 0,
+      nextHopProtocol: '',
+    });
+
+    await fetch('https://api.test/thing');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const timing = posted.find(
+      (message) => (message.payload as { phases?: unknown } | undefined)?.phases !== undefined
+    );
+    expect(timing).toBeUndefined();
   });
 });

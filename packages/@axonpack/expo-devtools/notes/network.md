@@ -52,6 +52,9 @@ transfers.
 - [x] What a compressed response cost on the wire, beside what the app was handed
 - [ ] Turn stream capture off independently, the way requests and sockets already can be
 - [ ] Capture requests made before the panel is set up
+- [ ] Sort the log by size, by duration or by status, not only oldest or newest first
+- [ ] Filter by how large or how slow a request was, and by a status expression rather than one band
+- [ ] Pick more than one method or source at once, and show only what is in flight or overridden
 
 ## Next
 
@@ -72,9 +75,15 @@ The open list above is a menu, not an order. What is worth doing next, and why, 
    observer API it publishes for itself.
 4. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
    which is most of a cold start.
-5. **The smaller display gaps** — an XML response as a tree, a version and a socket-shaped entry in
-   the export, and a switch for stream capture beside the ones requests and sockets already have.
-6. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
+5. **Sorting, and the filters that ask a number.** The log reverses and groups but never sorts, so
+   finding the slowest request or the largest response among two hundred rows means reading all of
+   them — which is the question a network panel exists to answer. The filters have the matching hole:
+   a chip per status band cannot say `>= 400`, there is no size or duration threshold at all, and
+   method and source take one value each where a comparison usually wants two. One panel's worth of
+   work, and the cheapest thing on this list per row it saves reading.
+6. **A switch for stream capture**, beside the ones requests and sockets already have — the last
+   inconsistency in the config, and a chatty stream is exactly what someone would want to mute.
+7. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
    row is still the single `size` field, which is the declared length when there is one and the body's
    length otherwise. Deciding what one column should say — and it should probably say what crossed the
    wire, the way a browser's does — is the rest of this job.
@@ -168,7 +177,10 @@ Three paths, because no one of them can see the others' traffic:
   no time": every detailed field is zeroed for a cross-origin response whose server sent no
   `Timing-Allow-Origin`, so a zero is dropped the way an unmeasured phase is dropped everywhere else.
   There is no `requestEnd` in that API, so a page's request has no sending phase and its wait contains
-  the sending instead.
+  the sending instead. When every field is zeroed — which is most third-party traffic — the entry says
+  nothing about the inside of the request, so nothing is relayed at all: the page times its own request
+  from JavaScript instead, the way the app's patches do, and the tab shows those two numbers rather
+  than an empty waterfall claiming the engine measured something.
 - **A page's cookies are the page's, not the request's.** `document.cookie` is all a page can read: the
   engine writes the `Cookie` header itself and forbids JavaScript from seeing it, and an HttpOnly
   cookie is invisible to a document by design. So it is stored in a field of its own and shown under
@@ -245,8 +257,15 @@ Three paths, because no one of them can see the others' traffic:
   but they start at a different moment and so can never agree: a JavaScript "wait" contains the queue,
   the handshake and the send, while the platform's contains none of them. Showing both put two rows
   named Waiting side by side with different figures, which reads as one of them being broken rather
-  than as two vantage points. The patches' numbers are the fallback now, for traffic no native stack
-  here reports on — a WebView's requests, a build without the native module, a platform not yet hooked.
+  than as two vantage points. The patches' numbers are the fallback now, for every request nothing
+  measured the inside of — a build without the native module, a platform not yet hooked, and a page's
+  request its own engine will not describe. Both halves are measured wherever a request has a moment
+  the headers arrive at: `fetch` resolving, and an `XMLHttpRequest` reaching `HEADERS_RECEIVED`, inside
+  a page exactly as in the app. A JSI client is the one path with neither — its observer reports a
+  start, an end and nothing between them — so those rows have a duration and no split, which is what
+  that observer knows rather than something withheld. And a phases block with no phase in it is not
+  phases: it takes the fallback, because a waterfall of no bars over numbers that do exist is a worse
+  answer than the numbers.
 - **A compressed response has two sizes, and one number could only ever be one of them.** The tab
   showed whichever happened to be available — `content-length` when the server sent one, the body's
   own length when it did not — which for a gzipped response are wildly different figures under one
@@ -319,3 +338,8 @@ Three paths, because no one of them can see the others' traffic:
 - **A HAR file.** The format permits a `-1` for anything a tool could not measure, so a valid one is
   producible — but the timings that make a HAR worth opening somewhere else are the ones that would be
   `-1`, so Export stays a plain JSON dump.
+- **Tools for something outside the app to read the log with.** A coding agent asking what the app
+  just requested is a real use, and the reason it is not here is the same property that makes `init()`
+  the whole production story: the panel is in the app's own process and nothing outside it can be
+  addressed. Exposing the log would mean a channel to a dev server, which this package does not have
+  and does not want — a tool that needs one is a different tool, not a tab.
