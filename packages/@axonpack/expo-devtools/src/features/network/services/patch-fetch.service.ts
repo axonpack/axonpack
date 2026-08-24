@@ -1,8 +1,5 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
-import {
-  isStreamCaptureEnabled,
-  recordStreamEvents,
-} from './record-stream-events.service';
+import { isStreamCaptureEnabled, recordStreamEvents } from './record-stream-events.service';
 import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
 import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
