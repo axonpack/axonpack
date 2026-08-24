@@ -225,10 +225,14 @@ was. A request still in flight shows an amber **PENDING** so you can tell "waiti
 
 **Finding one request among hundreds.** Search the text, then narrow with the chips: type (Fetch/XHR, JS,
 Img, Media, Other), status (2xx, 4xx, Failed, Pending), method, or source. The status, method and source
-chips are built from what you've actually captured, so they only ever offer real options. Search matches
+chips are built from what you've actually captured, so they only ever offer real options, and method and
+source take **more than one at a time** — two clients side by side, or GET and POST together. Status also
+takes an expression when a band is not the question: `>= 400`, `200-299`, or one exact code. Search matches
 light up in the list, and the box carries the three switches you expect from an editor: **match case**,
 **whole word**, and **regex**. **Invert** flips the whole filter — every chip, not just the text — and
-**Clear** resets all of it in one press. Extra toggles hide data URLs or failed requests.
+**Clear** resets all of it in one press. Under **More filters**: a size and a duration range (`20kb`,
+`1.5s` — the units you'd say out loud), show only what is still in flight, show only what one of your
+override rules answered, and the toggles that hide data URLs or failed requests.
 
 **Testing a bad connection.** Pick Slow 3G, Fast 3G, Fast 4G, Offline, or set your own speed and delay. It
 applies immediately, to your app's own requests and to in-app browser pages. You can also pretend to be an
@@ -237,7 +241,9 @@ ran under, so requests from before and after a change stay easy to tell apart.
 
 **Reading the room.** Turn on the traffic graph to see request volume over time and tap a section to zoom
 the list to that moment. Turn on grouping to bundle rows by where they came from, with a count per group.
-Or switch to compact rows to fit more on screen.
+Or switch to compact rows to fit more on screen. **Sort by** time, size, duration or status — the arrow in
+the toolbar flips the direction and says what pressing it would give you, so "which one is slow" is one tap
+rather than a read through two hundred rows.
 
 #### Tapping a request
 

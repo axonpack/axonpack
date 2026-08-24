@@ -76,7 +76,7 @@ requests; older ones fall off the end. Request and response bodies are kept in f
 | Control           | What it does                                                                                                           |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Record / Clear    | As above.                                                                                                              |
-| Sort (↓ / ↑)      | Newest first (default) or oldest first.                                                                                |
+| Sort (↑ / ↓)      | Flips the direction of whatever **Sort by** is set to. Its label says what pressing it would give you.                 |
 | Filter (⌕ list)   | Opens the filters panel below.                                                                                         |
 | Preserve log (🔖) | On by default. Keeps captured rows when a wired-up **WebView page navigates**; off means the log clears with the page. |
 | Export (⤓)        | Opens the OS share sheet with the **currently filtered** list as JSON, named `network-log-<timestamp>.json`.           |
@@ -84,25 +84,34 @@ requests; older ones fall off the end. Request and response bodies are kept in f
 
 ### Filters panel
 
-| Field                | What it does                                                                                              |
-| -------------------- | --------------------------------------------------------------------------------------------------------- |
-| Search box           | Matches method, URL, status code and source, not header or body text. Clear it with the ✕ inside the box. |
-| **Invert** chip      | Shows everything that does _not_ match the search text.                                                   |
-| **Type** chips       | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`, classified from the response MIME type.                |
-| **Method** chips     | `All` plus one chip per method actually captured (`GET`, `POST`, …). No captures, no chips.               |
-| **Source** chips     | `All` plus one per source seen: your app, or `WebView::[name]` for each declared browser view.            |
-| More filters ▸       | Reveals the two switches below.                                                                           |
-| Hide data URLs       | Drops requests whose URL starts with `data:`.                                                             |
-| Hide failed requests | Drops requests that errored (network failures, not 4xx/5xx responses).                                    |
+| Field                        | What it does                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Search box                   | Matches method, URL, status code and source, not header or body text. Clear it with the ✕ inside the box.        |
+| **Invert** chip              | Shows everything that does _not_ match the search text.                                                          |
+| **Type** chips               | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`, classified from the response MIME type.                       |
+| **Status** chips             | `All` plus one per band captured (`2xx`, `4xx`, `Failed`, `Pending`). Each one writes the field below.           |
+| Status expression            | `404`, `4xx`, `>= 400`, `200-299`, `failed`, `pending`. Unreadable text turns the field red and filters nothing. |
+| **Method** chips             | One per method actually captured (`GET`, `POST`, …), and more than one can be on at once. `All` clears them.     |
+| **Source** chips             | One per source seen — your app, or `WebView::[name]` per declared browser view — and again multi-select.         |
+| More filters ▸               | Reveals the rest, below.                                                                                         |
+| Size: at least / at most     | Bytes, or with a unit: `500`, `20kb`, `1.5mb`.                                                                   |
+| Duration: at least / at most | Milliseconds, or with a unit: `250`, `800ms`, `1.5s`, `2min`.                                                    |
+| Only requests in flight      | Keeps just the ones that have not finished.                                                                      |
+| Only overridden or blocked   | Keeps just the ones a rule of yours answered.                                                                    |
+| Hide data URLs               | Drops requests whose URL starts with `data:`.                                                                    |
+| Hide failed requests         | Drops requests that errored (network failures, not 4xx/5xx responses).                                           |
 
-Type, method and source filters combine with the search, and the search's **Invert** applies only to
-the text match.
+Every filter combines with the search. **Invert** negates all of them together except the two `Hide`
+switches, which stay absolute — inverting those would bring back the exact noise they suppress. A
+filter an entry has no figure for excludes it: a socket has no size or status code, and a request in
+flight has no duration yet.
 
 ### Settings panel
 
 | Setting               | Default        | What it does                                                                                               |
 | --------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
 | Large request rows    | On             | Off gives compact rows: no short name, no badges, URL as the primary line.                                 |
+| **Sort by**           | Time           | `Time`, `Size`, `Duration`, `Status`, plus the direction the toolbar's arrow also flips.                   |
 | Group by fetch client | Off            | Groups rows under a header per source, with a count per group.                                             |
 | Show overview         | Off            | Shows the traffic graph above the list.                                                                    |
 | Stack header values   | On below 768dp | In the detail sheet, puts each header's value under its name instead of beside it.                         |

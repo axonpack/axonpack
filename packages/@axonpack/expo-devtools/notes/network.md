@@ -25,9 +25,14 @@ transfers.
 - [x] Response size worked out from the payload when nothing declares it
 - [x] Requests bucketed by resource type, the way a browser does
 - [x] Pause and resume recording, clear the log, reverse the order
+- [x] Sort by size, by duration or by status, in either direction
 - [x] Keep or auto-clear the log when a WebView navigates
 - [x] Search with regex, case and whole-word modes, invert it, and highlight the matches
-- [x] Filter by type, method, status and source; hide data URLs; hide failed requests
+- [x] Filter by type and status; hide data URLs; hide failed requests
+- [x] Pick more than one method or source at once
+- [x] A status expression rather than one band — an exact code, a range, a comparison
+- [x] Filter by how large or how slow a request was, in the units you would say out loud
+- [x] Show only what is still in flight, or only what a rule of yours answered
 - [x] Throttle the connection — 3G/4G presets, a custom speed, or offline
 - [x] Override the user agent, for native requests and inside a WebView
 - [x] Group rows by source, denser or roomier rows, timeline overview strip
@@ -50,9 +55,6 @@ transfers.
 - [x] Server-sent event streams, with every event, whichever client opened them
 - [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
 - [x] What a compressed response cost on the wire, beside what the app was handed
-- [ ] Sort the log by size, by duration or by status, not only oldest or newest first
-- [ ] Filter by how large or how slow a request was, and by a status expression rather than one band
-- [ ] Pick more than one method or source at once, and show only what is in flight or overridden
 
 ## Next
 
@@ -73,13 +75,7 @@ The open list above is a menu, not an order. What is worth doing next, and why, 
    observer API it publishes for itself.
 4. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
    which is most of a cold start.
-5. **Sorting, and the filters that ask a number.** The log reverses and groups but never sorts, so
-   finding the slowest request or the largest response among two hundred rows means reading all of
-   them — which is the question a network panel exists to answer. The filters have the matching hole:
-   a chip per status band cannot say `>= 400`, there is no size or duration threshold at all, and
-   method and source take one value each where a comparison usually wants two. One panel's worth of
-   work, and the cheapest thing on this list per row it saves reading.
-6. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
+5. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
    row is still the single `size` field, which is the declared length when there is one and the body's
    length otherwise. Deciding what one column should say — and it should probably say what crossed the
    wire, the way a browser's does — is the rest of this job.
@@ -105,6 +101,35 @@ Three paths, because no one of them can see the others' traffic:
 
 ## Decisions worth knowing
 
+- **The panels scroll with the rows, as the list's own header.** Pinned above a bounded list, an open
+  filter panel — chips for type, status, method and source, then a search box, then six more controls
+  under More filters — leaves a phone almost no list to look at, and the list is the point of the tab.
+  So the settings panel, the filter panel and the overview strip are the list's header instead: they
+  scroll away as you read down, and the toolbar that opens them stays put. The settings panel lost the
+  scroll view it used to have for the same reason — a vertical scroller inside a vertical scroller is a
+  fight over every drag. The header goes in as an _element_, never as a function: a new function each
+  render is a new component type to `VirtualizedList`, which remounts the header and takes the focus
+  out of the search box on every keystroke.
+- **A filter is one field, and the chips are its presets.** The status chips write the same expression
+  the field takes, rather than being a second status filter beside it — two of them would have to be
+  reconciled, and `4xx` is exactly what a chip would set anyway. So a tap still answers "show me the
+  failures" and typing answers `>= 400`, which no arrangement of bands can express.
+- **An expression that cannot be read filters nothing, and says so.** Half of `>=` is on the way to a
+  filter, and emptying the list under the cursor reads as the panel being broken rather than as the
+  filter being incomplete. So an unreadable expression or threshold is ignored and its field turns red
+  — the same treatment the search box already gives an unfinished regex. The same reason the
+  thresholds take units: `20kb` is what someone would say, and `20480` is what they would have to work
+  out first.
+- **A filter an entry has no figure for excludes it.** A socket has no size and no status code, a
+  request in flight has no duration yet, and none of them is "under 20 kB" — letting them through
+  would make a threshold mean "or unknown", which is not what was asked. Sorting takes the opposite
+  view of the same fact: what cannot be compared keeps its order at the end, because a pending request
+  at the top of "slowest first" would read as the slowest one rather than as an unknown.
+- **Sorting is in Settings, and its direction is on the toolbar.** The key is chosen rarely and the
+  direction is flipped constantly, so they live where each is reached: beside grouping and row density
+  for the one, and on the arrow that was already there for the other. The arrow's label is written in
+  the vocabulary of the key rather than as "ascending" — "Slowest first" is a direction someone can
+  picture, and the direction of a size is not the direction of a clock.
 - **The switches name the traffic, not the transport.** `http`, `websocket` and `sse` — a request is a
   request whether it left through `fetch`, through Expo's own fetch, through `XMLHttpRequest`, from a
   JSI client or from inside a page, and someone turning requests off means all of them. The old flags
