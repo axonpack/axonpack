@@ -16,6 +16,18 @@ export type StorageAdapterKind = 'async' | 'sync';
 /** What the driver actually handed back, so a stored `1` doesn't render as the string `"1"`. */
 export type StorageValueType = 'string' | 'number' | 'boolean' | 'buffer';
 
+/**
+ * What a store is assumed to hold when nothing says otherwise. A store that only takes strings —
+ * AsyncStorage and SecureStore both do — says so, and the editor then offers nothing it would have
+ * to fail on.
+ */
+export const ALL_VALUE_TYPES: readonly StorageValueType[] = [
+  'string',
+  'number',
+  'boolean',
+  'buffer',
+];
+
 export type StorageReadResult = {
   /** `null` is an absent key. `''` is a value — a store can legitimately hold an empty string. */
   text: string | null;
@@ -25,6 +37,13 @@ export type StorageReadResult = {
 /** A driver may answer with a bare string; `defineStorageAdapter` normalises it. */
 export type StorageReadValue = string | null | undefined | StorageReadResult;
 
+/**
+ * A key this tab must never read. A regex covers the common case (`/^auth\./`), a predicate covers
+ * everything else — a token or a large binary cache key stays where it is rather than being read
+ * into memory and rendered.
+ */
+export type StorageKeyBlacklist = RegExp | ((key: string) => boolean);
+
 export type StorageAdapterConfig = {
   name: string;
   kind?: StorageAdapterKind;
@@ -32,8 +51,15 @@ export type StorageAdapterConfig = {
   /**
    * A fixed key list, for a store that cannot enumerate itself (SecureStore). Passing it turns
    * `canEnumerate` off, which is what makes the UI say so instead of implying the store is empty.
+   *
+   * A function is resolved on every read, for an app that keeps the list of what it stored somewhere
+   * of its own — the keys are then as current as the app is, rather than as current as `init()`.
    */
-  keys?: readonly string[];
+  keys?: readonly string[] | (() => MaybePromise<readonly string[]>);
+  /** The types this store can hold. Defaults to all four — declare it when the store is narrower. */
+  supportedTypes?: readonly StorageValueType[];
+  /** Keys the tab must not read, list, or write. */
+  blacklist?: StorageKeyBlacklist;
   getAllKeys?: () => MaybePromise<readonly string[]>;
   getItem: (key: string) => MaybePromise<StorageReadValue>;
   /** A batch read, when the driver has one. Keys absent from the result are treated as unset. */
@@ -47,6 +73,10 @@ export type StorageAdapterDefinition = {
   kind: StorageAdapterKind;
   readOnly?: boolean;
   canEnumerate: boolean;
+  supportedTypes: StorageValueType[];
+  /** Resolved from `blacklist`; always present, and answers `false` when nothing was declared. */
+  isHidden: (key: string) => boolean;
+  hasBlacklist: boolean;
   getAllKeys: () => Promise<string[]>;
   getItem: (key: string) => Promise<StorageReadResult>;
   getMany?: (keys: string[]) => Promise<Map<string, StorageReadResult>>;
@@ -62,6 +92,20 @@ export type StorageAdapter = Omit<StorageAdapterDefinition, 'readOnly'> & {
   canDelete: boolean;
 };
 
+const ABSENT: StorageReadResult = { text: null, valueType: 'string' };
+
+function toHiddenPredicate(blacklist: StorageKeyBlacklist | undefined): (key: string) => boolean {
+  if (blacklist === undefined) return () => false;
+  if (typeof blacklist === 'function') return (key) => blacklist(key);
+
+  // A `/g` or `/y` regex carries `lastIndex` from one call to the next, so the same key would test
+  // true, then false, then true again — reset before every test rather than ask the caller to.
+  return (key) => {
+    blacklist.lastIndex = 0;
+    return blacklist.test(key);
+  };
+}
+
 function toReadResult(value: StorageReadValue): StorageReadResult {
   if (value === null || value === undefined) return { text: null, valueType: 'string' };
   if (typeof value === 'string') return { text: value, valueType: 'string' };
@@ -74,12 +118,17 @@ function toReadResult(value: StorageReadValue): StorageReadResult {
  */
 export function defineStorageAdapter(config: StorageAdapterConfig): StorageAdapterDefinition {
   const { keys: fixedKeys, getAllKeys, getItem, getMany, setItem, removeItem } = config;
+  const isHidden = toHiddenPredicate(config.blacklist);
 
+  // Filtered here rather than in the view, and here rather than in `readAdapter`, so no path that
+  // lists keys can forget to: a blacklisted key is never read, so it never reaches memory at all.
   let listKeys: () => Promise<string[]>;
-  if (fixedKeys) {
-    listKeys = async () => [...fixedKeys];
+  if (typeof fixedKeys === 'function') {
+    listKeys = async () => [...(await fixedKeys())].filter((key) => !isHidden(key));
+  } else if (fixedKeys) {
+    listKeys = async () => fixedKeys.filter((key) => !isHidden(key));
   } else if (getAllKeys) {
-    listKeys = async () => [...(await getAllKeys())];
+    listKeys = async () => [...(await getAllKeys())].filter((key) => !isHidden(key));
   } else {
     throw new Error(
       `Storage adapter "${config.name}" needs either a getAllKeys function or a keys list.`
@@ -91,17 +140,22 @@ export function defineStorageAdapter(config: StorageAdapterConfig): StorageAdapt
     kind: config.kind ?? 'async',
     readOnly: config.readOnly,
     canEnumerate: !fixedKeys,
+    supportedTypes: [...(config.supportedTypes ?? ALL_VALUE_TYPES)],
+    isHidden,
+    hasBlacklist: config.blacklist !== undefined,
     getAllKeys: listKeys,
-    getItem: async (key) => toReadResult(await getItem(key)),
-    getMany: getMany && (async (keys) => getMany(keys)),
+    getItem: async (key) => (isHidden(key) ? ABSENT : toReadResult(await getItem(key))),
+    getMany: getMany && (async (keys) => getMany(keys.filter((key) => !isHidden(key)))),
     setItem:
       setItem &&
       (async (key, text, valueType) => {
+        if (isHidden(key)) throw new Error(`"${key}" is hidden by this store's blacklist.`);
         await setItem(key, text, valueType);
       }),
     removeItem:
       removeItem &&
       (async (key) => {
+        if (isHidden(key)) throw new Error(`"${key}" is hidden by this store's blacklist.`);
         await removeItem(key);
       }),
   };
@@ -128,6 +182,7 @@ export function asyncStorageAdapter(config: {
   driver: AsyncStorageLikeDriver;
   name?: string;
   readOnly?: boolean;
+  blacklist?: StorageKeyBlacklist;
 }): StorageAdapterDefinition {
   const { driver } = config;
   const hasGetMany = typeof driver.getMany === 'function';
@@ -157,6 +212,9 @@ export function asyncStorageAdapter(config: {
     name: config.name ?? 'AsyncStorage',
     kind: 'async',
     readOnly: config.readOnly,
+    blacklist: config.blacklist,
+    // Everything in here is a string on the way out, whatever it was on the way in.
+    supportedTypes: ['string'],
     getAllKeys: () => driver.getAllKeys(),
     getItem: (key) => driver.getItem(key),
     getMany: hasGetMany || hasMultiGet ? readMany : undefined,
@@ -194,6 +252,7 @@ export function mmkvAdapter(config: {
   driver: MmkvLikeDriver;
   name?: string;
   readOnly?: boolean;
+  blacklist?: StorageKeyBlacklist;
 }): StorageAdapterDefinition {
   const { driver } = config;
   const hasSet = typeof driver.set === 'function';
@@ -203,6 +262,7 @@ export function mmkvAdapter(config: {
     name: config.name ?? 'MMKV',
     kind: 'sync',
     readOnly: config.readOnly,
+    blacklist: config.blacklist,
     getAllKeys: () => driver.getAllKeys(),
     getItem: (key) => readMmkvValue(driver, key),
     setItem: hasSet
@@ -218,10 +278,25 @@ export function mmkvAdapter(config: {
  * MMKV has no "what type is this key" call, so the type is found by trying each getter in turn.
  * Every check is `!== undefined` rather than truthiness: a stored `0` and a stored `false` are
  * values, not misses, and reading them as misses would hide them from the whole tab.
+ *
+ * The order is not the obvious one, because the getters disagree with each other on the same key.
+ * `getString` lenient-decodes bytes that are not valid UTF-8 to `''` on some platforms, and
+ * `getNumber` reinterprets any 8-byte payload as an IEEE 754 double without regard for the
+ * `setBuffer` that wrote it. `getBuffer` is the strict one — it answers for keys actually written as
+ * bytes — so it is consulted ahead of both, and only a *non-empty* string is trusted before it. A
+ * deliberate `setString(key, '')` is caught at the bottom, once a buffer at the same key is ruled
+ * out. Bytes that happen to decode as valid UTF-8 still surface as a string; nothing can tell those
+ * apart from a string that was written as one.
  */
 function readMmkvValue(driver: MmkvLikeDriver, key: string): StorageReadResult {
   const text = driver.getString(key);
-  if (text !== undefined) return { text, valueType: 'string' };
+  if (text !== undefined && text.length > 0) return { text, valueType: 'string' };
+
+  const buffer = driver.getBuffer?.(key);
+  if (buffer !== undefined && buffer.byteLength > 0) {
+    // Rendering the bytes would mean inventing an encoding for them; the length is the honest part.
+    return { text: `${buffer.byteLength} bytes`, valueType: 'buffer' };
+  }
 
   const numeric = driver.getNumber?.(key);
   if (numeric !== undefined) return { text: String(numeric), valueType: 'number' };
@@ -229,11 +304,7 @@ function readMmkvValue(driver: MmkvLikeDriver, key: string): StorageReadResult {
   const flag = driver.getBoolean?.(key);
   if (flag !== undefined) return { text: String(flag), valueType: 'boolean' };
 
-  const buffer = driver.getBuffer?.(key);
-  if (buffer !== undefined) {
-    // Rendering the bytes would mean inventing an encoding for them; the length is the honest part.
-    return { text: `${buffer.byteLength} bytes`, valueType: 'buffer' };
-  }
+  if (text !== undefined) return { text, valueType: 'string' };
 
   return { text: null, valueType: 'string' };
 }
@@ -278,10 +349,11 @@ export type SecureStoreLikeDriver<TOptions = never> = {
  */
 export function secureStoreAdapter<TOptions>(config: {
   driver: SecureStoreLikeDriver<TOptions>;
-  keys: readonly string[];
+  keys: readonly string[] | (() => MaybePromise<readonly string[]>);
   name?: string;
   options?: TOptions;
   readOnly?: boolean;
+  blacklist?: StorageKeyBlacklist;
 }): StorageAdapterDefinition {
   const { driver, options } = config;
   const hasSet = typeof driver.setItemAsync === 'function';
@@ -292,6 +364,9 @@ export function secureStoreAdapter<TOptions>(config: {
     kind: 'async',
     readOnly: config.readOnly,
     keys: config.keys,
+    blacklist: config.blacklist,
+    // The keychain stores strings; a number written here comes back as its own text.
+    supportedTypes: ['string'],
     getItem: (key) => driver.getItemAsync(key, options),
     setItem: hasSet
       ? async (key, text) => {
@@ -349,4 +424,13 @@ export function resolveStorageAdapters(
 /** A binary value is shown but never edited — there is no text form of it to round-trip. */
 export function isEditableValueType(valueType: StorageValueType): boolean {
   return valueType !== 'buffer';
+}
+
+/**
+ * The types a new key can be created as: what the store can hold, minus what cannot be typed. Asking
+ * the store first is what keeps the editor from offering a number to a store that would hand it back
+ * as text.
+ */
+export function creatableValueTypes(adapter: StorageAdapter): StorageValueType[] {
+  return adapter.supportedTypes.filter(isEditableValueType);
 }

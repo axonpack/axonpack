@@ -8,8 +8,8 @@
 
 Tap a floating button for four tabs on the device itself: **Network** (every request, resendable, with
 throttling), **Console** (every log, plus a prompt that answers), **Performance** (frame rate, memory,
-the moments the app froze) and **Storage** (every key you've saved, searchable and editable). No desktop
-debugger, no cable, and nothing captured until you switch it on.
+the moments the app froze) and **Storage** (every key you've saved — search it, edit it, import and
+export it). No desktop debugger, no cable, and nothing captured until you switch it on.
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![npm downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
@@ -225,10 +225,14 @@ was. A request still in flight shows an amber **PENDING** so you can tell "waiti
 
 **Finding one request among hundreds.** Search the text, then narrow with the chips: type (Fetch/XHR, JS,
 Img, Media, Other), status (2xx, 4xx, Failed, Pending), method, or source. The status, method and source
-chips are built from what you've actually captured, so they only ever offer real options. Search matches
+chips are built from what you've actually captured, so they only ever offer real options, and method and
+source take **more than one at a time** — two clients side by side, or GET and POST together. Status also
+takes an expression when a band is not the question: `>= 400`, `200-299`, or one exact code. Search matches
 light up in the list, and the box carries the three switches you expect from an editor: **match case**,
 **whole word**, and **regex**. **Invert** flips the whole filter — every chip, not just the text — and
-**Clear** resets all of it in one press. Extra toggles hide data URLs or failed requests.
+**Clear** resets all of it in one press. Under **More filters**: a size and a duration range (`20kb`,
+`1.5s` — the units you'd say out loud), show only what is still in flight, show only what one of your
+override rules answered, and the toggles that hide data URLs or failed requests.
 
 **Testing a bad connection.** Pick Slow 3G, Fast 3G, Fast 4G, Offline, or set your own speed and delay. It
 applies immediately, to your app's own requests and to in-app browser pages. You can also pretend to be an
@@ -237,7 +241,9 @@ ran under, so requests from before and after a change stay easy to tell apart.
 
 **Reading the room.** Turn on the traffic graph to see request volume over time and tap a section to zoom
 the list to that moment. Turn on grouping to bundle rows by where they came from, with a count per group.
-Or switch to compact rows to fit more on screen.
+Or switch to compact rows to fit more on screen. **Sort by** time, size, duration or status — the arrow in
+the toolbar flips the direction and says what pressing it would give you, so "which one is slow" is one tap
+rather than a read through two hundred rows.
 
 #### Tapping a request
 
@@ -468,11 +474,13 @@ export const devtools = createDevtoolsClient({
       asyncStorageAdapter({ driver: AsyncStorage }),
       mmkvAdapter({ driver: mmkv }),
       // SecureStore can't list its own keys, so you name the ones worth watching.
+      // A function works too, if your app keeps its own list — it's read on every refresh.
       secureStoreAdapter({ driver: SecureStore, keys: ['session'] }),
       // Anything else — your own cache, a wrapper, an in-memory store.
       defineStorageAdapter({
         name: 'My cache',
         kind: 'sync',
+        blacklist: /^secret\./, // keys you'd rather the panel never see
         getAllKeys: () => cache.keys(),
         getItem: (key) => cache.get(key) ?? null,
         setItem: (key, text) => cache.set(key, text),
@@ -494,11 +502,25 @@ and value:
 - **Tap a key** for its value in the same expandable JSON tree the Network tab uses, the raw characters
   exactly as stored, an editor, and an Info tab. Copy the key, the value, or the pair as JSON.
 - **Edit** a value and **delete** a key, one at a time, with a confirmation on delete.
-- **Export** the filtered keys of a store as JSON through the share sheet.
+- **Add** a key the store doesn't have yet: you pick the name, the type and the value. A key that's
+  already there is refused rather than quietly overwritten.
+- **Export** the filtered keys of a store as JSON through the share sheet. The file carries a version, so
+  it can be read back later.
+- **Import** one of those files: paste it in and you're told how many keys are new, how many would be
+  overwritten, how many already hold that value and how many are skipped — before anything is written.
 
 Whether a store can be edited or deleted from is derived from what you handed over: register it without a
-`setItem` and the editor says so. `storage: { readOnly: true }`, or `readOnly` on one adapter, makes that
-explicit.
+`setItem` and the editor says so. Add and Import only appear for a store that can be written to.
+`storage: { readOnly: true }`, or `readOnly` on one adapter, makes that explicit.
+
+Two more options on an adapter are worth knowing:
+
+- **`blacklist`** — a `RegExp` or a function. A key it matches is never listed, never read and never
+  written, so its value never reaches the panel at all. The tab says a blacklist is set, but not how many
+  keys it hid.
+- **`supportedTypes`** — what the store can really hold. AsyncStorage and SecureStore hand back a string
+  whatever went in, so they declare `['string']` for you; MMKV takes all four. The Add-key sheet offers
+  only these, so you can't write something the store would flatten.
 
 ### Debug
 
@@ -626,8 +648,9 @@ go out at full speed.
 | `defaultTheme`                       | `string`                      | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                 |
 | `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                              |
 | `webviewSources`                     | `string[]`                    | `undefined` | Names of in-app browser views allowed to report in, for the Network and Console tabs.         |
-| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                           |
-| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest`. This is what catches axios and most other HTTP libraries.           |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests — `fetch`, Expo's fetch, `XMLHttpRequest`, a JSI client, a page's own. |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages, the app's own and a page's.                 |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events, whichever client opened them.             |
 | `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab not recording. The record button in its toolbar starts capture.          |
 | `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared browser views.               |
 | `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt. Off in release builds unless you ask for it.                             |

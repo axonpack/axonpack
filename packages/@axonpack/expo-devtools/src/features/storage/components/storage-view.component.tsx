@@ -2,14 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { FlatList, SectionList, Text, View } from 'react-native';
 
 import { AdapterSelector } from './adapter-selector.component';
+import { AddKeySheet } from './add-key-sheet.component';
+import { ImportSheet } from './import-sheet.component';
 import { DetailPanel } from './detail-panel';
 import { EmptyState } from './empty-state.component';
 import { EntryRow } from './entry-row.component';
 import { FiltersPanel } from './filters-panel.component';
 import { StorageSummary } from './storage-summary.component';
+import {
+  DevtoolsToolbar,
+  ToolbarDivider,
+} from '../../../core/components/devtools-toolbar.component';
+import { IconButton } from '../../../core/components/ui/icon-button.ui';
+import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
+import { animateNextLayout } from '../../../core/utils/layout-animation.util';
+import { buildMatcher } from '../../../core/utils/text-search.util';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { readAdapterById, readAllAdapters } from '../services/read-storage.service';
 import { storageStore, type StorageEntry } from '../stores/storage.store';
-import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import type { StoredValueKind } from '../utils/classify-value.util';
 import { exportStorageSnapshot } from '../utils/export-storage-snapshot.util';
 import {
@@ -20,14 +30,6 @@ import {
   type StorageSortField,
 } from '../utils/filter-entries.util';
 import { namespaceOf } from '../utils/formatters.util';
-import { buildMatcher } from '../../../core/utils/text-search.util';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import {
-  DevtoolsToolbar,
-  ToolbarDivider,
-} from '../../../core/components/devtools-toolbar.component';
-import { IconButton } from '../../../core/components/ui/icon-button.ui';
-import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 
 function keyExtractor(entry: StorageEntry): string {
   return `${entry.adapterId}:${entry.key}`;
@@ -52,6 +54,8 @@ export function StorageView() {
    * is also what closes the sheet.
    */
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const flatListRef = useRef<FlatList<StorageEntry>>(null);
   const sectionListRef = useRef<SectionList<StorageEntry>>(null);
@@ -189,6 +193,8 @@ export function StorageView() {
           onChange={(adapterId) => {
             setActiveId(adapterId);
             setSelectedKey(null);
+            setAddOpen(false);
+            setImportOpen(false);
           }}
         />>
         {adapters.length > 1 && <ToolbarDivider />}
@@ -198,6 +204,14 @@ export function StorageView() {
           onPress={() => (state ? readAdapterById(state.adapter.id) : readAllAdapters())}
           label="Refresh"
         />
+        {state?.adapter.canEdit === true && (
+          <IconButton
+            name="add"
+            color={COLORS.textSecondary}
+            onPress={() => setAddOpen(true)}
+            label="Add key"
+          />
+        )}
         <IconButton
           name="filter-list"
           color={filtersOpen ? COLORS.accent : COLORS.textSecondary}
@@ -211,9 +225,17 @@ export function StorageView() {
         <IconButton
           name="file-download"
           color={COLORS.textSecondary}
-          onPress={() => state && exportStorageSnapshot(state.adapter.name, visibleEntries)}
+          onPress={() => state && exportStorageSnapshot(state.adapter, visibleEntries)}
           label="Export"
         />
+        {state?.adapter.canEdit === true && (
+          <IconButton
+            name="file-upload"
+            color={COLORS.textSecondary}
+            onPress={() => setImportOpen(true)}
+            label="Import"
+          />
+        )}
       </DevtoolsToolbar>
 
       {groupByNamespace ? (
@@ -257,6 +279,19 @@ export function StorageView() {
       )}
 
       <DetailPanel entry={selected} state={state} onClose={() => setSelectedKey(null)} />
+
+      {state && (
+        <AddKeySheet adapter={state.adapter} visible={addOpen} onClose={() => setAddOpen(false)} />
+      )}
+
+      {state && (
+        <ImportSheet
+          adapter={state.adapter}
+          entries={entries}
+          visible={importOpen}
+          onClose={() => setImportOpen(false)}
+        />
+      )}
     </View>
   );
 }

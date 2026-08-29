@@ -60,6 +60,17 @@ export function setWebViewSocketCapture(enabled: boolean) {
   captureSockets = enabled;
 }
 
+/**
+ * The same, for a page's streams. Unlike the app's own, a page's stream exists only through this
+ * wrapper — there is no HTTP request underneath it that anything here can see — so turning streams
+ * off hides it altogether rather than leaving a row with no events.
+ */
+let captureStreams = true;
+
+export function setWebViewStreamCapture(enabled: boolean) {
+  captureStreams = enabled;
+}
+
 type WebViewMessageEventLike = {
   nativeEvent: {
     data: string;
@@ -280,14 +291,19 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
 
         var wire = positive(timing.encodedBodySize);
         var decoded = positive(timing.decodedBodySize);
+        var transfer = wire === undefined && decoded === undefined
+          ? undefined
+          : { wireBytes: wire, decodedBytes: decoded };
 
-        post({
-          id: id,
-          phases: phases,
-          transfer: wire === undefined && decoded === undefined
-            ? undefined
-            : { wireBytes: wire, decodedBytes: decoded }
-        });
+        // A cross-origin response with no Timing-Allow-Origin zeroes every detailed field, so an
+        // entry can exist and measure nothing. Sent anyway, it would put a waterfall with no phases
+        // in it in front of the numbers the page did measure — so nothing is sent at all.
+        var measured = phases.queuedMs !== undefined || phases.dnsMs !== undefined
+          || phases.tcpMs !== undefined || phases.tlsMs !== undefined
+          || phases.waitMs !== undefined || phases.downloadMs !== undefined;
+        if (!measured && transfer === undefined) return;
+
+        post({ id: id, phases: measured ? phases : undefined, transfer: transfer });
       }, 0);
     }
 
@@ -311,6 +327,10 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
         }
 
         return originalFetch(input, init).then(function (response) {
+          // The promise resolves once the headers are in, which is the one instant a page can see
+          // between the two halves of its own request. Read before the throttle's wait below, which
+          // belongs to the download and not to this.
+          var ttfb = Date.now() - startedAt;
           var responseHeaders = headersFromResponse(response.headers);
           // Body has to be read before the throttle wait so the delay can account for its size,
           // and the response is only handed back once that wait is over.
@@ -318,7 +338,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
             .then(function (text) {
               var size = extractSize(responseHeaders, text);
               return sleep(throttleRemainingMs(size, startedAt)).then(function () {
-                post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: size, duration: Date.now() - startedAt });
+                post({ id: id, status: 'success', statusCode: response.status, statusText: response.statusText, responseBody: text, responseHeaders: responseHeaders, mimeType: extractMimeType(responseHeaders), size: size, ttfb: ttfb, duration: Date.now() - startedAt });
                 relayResourceTiming(id, url);
                 return response;
               });
@@ -516,6 +536,13 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
         post({ id: id, method: String(xhr.__bruinMethod || 'GET').toUpperCase(), url: xhr.__bruinUrl || '', status: 'pending', requestBody: previewBody(body), requestHeaders: xhr.__bruinHeaders, pageCookies: pageCookies(), startedAt: startedAt, conditions: activeConditions });
 
         xhr.addEventListener('readystatechange', function () {
+          // Headers arrive one state before the body is complete, which is where the wait can be told
+          // apart from the download — the same seam the app's own XHR patch measures. Nothing is held
+          // back here: the throttle only defers the DONE transition, so this reading is the real one.
+          if (xhr.readyState === OriginalXHR.HEADERS_RECEIVED) {
+            post({ id: id, ttfb: Date.now() - startedAt });
+            return;
+          }
           if (xhr.readyState !== OriginalXHR.DONE) return;
           var isNetworkFailure = xhr.status === 0;
           var responseBody = readResponseBody(xhr);
@@ -569,7 +596,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
 
     // Streams the page opens. A page has a real EventSource, which React Native does not ship at all —
     // so this is the one transport whose page version needs no interpretation of a wire format.
-    ${buildEventSourcePatch()}
+    ${captureStreams ? buildEventSourcePatch() : ''}
   })();
   true;`;
 }
@@ -816,6 +843,9 @@ function applySocketEvent(source: string, payload: WebViewSocketPayload) {
  * with its events beside it. So the row, the Events tab and the filters all work on it unchanged.
  */
 function applyStreamEvent(source: string, payload: WebViewStreamPayload) {
+  // A page injected before the switch was flipped keeps relaying, so the answer is checked here too.
+  if (!captureStreams) return;
+
   if (payload.event === 'connect') {
     networkLogStore.add({
       id: payload.id,

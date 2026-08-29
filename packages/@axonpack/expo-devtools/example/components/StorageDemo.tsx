@@ -46,6 +46,8 @@ function seedMmkv() {
 
 function seedMemory() {
   for (const [key, value] of Object.entries(SEED)) memoryStore.set(key, value);
+  // Blacklisted in `devtools.ts`: written here, and the tab should never show it.
+  memoryStore.set('secret.api-key', 'sk-live-do-not-show');
 }
 
 async function seedSecureStore() {

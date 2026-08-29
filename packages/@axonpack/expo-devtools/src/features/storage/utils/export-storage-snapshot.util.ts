@@ -1,6 +1,8 @@
 import { Platform, Share } from 'react-native';
 
+import { buildStorageExport } from './build-storage-export.util';
 import { encodeBase64 } from '../../../core/utils/base64.util';
+import type { StorageAdapter } from '../services/define-adapter.service';
 import type { StorageEntry } from '../stores/storage.store';
 
 function fileName(adapterName: string): string {
@@ -13,18 +15,9 @@ function fileName(adapterName: string): string {
  * the network export takes — no filesystem module, so nothing is written to disk. iOS additionally
  * gets a base64 `data:` URL so the sheet has a named attachment for Files and Mail.
  */
-export async function exportStorageSnapshot(adapterName: string, entries: StorageEntry[]) {
+export async function exportStorageSnapshot(adapter: StorageAdapter, entries: StorageEntry[]) {
   const text = JSON.stringify(
-    {
-      store: adapterName,
-      exportedAt: new Date().toISOString(),
-      entries: entries.map((entry) => ({
-        key: entry.key,
-        value: entry.text,
-        type: entry.valueType,
-        bytes: entry.size,
-      })),
-    },
+    buildStorageExport(adapter, entries, new Date().toISOString()),
     null,
     2
   );
@@ -32,13 +25,13 @@ export async function exportStorageSnapshot(adapterName: string, entries: Storag
   try {
     if (Platform.OS === 'ios') {
       await Share.share({
-        title: fileName(adapterName),
+        title: fileName(adapter.name),
         message: text,
         url: `data:application/json;base64,${encodeBase64(text)}`,
       });
       return;
     }
-    await Share.share({ title: fileName(adapterName), message: text });
+    await Share.share({ title: fileName(adapter.name), message: text });
   } catch {
     // The user dismissed the sheet, or there's nothing installed to share to.
   }

@@ -32,6 +32,9 @@ export function StorageSummary({
       ? `Read ${entries.length} of ${state.totalKeys} keys — the rest are past the cap.`
       : undefined,
     adapter.readOnly ? 'Read-only — values here cannot be edited or deleted.' : undefined,
+    // Not "3 keys are hidden": the keys are filtered before they are read, so the count of what
+    // matched is something this tab deliberately never learns.
+    adapter.hasBlacklist ? 'A blacklist is set — any key it matches was never read.' : undefined,
   ].filter((note): note is string => note !== undefined);
 
   return (

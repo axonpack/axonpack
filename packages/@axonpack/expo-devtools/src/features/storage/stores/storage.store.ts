@@ -122,7 +122,11 @@ export const storageStore = {
     if (!enabled) return;
     patchState(adapterId, { status: 'error', error: message });
   },
-  /** Upserts one key after an edit, so a save doesn't re-read the whole store. */
+  /**
+   * Upserts one key after a write, so a save doesn't re-read the whole store. A key that wasn't
+   * there is a key the store didn't hold a moment ago, so the total moves with it — otherwise the
+   * summary reads one short until the next refresh.
+   */
   patchEntry(adapterId: string, entry: StorageEntry) {
     const state = snapshot.adapters.find((current) => current.adapter.id === adapterId);
     if (!state) return;
@@ -133,7 +137,10 @@ export const storageStore = {
         ? [...state.entries, entry]
         : state.entries.map((current, at) => (at === index ? entry : current));
 
-    patchState(adapterId, { entries });
+    patchState(adapterId, {
+      entries,
+      totalKeys: index === -1 ? state.totalKeys + 1 : state.totalKeys,
+    });
   },
   removeEntry(adapterId: string, key: string) {
     const state = snapshot.adapters.find((current) => current.adapter.id === adapterId);
