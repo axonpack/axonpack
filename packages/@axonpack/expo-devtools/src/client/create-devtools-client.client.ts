@@ -24,6 +24,7 @@ import { observeNitroFetch } from '../features/network/services/nitro-fetch.serv
 import { patchFetch } from '../features/network/services/patch-fetch.service';
 import { patchWebSocket } from '../features/network/services/patch-websocket.service';
 import { patchXHR } from '../features/network/services/patch-xhr.service';
+import { setStreamCapture } from '../features/network/services/record-stream-events.service';
 import {
   getWebViewConditionsRef,
   getWebViewUserAgent,
@@ -33,6 +34,7 @@ import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
   setWebViewSocketCapture,
+  setWebViewStreamCapture,
 } from '../features/network/services/webview-network-logger.service';
 import { networkConditionsStore } from '../features/network/stores/network-conditions.store';
 import { networkLogStore } from '../features/network/stores/network-log.store';
@@ -59,17 +61,28 @@ type WebViewMessageEventLike = {
   };
 };
 
+/**
+ * The switches name the **kind of traffic**, not the mechanism that carried it. A request is a request
+ * whether it went out through `fetch`, through `XMLHttpRequest`, from a JSI client or from inside a
+ * page, and someone turning requests off means all of them — the transports are this package's problem
+ * and there are already five of them. Every one defaults to `true`.
+ */
 export type DevtoolsNetworkConfig = {
-  includeFetch?: boolean;
-  includeXmlHttpRequest?: boolean;
-  /** WebSocket connections and their messages. Defaults to `true`. */
-  includeWebSocket?: boolean;
   /**
-   * Traffic from `react-native-nitro-fetch`, read from the observer that library publishes rather than
-   * from a patch — a JSI client answers none. Defaults to `true`, and is a no-op unless the library is
-   * installed.
+   * Plain requests, however they were made: `fetch`, Expo's own fetch, `XMLHttpRequest`, a JSI client,
+   * and a page's own requests. Off also means no phase timing, since there is nothing to time.
    */
-  includeNitroFetch?: boolean;
+  http?: boolean;
+  /** WebSocket connections and their messages, the app's own and a page's. */
+  websocket?: boolean;
+  /**
+   * Server-sent event streams and their events, whichever client opened them.
+   *
+   * The app's own stream is still recognised as one with this off — its endless body has to be, or it
+   * would be read as a response — so the row remains and only the events are dropped. A page's stream
+   * has no request underneath it that anything here can see, so that one disappears entirely.
+   */
+  sse?: boolean;
   disabledByDefault?: boolean;
 };
 
@@ -205,10 +218,9 @@ export function createDevtoolsClient<
 >(config?: DevtoolsClientConfig<TWebviewSources>) {
   const webviewSources = config?.webviewSources;
   const {
-    includeFetch = true,
-    includeXmlHttpRequest = true,
-    includeWebSocket = true,
-    includeNitroFetch = true,
+    http: captureHttp = true,
+    websocket: captureSockets = true,
+    sse: captureStreams = true,
     disabledByDefault: networkStartsPaused = false,
   } = config?.network ?? {};
   const {
@@ -311,15 +323,22 @@ export function createDevtoolsClient<
 
       networkLogStore.setEnabled(true);
       if (networkStartsPaused) networkLogStore.setPaused(true);
-      if (includeFetch) patchFetch();
-      if (includeXmlHttpRequest) patchXHR();
-      if (includeWebSocket) patchWebSocket();
-      // The same switch covers a page's own sockets, which the native patch cannot see at all.
-      setWebViewSocketCapture(includeWebSocket);
-      if (includeNitroFetch) observeNitroFetch();
-      // Before the app's first request on purpose: on Android the phase listener goes in by replacing
-      // React Native's OkHttp client factory, and that client is built once, on first use.
-      if (includeFetch || includeXmlHttpRequest) installNativeTimingReporter();
+      if (captureHttp) {
+        // Every transport a request can leave by, which is what one switch over requests has to mean.
+        patchFetch();
+        patchXHR();
+        // Before the app's first request on purpose: on Android the phase listener goes in by
+        // replacing React Native's OkHttp client factory, and that client is built once, on first use.
+        installNativeTimingReporter();
+      }
+      if (captureSockets) patchWebSocket();
+      // One observer carries both of that client's kinds, so it is told which of them are wanted
+      // rather than being attached or not.
+      observeNitroFetch({ http: captureHttp, websocket: captureSockets });
+      // The page's own of each, which no patch above can see: a page runs in its own engine.
+      setWebViewSocketCapture(captureSockets);
+      setWebViewStreamCapture(captureStreams);
+      setStreamCapture(captureStreams);
       if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
       if (consoleStartsPaused) consoleLogStore.setPaused(true);
       if (captureConsole) patchConsole();

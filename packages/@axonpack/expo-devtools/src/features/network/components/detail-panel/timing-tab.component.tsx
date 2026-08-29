@@ -7,6 +7,7 @@ import { formatDuration } from '../../../../core/utils/format-duration.util';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 import { isNativePhaseTimingActive } from '../../services/native-timing.service';
 import type { NetworkLogEntry } from '../../stores/network-log.store';
+import { hasMeasuredPhase } from '../../utils/phase-layout.util';
 
 /**
  * One account of a request, never two.
@@ -17,8 +18,10 @@ import type { NetworkLogEntry } from '../../stores/network-log.store';
  * queue, the handshake and the send, while the platform's contains none of them. Printing both meant
  * two rows called Waiting with different figures, which reads as one of them being wrong.
  *
- * So the patches' timing is the fallback, for the traffic no native stack here reports on: a WebView's
- * requests, a build without the native module, and every platform this package has not hooked.
+ * So the patches' timing is the fallback, for the traffic no native stack here reports on: a build
+ * without the native module, every platform this package has not hooked, and a page's request that
+ * nothing measured the inside of. A phases object with no phase measured is not phases — it takes the
+ * fallback rather than drawing a waterfall of nothing over numbers that do exist.
  */
 export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
   const rowStyles = useRowStyles();
@@ -28,7 +31,7 @@ export function TimingTab({ entry }: { entry: NetworkLogEntry }) {
     <View style={rowStyles.section}>
       <TimingRow label="Started At" value={new Date(entry.startedAt).toLocaleTimeString()} />
 
-      {entry.phases ? (
+      {entry.phases && hasMeasuredPhase(entry.phases) ? (
         <>
           <PhaseWaterfall phases={entry.phases} appDurationMs={entry.duration} />
           <Text style={styles.timingNote} selectable>

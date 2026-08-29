@@ -1,52 +1,44 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import {
-  FlatList,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { FlatList, SectionList, Text, useWindowDimensions, View } from 'react-native';
 
 import { DetailPanel } from './detail-panel';
+import { FilterPanel } from './filter-panel.component';
 import { LogRow } from './log-row.component';
 import { OverrideEditor } from './override-editor.component';
 import { OverviewStrip, type TimeRange } from './overview-strip.component';
+import { SettingsPanel } from './settings-panel.component';
 import { SocketDetailPanel } from './socket-detail-panel.component';
 import { SocketRow } from './socket-row.component';
-import { ThrottleSelector } from './throttle-selector.component';
-import { UserAgentSelector } from './user-agent-selector.component';
 import {
   DevtoolsToolbar,
   ToolbarDivider,
 } from '../../../core/components/devtools-toolbar.component';
-import { Chip } from '../../../core/components/ui/chip.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
-import { SearchInput } from '../../../core/components/ui/search-input.ui';
-import { SettingRow } from '../../../core/components/ui/setting-row.ui';
-import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
+import { replayNitroEntries } from '../services/nitro-fetch.service';
 import { networkLogStore } from '../stores/network-log.store';
 import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
-import { replayNitroEntries } from '../services/nitro-fetch.service';
 import { exportNetworkLog } from '../utils/export-network-log.util';
 import {
+  compileNetworkFilters,
   DEFAULT_NETWORK_FILTERS,
   hasActiveFilters,
   matchesFilters,
   matchesSocketFilters,
   sortStatusClasses,
   statusClass,
-  statusClassLabel,
   type NetworkFilters,
 } from '../utils/filter-entries.util';
 import { formatSource } from '../utils/formatters.util';
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from '../utils/resource-type.util';
+import {
+  DEFAULT_NETWORK_SORT,
+  sortDirectionLabel,
+  sortEntries,
+  type NetworkSort,
+} from '../utils/sort-entries.util';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
 
@@ -66,9 +58,8 @@ export function NetworkView() {
   );
 
   const [filters, setFilters] = useState<NetworkFilters>(DEFAULT_NETWORK_FILTERS);
-  const [reversed, setReversed] = useState(false);
+  const [sort, setSort] = useState<NetworkSort>(DEFAULT_NETWORK_SORT);
   const [openPanel, setOpenPanel] = useState<'settings' | 'filters' | null>(null);
-  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [bigRows, setBigRows] = useState(true);
   const [groupByFetchClient, setGroupByFetchClient] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
@@ -105,14 +96,17 @@ export function NetworkView() {
     [filters.search, filters.modes]
   );
 
+  // The status expression and the four thresholds, read once per keystroke rather than once per row.
+  const compiled = useMemo(() => compileNetworkFilters(filters), [filters]);
+
   const overviewLogs = useMemo(
     () =>
       logs.filter((entry) =>
         entry.kind === 'websocket'
-          ? matchesSocketFilters(entry, filters, matcher)
-          : matchesFilters(entry, filters, matcher)
+          ? matchesSocketFilters(entry, filters, matcher, compiled)
+          : matchesFilters(entry, filters, matcher, compiled)
       ),
-    [logs, filters, matcher]
+    [logs, filters, matcher, compiled]
   );
 
   /** The overview charts durations and status codes, neither of which a socket has. */
@@ -122,17 +116,14 @@ export function NetworkView() {
   );
 
   const visibleLogs = useMemo(() => {
-    let result = activeTimeRange
+    const inRange = activeTimeRange
       ? overviewLogs.filter(
           (entry) =>
             entry.startedAt >= activeTimeRange.start && entry.startedAt <= activeTimeRange.end
         )
       : overviewLogs;
-    if (reversed) {
-      result = [...result].reverse();
-    }
-    return result;
-  }, [overviewLogs, activeTimeRange, reversed]);
+    return sortEntries(inRange, sort);
+  }, [overviewLogs, activeTimeRange, sort]);
 
   const sections = useMemo(() => {
     if (!groupByFetchClient) return [];
@@ -151,11 +142,6 @@ export function NetworkView() {
     setOpenPanel((current) => (current === panel ? null : panel));
   }
 
-  function toggleMoreFilters() {
-    animateNextLayout();
-    setMoreFiltersOpen((current) => !current);
-  }
-
   function patchFilters(patch: Partial<NetworkFilters>) {
     setFilters((current) => ({ ...current, ...patch }));
   }
@@ -167,6 +153,61 @@ export function NetworkView() {
   }
 
   const filtersActive = hasActiveFilters(filters) || activeTimeRange !== null;
+
+  /**
+   * The panels and the overview scroll with the rows rather than sitting above them. Pinned, an open
+   * filter panel leaves a phone almost no list to look at — and the list is the point of the tab. Same
+   * reasoning, and the same shape, as the Storage tab's header.
+   *
+   * Passed as an element, not as a function: a new function each render is a new component type to
+   * `VirtualizedList`, which would remount the header and drop the search box's focus on every
+   * keystroke.
+   */
+  const listHeader = (
+    <>
+      {openPanel === 'settings' && (
+        <SettingsPanel
+          bigRows={bigRows}
+          onChangeBigRows={setBigRows}
+          groupByFetchClient={groupByFetchClient}
+          onChangeGroupByFetchClient={setGroupByFetchClient}
+          showOverview={showOverview}
+          onChangeShowOverview={(value) => {
+            setShowOverview(value);
+            if (!value) setActiveTimeRange(null);
+          }}
+          stackedHeaders={stackedHeaders}
+          onChangeStackedHeaders={setStackedHeaders}
+          sort={sort}
+          onChangeSort={setSort}
+        />
+      )}
+
+      {openPanel === 'filters' && (
+        <FilterPanel
+          filters={filters}
+          compiled={compiled}
+          onChange={patchFilters}
+          onClear={clearFilters}
+          visibleCount={visibleLogs.length}
+          totalCount={logs.length}
+          statuses={statuses}
+          methods={methods}
+          sources={sources}
+          searchInvalid={matcher?.invalid ?? false}
+          filtersActive={filtersActive}
+        />
+      )}
+
+      {showOverview && (
+        <OverviewStrip
+          entries={overviewRequests}
+          activeRange={activeTimeRange}
+          onSelectRange={setActiveTimeRange}
+        />
+      )}
+    </>
+  );
 
   const renderRow = useCallback(
     ({ item }: { item: NetworkEntry }) =>
@@ -209,10 +250,11 @@ export function NetworkView() {
         <ToolbarDivider />
 
         <IconButton
-          name={reversed ? 'arrow-upward' : 'arrow-downward'}
+          name={sort.descending ? 'arrow-downward' : 'arrow-upward'}
           color={COLORS.textSecondary}
-          onPress={() => setReversed((c) => !c)}
-          label={reversed ? 'Show oldest first' : 'Show newest first'}
+          onPress={() => setSort((current) => ({ ...current, descending: !current.descending }))}
+          // What flipping it would give you, in the vocabulary of whatever it is sorting on.
+          label={sortDirectionLabel({ ...sort, descending: !sort.descending })}
         />
         <IconButton
           name="filter-list"
@@ -251,174 +293,6 @@ export function NetworkView() {
         />
       </DevtoolsToolbar>
 
-      {openPanel === 'settings' && (
-        <ScrollView style={styles.scrollablePanel} contentContainerStyle={styles.panel}>
-          <SettingRow label="Large request rows" value={bigRows} onValueChange={setBigRows} />
-          <SettingRow
-            label="Group by fetch client"
-            value={groupByFetchClient}
-            onValueChange={setGroupByFetchClient}
-          />
-          <SettingRow
-            label="Show overview"
-            value={showOverview}
-            onValueChange={(value) => {
-              setShowOverview(value);
-              if (!value) setActiveTimeRange(null);
-            }}
-          />
-          <SettingRow
-            label="Stack header values"
-            value={stackedHeaders}
-            onValueChange={setStackedHeaders}
-          />
-          <ThrottleSelector />
-          <UserAgentSelector />
-        </ScrollView>
-      )}
-
-      {openPanel === 'filters' && (
-        <View style={styles.panel}>
-          <View style={styles.filterHeader}>
-            <Text style={styles.filterCount}>
-              {visibleLogs.length} of {logs.length}
-            </Text>
-            <Chip
-              label="Invert"
-              active={filters.invert}
-              onPress={() => patchFilters({ invert: !filters.invert })}
-            />
-            <TouchableOpacity
-              onPress={clearFilters}
-              disabled={!filtersActive}
-              hitSlop={HIT_SLOP.default}
-              accessibilityLabel="Clear all filters"
-              style={styles.clearFilters}>
-              <Text style={[styles.clearFiltersLabel, !filtersActive && styles.clearFiltersOff]}>
-                Clear
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <SearchInput
-            value={filters.search}
-            onChangeText={(search) => patchFilters({ search })}
-            modes={filters.modes}
-            onModesChange={(modes) => patchFilters({ modes })}
-            invalid={matcher?.invalid ?? false}
-          />
-
-          <Text style={styles.filterSectionLabel}>Type</Text>
-          <View style={styles.chipsRow}>
-            <Chip
-              label="All"
-              active={filters.type === null}
-              onPress={() => patchFilters({ type: null })}
-            />
-            {RESOURCE_TYPES.map((type) => (
-              <Chip
-                key={type}
-                label={RESOURCE_TYPE_LABELS[type]}
-                active={filters.type === type}
-                onPress={() => patchFilters({ type })}
-              />
-            ))}
-          </View>
-
-          {statuses.length > 0 && (
-            <>
-              <Text style={styles.filterSectionLabel}>Status</Text>
-              <View style={styles.chipsRow}>
-                <Chip
-                  label="All"
-                  active={filters.status === null}
-                  onPress={() => patchFilters({ status: null })}
-                />
-                {statuses.map((status) => (
-                  <Chip
-                    key={status}
-                    label={statusClassLabel(status)}
-                    active={filters.status === status}
-                    onPress={() => patchFilters({ status })}
-                  />
-                ))}
-              </View>
-            </>
-          )}
-
-          {methods.length > 0 && (
-            <>
-              <Text style={styles.filterSectionLabel}>Method</Text>
-              <View style={styles.chipsRow}>
-                <Chip
-                  label="All"
-                  active={filters.method === null}
-                  onPress={() => patchFilters({ method: null })}
-                />
-                {methods.map((method) => (
-                  <Chip
-                    key={method}
-                    label={method}
-                    active={filters.method === method}
-                    onPress={() => patchFilters({ method })}
-                  />
-                ))}
-              </View>
-            </>
-          )}
-
-          {sources.length > 0 && (
-            <>
-              <Text style={styles.filterSectionLabel}>Source</Text>
-              <View style={styles.chipsRow}>
-                <Chip
-                  label="All"
-                  active={filters.source === null}
-                  onPress={() => patchFilters({ source: null })}
-                />
-                {sources.map((source) => (
-                  <Chip
-                    key={source}
-                    label={formatSource(source)}
-                    active={filters.source === source}
-                    onPress={() => patchFilters({ source })}
-                  />
-                ))}
-              </View>
-            </>
-          )}
-
-          <TouchableOpacity onPress={toggleMoreFilters}>
-            <Text style={styles.moreFiltersToggle}>
-              {moreFiltersOpen ? 'Hide more filters' : 'More filters'}
-            </Text>
-          </TouchableOpacity>
-
-          {moreFiltersOpen && (
-            <View>
-              <SettingRow
-                label="Hide data URLs"
-                value={filters.hideDataUrls}
-                onValueChange={(hideDataUrls) => patchFilters({ hideDataUrls })}
-              />
-              <SettingRow
-                label="Hide failed requests"
-                value={filters.hideFailed}
-                onValueChange={(hideFailed) => patchFilters({ hideFailed })}
-              />
-            </View>
-          )}
-        </View>
-      )}
-
-      {showOverview && (
-        <OverviewStrip
-          entries={overviewRequests}
-          activeRange={activeTimeRange}
-          onSelectRange={setActiveTimeRange}
-        />
-      )}
-
       {groupByFetchClient ? (
         <SectionList
           sections={sections}
@@ -432,6 +306,9 @@ export function NetworkView() {
           )}
           contentContainerStyle={styles.listContent}
           contentInsetAdjustmentBehavior="never"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={<Text style={styles.empty}>No requests captured yet</Text>}
           ListFooterComponent=<InsetPadding edge="bottom" />
         />
@@ -443,6 +320,9 @@ export function NetworkView() {
           style={styles.list}
           contentContainerStyle={styles.listContent}
           contentInsetAdjustmentBehavior="never"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             <Text style={styles.empty}>
               {logs.length === 0 ? 'No requests captured yet' : 'No requests match your filter'}
@@ -482,62 +362,6 @@ const useStyles = makeThemedStyles((COLORS) => ({
     paddingVertical: 6,
     paddingBottom: 24,
     flexGrow: 1,
-  },
-  panel: {
-    padding: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.background,
-  },
-
-  scrollablePanel: {
-    flexGrow: 0,
-    maxHeight: 320,
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  filterCount: {
-    flex: 1,
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontVariant: ['tabular-nums'],
-  },
-  clearFilters: {
-    minHeight: TOUCH_TARGET.dense,
-    justifyContent: 'center',
-  },
-  clearFiltersLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.accent,
-  },
-  clearFiltersOff: {
-    color: COLORS.textSecondary,
-    opacity: 0.5,
-  },
-  moreFiltersToggle: {
-    fontSize: 12,
-    color: COLORS.accent,
-    fontWeight: '600',
-    marginTop: 10,
-  },
-  filterSectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 8,
   },
   sectionHeader: {
     paddingHorizontal: 12,

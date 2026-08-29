@@ -11,6 +11,16 @@ export const PHASES: { key: keyof NetworkPhases; label: string }[] = [
   { key: 'downloadMs', label: 'Downloading' },
 ];
 
+/**
+ * Whether anything inside the request was actually measured. A phases object can arrive with every
+ * phase absent — a page's own entry reports zeroes for a cross-origin response nobody allowed it to
+ * time — and a waterfall of no bars is worse than the two numbers a patch always has, so this is what
+ * decides which of the two accounts the Timing tab gives.
+ */
+export function hasMeasuredPhase(phases: NetworkPhases): boolean {
+  return PHASES.some((phase) => typeof phases[phase.key] === 'number');
+}
+
 /** Where each phase starts and how long it ran, as fractions of the whole request. */
 export function layOutPhases(phases: NetworkPhases, fallbackTotalMs?: number) {
   const measured = PHASES.map((phase) => ({

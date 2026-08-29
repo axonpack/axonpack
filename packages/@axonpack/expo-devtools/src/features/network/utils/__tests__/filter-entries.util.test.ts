@@ -1,9 +1,12 @@
-import type { NetworkLogEntry } from '../../stores/network-log.store';
+import type { NetworkLogEntry, WebSocketLogEntry } from '../../stores/network-log.store';
 import { buildMatcher, DEFAULT_SEARCH_MODES } from '../../../../core/utils/text-search.util';
 import {
+  compileNetworkFilters,
   DEFAULT_NETWORK_FILTERS,
   hasActiveFilters,
+  isUnreadable,
   matchesFilters,
+  matchesSocketFilters,
   sortStatusClasses,
   statusClass,
   statusClassLabel,
@@ -28,6 +31,32 @@ function filtersWith(overrides: Partial<NetworkFilters> = {}): NetworkFilters {
 
 function matcherFor(text: string) {
   return buildMatcher({ text, ...DEFAULT_SEARCH_MODES });
+}
+
+/** The two expressions and the four thresholds are read once, so every call site takes the pair. */
+function matches(
+  entry: NetworkLogEntry,
+  filters: NetworkFilters,
+  matcher: ReturnType<typeof matcherFor> = null
+) {
+  return matchesFilters(entry, filters, matcher, compileNetworkFilters(filters));
+}
+
+function socketWith(overrides: Partial<WebSocketLogEntry> = {}): WebSocketLogEntry {
+  return {
+    kind: 'websocket',
+    id: 's1',
+    socketId: 1,
+    method: 'WS',
+    url: 'wss://example.dev/live',
+    status: 'open',
+    startedAt: 0,
+    ...overrides,
+  };
+}
+
+function socketMatches(entry: WebSocketLogEntry, filters: NetworkFilters) {
+  return matchesSocketFilters(entry, filters, null, compileNetworkFilters(filters));
 }
 
 describe('statusClass', () => {
@@ -61,40 +90,122 @@ describe('statusClass', () => {
 
 describe('matchesFilters', () => {
   it('keeps everything when no filter is set', () => {
-    expect(matchesFilters(entryWith(), DEFAULT_NETWORK_FILTERS, null)).toBe(true);
+    expect(matches(entryWith(), DEFAULT_NETWORK_FILTERS)).toBe(true);
   });
 
   it('matches the search against method, url, status code and source', () => {
     const entry = entryWith({ source: 'my-webview' });
-    expect(matchesFilters(entry, filtersWith(), matcherFor('users'))).toBe(true);
-    expect(matchesFilters(entry, filtersWith(), matcherFor('200'))).toBe(true);
-    expect(matchesFilters(entry, filtersWith(), matcherFor('my-webview'))).toBe(true);
-    expect(matchesFilters(entry, filtersWith(), matcherFor('nope'))).toBe(false);
+    expect(matches(entry, filtersWith(), matcherFor('users'))).toBe(true);
+    expect(matches(entry, filtersWith(), matcherFor('200'))).toBe(true);
+    expect(matches(entry, filtersWith(), matcherFor('my-webview'))).toBe(true);
+    expect(matches(entry, filtersWith(), matcherFor('nope'))).toBe(false);
   });
 
-  it('filters by status band', () => {
+  it('reads the status filter as an expression, not only as a band', () => {
     const failing = entryWith({ statusCode: 500 });
-    expect(matchesFilters(failing, filtersWith({ status: '5xx' }), null)).toBe(true);
-    expect(matchesFilters(failing, filtersWith({ status: '2xx' }), null)).toBe(false);
+    expect(matches(failing, filtersWith({ statusQuery: '5xx' }))).toBe(true);
+    expect(matches(failing, filtersWith({ statusQuery: '2xx' }))).toBe(false);
+    expect(matches(failing, filtersWith({ statusQuery: '>= 400' }))).toBe(true);
+    expect(matches(failing, filtersWith({ statusQuery: '500-599' }))).toBe(true);
+    expect(matches(failing, filtersWith({ statusQuery: '500' }))).toBe(true);
+    expect(matches(failing, filtersWith({ statusQuery: '404' }))).toBe(false);
+  });
+
+  // Emptying the list on the way to a valid expression reads as the filter being broken.
+  it('ignores an expression it cannot read, rather than matching nothing', () => {
+    expect(matches(entryWith(), filtersWith({ statusQuery: '>=' }))).toBe(true);
+    expect(
+      isUnreadable('>=', compileNetworkFilters(filtersWith({ statusQuery: '>=' })).status)
+    ).toBe(true);
+  });
+
+  it('takes more than one method or source at a time', () => {
+    const post = entryWith({ method: 'POST' });
+    expect(matches(post, filtersWith({ methods: ['GET', 'POST'] }))).toBe(true);
+    expect(matches(post, filtersWith({ methods: ['GET', 'PUT'] }))).toBe(false);
+
+    const fromPage = entryWith({ source: 'shop' });
+    expect(matches(fromPage, filtersWith({ sources: ['shop', 'nitro-fetch'] }))).toBe(true);
+    expect(matches(fromPage, filtersWith({ sources: ['nitro-fetch'] }))).toBe(false);
+    // No source at all cannot be one of the ones asked for.
+    expect(matches(entryWith(), filtersWith({ sources: ['shop'] }))).toBe(false);
+  });
+
+  it('filters by how large and how slow a request was, units included', () => {
+    const entry = entryWith({ size: 30 * 1024, duration: 1200 });
+    expect(matches(entry, filtersWith({ minSize: '20kb' }))).toBe(true);
+    expect(matches(entry, filtersWith({ minSize: '1mb' }))).toBe(false);
+    expect(matches(entry, filtersWith({ maxSize: '20kb' }))).toBe(false);
+    expect(matches(entry, filtersWith({ minDuration: '1s' }))).toBe(true);
+    expect(matches(entry, filtersWith({ maxDuration: '800ms' }))).toBe(false);
+  });
+
+  // A threshold is a question about a figure, and an entry without the figure has not answered it.
+  it('excludes an entry that has no figure to compare', () => {
+    const pending = entryWith({ status: 'pending', statusCode: undefined });
+    expect(matches(pending, filtersWith({ minDuration: '0' }))).toBe(false);
+    expect(matches(pending, filtersWith({ maxSize: '1mb' }))).toBe(false);
+  });
+
+  it('shows only what is still in flight, or only what a rule answered', () => {
+    const pending = entryWith({ status: 'pending', statusCode: undefined });
+    expect(matches(pending, filtersWith({ inFlightOnly: true }))).toBe(true);
+    expect(matches(entryWith(), filtersWith({ inFlightOnly: true }))).toBe(false);
+
+    const overridden = entryWith({ intercepted: 'overridden' });
+    expect(matches(overridden, filtersWith({ interceptedOnly: true }))).toBe(true);
+    expect(matches(entryWith(), filtersWith({ interceptedOnly: true }))).toBe(false);
   });
 
   it('inverts every part of the match, not just the search text', () => {
     const entry = entryWith({ method: 'POST' });
-    expect(matchesFilters(entry, filtersWith({ method: 'POST', invert: true }), null)).toBe(false);
-    expect(matchesFilters(entry, filtersWith({ method: 'GET', invert: true }), null)).toBe(true);
-    expect(matchesFilters(entry, filtersWith({ invert: true }), matcherFor('users'))).toBe(false);
+    expect(matches(entry, filtersWith({ methods: ['POST'], invert: true }))).toBe(false);
+    expect(matches(entry, filtersWith({ methods: ['GET'], invert: true }))).toBe(true);
+    expect(matches(entry, filtersWith({ invert: true }), matcherFor('users'))).toBe(false);
   });
 
   it('leaves the hide toggles out of the inversion', () => {
     const dataUrl = entryWith({ url: 'data:image/png;base64,AAA' });
-    expect(matchesFilters(dataUrl, filtersWith({ hideDataUrls: true, invert: true }), null)).toBe(
-      false
-    );
+    expect(matches(dataUrl, filtersWith({ hideDataUrls: true, invert: true }))).toBe(false);
 
     const failed = entryWith({ status: 'error', statusCode: undefined });
-    expect(matchesFilters(failed, filtersWith({ hideFailed: true, invert: true }), null)).toBe(
-      false
-    );
+    expect(matches(failed, filtersWith({ hideFailed: true, invert: true }))).toBe(false);
+  });
+});
+
+describe('matchesSocketFilters', () => {
+  it('keeps a socket while nothing it has no answer for is being asked', () => {
+    expect(socketMatches(socketWith(), DEFAULT_NETWORK_FILTERS)).toBe(true);
+    expect(socketMatches(socketWith(), filtersWith({ methods: ['WS'] }))).toBe(true);
+  });
+
+  // It has no status code, no resource type, no size, and nothing intercepts one.
+  it('drops out of any filter a socket has no figure for', () => {
+    expect(socketMatches(socketWith(), filtersWith({ statusQuery: '2xx' }))).toBe(false);
+    expect(socketMatches(socketWith(), filtersWith({ minSize: '1kb' }))).toBe(false);
+    expect(socketMatches(socketWith(), filtersWith({ interceptedOnly: true }))).toBe(false);
+  });
+
+  it('is in flight while it is open, and timed once it has closed', () => {
+    expect(socketMatches(socketWith(), filtersWith({ inFlightOnly: true }))).toBe(true);
+    expect(
+      socketMatches(
+        socketWith({ status: 'closed', duration: 900 }),
+        filtersWith({ inFlightOnly: true })
+      )
+    ).toBe(false);
+    expect(
+      socketMatches(
+        socketWith({ status: 'closed', duration: 900 }),
+        filtersWith({ minDuration: '1s' })
+      )
+    ).toBe(false);
+    expect(
+      socketMatches(
+        socketWith({ status: 'closed', duration: 900 }),
+        filtersWith({ maxDuration: '1s' })
+      )
+    ).toBe(true);
   });
 });
 
@@ -106,7 +217,11 @@ describe('hasActiveFilters', () => {
   it('is true once any single filter is set', () => {
     expect(hasActiveFilters(filtersWith({ search: 'x' }))).toBe(true);
     expect(hasActiveFilters(filtersWith({ invert: true }))).toBe(true);
-    expect(hasActiveFilters(filtersWith({ status: '4xx' }))).toBe(true);
+    expect(hasActiveFilters(filtersWith({ statusQuery: '4xx' }))).toBe(true);
+    expect(hasActiveFilters(filtersWith({ methods: ['GET'] }))).toBe(true);
+    expect(hasActiveFilters(filtersWith({ minDuration: '500ms' }))).toBe(true);
+    expect(hasActiveFilters(filtersWith({ inFlightOnly: true }))).toBe(true);
+    expect(hasActiveFilters(filtersWith({ interceptedOnly: true }))).toBe(true);
     expect(hasActiveFilters(filtersWith({ hideDataUrls: true }))).toBe(true);
   });
 

@@ -76,7 +76,7 @@ requests; older ones fall off the end. Request and response bodies are kept in f
 | Control           | What it does                                                                                                           |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Record / Clear    | As above.                                                                                                              |
-| Sort (↓ / ↑)      | Newest first (default) or oldest first.                                                                                |
+| Sort (↑ / ↓)      | Flips the direction of whatever **Sort by** is set to. Its label says what pressing it would give you.                 |
 | Filter (⌕ list)   | Opens the filters panel below.                                                                                         |
 | Preserve log (🔖) | On by default. Keeps captured rows when a wired-up **WebView page navigates**; off means the log clears with the page. |
 | Export (⤓)        | Opens the OS share sheet with the **currently filtered** list as JSON, named `network-log-<timestamp>.json`.           |
@@ -84,25 +84,34 @@ requests; older ones fall off the end. Request and response bodies are kept in f
 
 ### Filters panel
 
-| Field                | What it does                                                                                              |
-| -------------------- | --------------------------------------------------------------------------------------------------------- |
-| Search box           | Matches method, URL, status code and source, not header or body text. Clear it with the ✕ inside the box. |
-| **Invert** chip      | Shows everything that does _not_ match the search text.                                                   |
-| **Type** chips       | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`, classified from the response MIME type.                |
-| **Method** chips     | `All` plus one chip per method actually captured (`GET`, `POST`, …). No captures, no chips.               |
-| **Source** chips     | `All` plus one per source seen: your app, or `WebView::[name]` for each declared browser view.            |
-| More filters ▸       | Reveals the two switches below.                                                                           |
-| Hide data URLs       | Drops requests whose URL starts with `data:`.                                                             |
-| Hide failed requests | Drops requests that errored (network failures, not 4xx/5xx responses).                                    |
+| Field                        | What it does                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Search box                   | Matches method, URL, status code and source, not header or body text. Clear it with the ✕ inside the box.        |
+| **Invert** chip              | Shows everything that does _not_ match the search text.                                                          |
+| **Type** chips               | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`, classified from the response MIME type.                       |
+| **Status** chips             | `All` plus one per band captured (`2xx`, `4xx`, `Failed`, `Pending`). Each one writes the field below.           |
+| Status expression            | `404`, `4xx`, `>= 400`, `200-299`, `failed`, `pending`. Unreadable text turns the field red and filters nothing. |
+| **Method** chips             | One per method actually captured (`GET`, `POST`, …), and more than one can be on at once. `All` clears them.     |
+| **Source** chips             | One per source seen — your app, or `WebView::[name]` per declared browser view — and again multi-select.         |
+| More filters ▸               | Reveals the rest, below.                                                                                         |
+| Size: at least / at most     | Bytes, or with a unit: `500`, `20kb`, `1.5mb`.                                                                   |
+| Duration: at least / at most | Milliseconds, or with a unit: `250`, `800ms`, `1.5s`, `2min`.                                                    |
+| Only requests in flight      | Keeps just the ones that have not finished.                                                                      |
+| Only overridden or blocked   | Keeps just the ones a rule of yours answered.                                                                    |
+| Hide data URLs               | Drops requests whose URL starts with `data:`.                                                                    |
+| Hide failed requests         | Drops requests that errored (network failures, not 4xx/5xx responses).                                           |
 
-Type, method and source filters combine with the search, and the search's **Invert** applies only to
-the text match.
+Every filter combines with the search. **Invert** negates all of them together except the two `Hide`
+switches, which stay absolute — inverting those would bring back the exact noise they suppress. A
+filter an entry has no figure for excludes it: a socket has no size or status code, and a request in
+flight has no duration yet.
 
 ### Settings panel
 
 | Setting               | Default        | What it does                                                                                               |
 | --------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
 | Large request rows    | On             | Off gives compact rows: no short name, no badges, URL as the primary line.                                 |
+| **Sort by**           | Time           | `Time`, `Size`, `Duration`, `Status`, plus the direction the toolbar's arrow also flips.                   |
 | Group by fetch client | Off            | Groups rows under a header per source, with a count per group.                                             |
 | Show overview         | Off            | Shows the traffic graph above the list.                                                                    |
 | Stack header values   | On below 768dp | In the detail sheet, puts each header's value under its name instead of beside it.                         |
@@ -370,7 +379,7 @@ entries before the panel could read them.
 Every key in every store you registered, with its value, type and byte size.
 
 ```
-[AsyncStorage 12 ▾] │ [⟳] [Filter] │ [⤓]
+[AsyncStorage 12 ▾] │ [⟳] [+] [Filter] │ [⤓] [⤒]
 AsyncStorage  ·  Async  ·  read at 14:22:07
 [12 keys] [4.1 KB] [cache/feed · 1.2 KB]
 ```
@@ -386,12 +395,35 @@ the snippet to copy, rather than an empty list that would read as "you have no d
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Store dropdown (▾) | Which store the tab is showing, with its key count. Appears once a second store is registered; the menu ticks the active one and carries every store's count. |
 | Refresh (⟳)        | Re-reads the selected store. This is where the record button is in every other tab.                                                                           |
+| Add key (+)        | Opens a sheet to write a key the store doesn't hold yet: a name, a type the store accepts, and a value. Shown only for a store the tab can write to.          |
 | Filter             | Opens the filter panel, at the top of the scrolling content. Pressing it also scrolls you back up to it.                                                      |
-| Export (⤓)         | The currently-filtered entries as JSON through the OS share sheet.                                                                                            |
+| Export (⤓)         | The currently-filtered entries as JSON through the OS share sheet, under a `schemaVersion`.                                                                   |
+| Import (⤒)         | Paste a snapshot back in. Shows what it would do before writing anything. Shown only for a store the tab can write to.                                        |
+
+Adding a key is a distinct operation from editing one, not an alias: the type is chosen rather than
+inherited from a value that is already there, and a key the store already holds is refused rather
+than quietly overwritten. The check asks the store, not the list on screen — a store the tab cannot
+enumerate holds keys the list never had.
 
 There is **no record button** — storage is a pull, not a stream, so there is no stream to pause. And
 no clear button: that icon means "clear the log" in the other three tabs, and it must never come to
 mean "wipe your storage". The tab reads on open and on Refresh; nothing polls.
+
+### Import
+
+There is no filesystem module in this package and no dev server to upload to, so a snapshot comes
+back the way it left: as text. The sheet takes a paste (or reads the clipboard for you), then says
+what the file would do before anything is written — how many keys are new, how many would be
+overwritten, how many already hold exactly that value, and how many are skipped, with the reason:
+hidden by the blacklist, a type this store does not hold, or no value to write. A file exported from
+a different store is not refused, but it is called out.
+
+Only then does the Write button do anything. Keys are written one at a time so a failure names the
+key that caused it, and the store is re-read afterwards rather than patched key by key — an import
+is the one write here big enough for the difference to matter, and a store is free to normalise
+every value it was handed.
+
+A file from a schema version this build does not read is refused outright, with the version it found.
 
 ### Store summary
 
@@ -504,8 +536,9 @@ it.
 | `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                         |
 | `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
 | `webviewSources`                     | `readonly string[]`           | `undefined` | Names of `<WebView>`s allowed to report in, for both the Network and Console tabs.    |
-| `network.includeFetch`               | `boolean`                     | `true`      | Capture requests made with `fetch`.                                                   |
-| `network.includeXmlHttpRequest`      | `boolean`                     | `true`      | Capture `XMLHttpRequest`. This is what catches axios and most HTTP libraries.         |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                           |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                     |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                   |
 | `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                          |
 | `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.            |
 | `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt.                                                                  |
@@ -566,8 +599,9 @@ createDevtoolsClient({
 | `secureStoreAdapter({ driver, keys })` | `expo-secure-store`. Takes `keys` because the keychain cannot be listed, and an optional `options` passed through to every call.                  |
 | `defineStorageAdapter({ ... })`        | Anything else. Duck-types nothing; takes exactly what you hand it.                                                                                |
 
-All four accept `name` (defaulted from the library) and `readOnly`. `defineStorageAdapter` needs either
-`getAllKeys` or a fixed `keys` list — passing `keys` is what turns enumeration off — and any of
+All four accept `name` (defaulted from the library), `readOnly`, `supportedTypes` and `blacklist`. `defineStorageAdapter` needs either
+`getAllKeys` or a fixed `keys` list — passing `keys` is what turns enumeration off, and it may be a
+function, resolved on every read, for an app that keeps its own list of what it stored — and any of
 `getItem` (required), `getMany`, `setItem`, `removeItem`. **Whether the tab can edit or delete is
 derived from which of those you provided**, so a store you registered read-only in effect is read-only
 in the UI without a flag. Sync functions are fine everywhere: they're awaited, not branched on, and
@@ -576,6 +610,18 @@ in the UI without a flag. Sync functions are fine everywhere: they're awaited, n
 `getItem` may return a bare `string | null`, or a `{ text, valueType }` when the type matters — that
 second form is how `mmkvAdapter` keeps a stored `1` from rendering as `"1"`, and what an edit is written
 back through.
+
+`blacklist` is a `RegExp` or a `(key: string) => boolean`, and a key it matches is never listed, never
+read, and never written — the filtering happens in the adapter, before the read, not in the view, so
+the value never reaches memory at all. A `/g` regex is safe: `lastIndex` is reset before every test.
+The summary says a blacklist is set, but never how many keys it matched — that is a count this tab
+deliberately never learns.
+
+`supportedTypes` is the list of types the store can actually hold, and it defaults to all four.
+`asyncStorageAdapter` and `secureStoreAdapter` declare `['string']` for you, since both hand back a
+string whatever went in; MMKV takes all four. The Add-key sheet offers only these types, so a write
+the store would have flattened is never offered in the first place. Binary is never offered for
+either creating or editing — there is no text form of the bytes to round-trip.
 
 ### Client methods
 
@@ -661,6 +707,7 @@ property if you override it.
 `ThrottleProfile`, `UserAgentPresetId`, `ConsoleLogEntry`, `ConsoleLogLevel`, `LongTaskEntry`,
 `MemorySample`, `StartupTiming`, `UserTimingEntry`, `MarkOptions`, `MeasureOptions`,
 `StorageAdapter`, `StorageAdapterConfig`, `StorageAdapterDefinition`, `StorageAdapterKind`,
+`StorageKeyBlacklist`,
 `StorageAdapterState`, `StorageEntry`, `StorageReadResult`, `StorageValueType`, `StoredValueKind`,
 `AsyncStorageLikeDriver`, `MmkvLikeDriver`, `SecureStoreLikeDriver`.
 

@@ -10,7 +10,7 @@ transfers.
 - [x] Captures Expo's own fetch when it is imported directly, not only through the global
 - [x] Captures `XMLHttpRequest`, so third-party HTTP clients show up
 - [x] Captures requests made inside a WebView
-- [x] Turn plain requests and sockets off independently
+- [x] Turn requests, sockets and streams off independently, by kind rather than by transport
 - [x] WebSocket connections, with every message sent and received
 - [x] Sockets a WebView page opens, with every frame in both directions
 - [x] Streams a WebView page opens, with every event the engine dispatched
@@ -25,9 +25,14 @@ transfers.
 - [x] Response size worked out from the payload when nothing declares it
 - [x] Requests bucketed by resource type, the way a browser does
 - [x] Pause and resume recording, clear the log, reverse the order
+- [x] Sort by size, by duration or by status, in either direction
 - [x] Keep or auto-clear the log when a WebView navigates
 - [x] Search with regex, case and whole-word modes, invert it, and highlight the matches
-- [x] Filter by type, method, status and source; hide data URLs; hide failed requests
+- [x] Filter by type and status; hide data URLs; hide failed requests
+- [x] Pick more than one method or source at once
+- [x] A status expression rather than one band — an exact code, a range, a comparison
+- [x] Filter by how large or how slow a request was, in the units you would say out loud
+- [x] Show only what is still in flight, or only what a rule of yours answered
 - [x] Throttle the connection — 3G/4G presets, a custom speed, or offline
 - [x] Override the user agent, for native requests and inside a WebView
 - [x] Group rows by source, denser or roomier rows, timeline overview strip
@@ -50,8 +55,6 @@ transfers.
 - [x] Server-sent event streams, with every event, whichever client opened them
 - [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
 - [x] What a compressed response cost on the wire, beside what the app was handed
-- [ ] Turn stream capture off independently, the way requests and sockets already can be
-- [ ] Capture requests made before the panel is set up
 
 ## Next
 
@@ -72,9 +75,7 @@ The open list above is a menu, not an order. What is worth doing next, and why, 
    observer API it publishes for itself.
 4. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
    which is most of a cold start.
-5. **The smaller display gaps** — an XML response as a tree, a version and a socket-shaped entry in
-   the export, and a switch for stream capture beside the ones requests and sockets already have.
-6. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
+5. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
    row is still the single `size` field, which is the declared length when there is one and the body's
    length otherwise. Deciding what one column should say — and it should probably say what crossed the
    wire, the way a browser's does — is the rest of this job.
@@ -100,6 +101,46 @@ Three paths, because no one of them can see the others' traffic:
 
 ## Decisions worth knowing
 
+- **The panels scroll with the rows, as the list's own header.** Pinned above a bounded list, an open
+  filter panel — chips for type, status, method and source, then a search box, then six more controls
+  under More filters — leaves a phone almost no list to look at, and the list is the point of the tab.
+  So the settings panel, the filter panel and the overview strip are the list's header instead: they
+  scroll away as you read down, and the toolbar that opens them stays put. The settings panel lost the
+  scroll view it used to have for the same reason — a vertical scroller inside a vertical scroller is a
+  fight over every drag. The header goes in as an _element_, never as a function: a new function each
+  render is a new component type to `VirtualizedList`, which remounts the header and takes the focus
+  out of the search box on every keystroke.
+- **A filter is one field, and the chips are its presets.** The status chips write the same expression
+  the field takes, rather than being a second status filter beside it — two of them would have to be
+  reconciled, and `4xx` is exactly what a chip would set anyway. So a tap still answers "show me the
+  failures" and typing answers `>= 400`, which no arrangement of bands can express.
+- **An expression that cannot be read filters nothing, and says so.** Half of `>=` is on the way to a
+  filter, and emptying the list under the cursor reads as the panel being broken rather than as the
+  filter being incomplete. So an unreadable expression or threshold is ignored and its field turns red
+  — the same treatment the search box already gives an unfinished regex. The same reason the
+  thresholds take units: `20kb` is what someone would say, and `20480` is what they would have to work
+  out first.
+- **A filter an entry has no figure for excludes it.** A socket has no size and no status code, a
+  request in flight has no duration yet, and none of them is "under 20 kB" — letting them through
+  would make a threshold mean "or unknown", which is not what was asked. Sorting takes the opposite
+  view of the same fact: what cannot be compared keeps its order at the end, because a pending request
+  at the top of "slowest first" would read as the slowest one rather than as an unknown.
+- **Sorting is in Settings, and its direction is on the toolbar.** The key is chosen rarely and the
+  direction is flipped constantly, so they live where each is reached: beside grouping and row density
+  for the one, and on the arrow that was already there for the other. The arrow's label is written in
+  the vocabulary of the key rather than as "ascending" — "Slowest first" is a direction someone can
+  picture, and the direction of a size is not the direction of a clock.
+- **The switches name the traffic, not the transport.** `http`, `websocket` and `sse` — a request is a
+  request whether it left through `fetch`, through Expo's own fetch, through `XMLHttpRequest`, from a
+  JSI client or from inside a page, and someone turning requests off means all of them. The old flags
+  were named after the mechanisms instead, which put this package's five capture paths in the
+  consumer's config and left `sse` with nowhere to go: it has no path of its own on the app's side at
+  all. Turning streams off is the one switch whose effect differs by where the stream came from, for a
+  reason that is not a compromise: the app's own stream is still recognised — its endless body has to
+  be, or it would be read as a response — so its row stays and only the events are dropped, while a
+  page's stream exists only through the wrapper this injects, so that one disappears with the wrapper.
+  A JSI client is the other asymmetry: one observer reports both of its kinds, so it is told which are
+  wanted rather than being attached for one and not the other.
 - **Declared WebView names are the allowlist.** They are a `const` type parameter, so passing an
   undeclared name is a compile error, and the same list is checked at runtime — any page can post a
   message wearing our marker, including one nobody here wrote. It sits at the top level of the
@@ -168,7 +209,10 @@ Three paths, because no one of them can see the others' traffic:
   no time": every detailed field is zeroed for a cross-origin response whose server sent no
   `Timing-Allow-Origin`, so a zero is dropped the way an unmeasured phase is dropped everywhere else.
   There is no `requestEnd` in that API, so a page's request has no sending phase and its wait contains
-  the sending instead.
+  the sending instead. When every field is zeroed — which is most third-party traffic — the entry says
+  nothing about the inside of the request, so nothing is relayed at all: the page times its own request
+  from JavaScript instead, the way the app's patches do, and the tab shows those two numbers rather
+  than an empty waterfall claiming the engine measured something.
 - **A page's cookies are the page's, not the request's.** `document.cookie` is all a page can read: the
   engine writes the `Cookie` header itself and forbids JavaScript from seeing it, and an HttpOnly
   cookie is invisible to a document by design. So it is stored in a field of its own and shown under
@@ -245,8 +289,15 @@ Three paths, because no one of them can see the others' traffic:
   but they start at a different moment and so can never agree: a JavaScript "wait" contains the queue,
   the handshake and the send, while the platform's contains none of them. Showing both put two rows
   named Waiting side by side with different figures, which reads as one of them being broken rather
-  than as two vantage points. The patches' numbers are the fallback now, for traffic no native stack
-  here reports on — a WebView's requests, a build without the native module, a platform not yet hooked.
+  than as two vantage points. The patches' numbers are the fallback now, for every request nothing
+  measured the inside of — a build without the native module, a platform not yet hooked, and a page's
+  request its own engine will not describe. Both halves are measured wherever a request has a moment
+  the headers arrive at: `fetch` resolving, and an `XMLHttpRequest` reaching `HEADERS_RECEIVED`, inside
+  a page exactly as in the app. A JSI client is the one path with neither — its observer reports a
+  start, an end and nothing between them — so those rows have a duration and no split, which is what
+  that observer knows rather than something withheld. And a phases block with no phase in it is not
+  phases: it takes the fallback, because a waterfall of no bars over numbers that do exist is a worse
+  answer than the numbers.
 - **A compressed response has two sizes, and one number could only ever be one of them.** The tab
   showed whichever happened to be available — `content-length` when the server sent one, the body's
   own length when it did not — which for a gzipped response are wildly different figures under one
@@ -319,3 +370,8 @@ Three paths, because no one of them can see the others' traffic:
 - **A HAR file.** The format permits a `-1` for anything a tool could not measure, so a valid one is
   producible — but the timings that make a HAR worth opening somewhere else are the ones that would be
   `-1`, so Export stays a plain JSON dump.
+- **Tools for something outside the app to read the log with.** A coding agent asking what the app
+  just requested is a real use, and the reason it is not here is the same property that makes `init()`
+  the whole production story: the panel is in the app's own process and nothing outside it can be
+  addressed. Exposing the log would mean a channel to a dev server, which this package does not have
+  and does not want — a tool that needs one is a different tool, not a tab.

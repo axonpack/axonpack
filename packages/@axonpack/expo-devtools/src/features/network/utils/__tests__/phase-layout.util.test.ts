@@ -1,4 +1,4 @@
-import { layOutPhases } from '../phase-layout.util';
+import { hasMeasuredPhase, layOutPhases } from '../phase-layout.util';
 import type { NetworkPhases } from '../../stores/network-log.store';
 
 const MEASURED: NetworkPhases['measuredBy'] = 'urlsession';
@@ -96,5 +96,24 @@ describe('layOutPhases', () => {
     const rows = layOutPhases({ waitMs: 700, downloadMs: 300, measuredBy: MEASURED });
 
     expect(rows[rows.length - 1]?.offsetPercent + rows[rows.length - 1]?.widthPercent).toBe(100);
+  });
+});
+
+describe('hasMeasuredPhase', () => {
+  it('is true for a phase that was measured', () => {
+    expect(hasMeasuredPhase({ waitMs: 120, measuredBy: MEASURED })).toBe(true);
+  });
+
+  // What a page's entry looks like for a cross-origin response nobody allowed it to time: a total,
+  // and nothing inside it. The Timing tab has to fall back to the numbers a patch measured.
+  it('is false when only the surrounding facts arrived', () => {
+    expect(
+      hasMeasuredPhase({
+        totalMs: 300,
+        protocol: 'h2',
+        reusedConnection: true,
+        measuredBy: 'webview',
+      })
+    ).toBe(false);
   });
 });

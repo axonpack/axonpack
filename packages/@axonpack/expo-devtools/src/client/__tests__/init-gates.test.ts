@@ -19,7 +19,7 @@ jest.mock('../../features/crash/services/native-crash.service', () => ({
 }));
 
 /** A full `init()` patches XHR, which this environment has no implementation of. */
-const NO_NETWORK_PATCHES = { includeFetch: false, includeXmlHttpRequest: false };
+const NO_NETWORK_PATCHES = { http: false };
 
 beforeEach(() => {
   resetCrashHandlers();

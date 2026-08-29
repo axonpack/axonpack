@@ -1,4 +1,8 @@
-import { applyNitroEntry } from '../nitro-fetch.service';
+import {
+  applyNitroEntry,
+  observeNitroFetch,
+  stopObservingNitroFetch,
+} from '../nitro-fetch.service';
 import { networkLogStore } from '../../stores/network-log.store';
 
 /** The shape the library's own observer hands over, as of `react-native-nitro-fetch`. */
@@ -179,5 +183,33 @@ describe('the same entry arriving more than once', () => {
     const rows = networkLogStore.getSnapshot();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ statusCode: 404, statusText: 'Not Found' });
+  });
+});
+
+/**
+ * One observer reports both of that client's kinds, so the request switch and the socket switch cannot
+ * be honoured by attaching or not attaching it — the kind is decided per entry.
+ */
+describe('the kinds a JSI client carries', () => {
+  beforeAll(() => networkLogStore.setEnabled(true));
+  beforeEach(() => networkLogStore.clear());
+  afterEach(() => stopObservingNitroFetch());
+
+  it('drops its requests when requests are off, sockets still on', () => {
+    observeNitroFetch({ http: false, websocket: true });
+
+    applyNitroEntry(entry());
+
+    expect(networkLogStore.getSnapshot()).toEqual([]);
+  });
+
+  it('drops its sockets when sockets are off, requests still on', () => {
+    observeNitroFetch({ http: true, websocket: false });
+
+    applyNitroEntry(entry({ type: 'websocket', url: 'wss://example.test/live' }));
+    applyNitroEntry(entry());
+
+    expect(networkLogStore.getWebSocketSnapshot()).toEqual([]);
+    expect(networkLogStore.getSnapshot()).toHaveLength(1);
   });
 });

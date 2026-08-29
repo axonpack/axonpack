@@ -18,7 +18,7 @@ export function SendButton({ sending, onPress }: { sending: boolean; onPress: ()
 
 const useStyles = makeThemedStyles((COLORS) => ({
   button: {
-    backgroundColor: COLORS.textPrimary,
+    backgroundColor: COLORS.accent,
     borderRadius: 6,
     paddingHorizontal: 16,
     minHeight: TOUCH_TARGET.min,

@@ -1,5 +1,5 @@
 import { captureInitiatorFrames } from './capture-initiator.service';
-import { recordStreamEvents } from './record-stream-events.service';
+import { isStreamCaptureEnabled, recordStreamEvents } from './record-stream-events.service';
 import { encodeBytesToBase64 } from '../../../core/utils/base64.util';
 import { rememberUnpatchedFetch } from '../../../core/utils/unpatched-fetch.util';
 import { EVENT_STREAM_MIME_TYPE } from '../constants/event-stream.const';
@@ -347,9 +347,14 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
           eventStream: true,
           ttfb,
         });
-        readEventStream(response.clone(), id, startedAt).catch(() => {
-          // A stream that cannot be read is a row without its events, not a failed request.
-        });
+        // Recognised either way — a stream that went unrecognised would have its endless body read as
+        // a response — but with stream capture off there is no reader and no clone, so the row says
+        // what it is and stops there.
+        if (isStreamCaptureEnabled()) {
+          readEventStream(response.clone(), id, startedAt).catch(() => {
+            // A stream that cannot be read is a row without its events, not a failed request.
+          });
+        }
         return response;
       }
 
