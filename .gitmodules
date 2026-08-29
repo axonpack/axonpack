@@ -1,3 +1,6 @@
 [submodule "marketing"]
 	path = marketing
 	url = https://github.com/axonpack/axonpack-marketing.git
+[submodule "docs"]
+	path = docs
+	url = https://github.com/axonpack/docs.git
