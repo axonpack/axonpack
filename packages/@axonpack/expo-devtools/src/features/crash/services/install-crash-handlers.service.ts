@@ -91,7 +91,7 @@ function installRejectionHandler() {
 
   hermes.enablePromiseRejectionTracker({
     allRejections: true,
-    onUnhandled: (id, rejection) => {
+    onUnhandled: (_id, rejection) => {
       const error =
         rejection instanceof Error
           ? rejection

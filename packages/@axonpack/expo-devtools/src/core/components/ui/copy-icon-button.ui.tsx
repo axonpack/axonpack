@@ -32,7 +32,7 @@ export function CopyIconButton({ value }: { value: string }) {
   );
 }
 
-const useStyles = makeThemedStyles((COLORS) => ({
+const useStyles = makeThemedStyles(() => ({
   button: {
     marginLeft: 6,
     width: TOUCH_TARGET.dense,
