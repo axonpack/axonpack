@@ -11,6 +11,8 @@ throttling), **Console** (every log, plus a prompt that answers), **Performance*
 the moments the app froze) and **Storage** (every key you've saved — search it, edit it, import and
 export it). No desktop debugger, no cable, and nothing captured until you switch it on.
 
+**[Documentation](https://axonpack.github.io/docs/expo-devtools)** · [Reference](https://axonpack.github.io/docs/expo-devtools/reference) · [Changelog](https://axonpack.github.io/docs/expo-devtools/changelog)
+
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![npm downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/axonpack/axonpack/blob/main/LICENSE)
@@ -666,7 +668,8 @@ go out at full speed.
 | `storage.readOnly`                   | `boolean`                     | `false`     | Make every store read-only. One adapter can still override it.                                |
 
 Every field of every panel, and the rest of the API (the client's methods, the overlay's props, the theme
-tokens, the exported types) is in [`REFERENCE.md`](./REFERENCE.md).
+tokens, the exported types) is in the [reference](https://axonpack.github.io/docs/expo-devtools/reference), also shipped
+in this package as [`REFERENCE.md`](./REFERENCE.md).
 
 ## Leaving it in production
 
@@ -722,6 +725,11 @@ cd example
 bun run start   # Expo Go / dev client
 bun run ios     # or: bun run android (full native build)
 ```
+
+## Changelog
+
+Every published release is at [axonpack.github.io/docs/expo-devtools/changelog](https://axonpack.github.io/docs/expo-devtools/changelog),
+and in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## What's built, and what isn't
 

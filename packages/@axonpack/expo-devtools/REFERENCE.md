@@ -3,6 +3,9 @@
 Every control, section and field in the panel, and the whole public API. The
 [README](./README.md) is the tour; this is the map.
 
+This file ships inside the package. The same reference, split into pages and searchable, is at
+[axonpack.github.io/docs/expo-devtools/reference](https://axonpack.github.io/docs/expo-devtools/reference).
+
 - [The panel](#the-panel)
 - [Network tab](#network-tab)
 - [Console tab](#console-tab)
