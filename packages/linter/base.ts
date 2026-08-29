@@ -14,6 +14,11 @@ import type { OxlintConfig } from "oxlint";
  *   ignorePatterns: ["build"], // package-specific
  * });
  * ```
+ *
+ * NOTE: oxlint does not inherit `ignorePatterns` through `extends`
+ * (https://github.com/oxc-project/oxc/issues/10223). This config deliberately declares none, so
+ * nothing is silently lost today — but if any are added here, every consuming config has to re-apply
+ * them with `ignorePatterns: [...base.ignorePatterns, ...]`.
  */
 const base: OxlintConfig = {
   plugins: ["import", "node", "react", "unicorn"],
@@ -2598,6 +2603,16 @@ const base: OxlintConfig = {
         es2018: true,
       },
       plugins: ["typescript"],
+    },
+    {
+      // `noUnusedLocals` and `noUnusedParameters` are on in the TypeScript config, so tsc already
+      // reports every unused binding — with a hard error rather than a warning. Leaving the lint
+      // rule on means the same line is flagged twice by two tools that disagree on severity.
+      files: ["**/*.ts", "**/*.tsx", "**/*.d.ts"],
+      rules: {
+        "no-unused-vars": "off",
+        "typescript/no-unused-vars": "off",
+      },
     },
   ],
 };
