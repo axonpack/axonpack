@@ -1,0 +1,131 @@
+---
+title: Crash reporting
+description: JS errors, unhandled rejections, render errors and native exceptions, turned into a report you can read on the device.
+---
+
+The errors that end a session, or nearly do, turned into a report you can read on the device — and the
+one subsystem here meant to survive into a release build.
+
+A report carries the message, the stack, the component stack where there is one, breadcrumbs, device
+details and the raw JSON. You can copy it as Markdown or JSON, or share the whole thing. Past reports
+stay in a history with an unread count on the tab.
+
+## The four tiers
+
+Which tier caught a crash decides how much it can say.
+
+| Tier                            | Where it comes from                                                                                             |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **JS errors**                   | The global `ErrorUtils` handler, *wrapped* rather than replaced, so LogBox and React Native's own reporting live |
+| **Unhandled promise rejections** | The Hermes rejection tracker. React Native registers its own only in development                                |
+| **React render errors**         | The exported `<DevtoolsErrorBoundary />`. The only tier that produces a component stack                         |
+| **Uncaught native exceptions**  | The platform's uncaught-exception handler on each side, chained to whatever was installed before it              |
+
+## Reporting from a release build
+
+Crash capture has the only gate that is not `init()`. Setting one flag installs the handlers when the
+client is **constructed**, so an app can keep its usual development-only `init()` call and still report
+crashes from release:
+
+```ts title="devtools.ts"
+export const devtools = createDevtoolsClient({
+  crash: { enableWhileDevtoolsDisabled: true },
+});
+```
+
+On its own that captures **native exceptions only** — the crashes that end the app — and reports them
+in the compact sheet. A later `init()` upgrades it: the JS tiers install too and the full sheet takes
+over. It brings nothing else with it either way: no panel, no REPL, no console capture, no request
+bodies.
+
+The JS tiers are held back before `init()` on purpose. They report errors the app survived, which is a
+developer's concern, and the sheet there is in front of somebody using the app. A fatal JS error still
+arrives, because React Native turns it into a native exception on its way to killing the process.
+
+<Callout type="info" title="Two sheets, and the wrong one in release is a real problem">
+  `popupDetail` defaults to `'auto'`: the full developer sheet — tabs, a stack tree, raw JSON, this
+  package's branding — when the devtools are enabled, and a compact notice — what broke, when, and
+  Share / Copy / Dismiss — when they are not. Set it explicitly for an internal build that ships the
+  crash sheet but not the panel and still wants the stack on screen.
+</Callout>
+
+If you ship crash reporting without the panel, mount the sheet yourself:
+
+```tsx
+import { CrashReportOverlay } from '@axonpack/expo-devtools';
+```
+
+`<DevtoolsOverlay />` already mounts one, and mounting both is harmless: whichever mounted first owns
+the sheet and the other draws nothing.
+
+## Catching render errors
+
+`<DevtoolsErrorBoundary />` is the only tier that produces a component stack, and it turns a white
+screen into a Try again button — which is why it is worth mounting even in a release build:
+
+```tsx
+import { DevtoolsErrorBoundary } from '@axonpack/expo-devtools';
+
+<DevtoolsErrorBoundary
+  fallback={(error, reset) => <MyErrorScreen error={error} onRetry={reset} />}
+  onError={(error, info) => report(error, info)}
+>
+  <Checkout />
+</DevtoolsErrorBoundary>;
+```
+
+`fallback` replaces the built-in screen and `reset` remounts the subtree that threw. A boundary around
+a subtree is the stronger tool wherever it fits, because unmounting that subtree actually discards the
+broken state rather than stepping over it.
+
+## Attaching your own details
+
+```ts
+devtools.setCrashContext({ userId, screen, flags });
+```
+
+Everything you pass is attached to every record from that point on.
+
+To rewrite or drop a record before it is stored, handed to `onCrash` or written to disk, use `redact`:
+
+```ts
+createDevtoolsClient({
+  crash: {
+    redact: (record) => (record.message.includes('token') ? null : record),
+    onCrash: (record) => myBackend.send(record),
+  },
+});
+```
+
+## Decisions worth knowing
+
+- **A fatal JS error does not end the app, and there is no switch for that.** React Native decides this
+  by build: in development it hands the error to the red box and tells the native side nothing; in a
+  release build it reports it, which is what ends the process. The same error, the same fatality — only
+  the branch differs. Capturing it closes that gap. Turning the `jsErrors` tier off hands the decision
+  back to React Native.
+- **What survives is the process, not necessarily the state.** The JavaScript thread was interrupted
+  part-way through, possibly mid-render, so component state, the native view tree and your own state
+  may afterwards disagree. This is why the report is put on screen rather than filed quietly.
+- **A crash that killed the app is reported at the next launch.** A dying process is written from
+  native, on the dying thread, into the app's own sandbox, and drained at the next launch — which is
+  also the proof the process died. Non-fatal records are not persisted: the app survived them, so
+  re-reporting one next launch would be a bug. `persistNonFatal` turns that on if you want it.
+- **Stacks are symbolicated by asking Metro**, the way LogBox does, and only when the trace itself came
+  from an http origin. A release build asks nobody.
+- **Breadcrumbs carry request URLs and whatever the app logged**, which is a different privacy
+  proposition from a stack trace. They default to on; `crash: { breadcrumbs: false }` turns them off.
+
+## Limits
+
+- **No backend.** Nothing is sent anywhere. `onCrash` is the hook if you want to send reports
+  yourself — queueing and retry are yours to write.
+- **No grouping.** Duplicate crashes are one row each.
+- **The current route is not captured automatically.** Pass it through `setCrashContext`.
+
+## Next step
+
+<Cards>
+  <Card title="Client reference" href="/docs/expo-devtools/reference/client#crash" description="Every crash option and its default." />
+  <Card title="Leaving it in production" href="/docs/expo-devtools/production" description="What ships, and what stays dark." />
+</Cards>

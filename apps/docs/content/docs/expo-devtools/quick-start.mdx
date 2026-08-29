@@ -1,0 +1,168 @@
+---
+title: Quick start
+description: Create the client, call init() once at startup, and mount the overlay once at the root.
+---
+
+Two things have to happen: `init()` runs **once at startup**, and `<DevtoolsOverlay />` is mounted
+**once at the root**. Nothing else.
+
+## 1. Create the client
+
+One shared instance the rest of your app imports, plus one flag deciding whether it runs at all:
+
+```ts title="devtools.ts"
+import { createDevtoolsClient } from '@axonpack/expo-devtools';
+
+export const DEVTOOLS_ENABLED = process.env.EXPO_PUBLIC_APP_ENV !== 'prod';
+
+export const devtools = createDevtoolsClient();
+```
+
+Set `EXPO_PUBLIC_APP_ENV=prod` for your production builds (in `eas.json`, or a `.env` file) and leave
+it unset everywhere else. Use `__DEV__` instead if a dev/release split is all you need.
+
+## 2. Wire it up
+
+Use whichever of these matches your app. You only need one.
+
+<Tabs items={['Expo Router', 'Your own entry point']}>
+
+<Tab value="Expo Router">
+
+The root layout is the place. `devtools.init()` goes at **module scope**, outside the component, so
+the `fetch` and `console` patches are installed before the first screen renders.
+
+```tsx title="app/_layout.tsx"
+import { Stack } from 'expo-router';
+import { DevtoolsOverlay } from '@axonpack/expo-devtools';
+import { devtools, DEVTOOLS_ENABLED } from '../devtools';
+
+if (DEVTOOLS_ENABLED) devtools.init();
+
+export default function RootLayout() {
+  return (
+    <>
+      <Stack />
+      {DEVTOOLS_ENABLED && <DevtoolsOverlay />}
+    </>
+  );
+}
+```
+
+</Tab>
+
+<Tab value="Your own entry point">
+
+`init()` goes in the entry file, before the app is registered. The overlay goes in your root
+component.
+
+```ts title="index.ts"
+import { registerRootComponent } from 'expo';
+import App from './App';
+import { devtools, DEVTOOLS_ENABLED } from './devtools';
+
+if (DEVTOOLS_ENABLED) devtools.init();
+registerRootComponent(App);
+```
+
+```tsx title="App.tsx"
+import { DevtoolsOverlay } from '@axonpack/expo-devtools';
+import { DEVTOOLS_ENABLED } from './devtools';
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      {DEVTOOLS_ENABLED && <DevtoolsOverlay />}
+    </>
+  );
+}
+```
+
+</Tab>
+
+</Tabs>
+
+That is it. Drag the button anywhere on screen, tap it to open the panel, and the Network and Console
+tabs are already recording. The Storage tab is empty until you tell it which stores you use — see
+[Storage](/docs/expo-devtools/storage). The panel reopens on whichever tab you last had open, for as long as
+the app is running.
+
+## Things that trip people up
+
+- **Mount the overlay exactly once.** The root is the place, because one mount there covers every
+  route: the panel opens as a modal on top of whichever screen is showing, so nested Tabs and Drawer
+  layouts are already covered and must not mount their own. A second mount gives you a second button.
+- **`init()` runs exactly once too**, at module scope rather than in a `useEffect`. Anything that
+  fires before an effect would run — requests during module evaluation, logs at import time — is
+  missed otherwise.
+- **Performance starts paused.** Measuring is not free, so press its record button when you want it.
+  The other two recording tabs record from launch.
+- **Expo Go works.** See [Installation](/docs/expo-devtools/installation) for the handful of readings that go
+  quiet there.
+- **In-app browser pages need two extra props** on the `<WebView />` itself. See
+  [In-app browsers](/docs/expo-devtools/in-app-browsers).
+- **`init()` is the guard.** `<DevtoolsOverlay />` draws nothing until `init()` has brought the panel
+  up, so an unguarded mount in a release build is harmless rather than a button over empty lists.
+  Crash reports still surface, because that is the one subsystem meant to run in production.
+
+## Optional: starting before Expo Router
+
+Skip this unless you need it. Step 2 is enough for normal use.
+
+The root layout runs after Expo Router's own entry file, so requests and logs from that window are
+missed, and the startup breakdown's *App setup* phase starts later than the app really did. You can
+move `init()` ahead of Expo Router by owning the entry file yourself.
+
+Point `main` at your own file:
+
+```json title="package.json"
+{ "main": "index.js" }
+```
+
+Then have that file call `init()` before handing control to Expo Router. The import order is the whole
+point, so keep `init()` in a separate module rather than calling it inline: an `import` is hoisted
+above statements in the same file, which would put `expo-router/entry` first anyway.
+
+```js title="index.js"
+import './devtools-init'; // a module whose only job is `devtools.init()`
+import 'expo-router/entry';
+```
+
+Now remove the `devtools.init()` line from `app/_layout.tsx`, keeping `<DevtoolsOverlay />` there. The
+overlay still belongs in the root layout; only the `init()` call moves.
+
+## The launcher button
+
+Nothing has to be configured: `<DevtoolsOverlay />` on its own gives you the bug glyph on a blue
+circle. Everything about its appearance is a prop, since that is where you mount it.
+
+| Prop            | Default     | What it does                                                                      |
+| --------------- | ----------- | --------------------------------------------------------------------------------- |
+| `iconComponent` | none        | Renders in place of the built-in glyph. Given the resolved `size`; colour is yours |
+| `size`          | `44`        | Diameter of the button, in dp                                                     |
+| `color`         | accent blue | Button fill                                                                       |
+| `iconColor`     | white       | The built-in glyph only; an `iconComponent` colours itself                        |
+
+```tsx
+<DevtoolsOverlay
+  iconComponent={({ size }) => <MyLogo width={size} height={size} />}
+  size={56}
+  color="#111827"
+/>
+```
+
+A `size` under 44 still gets a 44dp touch area through `hitSlop`, so a small button stays as easy to
+hit as it looks, and however big you make it, the drag stays inside the screen.
+
+<Callout type="warn" title="Pick the two colours together">
+  `color` and the default glyph have to work together: a pale button needs `iconColor` set, or the
+  white glyph vanishes into it.
+</Callout>
+
+## Next step
+
+<Cards>
+  <Card title="Network" href="/docs/expo-devtools/network" description="Every request, filtered, replayed and throttled." />
+  <Card title="Storage" href="/docs/expo-devtools/storage" description="The one tab that needs configuring before it shows anything." />
+</Cards>

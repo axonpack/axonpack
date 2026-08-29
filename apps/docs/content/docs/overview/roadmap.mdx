@@ -1,0 +1,51 @@
+---
+title: Roadmap
+description: The three packages that do not exist yet, and why they are on the list.
+---
+
+Axonpack's priority order comes from what is already duplicated across the apps it was extracted from.
+Only `@axonpack/expo-devtools` is published today.
+
+<Callout type="warn">
+  Nothing on this page is installable. It is here because the roadmap is public, not because it is
+  ready. Each package gets its own tab in the sidebar on the day it ships, and not before.
+</Callout>
+
+<PackageCards status="planned" />
+
+## `@axonpack/lite-storage`
+
+Local storage on SQLite with in-memory caching.
+
+- One `AsyncStorage`-shaped interface, with swappable SQLite and MMKV backends
+- Debounced and batched writes, in a single transaction
+- Use-case namespacing; a drop-in for the common state-management persistence middleware
+- Write-ahead logging enabled, with a busy timeout set for concurrency
+
+## `@axonpack/api-kit`
+
+An HTTP client factory with auth built in.
+
+- Single-flight 401 refresh and retry, so a burst of expired requests triggers one refresh
+- A token service that caches synchronously and persists on a debounce
+
+## `@axonpack/i18n`
+
+Type-safe translations without a configuration file to maintain.
+
+- Type safety on keys and interpolated values
+- No complex config
+- A VS Code extension
+
+## What is built in the package that exists
+
+Each area of `@axonpack/expo-devtools` keeps its own status list — what is built, what is not, and what
+never will be because the platform makes it impossible. They live beside the code:
+
+<Cards>
+  <Card
+    title="Package notes"
+    href="https://github.com/axonpack/axonpack/blob/main/packages/@axonpack/expo-devtools/notes/README.md"
+    description="One note per area, each owning its own feature checklist."
+  />
+</Cards>

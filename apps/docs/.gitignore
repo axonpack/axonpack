@@ -1,0 +1,10 @@
+# Content compiled by fumadocs-mdx at dev/build time.
+.source
+
+# Written by `next typegen`; regenerated on every `check-types` and build.
+next-env.d.ts
+
+.next/
+
+*.tsbuildinfo
+out/
