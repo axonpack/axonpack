@@ -1,0 +1,115 @@
+---
+title: Storage
+description: Every key you have saved — but only for the stores you hand over, because this package depends on none of them.
+---
+
+Every key you have saved, on the device, without a `console.log(await AsyncStorage.getAllKeys())`.
+
+<Callout type="warn" title="This is the one tab that cannot find anything by itself">
+  A key-value store is a separate install with its own native code, and this package deliberately
+  depends on none of them. Register the stores you already use and the tab reads them; register
+  nothing and it explains that instead of showing an empty list.
+</Callout>
+
+## Registering your stores
+
+Hand over the stores you already use, once, where you create the client:
+
+```ts title="devtools.ts"
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { createMMKV } from 'react-native-mmkv';
+import {
+  createDevtoolsClient,
+  asyncStorageAdapter,
+  mmkvAdapter,
+  secureStoreAdapter,
+  defineStorageAdapter,
+} from '@axonpack/expo-devtools';
+
+const mmkv = createMMKV();
+
+export const devtools = createDevtoolsClient({
+  storage: {
+    adapters: [
+      asyncStorageAdapter({ driver: AsyncStorage }),
+      mmkvAdapter({ driver: mmkv }),
+      // SecureStore can't list its own keys, so you name the ones worth watching.
+      // A function works too, if your app keeps its own list — it's read on every refresh.
+      secureStoreAdapter({ driver: SecureStore, keys: ['session'] }),
+      // Anything else — your own cache, a wrapper, an in-memory store.
+      defineStorageAdapter({
+        name: 'My cache',
+        kind: 'sync',
+        blacklist: /^secret\./, // keys you'd rather the panel never see
+        getAllKeys: () => cache.keys(),
+        getItem: (key) => cache.get(key) ?? null,
+        setItem: (key, text) => cache.set(key, text),
+        removeItem: (key) => cache.remove(key),
+      }),
+    ],
+  },
+});
+```
+
+The full shape of each factory is in [Storage adapters](/docs/expo-devtools/reference/storage-adapters).
+
+## What the tab gives you
+
+The toolbar gets a dropdown to switch between your stores, and each key a row with its type, size and
+value.
+
+- **Search** keys, values or both, with match case / whole word / regex, and matches highlighted in
+  place.
+- **Filter** by value type — Object, Array, String, Number, Boolean, Binary, Empty, Missing — with
+  counts, or narrow to JSON only and hide empty values.
+- **Sort** by key, size or type, ascending or descending, and **group by namespace**: the `auth:token`,
+  `cache/user/1`, `settings.theme` prefixes your keys already use, which no store knows about.
+- **Tap a key** for its value in the same expandable JSON tree the Network tab uses, the raw characters
+  exactly as stored, an editor, and an Info tab. Copy the key, the value, or the pair as JSON.
+- **Edit** a value and **delete** a key, one at a time, with a confirmation on delete.
+- **Add** a key the store does not have yet: you pick the name, the type and the value. A key that is
+  already there is refused rather than quietly overwritten.
+- **Export** the filtered keys of a store as JSON through the share sheet. The file carries a version,
+  so it can be read back later.
+- **Import** one of those files: paste it in and you are told how many keys are new, how many would be
+  overwritten, how many already hold that value and how many are skipped — before anything is written.
+
+## What a store is allowed to do
+
+Whether a store can be edited or deleted from is derived from what you handed over: register it without
+a `setItem` and the editor says so. Add and Import only appear for a store that can be written to.
+`storage: { readOnly: true }`, or `readOnly` on one adapter, makes that explicit.
+
+Two more options on an adapter are worth knowing:
+
+- **`blacklist`** — a `RegExp` or a function. A key it matches is never listed, never read and never
+  written, so its value never reaches the panel at all. The tab says a blacklist is set, but not how
+  many keys it hid.
+- **`supportedTypes`** — what the store can really hold. AsyncStorage and SecureStore hand back a string
+  whatever went in, so they declare `['string']` for you; MMKV takes all four. The Add-key sheet offers
+  only these, so you cannot write something the store would flatten.
+
+## Why there is no record button
+
+Storage is a pull, not a stream, so there is no stream to pause — the toolbar carries Refresh where the
+other tabs carry a record button. There is no clear button either: that icon means "clear the log" in
+three tabs, and it must never come to mean "wipe your storage".
+
+Nothing patches the store instance you hand over, so there is no mutation history and your app's
+behaviour is unchanged. The tab only calls what it was handed.
+
+## Limits
+
+- **1,000 keys per store** by default, then it stops and reports how many it skipped. Raise it with
+  `storage.maxKeys`.
+- **No SQLite.** A table needs schema, queries and paging, not a key list.
+- **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
+  their length is reported.
+
+## Next step
+
+<Cards>
+  <Card title="Storage adapters" href="/docs/expo-devtools/reference/storage-adapters" description="All four factories, field by field." />
+  <Card title="Storage tab reference" href="/docs/expo-devtools/reference/storage-tab" description="Every control, filter and sheet." />
+</Cards>

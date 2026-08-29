@@ -1,0 +1,115 @@
+---
+title: Network
+description: Every request the app makes, searchable, replayable and throttled, in-app browser traffic included.
+---
+
+Every request lands as a row: the method, the status, how long it took, and when. Underneath, the
+short name and the full URL, plus badges for the kind of response, where the request came from, and
+how big it was. A request still in flight shows an amber **PENDING**, so you can tell "waiting" from
+"finished".
+
+Three capture paths feed one list — `fetch`, `XMLHttpRequest` (which is what catches axios and most
+HTTP client libraries), and any `<WebView />` you wired up. Nothing needs configuring: the tab records
+from launch.
+
+![Network tab listing captured requests](/expo-devtools/screenshots/network-log.png)
+
+## Finding one request among hundreds
+
+![Filter panel with type, method and source chips](/expo-devtools/screenshots/network-filters.png)
+
+Search the text, then narrow with the chips: type (Fetch/XHR, JS, Img, Media, Other), status (2xx,
+4xx, Failed, Pending), method, or source. The status, method and source chips are built from what you
+have actually captured, so they only ever offer real options, and method and source take **more than
+one at a time** — two clients side by side, or GET and POST together.
+
+Status also takes an expression when a band is not the question: `>= 400`, `200-299`, or one exact
+code. Search matches light up in the list, and the box carries the three switches you expect from an
+editor: **match case**, **whole word** and **regex**. **Invert** flips the whole filter — every chip,
+not just the text — and **Clear** resets all of it in one press.
+
+Under **More filters**: a size and a duration range (`20kb`, `1.5s` — the units you would say out
+loud), show only what is still in flight, show only what one of your override rules answered, and the
+toggles that hide data URLs or failed requests.
+
+## Testing a bad connection
+
+![Throttling and user agent options](/expo-devtools/screenshots/network-conditions.png)
+
+Pick Slow 3G, Fast 3G, Fast 4G, Offline, or set your own speed and delay. It applies immediately, to
+your app's own requests and to in-app browser pages. You can also pretend to be an iPhone, an Android
+phone, a desktop browser, or Googlebot.
+
+Every captured request remembers the settings it ran under, so requests from before and after a change
+stay easy to tell apart. The exact profiles are in the
+[Network tab reference](/docs/expo-devtools/reference/network-tab#settings-panel).
+
+## Reading the room
+
+![Traffic graph with requests grouped by source](/expo-devtools/screenshots/network-overview.png)
+
+Turn on the traffic graph to see request volume over time, and tap a section to zoom the list to that
+moment. Turn on grouping to bundle rows by where they came from, with a count per group. Or switch to
+compact rows to fit more on screen.
+
+**Sort by** time, size, duration or status — the arrow in the toolbar flips the direction and says
+what pressing it would give you, so "which one is slow" is one tap rather than a read through two
+hundred rows.
+
+## Tapping a request
+
+![Headers tab with a copy button on every value](/expo-devtools/screenshots/request-headers.png)
+
+A panel slides up with everything captured, across a few tabs:
+
+- **Headers** — what was sent and what came back, each value with its own copy button, plus the
+  connection settings this request ran under.
+- **Payload** — what you sent, as an explorable tree rather than a wall of text.
+- **Preview** — the response pretty-printed and colour-coded; images and HTML render as a real
+  preview.
+- **Response** — the raw body, in full, never cut off.
+- **Timing** — when it started and how long it took. It also tells you plainly that a DNS/TCP/TLS
+  breakdown is not available on-device, rather than showing numbers it cannot measure.
+
+![Request payload as an explorable JSON tree](/expo-devtools/screenshots/request-payload.png)
+
+Payload, Preview and Response share a search box that stays put while the body scrolls, with the same
+match case / whole word / regex switches, and every hit highlighted where it sits — in the JSON tree,
+in the syntax-coloured code, and in the raw body alike.
+
+The **⋮** menu copies the URL, or the whole request as a ready-to-paste **cURL** command or `fetch`
+snippet.
+
+## Editing and resending a request
+
+![Sandbox with editable URL, method, auth and query parameters](/expo-devtools/screenshots/sandbox.png)
+
+**Try in sandbox** opens the request as something you can edit: change the method, the URL, the query
+parameters, headers, cookies, auth, or the body, then Send and watch the real response come back.
+Handy for "does this break if the token is missing?" without touching your code.
+
+Sandbox requests go out through the same patched `fetch`, so they appear in the log like any other
+request.
+
+## Taking it with you
+
+**Export** opens the OS share sheet with the currently-filtered list as JSON, named
+`network-log-<timestamp>.json`. Mail it to yourself, drop it in Slack, paste it into a bug report. It
+uses React Native's own `Share` and nothing else, so there is no filesystem involved and no extra
+dependency.
+
+## Limits
+
+- The list holds the **200** most recent requests; older ones fall off the end. Request and response
+  bodies are kept in full, never truncated.
+- There is no DNS/TCP/TLS/TTFB breakdown. Those phases happen in the native networking stack, where
+  JavaScript cannot see them.
+- A wired-up page can never be *fully* throttled: images, stylesheets and scripts the browser loads by
+  itself still go out at full speed.
+
+## Next step
+
+<Cards>
+  <Card title="Network tab reference" href="/docs/expo-devtools/reference/network-tab" description="Every control, filter and field." />
+  <Card title="In-app browsers" href="/docs/expo-devtools/in-app-browsers" description="Two props to capture a WebView's traffic." />
+</Cards>

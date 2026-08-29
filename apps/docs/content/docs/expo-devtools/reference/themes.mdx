@@ -1,0 +1,37 @@
+---
+title: Themes
+description: The built-in theme ids, and all 22 palette tokens.
+---
+
+A theme patches a base rather than redefining everything:
+
+```ts
+createDevtoolsClient({
+  defaultTheme: 'midnight',
+  themes: {
+    midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
+  },
+});
+```
+
+Built-in ids: `light`, `dark`, `dracula`, `nord`, `monokai`, `one-dark`, `solarized-light`. Reuse one as
+your own name and you replace it. A `defaultTheme` naming something unregistered is ignored rather than
+leaving the panel unstyled.
+
+The choice lives in memory for the session. Persisting it would mean taking a storage dependency for a
+colour scheme.
+
+## The 22 tokens of `Palette`
+
+| Group    | Tokens                                                                                      |
+| -------- | --------------------------------------------------------------------------------------------- |
+| Surfaces | `background`, `toolbarBackground`, `toolbarOverlay`, `sectionTint`, `border`                |
+| Text     | `textPrimary`, `textSecondary`                                                              |
+| Status   | `accent`, `pending`, `success`, `error`, `warning`, `errorSurface`, `warningSurface`        |
+| Search   | `matchHighlight`                                                                            |
+| Syntax   | `keyAccent`, `jsonKey`, `jsonString`, `jsonNumber`, `codeKeyword`, `codeComment`, `codeTag` |
+
+<Callout type="info" title="Keep matchHighlight translucent">
+  It is the background painted behind text matching the current search. Every built-in palette sets it
+  to a translucent colour so syntax highlighting still reads through it.
+</Callout>

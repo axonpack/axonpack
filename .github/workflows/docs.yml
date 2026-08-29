@@ -1,0 +1,77 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/docs/**'
+      - '.github/workflows/docs.yml'
+      - 'bun.lock'
+  pull_request:
+    paths:
+      - 'apps/docs/**'
+      - '.github/workflows/docs.yml'
+      - 'bun.lock'
+  workflow_dispatch:
+
+# A superseded deploy is just stale, so cancelling one is free — the opposite call from `release.yml`,
+# where a half-published run is worse than a queued one.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # GitHub Pages serves this repo as a project site at https://axonpack.github.io/axonpack, so every
+  # route and asset needs the repo name as a prefix. Both of these go away the day the site gets a
+  # custom domain: drop them here and add `apps/docs/public/CNAME`.
+  NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+  NEXT_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Lint and typecheck
+        run: bunx turbo run lint check-types --filter=axonpack-docs
+
+      # `output: 'export'` writes a plain directory of files to apps/docs/out. Nothing here needs a
+      # Node server at runtime, which is the whole reason Pages can host it.
+      - name: Build static export
+        run: bunx turbo run build --filter=axonpack-docs
+
+      - name: Upload artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/docs/out
+
+  deploy:
+    name: Deploy
+    # A pull request builds to prove it still compiles, and stops there — only main is published.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

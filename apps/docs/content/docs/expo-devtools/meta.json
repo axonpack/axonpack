@@ -1,0 +1,26 @@
+{
+  "title": "@axonpack/expo-devtools",
+  "description": "On-device network, console, performance, storage and crash devtools",
+  "icon": "Bug",
+  "root": true,
+  "pages": [
+    "---Get started---",
+    "index",
+    "installation",
+    "quick-start",
+    "---Guides---",
+    "network",
+    "console",
+    "performance",
+    "storage",
+    "crash-reporting",
+    "debug",
+    "themes",
+    "in-app-browsers",
+    "---Shipping---",
+    "production",
+    "example-app",
+    "---Reference---",
+    "reference"
+  ]
+}

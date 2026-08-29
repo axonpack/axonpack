@@ -1,0 +1,7 @@
+{
+  "title": "Axonpack",
+  "description": "What the project is, and what is coming",
+  "icon": "Boxes",
+  "root": true,
+  "pages": ["index", "roadmap"]
+}
