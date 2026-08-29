@@ -2,8 +2,12 @@
 
 Thanks for taking the time to contribute! This repo hosts `@axonpack/*` — free, open-source
 foundation libraries for React Native / Expo apps. Only `@axonpack/expo-devtools` is implemented so far;
-see its [notes](./packages/@axonpack/expo-devtools/notes/README.md) for what it does, area by area,
-and what is still open.
+its [documentation](https://axonpack.github.io/docs/expo-devtools) covers what it does, and its
+[notes](./packages/@axonpack/expo-devtools/notes/README.md) record what is built, area by area, and
+what is still open.
+
+The documentation site is its own repository, [`axonpack/docs`](https://github.com/axonpack/docs),
+mounted here as a submodule at `docs/`. A docs change is a commit there and a pointer bump here.
 
 Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
 

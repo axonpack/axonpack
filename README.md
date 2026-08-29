@@ -7,6 +7,8 @@
 Free, open-source foundation libraries for React Native and Expo apps: small, focused,
 dependency-light packages you drop in rather than a framework you adopt.
 
+**[Documentation](https://axonpack.github.io/docs)**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-fe5196.svg)](https://www.conventionalcommits.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
@@ -33,7 +35,7 @@ dependency-light packages you drop in rather than a framework you adopt.
 > [!NOTE]
 > Early days. Only [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) is implemented so far.
 > `@axonpack/lite-storage`, `@axonpack/api-kit`, and `@axonpack/i18n` are planned. See its
-> [notes](./packages/@axonpack/expo-devtools/notes/README.md) for what the one that exists does.
+> [documentation](https://axonpack.github.io/docs/expo-devtools) for what the one that exists does.
 
 ## Packages
 
@@ -44,8 +46,9 @@ monorepo. Each package under `packages/@axonpack/*` is published independently.
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) | On-device network, console, performance, storage and crash devtools for React Native / Expo | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools) |
 
-See each package's own README for installation and usage. Start with
-[`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools/README.md).
+Full documentation is at **[axonpack.github.io/docs](https://axonpack.github.io/docs)** — installation, guides, an
+exhaustive reference and the changelog. Start with
+[`@axonpack/expo-devtools`](https://axonpack.github.io/docs/expo-devtools).
 
 ## Development
 

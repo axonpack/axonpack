@@ -10,7 +10,7 @@
     "expo",
     "react-native"
   ],
-  "homepage": "https://github.com/axonpack/axonpack#readme",
+  "homepage": "https://axonpack.github.io/docs/expo-devtools",
   "bugs": {
     "url": "https://github.com/axonpack/axonpack/issues"
   },
@@ -28,6 +28,7 @@
     "ios",
     "android",
     "expo-module.config.json",
+    "CHANGELOG.md",
     "REFERENCE.md",
     "notes"
   ],
