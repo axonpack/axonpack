@@ -38,6 +38,11 @@ jobs:
         env:
           HUSKY: 0
 
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Check for pending changesets
         id: changesets
         run: |
@@ -56,8 +61,6 @@ jobs:
         env:
           HUSKY: 0
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "release: version packages"
           git push origin HEAD:${{ github.ref_name }}
@@ -69,6 +72,18 @@ jobs:
         run: bunx changeset publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # `changeset publish` tags only what it actually publishes. A version published from a laptop
+      # leaves this job with nothing to publish and so nothing to tag — which is how 7 of the first 11
+      # tags never reached the remote, including the one for the latest release. `changeset tag` reads
+      # the versions in the tree and tags each one, whoever published it, and skips tags that exist.
+      #
+      # It tags **HEAD**, not the commit a version was published from — which is correct here, where
+      # it runs on the release commit itself, and wrong anywhere else. Do not use it to back-fill a
+      # tag for an older release: it would point at the wrong commit. Create those by hand from the
+      # commit that bumped the version.
+      - name: Tag released versions
+        run: bunx changeset tag
 
       - name: Push release tags
         run: git push origin --tags
