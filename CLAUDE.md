@@ -39,11 +39,13 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS 
 
 Its own repository, `axonpack/docs`, so almost everything about it is documented in `docs/README.md` rather than here. What matters from this side:
 
+- **Both live sites show only what is published.** A planned package gets no entry in `docs`'s `src/lib/packages.ts`, no `content/docs/<slug>/` folder, no card on the landing page, and there is no roadmap on either site. It earns those on the day it goes to npm. Naming a library on a public page is a promise and documentation is a promise that something works as described; neither has anything behind it until the thing is installable. Unshipped work lives in `notes/plan.md` in this repo and nowhere else.
+
 - **Run `bun install` inside `docs/`**, not at this root. It is not a workspace member, so the root install, `format`, `lint`, `build` and `check-types` all skip it — `turbo run` will not list it, and that is correct, not a misconfiguration.
 - **A docs change is two commits**: one in the submodule, one here to move the gitlink. `git submodule update --remote docs` pulls the latest.
 - `docs` is in `.prettierignore` for the same reason `marketing` is: the root `format` task would rewrite it and leave the gitlink permanently dirty.
 - It **deploys itself** — `.github/workflows/deploy.yml` in that repo, on its own `GITHUB_TOKEN`, no secret and no credential to rotate. That is the whole point of the docs living in the repo they are served from; a cross-repo push needed a deploy key or a token, and both were tried and thrown away.
-- Served at `https://axonpack.github.io/docs` — a Pages **project site**, so the URL prefix is the repo name. Because that repo is named `docs`, the app's own routes sit at _its_ root (landing page at `/`, a package at `/<slug>`); a second `/docs` segment would only double the prefix.
+- Served at `https://axonpack.github.io/docs` — a Pages **project site**, so the URL prefix is the repo name. Because that repo is named `docs`, the app's own routes sit at _its_ root (the introduction at `/`, a package at `/<slug>`); a second `/docs` segment would only double the prefix.
 
 ### Landing page (the `landing-page/` submodule)
 
