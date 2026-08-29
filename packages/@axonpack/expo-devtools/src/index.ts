@@ -61,6 +61,7 @@ export type {
   StorageAdapterConfig,
   StorageAdapterDefinition,
   StorageAdapterKind,
+  StorageKeyBlacklist,
   StorageReadResult,
   StorageValueType,
 } from './features/storage/services/define-adapter.service';

@@ -8,8 +8,8 @@
 
 Tap a floating button for four tabs on the device itself: **Network** (every request, resendable, with
 throttling), **Console** (every log, plus a prompt that answers), **Performance** (frame rate, memory,
-the moments the app froze) and **Storage** (every key you've saved, searchable and editable). No desktop
-debugger, no cable, and nothing captured until you switch it on.
+the moments the app froze) and **Storage** (every key you've saved — search it, edit it, import and
+export it). No desktop debugger, no cable, and nothing captured until you switch it on.
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![npm downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
@@ -474,11 +474,13 @@ export const devtools = createDevtoolsClient({
       asyncStorageAdapter({ driver: AsyncStorage }),
       mmkvAdapter({ driver: mmkv }),
       // SecureStore can't list its own keys, so you name the ones worth watching.
+      // A function works too, if your app keeps its own list — it's read on every refresh.
       secureStoreAdapter({ driver: SecureStore, keys: ['session'] }),
       // Anything else — your own cache, a wrapper, an in-memory store.
       defineStorageAdapter({
         name: 'My cache',
         kind: 'sync',
+        blacklist: /^secret\./, // keys you'd rather the panel never see
         getAllKeys: () => cache.keys(),
         getItem: (key) => cache.get(key) ?? null,
         setItem: (key, text) => cache.set(key, text),
@@ -500,11 +502,25 @@ and value:
 - **Tap a key** for its value in the same expandable JSON tree the Network tab uses, the raw characters
   exactly as stored, an editor, and an Info tab. Copy the key, the value, or the pair as JSON.
 - **Edit** a value and **delete** a key, one at a time, with a confirmation on delete.
-- **Export** the filtered keys of a store as JSON through the share sheet.
+- **Add** a key the store doesn't have yet: you pick the name, the type and the value. A key that's
+  already there is refused rather than quietly overwritten.
+- **Export** the filtered keys of a store as JSON through the share sheet. The file carries a version, so
+  it can be read back later.
+- **Import** one of those files: paste it in and you're told how many keys are new, how many would be
+  overwritten, how many already hold that value and how many are skipped — before anything is written.
 
 Whether a store can be edited or deleted from is derived from what you handed over: register it without a
-`setItem` and the editor says so. `storage: { readOnly: true }`, or `readOnly` on one adapter, makes that
-explicit.
+`setItem` and the editor says so. Add and Import only appear for a store that can be written to.
+`storage: { readOnly: true }`, or `readOnly` on one adapter, makes that explicit.
+
+Two more options on an adapter are worth knowing:
+
+- **`blacklist`** — a `RegExp` or a function. A key it matches is never listed, never read and never
+  written, so its value never reaches the panel at all. The tab says a blacklist is set, but not how many
+  keys it hid.
+- **`supportedTypes`** — what the store can really hold. AsyncStorage and SecureStore hand back a string
+  whatever went in, so they declare `['string']` for you; MMKV takes all four. The Add-key sheet offers
+  only these, so you can't write something the store would flatten.
 
 ### Debug
 

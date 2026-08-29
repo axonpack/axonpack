@@ -40,9 +40,9 @@ dependency-light packages you drop in rather than a framework you adopt.
 This is a [Turborepo](https://turborepo.dev) + [Bun workspaces](https://bun.sh/docs/install/workspaces)
 monorepo. Each package under `packages/@axonpack/*` is published independently.
 
-| Package                                                         | Description                                                                 | Version                                                                                                                   |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) | On-device network, console and performance devtools for React Native / Expo | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools) |
+| Package                                                         | Description                                                                                 | Version                                                                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) | On-device network, console, performance, storage and crash devtools for React Native / Expo | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools) |
 
 See each package's own README for installation and usage. Start with
 [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools/README.md).

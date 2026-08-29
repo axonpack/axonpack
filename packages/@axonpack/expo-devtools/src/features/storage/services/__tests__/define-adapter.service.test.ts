@@ -1,6 +1,7 @@
 import {
   asyncStorageAdapter,
   defineStorageAdapter,
+  creatableValueTypes,
   isEditableValueType,
   mmkvAdapter,
   resolveStorageAdapters,
@@ -218,6 +219,61 @@ describe('mmkvAdapter', () => {
     });
   });
 
+  /**
+   * A driver that reproduces the disagreement the probe order exists for: `getString` answers `''`
+   * for bytes that are not valid UTF-8, and `getNumber` reinterprets an 8-byte payload as a double.
+   */
+  function lenientDriverFor(values: Record<string, string | Uint8Array>): MmkvLikeDriver {
+    const store = new Map(Object.entries(values));
+
+    return {
+      getAllKeys: () => [...store.keys()],
+      getString: (key) => {
+        const value = store.get(key);
+        if (value === undefined) return undefined;
+        return typeof value === 'string' ? value : '';
+      },
+      getNumber: (key) => {
+        const value = store.get(key);
+        if (!(value instanceof Uint8Array) || value.byteLength !== 8) return undefined;
+        return new DataView(value.buffer).getFloat64(0);
+      },
+      getBoolean: () => undefined,
+      getBuffer: (key) => {
+        const value = store.get(key);
+        return value instanceof Uint8Array ? value : undefined;
+      },
+    };
+  }
+
+  it('reads bytes that do not decode as UTF-8 as a buffer, not as an empty string', async () => {
+    const definition = mmkvAdapter({
+      driver: lenientDriverFor({ blob: new Uint8Array([0xff, 0xfe, 0xfd]) }),
+    });
+
+    await expect(definition.getItem('blob')).resolves.toEqual({
+      text: '3 bytes',
+      valueType: 'buffer',
+    });
+  });
+
+  it('reads an 8-byte buffer as a buffer, not as the double getNumber makes of it', async () => {
+    const definition = mmkvAdapter({
+      driver: lenientDriverFor({ blob: new Uint8Array([0xff, 0, 0, 0, 0, 0, 0, 1]) }),
+    });
+
+    await expect(definition.getItem('blob')).resolves.toEqual({
+      text: '8 bytes',
+      valueType: 'buffer',
+    });
+  });
+
+  it('still reads a deliberately stored empty string as a string', async () => {
+    const definition = mmkvAdapter({ driver: lenientDriverFor({ blank: '' }) });
+
+    await expect(definition.getItem('blank')).resolves.toEqual({ text: '', valueType: 'string' });
+  });
+
   it('writes back through the type the value was read as', async () => {
     const { store, definition } = driverFor({ count: 7, flag: true, text: 'a' });
 
@@ -263,5 +319,110 @@ describe('isEditableValueType', () => {
     expect(isEditableValueType('string')).toBe(true);
     expect(isEditableValueType('number')).toBe(true);
     expect(isEditableValueType('buffer')).toBe(false);
+  });
+});
+
+describe('supported types', () => {
+  it('defaults to all four, and narrows for the stores that only hold strings', () => {
+    expect(
+      defineStorageAdapter({ name: 'Any', getAllKeys: () => [], getItem: () => null })
+        .supportedTypes
+    ).toEqual(['string', 'number', 'boolean', 'buffer']);
+    expect(
+      asyncStorageAdapter({ driver: { getAllKeys: () => [], getItem: () => null } }).supportedTypes
+    ).toEqual(['string']);
+    expect(
+      secureStoreAdapter({ driver: { getItemAsync: async () => null }, keys: [] }).supportedTypes
+    ).toEqual(['string']);
+  });
+
+  it('offers only what a new key can be typed as — never binary', () => {
+    const [mmkv] = resolveStorageAdapters([
+      mmkvAdapter({ driver: { getAllKeys: () => [], getString: () => undefined } }),
+    ]);
+
+    expect(mmkv.supportedTypes).toContain('buffer');
+    expect(creatableValueTypes(mmkv)).toEqual(['string', 'number', 'boolean']);
+  });
+});
+
+describe('a computed key list', () => {
+  it('resolves the function on every read, so the list is as current as the app', async () => {
+    const known = ['session'];
+    const definition = secureStoreAdapter({
+      driver: { getItemAsync: async () => 'value' },
+      keys: () => [...known],
+    });
+
+    expect(definition.canEnumerate).toBe(false);
+    await expect(definition.getAllKeys()).resolves.toEqual(['session']);
+
+    known.push('pin');
+    await expect(definition.getAllKeys()).resolves.toEqual(['session', 'pin']);
+  });
+});
+
+describe('blacklist', () => {
+  function blacklisted(blacklist: RegExp | ((key: string) => boolean)) {
+    const map = new Map([
+      ['visible', 'yes'],
+      ['auth.token', 'secret'],
+    ]);
+    const definition = defineStorageAdapter({
+      name: 'Memory',
+      blacklist,
+      getAllKeys: () => [...map.keys()],
+      getItem: (key) => map.get(key) ?? null,
+      setItem: (key, text) => {
+        map.set(key, text);
+      },
+      removeItem: (key) => {
+        map.delete(key);
+      },
+    });
+    return { map, definition };
+  }
+
+  it('keeps a matching key out of the list and out of memory', async () => {
+    const { definition } = blacklisted(/^auth\./);
+
+    await expect(definition.getAllKeys()).resolves.toEqual(['visible']);
+    await expect(definition.getItem('auth.token')).resolves.toEqual({
+      text: null,
+      valueType: 'string',
+    });
+    expect(definition.hasBlacklist).toBe(true);
+  });
+
+  it('takes a predicate as well as a regex', async () => {
+    const { definition } = blacklisted((key) => key.startsWith('auth'));
+
+    await expect(definition.getAllKeys()).resolves.toEqual(['visible']);
+  });
+
+  it('survives a global regex, whose lastIndex would otherwise alternate', async () => {
+    const { definition } = blacklisted(/auth/g);
+
+    await expect(definition.getAllKeys()).resolves.toEqual(['visible']);
+    await expect(definition.getAllKeys()).resolves.toEqual(['visible']);
+  });
+
+  it('refuses to write or delete a key it hides', async () => {
+    const { map, definition } = blacklisted(/^auth\./);
+
+    await expect(definition.setItem?.('auth.token', 'x', 'string')).rejects.toThrow(/blacklist/);
+    await expect(definition.removeItem?.('auth.token')).rejects.toThrow(/blacklist/);
+    expect(map.get('auth.token')).toBe('secret');
+  });
+
+  it('answers false for every key when nothing was declared', () => {
+    const definition = defineStorageAdapter({
+      name: 'Memory',
+      getAllKeys: () => [],
+      getItem: () => null,
+    });
+
+    expect(definition.hasBlacklist).toBe(false);
+    expect(definition.isHidden('anything')).toBe(false);
   });
 });

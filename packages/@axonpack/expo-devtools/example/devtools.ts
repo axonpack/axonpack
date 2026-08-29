@@ -66,11 +66,15 @@ export const devtools = createDevtoolsClient({
     adapters: [
       asyncStorageAdapter({ driver: AsyncStorage }),
       ...(mmkv ? [mmkvAdapter({ driver: mmkv })] : []),
-      // SecureStore cannot list its own keys, so it is told which ones to watch.
-      secureStoreAdapter({ driver: SecureStore, keys: SECURE_KEYS }),
+      // SecureStore cannot list its own keys, so it is told which ones to watch. Passed as a
+      // function to show the other form: an app that keeps its own list is read on every refresh.
+      secureStoreAdapter({ driver: SecureStore, keys: () => SECURE_KEYS }),
       defineStorageAdapter({
         name: 'In-memory',
         kind: 'sync',
+        // Anything under `secret.` is never listed and never read — see `seedMemory`, which writes
+        // one so the tab can be checked against it.
+        blacklist: /^secret\./,
         getAllKeys: () => [...memoryStore.keys()],
         getItem: (key) => memoryStore.get(key) ?? null,
         setItem: (key, text) => {
