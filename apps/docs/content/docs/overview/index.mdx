@@ -1,0 +1,57 @@
+---
+title: Introduction
+description: What Axonpack is, how these docs are organised, and where to start.
+icon: House
+---
+
+Axonpack is a set of free, open-source foundation libraries for React Native and Expo apps. Each one
+is small, focused and dependency-light — something you drop into an app you already have, rather than
+a framework you adopt.
+
+Every package is published independently, versioned independently, and documented independently.
+There is no `axonpack` meta-package to install, and installing one never brings in another.
+
+Everything is MIT licensed and developed in the open at
+[github.com/axonpack/axonpack](https://github.com/axonpack/axonpack).
+
+## The packages
+
+<PackageCards />
+
+<Callout type="info" title="Early days">
+  Only `@axonpack/expo-devtools` is published. The other three have a place on the
+  [roadmap](/docs/overview/roadmap) and nothing to install yet.
+</Callout>
+
+## How these docs are organised
+
+**One tab per package.** The switcher at the top of the sidebar is the package list — picking one
+puts you in that package's documentation and nothing else. A package's guides, its reference, and
+its screenshots all live under its own name, so nothing here is shared between two libraries by
+accident.
+
+Inside a package, the shape is always the same:
+
+| Section         | What is in it                                                                 |
+| --------------- | ------------------------------------------------------------------------------- |
+| **Get started** | Install it and wire it up. Read in order the first time.                      |
+| **Guides**      | One page per thing it does, written as prose with the limits stated.          |
+| **Reference**   | Exhaustive: every control, field, option and exported type. Read by lookup.   |
+
+This tab, **Axonpack**, is the only one that is not a package: it is what is true of the project as a
+whole.
+
+## Start here
+
+<Cards>
+  <Card
+    title="@axonpack/expo-devtools"
+    href="/docs/expo-devtools"
+    description="The one package you can install today. Browser-style devtools inside your app."
+  />
+  <Card
+    title="Roadmap"
+    href="/docs/overview/roadmap"
+    description="The three packages that do not exist yet, and why they are on the list."
+  />
+</Cards>
