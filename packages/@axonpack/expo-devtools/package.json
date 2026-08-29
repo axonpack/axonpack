@@ -10,7 +10,7 @@
     "expo",
     "react-native"
   ],
-  "homepage": "https://github.com/axonpack/axonpack#readme",
+  "homepage": "https://axonpack.github.io/docs/expo-devtools",
   "bugs": {
     "url": "https://github.com/axonpack/axonpack/issues"
   },
@@ -28,6 +28,7 @@
     "ios",
     "android",
     "expo-module.config.json",
+    "CHANGELOG.md",
     "REFERENCE.md",
     "notes"
   ],
@@ -66,8 +67,7 @@
   },
   "dependencies": {
     "@changesets/changelog-git": "^0.2.1",
-    "@expo/vector-icons": "^15.1.1",
-    "expo-clipboard": "~57.0.1"
+    "@expo/vector-icons": "^15.1.1"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
@@ -80,10 +80,11 @@
     "eslint-config-universe": "^15.0.3",
     "eslint-import-resolver-node": "^0.3.10",
     "expo": "^57.0.7",
+    "expo-clipboard": "~57.0.1",
     "jest": "^29.7.0",
     "jest-expo": "~57.0.2",
     "linter": "*",
-    "oxlint": "^1.77.0",
+    "oxlint": "^1.80.0",
     "prettier": "^3.0.0",
     "react-native": "0.86.0",
     "react-native-safe-area-context": "^5.8.0",
@@ -101,6 +102,7 @@
   },
   "peerDependencies": {
     "expo": "*",
+    "expo-clipboard": "*",
     "react": "*",
     "react-native": "*",
     "react-native-safe-area-context": "*",

@@ -31,7 +31,8 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS 
 ### `@axonpack/expo-devtools` package (run from `packages/@axonpack/expo-devtools`)
 
 - `bun run build` — `node internal/module_scripts/build.js`: plain `tsc` compile of `src` → `build`. Does **not** clean first, so stale compiled files from removed/renamed sources linger — run `bun run clean` first when that matters.
-- `bun run lint` / `bun run format` — `oxlint src` / `oxlint src --fix`. Rules come from `oxlint.config.mts` extending the shared `linter` base config (`packages/linter`). The migration off eslint is done; the old `lint:oxlint` script is gone, and eslint is no longer a gate.
+- `bun run lint` / `bun run format` — `oxlint src` / `oxlint src --fix`. Rules come from `oxlint.config.mts` extending the shared `linter` base config (`packages/linter`), which is now a thin extend of `oxlint-config-universe/native` — the maintained oxlint port of `eslint-config-universe`, and what Expo's own packages extend. It replaced a 2,600-line `@oxlint/migrate` snapshot. The base turns off `curly` (universe wants braces everywhere; this codebase has always used single-line guard clauses, and it was 539 warnings about a settled style question) and the unused-binding rules for TypeScript, which tsc already reports. The migration off eslint is done; the old `lint:oxlint` script is gone, and eslint is no longer a gate.
+- **`bun run lint` currently reports 4 warnings**, all from React rules the old base did not carry: three `react(set-state-in-effect)` and one `react(immutability)`, in the network detail panel and the crash stack section. They are real observations about async components, not noise — left visible rather than disabled or blind-fixed. Warnings do not fail the gate.
 - `bun run check-types` — `tsc --noEmit`.
 - `bun run test` — jest (`jest-expo` preset, roots at `src`). No test files exist yet; runs in watch mode locally unless `CI`/`EXPO_NONINTERACTIVE` is set.
 
