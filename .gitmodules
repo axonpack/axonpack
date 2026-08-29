@@ -3,4 +3,4 @@
 	url = https://github.com/axonpack/axonpack-marketing.git
 [submodule "docs"]
 	path = docs
-	url = https://github.com/axonpack/docs.git
+	url = git@github.com:axonpack/docs.git
