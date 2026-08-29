@@ -45,6 +45,15 @@ Its own repository, `axonpack/docs`, so almost everything about it is documented
 - It **deploys itself** — `.github/workflows/deploy.yml` in that repo, on its own `GITHUB_TOKEN`, no secret and no credential to rotate. That is the whole point of the docs living in the repo they are served from; a cross-repo push needed a deploy key or a token, and both were tried and thrown away.
 - Served at `https://axonpack.github.io/docs` — a Pages **project site**, so the URL prefix is the repo name. Because that repo is named `docs`, the app's own routes sit at _its_ root (landing page at `/`, a package at `/<slug>`); a second `/docs` segment would only double the prefix.
 
+### Landing page (the `landing-page/` submodule)
+
+Its own repository, `axonpack/axonpack.github.io`, serving `https://axonpack.github.io`. **That name is the only reason the repo exists**: GitHub serves the organisation root from a repository named after the org and nothing else. It coexists with the docs because GitHub routes `/<repo>` to the matching project site — so `axonpack/docs` keeps `/docs`. **Never add a `docs/` directory to the landing repo**; it would shadow that path.
+
+- One `index.html`, four images in `assets/`, no build step, no dependencies, no workflow — Pages serves the branch directly. A page that changes a few times a year does not earn a toolchain, and without one there is nothing to break in CI.
+- Edit and push; Pages redeploys itself. Its Pages source is **Deploy from a branch**, `main` / `(root)`, not GitHub Actions.
+- Its palette mirrors the docs site on purpose, so the two do not read as different products.
+- In `.prettierignore` for the same reason `docs` and `marketing` are.
+
 ### Example app (run from `packages/@axonpack/expo-devtools/example`)
 
 - `bun run ios` / `bun run android` — `expo run:ios` / `expo run:android` (full native build via prebuild — needs Xcode/Android Studio).
