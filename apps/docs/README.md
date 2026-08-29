@@ -73,51 +73,45 @@ keeps its intent bullets on the plan page until the day it does.
 
 ## Deployment
 
-`.github/workflows/docs.yml` builds on every pull request that touches `apps/docs/**`, and deploys to
-GitHub Pages on push to `main`.
+The site is served from the **organisation root**, `https://axonpack.github.io`. Only a repo named
+exactly `<org>.github.io` gets that URL — a project repo can only ever be served at
+`https://axonpack.github.io/<repo>`. So the site is built here and its output is pushed to
+`axonpack/axonpack.github.io`, which holds nothing but build output.
 
-The site is a project site (`https://axonpack.github.io/axonpack`), so it is served under a path
-prefix rather than a domain root. `NEXT_PUBLIC_BASE_PATH` carries that prefix; the workflow derives
-it from the repo name, and local dev runs without it.
+`.github/workflows/docs.yml` builds on every pull request that touches `apps/docs/**`, and on push to
+`main` force-pushes `apps/docs/out` to that repo. Its history is replaced on every deploy rather than
+appended to, so **nothing in that repo should ever be hand-edited** — the next deploy discards it.
 
-Two things depend on it that are easy to miss:
+### One-time setup
 
-- `next.config.mjs` passes it to `basePath`, which is what prefixes every route, link and asset.
+1. Create the repo `axonpack/axonpack.github.io`, public and empty.
+2. Generate a deploy key:
+   `ssh-keygen -t ed25519 -C axonpack-docs-deploy -f ./pages_deploy -N ""`
+3. In **axonpack.github.io** → Settings → Deploy keys → Add deploy key: paste `pages_deploy.pub` and
+   tick **Allow write access**.
+4. In **axonpack/axonpack** → Settings → Secrets and variables → Actions → New repository secret:
+   name `PAGES_DEPLOY_KEY`, value the contents of `pages_deploy` (the private half).
+5. In **axonpack.github.io** → Settings → Pages → Source: **Deploy from a branch**, `main` / `(root)`.
+6. Delete both local key files.
+
+`public/.nojekyll` is what makes step 5 work: without it Pages runs Jekyll, which ignores every
+directory starting with an underscore — including `_next`.
+
+### Base paths
+
+A root site has no path prefix, so `NEXT_PUBLIC_BASE_PATH` is unset everywhere and every URL is
+root-relative. It stays wired up because the day the site moves under a subpath, that prefix has to
+reach **two** places and only one is automatic:
+
+- `next.config.mjs` passes it to `basePath`, which prefixes every route, link and asset.
 - `src/components/search.tsx` builds the search index URL from it by hand. Fumadocs reads its own base
   path from `import.meta.env.BASE_URL`, a Vite convention Next does not set, so without this the index
-  would be fetched from the domain root and 404.
+  would be fetched from the wrong origin and every search would come back empty.
 
-## Search
+Both are declared in `turbo.json`'s `build.env`, so a cached build is never reused across prefixes.
 
-There is no search server. `src/app/api/search.json/route.ts` exports `staticGET`, so the whole index
-is serialized at build time into `out/api/search.json` (~1.2 MB, ~240 KB gzipped, one entry per
-heading). `src/components/search.tsx` fetches it **on the first query**, not on page load or when the
-dialog opens, hydrates it in the browser and answers every keystroke locally.
-
-The route is named `search.json`, not `search`, because GitHub Pages types and compresses a file by
-its extension. Extensionless it is served as `application/octet-stream` and uncompressed — the same
-index at five times the transfer.
-
-### Scoped to one package
-
-Every entry is tagged with its root folder — which is its tab, which is its package — by the
-`buildIndex` in that route. `src/components/search.tsx` reads the current package out of the pathname
-and opens search already filtered to it, with a row of tags in the dialog footer to switch package or
-clear the filter and search everything.
-
-Adding a library needs nothing here: the tag comes from `page.slugs[0]`, and the footer is built from
-`searchTags` in `src/lib/packages.ts`.
-
-Note that this fixes _relevance_, not weight — one index still covers every package, and the whole
-file is downloaded whichever tag is active. That is the right trade at this size. If it ever gets too
-big to ship, the next steps in order are: one index file per package fetched on demand, or a hosted
-index (Orama Cloud, Algolia). Both keep the site static; only `search.tsx` changes.
-
-**To move to a custom domain**, drop both `NEXT_PUBLIC_*` variables from the workflow and add
+**To move to a custom domain**, drop `NEXT_PUBLIC_SITE_URL` from the workflow and add
 `public/CNAME`. Nothing else changes.
-
-`public/.nojekyll` is required: without it Pages runs Jekyll, which ignores every directory starting
-with an underscore — including `_next`.
 
 ## Conventions
 

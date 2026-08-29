@@ -19,9 +19,10 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { searchTags } from '@/lib/packages';
 
-// fumadocs reads its own base path from `import.meta.env.BASE_URL`, which is a Vite convention that
-// Next does not set — so under a GitHub Pages project site the index would be fetched from the domain
-// root and 404. Build the URL from the same variable `next.config.mjs` uses.
+// Empty on the current deployment, which serves from a domain root. It is built by hand anyway
+// because fumadocs reads its own base path from `import.meta.env.BASE_URL`, a Vite convention Next
+// does not set — so the day the site moves under a subpath, this would silently fetch the index from
+// the wrong origin and every search would come back empty.
 const searchIndexUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api/search.json`;
 
 const tagValues = new Set(searchTags.map((tag) => tag.value));

@@ -21,16 +21,17 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # GitHub Pages serves this repo as a project site at https://axonpack.github.io/axonpack, so every
-  # route and asset needs the repo name as a prefix. Both of these go away the day the site gets a
-  # custom domain: drop them here and add `apps/docs/public/CNAME`.
-  NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
-  NEXT_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+  # The site is served from the organisation root, https://axonpack.github.io, which means no path
+  # prefix and so no NEXT_PUBLIC_BASE_PATH. Only a repo literally named `<org>.github.io` gets that
+  # URL, which is why the build happens here and the output is pushed to `axonpack/axonpack.github.io`.
+  NEXT_PUBLIC_SITE_URL: https://axonpack.github.io
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -55,9 +56,12 @@ jobs:
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: docs-export
           path: apps/docs/out
+          retention-days: 7
+          include-hidden-files: true
 
   deploy:
     name: Deploy
@@ -65,13 +69,31 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
-      pages: write
-      id-token: write
+      contents: read
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Download export
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-export
+          path: out
+
+      # `axonpack/axonpack.github.io` holds build output and nothing else, so each deploy replaces its
+      # history rather than adding to it — a docs site committed page-by-page would grow without
+      # bound. Never hand-edit anything in that repo; this force-push will discard it.
+      - name: Publish to axonpack.github.io
+        env:
+          DEPLOY_KEY: ${{ secrets.PAGES_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+          cd out
+          git init -q -b main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "deploy ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
+          git push -f git@github.com:axonpack/axonpack.github.io.git main
