@@ -35,11 +35,13 @@ export it). No desktop debugger, no cable, and nothing captured until you switch
 ## Installation
 
 ```sh
-npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview
+npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview expo-clipboard
 ```
 
-`react-native-safe-area-context` and `react-native-webview` are peer dependencies. The overlay and its
-response previews rely on them.
+`react-native-safe-area-context`, `react-native-webview` and `expo-clipboard` are peer dependencies —
+your app supplies them, so each resolves to the version your Expo SDK ships rather than one this
+package pins. The overlay lays itself out inside the safe area, response previews render in a WebView,
+and every Copy button uses the clipboard.
 
 ## Quick start
 

@@ -8,6 +8,7 @@
     "axios": "^1.18.1",
     "expo": "~57.0.8",
     "expo-asset": "~57.0.7",
+    "expo-clipboard": "~57.0.1",
     "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
