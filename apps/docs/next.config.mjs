@@ -8,9 +8,10 @@ const withMDX = createMDX();
 // lockfile — which is the repo root here. Say so explicitly rather than relying on the inference.
 const workspaceRoot = path.join(import.meta.dirname, '..', '..');
 
-// GitHub Pages serves a project site under `/<repo>`, so every asset and route needs that prefix.
-// A custom domain or a `<org>.github.io` repo serves from the root instead — leave it unset there.
-// The deploy workflow is what sets it; local dev and previews run without it.
+// Unset in every current deployment: the site is served from https://axonpack.github.io, an
+// organisation root with no path prefix. It stays wired up because the day the site moves under a
+// subpath — a project site at `/<repo>`, say — that prefix has to reach both `basePath` here and the
+// search index URL in `src/components/search.tsx`, and finding that out later is expensive.
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 /** @type {import('next').NextConfig} */
