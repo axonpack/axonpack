@@ -1,6 +1,6 @@
 {
   "name": "axonpack",
-  "private": true,
+  "private": false,
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",

@@ -1,7 +1,7 @@
 {
   "name": "linter",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "description": "Shared oxlint base configuration for @axonpack/* packages",
   "license": "MIT",
   "type": "module",
