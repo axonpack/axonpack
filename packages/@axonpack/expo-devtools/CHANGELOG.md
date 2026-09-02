@@ -1,5 +1,13 @@
 # @axonpack/expo-devtools
 
+## 2.5.4
+
+### Patch Changes
+
+- - **Badges, cards and progress tracks sit above the panel** rather than looking punched into it, on Dracula, Monokai and One Dark
+  - **A theme whose header is a different shade from its panel keeps readable tabs** — the labels take their colour from the header now, worked out from it when your theme doesn't say
+  - **A custom theme can set `surface`** for anything raised inside a tab, and `toolbarText` / `toolbarTextActive` for the header's own labels
+
 ## 2.5.3
 
 ### Patch Changes
