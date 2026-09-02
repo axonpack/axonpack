@@ -1,3 +1,5 @@
+import { isDarkColor } from '../utils/color-luminance.util';
+
 /**
  * Every colour the panel uses, as `#rrggbb` (or `#rrggbbaa` where a token is deliberately
  * translucent). A custom theme overrides any subset of these through
@@ -117,11 +119,31 @@ export type BuiltInThemeId =
   'light' | 'dark' | 'dracula' | 'nord' | 'monokai' | 'one-dark' | 'solarized-light';
 
 /** A custom palette, as passed to `createDevtoolsClient({ themes })`. */
+/**
+ * The status bar's content while the panel is open. `'light'` means light icons, for a dark
+ * background — the same sense `expo-status-bar`'s `style` has.
+ */
+export type StatusBarStyle = 'light' | 'dark';
+
+/** A palette and the status bar style that stays legible over it. */
+export type Theme = {
+  palette: Palette;
+  statusBarStyle: StatusBarStyle;
+};
+
 export type ThemeConfig = {
   /** The built-in palette every colour is inherited from. Defaults to `'light'`. */
   base?: BuiltInThemeId;
   /** Colours to override on `base`. Every token left out keeps the base's value. */
   colors?: Partial<Palette>;
+  /**
+   * Status bar content for this theme — `'light'` for light icons over a dark panel, `'dark'` for
+   * dark icons over a light one. Worked out from the theme's toolbar colour when left out.
+   *
+   * Only used when the app asks for it: `<DevtoolsOverlay statusBar="auto" />`. By default the panel
+   * leaves the status bar to the app.
+   */
+  statusBarStyle?: StatusBarStyle;
 };
 
 /** https://draculatheme.com */
@@ -254,16 +276,33 @@ export const SOLARIZED_LIGHT_PALETTE: Palette = {
   codeTag: '#268bd2',
 };
 
-export const BUILT_IN_PALETTES: Record<BuiltInThemeId, Palette> = {
-  light: LIGHT_PALETTE,
-  dark: DARK_PALETTE,
-  dracula: DRACULA_PALETTE,
-  nord: NORD_PALETTE,
-  monokai: MONOKAI_PALETTE,
-  'one-dark': ONE_DARK_PALETTE,
-  'solarized-light': SOLARIZED_LIGHT_PALETTE,
+/**
+ * Every theme that ships, each declaring its own status bar style: a palette alone cannot say
+ * whether it is a dark theme or a light one, and the status bar sits over the panel's header.
+ */
+export const BUILT_IN_THEMES: Record<BuiltInThemeId, Theme> = {
+  light: { palette: LIGHT_PALETTE, statusBarStyle: 'dark' },
+  dark: { palette: DARK_PALETTE, statusBarStyle: 'light' },
+  dracula: { palette: DRACULA_PALETTE, statusBarStyle: 'light' },
+  nord: { palette: NORD_PALETTE, statusBarStyle: 'light' },
+  monokai: { palette: MONOKAI_PALETTE, statusBarStyle: 'light' },
+  'one-dark': { palette: ONE_DARK_PALETTE, statusBarStyle: 'light' },
+  'solarized-light': { palette: SOLARIZED_LIGHT_PALETTE, statusBarStyle: 'dark' },
 };
 
-export function resolvePalette(config: ThemeConfig): Palette {
-  return { ...BUILT_IN_PALETTES[config.base ?? 'light'], ...config.colors };
+/**
+ * A custom theme's `{ base, colors, statusBarStyle }` folded into the palette the panel renders and
+ * the status bar style it asks for.
+ *
+ * An undeclared `statusBarStyle` is read off the resolved toolbar colour rather than inherited from
+ * the base, so `{ base: 'light', colors: { toolbarBackground: '#111' } }` still gets legible icons.
+ */
+export function resolveTheme(config: ThemeConfig): Theme {
+  const base = BUILT_IN_THEMES[config.base ?? 'light'];
+  const palette = { ...base.palette, ...config.colors };
+  return {
+    palette,
+    statusBarStyle:
+      config.statusBarStyle ?? (isDarkColor(palette.toolbarBackground) ? 'light' : 'dark'),
+  };
 }

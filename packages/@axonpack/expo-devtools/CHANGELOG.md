@@ -1,5 +1,15 @@
 # @axonpack/expo-devtools
 
+## 2.5.3
+
+### Patch Changes
+
+- - **The status bar follows the theme you picked** — light icons on a dark theme, dark ones on a light theme, and your app's own back when the panel closes
+  - **The strip above the toolbar is gone** — the header now paints the area behind the status bar, in every theme
+  - **A custom theme can declare its own `statusBarStyle`**, or leave it out and have it read off the theme's colours
+  - **`<DevtoolsOverlay statusBar="app" />`** leaves the status bar alone, for an app that manages it itself
+  - **Tapping a WebSocket row opens it** — the panel used to close itself as it appeared
+
 ## 2.5.2
 
 ### Patch Changes

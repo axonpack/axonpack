@@ -1,5 +1,11 @@
 export { createDevtoolsClient } from './client/create-devtools-client.client';
-export type { BuiltInThemeId, Palette, ThemeConfig, ThemeId } from './core/constants/theme.const';
+export type {
+  BuiltInThemeId,
+  Palette,
+  StatusBarStyle,
+  ThemeConfig,
+  ThemeId,
+} from './core/constants/theme.const';
 export type {
   DevtoolsClientConfig,
   DevtoolsConsoleConfig,
