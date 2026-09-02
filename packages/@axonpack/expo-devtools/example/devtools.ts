@@ -29,7 +29,7 @@ export const memoryStore = new Map<string, string>();
 export const SECURE_KEYS = ['session', 'pin'];
 
 export const devtools = createDevtoolsClient({
-  defaultTheme: 'dark',
+  defaultTheme: 'light',
   themes: {
     midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
   },
