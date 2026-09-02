@@ -366,7 +366,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   sectionHeader: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.textPrimary,

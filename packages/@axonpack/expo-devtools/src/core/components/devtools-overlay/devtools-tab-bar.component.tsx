@@ -47,7 +47,7 @@ export function DevtoolsTabBar({
             <MaterialIcons
               name={icon}
               size={16}
-              color={active ? COLORS.accent : COLORS.textSecondary}
+              color={active ? COLORS.toolbarTextActive : COLORS.toolbarText}
             />
             <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
             {!active && badge ? <Text style={styles.badge}>{badge}</Text> : null}
@@ -76,15 +76,15 @@ const useStyles = makeThemedStyles((COLORS) => ({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: COLORS.accent,
+    borderBottomColor: COLORS.toolbarTextActive,
   },
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: COLORS.toolbarText,
   },
   labelActive: {
-    color: COLORS.accent,
+    color: COLORS.toolbarTextActive,
   },
   badge: {
     fontSize: 10,

@@ -131,7 +131,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flex: 1,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
     overflow: 'hidden',
   },
   // Muted and full width: it is the scale the rest are measured against, not a phase of its own.

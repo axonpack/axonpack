@@ -29,9 +29,34 @@ export const memoryStore = new Map<string, string>();
 export const SECURE_KEYS = ['session', 'pin'];
 
 export const devtools = createDevtoolsClient({
-  defaultTheme: 'light',
+  defaultTheme: 'empathika',
   themes: {
     midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
+
+    empathika: {
+      base: 'light',
+      // The header is white, so the clock and icons over it have to be dark. The app's own light
+      // status bar is restored when the panel closes.
+      statusBarStyle: 'light',
+      colors: {
+        background: '#F1F1F1', // background
+        toolbarBackground: '#2D5433', // tabBar — the header, and the fill behind every chip
+        toolbarOverlay: '#ECF1ED', // green50 — the active-tab pill in WmsTabBar
+        border: '#D7DBE6', // border
+        sectionTint: '#ECF1ED', // green50
+        textPrimary: '#4E4E4E', // text
+        textSecondary: '#6E6E6E', // tabBarInactive — inactive tab labels, and all muted text
+        accent: '#407648', // tabBarActive / primary — active tab, launcher, links, focus
+        keyAccent: '#2D5433', // green700
+        pending: '#DC8118', // orange500
+        success: '#5AAE4A', // success
+        error: '#EC0041', // error
+        warning: '#E9A95B', // warning
+        errorSurface: '#FDEAEC', // red50
+        warningSurface: '#E9A95B1F', // warningBg — warning at 12%
+        matchHighlight: '#EAB92559', // yellow500 at 35%
+      },
+    },
   },
   webviewSources: ['example-webview', 'test2', 'page-apis'],
   network: {

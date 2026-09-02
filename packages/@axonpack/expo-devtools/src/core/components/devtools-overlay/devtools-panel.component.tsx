@@ -84,7 +84,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         <ThemePicker />
         <IconButton
           name="close"
-          color={COLORS.textSecondary}
+          color={COLORS.toolbarText}
           onPress={onClose}
           hitSlop={HIT_SLOP.default}
         />

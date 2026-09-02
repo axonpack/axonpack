@@ -22,7 +22,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 2,
