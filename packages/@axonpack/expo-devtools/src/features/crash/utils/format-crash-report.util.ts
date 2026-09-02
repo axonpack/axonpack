@@ -38,6 +38,9 @@ function deviceLines(device: CrashDeviceInfo | undefined): string[] {
 }
 
 /**
+ * A crash as shareable Markdown — title, device table, stack and breadcrumbs — which is what the
+ * sheet's Share and Copy buttons produce. Paste it straight into an issue or a chat.
+ *
  * Markdown rather than plain text because the destination is almost always an issue tracker or a
  * chat window, and both render it. The fenced blocks are what keep a stack trace from being
  * re-wrapped into nonsense on the way.
@@ -91,6 +94,10 @@ export function formatCrashReport(record: CrashRecord): string {
   return sections.join('\n');
 }
 
+/**
+ * The whole record as pretty-printed JSON, for a machine rather than a person — an upload body, a
+ * log line, a fixture. Never throws: a value it cannot serialise falls back to a string.
+ */
 export function formatCrashJson(record: CrashRecord): string {
   return safeStringify(record);
 }

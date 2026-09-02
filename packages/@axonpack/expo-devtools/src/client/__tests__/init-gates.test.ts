@@ -1,5 +1,5 @@
 import { createDevtoolsClient } from '../create-devtools-client.client';
-import { BUILT_IN_PALETTES } from '../../core/constants/theme.const';
+import { BUILT_IN_THEMES } from '../../core/constants/theme.const';
 import {
   captureCrash,
   resetCrashCapture,
@@ -84,7 +84,7 @@ describe('enableWhileDevtoolsDisabled', () => {
       defaultTheme: 'dracula',
       crash: { enableWhileDevtoolsDisabled: true },
     });
-    expect(themeStore.getPalette()).toBe(BUILT_IN_PALETTES.dracula);
+    expect(themeStore.getPalette()).toBe(BUILT_IN_THEMES.dracula.palette);
   });
 });
 

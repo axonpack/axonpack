@@ -1,16 +1,35 @@
 import { performanceStore } from '../stores/performance.store';
 
+/** Options for `devtools.mark()`. Both optional; `devtools.mark('name')` is the usual call. */
 export type MarkOptions = {
+  /**
+   * Anything worth seeing beside the entry — an id, a route, a count. Strings are shown as they
+   * are, everything else as JSON. Nothing is attached by default.
+   */
   detail?: unknown;
-
+  /**
+   * Place the mark at a time you already have, in `performance.now()` milliseconds. Defaults to
+   * now — pass this only when timing something that already happened.
+   */
   startTime?: number;
 };
 
+/**
+ * Options for `devtools.measure()`, for the cases the two-mark form cannot express.
+ *
+ * Passing `start`, `end` and `duration` together throws, since the three can disagree.
+ */
 export type MeasureOptions = {
+  /** As `MarkOptions.detail`: extra context shown beside the entry. */
   detail?: unknown;
-
+  /**
+   * Where the span begins — the name of an earlier mark, or a `performance.now()` timestamp.
+   * Defaults to the mark with the same name as the measure.
+   */
   start?: string | number;
+  /** Where the span ends, as a mark name or a timestamp. Defaults to now. */
   end?: string | number;
+  /** The span's length in milliseconds, when you have timed it yourself. */
   duration?: number;
 };
 

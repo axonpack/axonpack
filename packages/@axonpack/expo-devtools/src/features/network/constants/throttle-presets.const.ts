@@ -1,4 +1,12 @@
+/**
+ * A throttling profile — the shape behind each preset in the Network tab's conditions panel, and
+ * what `devtools.networkConditionsStore` reports as the active one.
+ *
+ * Setting one delays a response by `latencyMs` and then paces its body at the given rates, so a
+ * request behaves roughly the way it would on that connection.
+ */
 export type ThrottleProfile = {
+  /** Downlink in kilobits per second. */
   downloadKbps: number;
   /**
    * The uplink, which on a real mobile connection is a fraction of the downlink — the presets below
@@ -6,6 +14,7 @@ export type ThrottleProfile = {
    */
   uploadKbps: number;
 
+  /** Round-trip delay added before a response starts, in milliseconds. */
   latencyMs: number;
 };
 
@@ -18,6 +27,11 @@ export const THROTTLE_PRESET_IDS = [
   'custom',
 ] as const;
 
+/**
+ * The throttling choices in the Network tab's conditions panel: `'none'` (the default, no
+ * throttling), `'slow-3g'`, `'fast-3g'`, `'fast-4g'`, `'offline'` (requests fail as they would
+ * without a network), and `'custom'` for rates you set yourself.
+ */
 export type ThrottlePresetId = (typeof THROTTLE_PRESET_IDS)[number];
 
 export const THROTTLE_PRESET_LABELS: Record<ThrottlePresetId, string> = {

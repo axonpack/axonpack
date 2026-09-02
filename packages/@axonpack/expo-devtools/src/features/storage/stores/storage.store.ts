@@ -3,11 +3,19 @@ import { EventEmitter } from 'expo';
 import type { StorageAdapter, StorageValueType } from '../services/define-adapter.service';
 import type { StoredValueKind } from '../utils/classify-value.util';
 
+/**
+ * One key and value read from a registered store — a row in the Storage tab. Read them from
+ * `devtools.storageStore.getSnapshot()`; nothing is read until the tab is opened or Refresh is
+ * pressed, since a pull costs only what it reads.
+ */
 export type StorageEntry = {
+  /** Which registered store it came from — `StorageAdapter.id`. */
   adapterId: string;
+  /** The key, as the store reported it. */
   key: string;
   /** `null` is an absent key. `''` is a value. */
   text: string | null;
+  /** What the driver typed the value as. Drives how an edit is written back. */
   valueType: StorageValueType;
   /** Classified once at read time — see `classifyStoredValue`, which parses JSON to get here. */
   kind: StoredValueKind;
@@ -17,20 +25,33 @@ export type StorageEntry = {
   error?: string;
 };
 
+/**
+ * Where a store's read got to: `'idle'` before the tab has read it, `'reading'` while it is,
+ * `'ready'` once entries are in, `'error'` when the driver threw.
+ */
 export type StorageAdapterStatus = 'idle' | 'reading' | 'ready' | 'error';
 
+/** One registered store and the last read of it. */
 export type StorageAdapterState = {
+  /** The store itself — name, id, and what it is allowed to do. */
   adapter: StorageAdapter;
+  /** The keys read, sorted by key. Empty until the first read. */
   entries: StorageEntry[];
+  /** Where that read got to. */
   status: StorageAdapterStatus;
+  /** Why the read failed, when it did. */
   error?: string;
   /** The read stopped at the key cap. `totalKeys` is how many the store really holds. */
   truncated: boolean;
+  /** How many keys the store holds, even when only `storage.maxKeys` of them were read. */
   totalKeys: number;
+  /** When the last read finished, as `Date.now()` milliseconds. Absent before the first one. */
   readAt?: number;
 };
 
+/** Every registered store and its last read — what `devtools.storageStore.getSnapshot()` returns. */
 export type StorageSnapshot = {
+  /** One entry per registered adapter, in the order they were registered. */
   adapters: StorageAdapterState[];
 };
 

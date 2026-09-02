@@ -4,6 +4,10 @@ import type { ResolvedNetworkConditions } from './network-conditions.store';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
 import type { RequestField } from '../utils/request-body.util';
 
+/**
+ * Where a request got to: `'pending'` while it is in flight, `'success'` for a 2xx/3xx answer,
+ * `'error'` for a 4xx/5xx one or a request that never came back. What colours a row in the tab.
+ */
 export type NetworkLogStatus = 'pending' | 'success' | 'error';
 
 /**
@@ -14,13 +18,17 @@ export type NetworkLogStatus = 'pending' | 'success' | 'error';
 export type NetworkPhases = {
   /** Waiting for the stack to start work on it — the connection pool and the request queue. */
   queuedMs?: number;
+  /** Resolving the host name, in milliseconds. Absent on a reused connection. */
   dnsMs?: number;
+  /** Opening the socket, in milliseconds. Absent on a reused connection. */
   tcpMs?: number;
+  /** The TLS handshake, in milliseconds. Absent on plain HTTP and on a reused connection. */
   tlsMs?: number;
   /** Sending the request, headers and body. */
   sendMs?: number;
   /** Sent, waiting for the first byte back. */
   waitMs?: number;
+  /** Reading the response body, in milliseconds. */
   downloadMs?: number;
   /** No connection phases means the socket was already open, which is worth saying rather than
    * leaving three blanks that read like a failure to measure. */
@@ -38,18 +46,31 @@ export type NetworkPhases = {
   measuredBy: 'urlsession' | 'okhttp' | 'webview';
 };
 
+/**
+ * One captured request — an HTTP row in the Network tab. Read them with
+ * `devtools.networkLogStore.getSnapshot()`; the store keeps the most recent 200, and bodies are
+ * kept whole rather than truncated.
+ */
 export type NetworkLogEntry = {
   /** Discriminates a request from a socket in the one list the tab shows. */
   kind: 'http';
+  /** Unique id for this row, stable for as long as it is in the buffer. */
   id: string;
+  /** HTTP method, upper-case — `GET`, `POST`. */
   method: string;
+  /** The absolute URL, with a page's relative path already resolved against its own location. */
   url: string;
+  /** Where the request got to. */
   status: NetworkLogStatus;
+  /** The response's status code. Absent until the response arrives, or if it never did. */
   statusCode?: number;
+  /** The status line's reason phrase, when the stack reported one. */
   statusText?: string;
+  /** The request body as text, whole. Absent for a request that had none. */
   requestBody?: string;
   /** The parts of a form-data body, where a one-line preview cannot show what was uploaded. */
   requestFields?: RequestField[];
+  /** The response body as text, whole. Absent for a binary response — see `responseBase64`. */
   responseBody?: string;
   /**
    * A response that is not text, base64-encoded. Kept beside `responseBody` rather than replacing it,
@@ -61,8 +82,11 @@ export type NetworkLogEntry = {
    * too big to keep and one that could not be read are different facts, and both are worth knowing.
    */
   bodyOmitted?: 'too-large' | 'unreadable';
+  /** The failure message, for a request that never produced a response. */
   error?: string;
+  /** When the request went out, as `Date.now()` milliseconds. Sorts the list. */
   startedAt: number;
+  /** End-to-end time in milliseconds. Absent while the request is still in flight. */
   duration?: number;
   /** Time until the response headers arrived — the wait, as opposed to the body download. */
   ttfb?: number;
@@ -74,6 +98,9 @@ export type NetworkLogEntry = {
    */
   progress?: { direction: 'upload' | 'download'; loaded: number; total?: number };
 
+  /**
+   * Which WebView made it — the `webviewSources` name. Absent for the app's own requests.
+   */
   source?: string;
   /**
    * What `document.cookie` held in the page when it made the request. Not the cookies the request
@@ -81,13 +108,18 @@ export type NetworkLogEntry = {
    * HttpOnly cookie is invisible to a page by design. Kept separate from the headers for that reason.
    */
   pageCookies?: string;
+  /** Request headers, lower-cased keys. Absent when the transport did not expose them. */
   requestHeaders?: Record<string, string>;
+  /** Response headers, lower-cased keys. */
   responseHeaders?: Record<string, string>;
-
+  /** The response's content type, without parameters — `application/json`. */
   mimeType?: string;
-
+  /** Response body size in bytes, as the row reports it. See `transfer` for wire vs decoded. */
   size?: number;
-
+  /**
+   * The network conditions in force when this request went out, so a slow row can be read as
+   * throttled rather than slow. Absent when nothing was being simulated.
+   */
   conditions?: ResolvedNetworkConditions;
 
   /** Set when the panel stood in for the server, so a row never passes off a rule as a real answer. */
@@ -121,49 +153,74 @@ export type NetworkLogEntry = {
   initiator?: StackFrame[];
 };
 
+/** A socket's state, mirroring `WebSocket.readyState`, with `'error'` for one that failed. */
 export type WebSocketStatus = 'connecting' | 'open' | 'closing' | 'closed' | 'error';
 
+/** One frame on a WebSocket, listed under that connection's Events tab. */
 export type WebSocketMessage = {
+  /** Unique id for this frame. */
   id: string;
+  /** Which way it went, from the app's point of view. */
   direction: 'sent' | 'received';
+  /** The frame's payload as text; a binary frame arrives as its decoded bytes. */
   data: string;
   /** A blob arrives as `binary`: only its bytes are relayed, never a `Blob` we could re-read. */
   messageType: 'text' | 'binary';
+  /** When it was sent or received, as `Date.now()` milliseconds. */
   timestamp: number;
 };
 
 /** One dispatched event out of a `text/event-stream` response. */
 export type ServerSentEvent = {
+  /** Unique id for this event — not the stream's own `id:`, which is `lastEventId`. */
   id: string;
   /** `message` unless the block named one, exactly as `EventSource` would have dispatched it. */
   type: string;
+  /** The event's `data:` payload, with multi-line blocks already joined. */
   data: string;
   /** The stream's own `id:`, when it sent one — what a client would resume from. */
   lastEventId?: string;
+  /** When it was dispatched, as `Date.now()` milliseconds. */
   timestamp: number;
 };
 
+/**
+ * One captured WebSocket connection — a `WS` row in the Network tab. Its frames are held apart, and
+ * read with `devtools.networkLogStore.getSocketMessages(id)`.
+ */
 export type WebSocketLogEntry = {
+  /** Discriminates a socket from a request in the one list the tab shows. */
   kind: 'websocket';
+  /** Unique id for this row, stable for as long as it is in the buffer. */
   id: string;
   /**
    * Always `WS`. A socket has no HTTP method, but the list, the grouping and the method filter all
    * read this field, and a socket is a row in that same list.
    */
   method: 'WS';
+  /** Which WebView opened it — the `webviewSources` name. Absent for the app's own sockets. */
   source?: string;
   /** React Native's own handle for the socket, which is what its native events are keyed by. */
   socketId: number;
+  /** The `ws://` or `wss://` URL it connected to. */
   url: string;
+  /** Subprotocols offered at handshake, when any were. */
   protocols?: string[];
+  /** The connection's state right now. */
   status: WebSocketStatus;
+  /** When the connection was opened, as `Date.now()` milliseconds. */
   startedAt: number;
+  /** How long it stayed open, in milliseconds. Absent while it still is. */
   duration?: number;
+  /** The close code, once it closed — `1000` for a normal close. */
   closeCode?: number;
+  /** The close reason the peer gave, when it gave one. */
   closeReason?: string;
+  /** The failure message, for a socket that errored. */
   error?: string;
 };
 
+/** A row in the Network tab: either a request or a socket. Both carry a `kind` to tell them apart. */
 export type NetworkEntry = NetworkLogEntry | WebSocketLogEntry;
 
 type NetworkLogEvents = {

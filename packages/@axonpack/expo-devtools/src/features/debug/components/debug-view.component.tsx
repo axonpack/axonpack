@@ -1,8 +1,8 @@
 import { ScrollView, View } from 'react-native';
 
 import { LimiterSection } from './limiter-section.component';
-import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
+import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 
 /**
  * Tools that break the app on purpose, rather than measure it.

@@ -109,16 +109,16 @@ export function captureCrash(
     // Before the handler returns: the link is what lets the console patch recognise React Native's
     // own re-emit of this error and leave it alone, since the row below is already the one to show.
     crashLinkStore.link(error, record.id);
-    // Written here rather than left to that re-emit: a fatal error never reaches it, because the
-    // handler that would have re-emitted is the one being withheld from, and a native exception
-    // never passed through JavaScript at all. Doing it for every kind is what makes the console the
-    // one place every error turns up, at one level, with one icon.
+    // Written here rather than left to that re-emit: a native exception never passed through
+    // JavaScript at all, and for the kinds that did, the link above is what stops the re-emit from
+    // writing a second row. Doing it for every kind is what makes the console the one place every
+    // error turns up, at one level, with one icon.
     logCrashRow(record);
 
-    // A native exception is the only kind that still ends the app, so it is the only one worth
-    // writing down for the next launch to read. Every JavaScript tier is survived now, which means
-    // the panel is alive to show the record already — persisting one would report it a second time at
-    // the next launch, and present it as a crash the process did not survive.
+    // A fatal JS error ends the app as well, but it is not written down here: React Native reports
+    // it to the native side on its way out, so the native handler records that same crash as the
+    // exception it became. Persisting this record too would show one crash as two rows at the next
+    // launch. Every other JavaScript tier is survived, so the panel is alive to show those already.
     if (kind === 'native-exception' || options.persistNonFatal) persistCrashRecord(record);
 
     try {

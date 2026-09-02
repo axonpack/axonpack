@@ -1,4 +1,4 @@
-import type { ThemeConfig, ThemeId } from '../core/constants/theme.const';
+import type { BuiltInThemeId, ThemeConfig } from '../core/constants/theme.const';
 import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
 import { themeStore } from '../core/stores/theme.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
@@ -69,40 +69,116 @@ type WebViewMessageEventLike = {
  */
 export type DevtoolsNetworkConfig = {
   /**
-   * Plain requests, however they were made: `fetch`, Expo's own fetch, `XMLHttpRequest`, a JSI client,
-   * and a page's own requests. Off also means no phase timing, since there is nothing to time.
+   * Plain requests, however they were made: `fetch`, Expo's own fetch, `XMLHttpRequest`, a JSI
+   * client, and a page's own requests. Each becomes a row in the Network tab. Defaults to `true`.
+   *
+   * Off also means no phase timing, since there is nothing to time.
    */
   http?: boolean;
-  /** WebSocket connections and their messages, the app's own and a page's. */
+  /**
+   * WebSocket connections, the app's own and a page's. The connection is a row in the Network tab
+   * and its messages are listed under that row's Events tab. Defaults to `true`.
+   */
   websocket?: boolean;
   /**
-   * Server-sent event streams and their events, whichever client opened them.
+   * Server-sent event streams and their events, whichever client opened them — a stream is a row in
+   * the Network tab and its events are listed under that row's Events tab. Defaults to `true`.
    *
    * The app's own stream is still recognised as one with this off — its endless body has to be, or it
    * would be read as a response — so the row remains and only the events are dropped. A page's stream
    * has no request underneath it that anything here can see, so that one disappears entirely.
    */
   sse?: boolean;
+  /**
+   * Open the Network tab with recording paused, so nothing is logged until the record button in its
+   * toolbar is pressed. Defaults to `false`.
+   *
+   * Interception is still installed either way — this is the pause button's starting position, not
+   * a way to keep the patches out of the app.
+   */
   disabledByDefault?: boolean;
 };
 
+/** Everything the Console tab does. Both switches default to `true`. */
 export type DevtoolsConsoleConfig = {
+  /**
+   * Mirror `console.log` / `.warn` / `.error` / `.info` / `.debug` into the Console tab, the app's
+   * own and a declared WebView's. Defaults to `true`.
+   *
+   * The original console keeps working — Metro still gets every call.
+   */
   capture?: boolean;
+  /**
+   * The `>` prompt at the bottom of the Console tab, for evaluating expressions against the running
+   * app. Defaults to `true`. Turn it off to ship the log view without a way to execute code.
+   */
   repl?: boolean;
+  /**
+   * Extra values the `>` prompt can reach by name, on top of the app's globals — handy for the
+   * things a REPL cannot import for itself, such as a store instance or a helper:
+   *
+   * ```ts
+   * console: { context: { store, resetOnboarding } }
+   * ```
+   *
+   * Empty by default.
+   */
   context?: Record<string, unknown>;
+  /**
+   * Open the Console tab with recording paused, so nothing is logged until the record button in its
+   * toolbar is pressed. Defaults to `false`. The `>` prompt still answers while paused.
+   */
   disabledByDefault?: boolean;
 };
 
+/**
+ * What the Performance tab samples and how much of it it keeps. The defaults are tuned to stay out
+ * of the way of the app being measured; raise the thresholds to see less, lower them to see more.
+ */
 export type DevtoolsPerformanceConfig = {
+  /**
+   * How often JS heap and system metrics are sampled, in milliseconds. Defaults to `1000`.
+   *
+   * Each sample crosses into the JS engine to read its heap, so a very short interval makes the
+   * profiler part of what it is measuring. A second is enough to watch a leak grow.
+   */
   sampleIntervalMs?: number;
+  /**
+   * Shortest JS-thread block, in milliseconds, that is worth listing as a long task. Defaults to
+   * `150`. Anything faster than this is dropped rather than shown.
+   */
   longTaskThresholdMs?: number;
+  /**
+   * Shortest interaction — a tap or key press — in milliseconds that is worth recording, measured
+   * from the event to the end of its handling. Defaults to `100`; values below `16` (one frame) are
+   * raised to it, since the platform cannot report finer.
+   */
   interactionThresholdMs?: number;
+  /**
+   * Entries kept per series — memory samples, long tasks, interactions, user timings. Defaults to
+   * `120`, i.e. two minutes of samples at the default interval. Oldest are dropped first.
+   */
   historySize?: number;
+  /**
+   * Open the Performance tab with recording paused. Defaults to `true` here, unlike the other tabs:
+   * the collectors keep a frame loop and an interval running, so they start only when the record
+   * button asks for them.
+   */
   disabledByDefault?: boolean;
 };
 
+/**
+ * Crash reporting: which crashes are caught, what the sheet in front of the user looks like, and
+ * where records go afterwards. The only part of this package that can run without `init()` — see
+ * `enableWhileDevtoolsDisabled`.
+ */
 export type DevtoolsCrashConfig = {
-  /** Capture at all. Defaults to `true`. */
+  /**
+   * Whether crashes are captured at all. Defaults to `true`.
+   *
+   * Set it to `false` to ship the panel without crash reporting; nothing is installed and the crash
+   * sheet never appears.
+   */
   enabled?: boolean;
   /**
    * Keep capturing crashes even when the devtools are off — which, in this package, means nothing
@@ -127,6 +203,18 @@ export type DevtoolsCrashConfig = {
    * runs whatever these say: the JS tiers report errors the app survived, which is a developer's
    * concern, and the sheet is in front of a user there. A fatal JS error still arrives, because
    * React Native turns it into a native exception on the way to killing the process.
+   *
+   * **If the app already has a crash reporter — Sentry, Crashlytics — these are the switches that
+   * decide who sees what.** The two JS tiers use the same hooks such a reporter does:
+   *
+   * - `jsErrors` wraps React Native's global handler and passes every error on, fatal or not, so a
+   *   reporter installed before this one sees all of them.
+   * - `unhandledRejections` takes a single-slot API with nothing to chain to, so whichever of the
+   *   two is initialised last wins outright. Turn it off to leave the slot to the reporter.
+   * - `nativeExceptions` always chains to the handler that was already installed, so a native crash
+   *   reaches every reporter regardless.
+   *
+   * `onCrash` is the other way round: leave the tiers on and forward each record yourself.
    */
   handlers?: {
     /**
@@ -135,14 +223,21 @@ export type DevtoolsCrashConfig = {
      * Installing it also stops a fatal error from ending the app: React Native is what reports one to
      * the native side, and this handler is what withholds it. Turning the tier off hands that back,
      * so the app crashes the way it would without this package.
+     *
+     * Defaults to `true`.
      */
     jsErrors?: boolean;
     /**
      * Unhandled promise rejections — the tier that adds the most in a development build, since React
      * Native registers its own tracker only under `__DEV__`.
+     *
+     * Defaults to `true`.
      */
     unhandledRejections?: boolean;
-    /** Uncaught Java/Kotlin and Objective-C exceptions, via the native module. */
+    /**
+     * Uncaught Java/Kotlin and Objective-C exceptions, via the native module. Defaults to `true`,
+     * and is the one tier that also runs before `init()` — see `enableWhileDevtoolsDisabled`.
+     */
     nativeExceptions?: boolean;
   };
   /**
@@ -176,46 +271,151 @@ export type DevtoolsCrashConfig = {
    * proposition from a stack trace.
    */
   breadcrumbs?: boolean;
+  /**
+   * Intended cap on how many breadcrumbs travel with a record.
+   *
+   * Not honoured yet: the trail is currently everything the Console and Network tabs were holding,
+   * so setting this changes nothing. Kept because the field is public API.
+   */
   maxBreadcrumbs?: number;
-  /** Reports kept in memory. Defaults to 25. */
+  /** How many crash reports the Crash tab keeps, oldest dropped first. Defaults to `25`. */
   maxRecords?: number;
   /**
    * Also write non-fatal records to disk. Off by default: the app survived them, so they are already
    * in the panel, and persisting one means reporting it again at the next launch.
    */
   persistNonFatal?: boolean;
-  /** Runs before the record reaches the store, the disk or `onCrash`. Return `null` to drop it. */
+  /**
+   * Your chance to strip anything sensitive before a record is stored, written to disk or handed to
+   * `onCrash`. Return the record to keep — edited or not — or `null` to drop it entirely. No
+   * redaction by default.
+   *
+   * ```ts
+   * redact: (record) => ({ ...record, context: { ...record.context, token: undefined } })
+   * ```
+   */
   redact?: (record: CrashRecord) => CrashRecord | null;
+  /**
+   * Called once per crash, after `redact`, with the record that was stored — the hook for forwarding
+   * to Sentry, Crashlytics or your own endpoint.
+   *
+   * It runs inside the crash handler, so keep it cheap and never let it throw: fire the report and
+   * return. Not called for a record `redact` dropped.
+   */
   onCrash?: (record: CrashRecord) => void;
 };
 
+/**
+ * The Storage tab. Nothing is discovered automatically, so `adapters` is the whole of what the tab
+ * can see; the rest bounds how much it reads and whether it may write.
+ */
 export type DevtoolsStorageConfig = {
   /**
    * The stores to inspect, built with `asyncStorageAdapter` / `mmkvAdapter` /
    * `secureStoreAdapter` / `defineStorageAdapter`. Nothing is discovered automatically — this
    * package depends on no storage library, so this list is the whole of what the tab can see.
+   *
+   * ```ts
+   * storage: { adapters: [asyncStorageAdapter({ driver: AsyncStorage })] }
+   * ```
+   *
+   * Empty by default, which leaves the Storage tab with nothing to show.
    */
   adapters?: readonly StorageAdapterDefinition[];
-  /** Keys read per store before the tab stops and says how many it skipped. */
+  /**
+   * How many keys are read per store before the tab stops and reports how many it skipped. Defaults
+   * to `1000`. Raise it for a store with more keys than that, at the cost of a slower refresh.
+   */
   maxKeys?: number;
-  /** Blanket read-only default; an individual adapter can still set its own. */
+  /**
+   * Make every registered store read-only, so the tab can inspect values but not edit or delete
+   * them. Defaults to `false`. An individual adapter's own `readOnly` wins over this.
+   */
   readOnly?: boolean;
 };
 
-export type DevtoolsClientConfig<TWebviewSources extends readonly string[]> = {
-  defaultTheme?: ThemeId;
-  themes?: Record<ThemeId, ThemeConfig>;
+/**
+ * Everything `createDevtoolsClient` accepts. Every field is optional and the defaults suit most
+ * apps — a bare `createDevtoolsClient()` captures requests, console output and crashes.
+ *
+ * The two type parameters are inferred from the config you pass; you never write them out.
+ */
+export type DevtoolsClientConfig<
+  TWebviewSources extends readonly string[],
+  TThemeName extends string = never,
+> = {
+  // `NoInfer` is what closes the set: without it this property is an inference site of its own, so
+  // a name that was never registered would widen `TThemeName` rather than fail to compile.
+  /**
+   * The theme the panel opens on. Accepts a built-in palette id — `'light'`, `'dark'`, `'dracula'`,
+   * `'nord'`, `'monokai'`, `'one-dark'`, `'solarized-light'` — or the name of a theme declared in
+   * `themes`. An unknown name is a type error. Defaults to `'light'`.
+   *
+   * The theme picker in the panel header overrides this for the current session; the selection is
+   * not persisted.
+   */
+  defaultTheme?: BuiltInThemeId | NoInfer<TThemeName>;
+  /**
+   * Custom themes, keyed by the name shown in the panel's theme picker. A theme patches a built-in
+   * palette rather than defining every colour:
+   *
+   * ```ts
+   * themes: { midnight: { base: 'dark', colors: { accent: '#a78bfa' } } }
+   * ```
+   *
+   * A name declared here becomes a valid value for `defaultTheme`.
+   */
+  themes?: Record<TThemeName, ThemeConfig>;
+  /**
+   * Names for the WebViews the panel captures from. A name labels one WebView's requests and
+   * console output, and is what you pass when wiring that WebView up:
+   *
+   * ```tsx
+   * <WebView
+   *   injectedJavaScriptBeforeContentLoaded={devtools.getWebViewInjectedJavaScriptBeforeContentLoaded('checkout')}
+   *   onMessage={devtools.handleWebViewMessage}
+   * />
+   * ```
+   *
+   * The list is both the accepted set of names and a runtime allowlist: an undeclared name is a
+   * type error at the call site, and `handleWebViewMessage` ignores messages from a source that is
+   * not listed. Omit it and messages from any source are accepted.
+   *
+   * It sits at the top level rather than under `network` because the Console tab captures from a
+   * declared WebView as well.
+   */
   webviewSources?: TWebviewSources;
+  /** The Network tab: which kinds of traffic are captured, and whether it starts recording. */
   network?: DevtoolsNetworkConfig;
+  /** The Console tab: log capture, the `>` prompt, and what that prompt can reach. */
   console?: DevtoolsConsoleConfig;
+  /** The Performance tab: sampling rate, what counts as slow, and how much history is kept. */
   performance?: DevtoolsPerformanceConfig;
+  /** The Storage tab: which stores it can see. Nothing is inspected until you register one here. */
   storage?: DevtoolsStorageConfig;
+  /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
   crash?: DevtoolsCrashConfig;
 };
 
+/**
+ * Creates the devtools client — the package's one entry point. Call it once, at module scope, and
+ * export the result so the rest of the app can reach it.
+ *
+ * It only builds the client: `init()` is what installs the instrumentation, and `<DevtoolsOverlay />`
+ * is what renders the panel.
+ *
+ * ```ts
+ * export const devtools = createDevtoolsClient({ defaultTheme: 'dark' });
+ * if (__DEV__) devtools.init();
+ * ```
+ *
+ * Every option is optional — `createDevtoolsClient()` captures requests, console output and crashes
+ * with sensible defaults. See `DevtoolsClientConfig` for what can be configured.
+ */
 export function createDevtoolsClient<
   const TWebviewSources extends readonly string[] = readonly string[],
->(config?: DevtoolsClientConfig<TWebviewSources>) {
+  TThemeName extends string = never,
+>(config?: DevtoolsClientConfig<TWebviewSources, TThemeName>) {
   const webviewSources = config?.webviewSources;
   const {
     http: captureHttp = true,
@@ -315,6 +515,17 @@ export function createDevtoolsClient<
   if (crashSurvivesDisabled) initCrashCapture(false);
 
   return {
+    /**
+     * Starts the devtools: installs the network and console patches, attaches the crash handlers and
+     * makes the overlay appear. Call it once, as early in startup as possible.
+     *
+     * Nothing in this package records anything until this runs, so wrapping the call is the whole
+     * production gate:
+     *
+     * ```ts
+     * if (__DEV__) devtools.init();
+     * ```
+     */
     init() {
       // First among the subsystems, so the handlers are already listening if anything below throws.
       // Safe to re-run when the factory already installed the native tier: this is where the JS
@@ -371,38 +582,113 @@ export function createDevtoolsClient<
       // above throwing leaves the overlay hidden, which is the honest outcome.
       devtoolsReadyStore.markReady();
     },
+    /**
+     * The script that makes one WebView's requests and logs visible to the panel. A page runs in its
+     * own JS engine, so it has to be instrumented from the inside.
+     *
+     * Pass a name from `webviewSources`, hand the result to `injectedJavaScriptBeforeContentLoaded`,
+     * and wire `onMessage` to `handleWebViewMessage` — without both halves nothing arrives.
+     */
     getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
       const scripts = [getWebViewInjectedJavaScriptBeforeContentLoaded(source)];
       if (captureConsole) scripts.push(getWebViewConsoleInjectedJavaScript(source));
       return scripts.join('\n');
     },
+    /**
+     * Records a named point in time, shown under User timing in the Performance tab. The app's own
+     * equivalent of `performance.mark`.
+     *
+     * ```ts
+     * devtools.mark('checkout:start');
+     * ```
+     */
     mark(name: string, options?: MarkOptions) {
       recordMark(name, options);
     },
+    /**
+     * Records a named duration, shown under User timing in the Performance tab. Takes two marks, or
+     * an options object with explicit `start` / `end` / `duration` values:
+     *
+     * ```ts
+     * devtools.measure('checkout', 'checkout:start', 'checkout:done');
+     * devtools.measure('checkout', { duration: 820 });
+     * ```
+     *
+     * With no start given, the mark of the same name is used; with no end, now. Passing `start`,
+     * `end` and `duration` together throws, since the three can disagree.
+     */
     measure(name: string, startOrOptions?: string | MeasureOptions, endMark?: string) {
       recordMeasure(name, startOrOptions, endMark);
     },
+    /** Drops recorded marks — the one named, or all of them when called with no name. */
     clearMarks(name?: string) {
       clearRecordedMarks(name);
     },
+    /** Drops recorded measures — the one named, or all of them when called with no name. */
     clearMeasures(name?: string) {
       clearRecordedMeasures(name);
     },
-    /** Extra keys attached to every crash record from here on — user id, route, feature flags. */
+    /**
+     * Extra keys attached to every crash record from here on — user id, current route, feature
+     * flags. Empty until you call this.
+     *
+     * Each call **replaces** the whole context rather than merging into it; pass `null` to clear it.
+     *
+     * ```ts
+     * devtools.setCrashContext({ userId: user.id, route: 'checkout' });
+     * ```
+     */
     setCrashContext,
+    /**
+     * Whether a WebView should be allowed to load right now — `false` while the Network tab's
+     * conditions are set to offline. Use it in `onShouldStartLoadWithRequest` so a page obeys the
+     * offline switch the way the app's own requests do.
+     */
     shouldAllowWebViewRequest,
+    /**
+     * The other half of the WebView wiring: give this to a WebView's `onMessage` and the panel
+     * receives that page's requests and logs.
+     *
+     * Returns `true` when the message was one of ours, so an app that also uses `postMessage` for
+     * its own purposes can pass on the rest:
+     *
+     * ```tsx
+     * onMessage={(event) => {
+     *   if (devtools.handleWebViewMessage(event)) return;
+     *   handleMyOwnMessage(event);
+     * }}
+     * ```
+     */
     handleWebViewMessage(event: WebViewMessageEventLike) {
       if (handleWebViewNetworkMessage(event, webviewSources)) return true;
       return captureConsole && handleWebViewConsoleMessage(event, webviewSources);
     },
+    /**
+     * A `ref` callback for one declared WebView, which lets the panel push network conditions —
+     * offline, throttling, a custom user agent — into that page. Optional: without it the WebView
+     * still logs, it just ignores those conditions.
+     *
+     * ```tsx
+     * <WebView ref={devtools.getWebViewRef('checkout')} />
+     * ```
+     */
     getWebViewRef(source: TWebviewSources[number]) {
       return getWebViewConditionsRef(source);
     },
+    /**
+     * The user agent currently set in the Network tab's conditions, or `undefined` when none is.
+     * Pass it to a WebView's `userAgent` prop so the page identifies itself the way the panel says.
+     */
     getWebViewUserAgent,
+    /** The captured requests, for reading or clearing them from code. */
     networkLogStore,
+    /** The Network tab's conditions — offline, throttling, user agent — settable from code. */
     networkConditionsStore,
+    /** The captured console entries, for reading or clearing them from code. */
     consoleLogStore,
+    /** The registered stores and the keys last read from them. */
     storageStore,
+    /** The crash records held in memory, for reporting or clearing them from code. */
     crashStore,
   };
 }

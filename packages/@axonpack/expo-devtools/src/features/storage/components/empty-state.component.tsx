@@ -104,7 +104,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     fontSize: 11,
     fontFamily: MONOSPACE,
     color: COLORS.textPrimary,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 8,
