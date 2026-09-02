@@ -39,16 +39,24 @@ export function BottomSheet({
         duration: SLIDE_IN_MS,
         useNativeDriver: true,
       }).start();
-    } else {
-      Animated.timing(translateY, {
-        toValue: OFFSCREEN_Y,
-        duration: SLIDE_OUT_MS,
-        useNativeDriver: true,
-      }).start(() => {
-        setShouldRender(false);
-      });
+      return;
     }
-  }, [visible, translateY]);
+
+    // Nothing on screen means there is nothing to slide out. Running one anyway animates a value
+    // attached to no view, and the next open interrupts it — see the `finished` guard below.
+    if (!shouldRender) return;
+
+    Animated.timing(translateY, {
+      toValue: OFFSCREEN_Y,
+      duration: SLIDE_OUT_MS,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      // Only a slide-out that ran to the end means the sheet is off screen. An interrupted one is
+      // the next open taking the value over, and unmounting on that closes the sheet in the same
+      // breath as it opened — which looked like a tap that did nothing.
+      if (finished) setShouldRender(false);
+    });
+  }, [visible, shouldRender, translateY]);
 
   if (!shouldRender) return null;
 
