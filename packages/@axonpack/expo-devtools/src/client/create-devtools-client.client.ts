@@ -203,6 +203,18 @@ export type DevtoolsCrashConfig = {
    * runs whatever these say: the JS tiers report errors the app survived, which is a developer's
    * concern, and the sheet is in front of a user there. A fatal JS error still arrives, because
    * React Native turns it into a native exception on the way to killing the process.
+   *
+   * **If the app already has a crash reporter — Sentry, Crashlytics — these are the switches that
+   * decide who sees what.** The two JS tiers use the same hooks such a reporter does:
+   *
+   * - `jsErrors` wraps React Native's global handler and passes every error on, fatal or not, so a
+   *   reporter installed before this one sees all of them.
+   * - `unhandledRejections` takes a single-slot API with nothing to chain to, so whichever of the
+   *   two is initialised last wins outright. Turn it off to leave the slot to the reporter.
+   * - `nativeExceptions` always chains to the handler that was already installed, so a native crash
+   *   reaches every reporter regardless.
+   *
+   * `onCrash` is the other way round: leave the tiers on and forward each record yourself.
    */
   handlers?: {
     /**

@@ -1,9 +1,10 @@
 import { EventEmitter } from 'expo';
 
 /**
- * What produced the record. The distinction that matters is whether the process survived: a
- * `js-fatal` or `native-exception` is read back from disk on the *next* launch, everything else is
- * captured while the app is still running and can be shown immediately.
+ * What produced the record. The distinction that matters is whether the process survived. A
+ * `native-exception` is read back from disk on the *next* launch — and so is the crash a `js-fatal`
+ * becomes, since React Native reports that one to the native side on its way out. Every other kind
+ * is captured while the app is still running and can be shown immediately.
  */
 export type CrashKind =
   'js-fatal' | 'js-error' | 'unhandled-rejection' | 'react-render' | 'native-exception';
