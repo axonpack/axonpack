@@ -1,7 +1,57 @@
-export type Palette = typeof LIGHT_PALETTE;
+/**
+ * Every colour the panel uses, as `#rrggbb` (or `#rrggbbaa` where a token is deliberately
+ * translucent). A custom theme overrides any subset of these through
+ * `themes: { name: { base, colors } }` — the rest come from the `base` palette.
+ */
+export type Palette = {
+  /** The panel's own surface, behind every tab. */
+  background: string;
+  /** Toolbars, the header and the tab bar. */
+  toolbarBackground: string;
+  /** Translucent wash over a toolbar control that is pressed or active. */
+  toolbarOverlay: string;
+  /** Every hairline: row separators, input borders, panel edges. */
+  border: string;
+  /** Fill behind a selected row or an expanded section. */
+  sectionTint: string;
+  /** Body text, keys and values. */
+  textPrimary: string;
+  /** Labels, timestamps, placeholders — anything supporting. */
+  textSecondary: string;
+  /** The theme's own colour: the launcher button, active tabs, links and focus. */
+  accent: string;
+  /** A request still in flight. */
+  pending: string;
+  /** A 2xx/3xx request, and anything else that went right. */
+  success: string;
+  /** A failed request, `console.error`, a crash. */
+  error: string;
+  /** `console.warn` and a slow-but-fine reading. */
+  warning: string;
+  /** Fill behind an error row or banner. */
+  errorSurface: string;
+  /** Fill behind a warning row or banner. */
+  warningSurface: string;
+  /** Highlight on the part of a row that matched the filter. Translucent on purpose. */
+  matchHighlight: string;
+  /** Header names and object keys outside a JSON tree. */
+  keyAccent: string;
+  /** JSON tree: property names. */
+  jsonKey: string;
+  /** JSON tree: string values. */
+  jsonString: string;
+  /** JSON tree: numbers, booleans and `null`. */
+  jsonNumber: string;
+  /** Syntax highlighting: keywords. */
+  codeKeyword: string;
+  /** Syntax highlighting: comments. */
+  codeComment: string;
+  /** Syntax highlighting: HTML/XML tags. */
+  codeTag: string;
+};
 
 /** Chrome DevTools' light Network tab */
-export const LIGHT_PALETTE = {
+export const LIGHT_PALETTE: Palette = {
   background: '#ffffff',
   toolbarBackground: '#f3f3f3',
   toolbarOverlay: '#0000000D',
@@ -52,13 +102,25 @@ export const DARK_PALETTE: Palette = {
   codeTag: '#d16969',
 };
 
+/**
+ * Any theme's id: a built-in one or a name you registered through `themes`. The loose type behind
+ * the theme store — `createDevtoolsClient`'s `defaultTheme` is the checked version of it.
+ */
 export type ThemeId = string;
 
+/**
+ * The palettes that ship with the package: `'light'` (the default) and `'dark'` mirror Chrome
+ * DevTools, and the rest are the published palettes of their projects. Any of them can be
+ * `defaultTheme`, or the `base` a custom theme patches.
+ */
 export type BuiltInThemeId =
   'light' | 'dark' | 'dracula' | 'nord' | 'monokai' | 'one-dark' | 'solarized-light';
 
+/** A custom palette, as passed to `createDevtoolsClient({ themes })`. */
 export type ThemeConfig = {
+  /** The built-in palette every colour is inherited from. Defaults to `'light'`. */
   base?: BuiltInThemeId;
+  /** Colours to override on `base`. Every token left out keeps the base's value. */
   colors?: Partial<Palette>;
 };
 

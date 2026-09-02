@@ -11,14 +11,21 @@ import {
   type UserAgentPresetId,
 } from '../constants/user-agent-presets.const';
 
+/**
+ * The network conditions in force right now, as returned by
+ * `devtools.networkConditionsStore.resolve()` — the preset ids the user picked, plus the concrete
+ * values those ids resolve to.
+ */
 export type ResolvedNetworkConditions = {
+  /** `true` while the offline preset is selected, which is what fails outgoing requests. */
   offline: boolean;
-
+  /** The active throttling rates, or `null` when nothing is being throttled. */
   throttle: ThrottleProfile | null;
-
+  /** The user-agent string to send, or `null` to leave the platform's own alone. */
   userAgent: string | null;
-
+  /** Which throttling preset is selected. Defaults to `'none'`. */
   throttleId: ThrottlePresetId;
+  /** Which user-agent preset is selected. Defaults to `'default'`. */
   userAgentId: UserAgentPresetId;
 };
 

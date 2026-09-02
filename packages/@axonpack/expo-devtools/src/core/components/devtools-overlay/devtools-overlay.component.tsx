@@ -15,10 +15,21 @@ const EDGE_MARGIN = 16;
 const TAP_THRESHOLD = 4;
 const GLYPH_RATIO = 0.45;
 
+/**
+ * Props for `<DevtoolsOverlay />` — the draggable launcher button that opens the panel. All optional;
+ * `<DevtoolsOverlay />` on its own is the normal usage.
+ */
 export type DevtoolsOverlayProps = {
+  /**
+   * Your own icon in place of the default bug glyph. It is handed a `size` in dp and should render
+   * at it. Defaults to a Material `bug-report` icon.
+   */
   iconComponent?: ComponentType<{ size: number }>;
+  /** Diameter of the button in dp. Defaults to `44`, the platform's minimum tap target. */
   size?: number;
+  /** Button fill. Defaults to the active theme's accent colour. */
   color?: string;
+  /** Glyph colour, used by the default icon only. Defaults to `'#ffffff'`. */
   iconColor?: string;
 };
 
@@ -31,6 +42,20 @@ function getInitialPosition(size: number): { x: number; y: number } {
   return { x: width - size - EDGE_MARGIN, y: height - size - EDGE_MARGIN * 4 };
 }
 
+/**
+ * The draggable launcher button, and the panel it opens. Mount it once, anywhere inside your app's
+ * tree — it renders nothing until `devtools.init()` has run, so a build that never calls `init()`
+ * pays for nothing and shows nothing.
+ *
+ * ```tsx
+ * <>
+ *   <App />
+ *   <DevtoolsOverlay />
+ * </>
+ * ```
+ *
+ * It also mounts the crash report sheet, so a dev build gets that without wiring a second component.
+ */
 export function DevtoolsOverlay({
   iconComponent: IconComponent,
   size = DEFAULT_SIZE,
