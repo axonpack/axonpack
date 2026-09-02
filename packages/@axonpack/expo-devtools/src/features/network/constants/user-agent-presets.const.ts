@@ -8,6 +8,11 @@ export const USER_AGENT_PRESET_IDS = [
   'custom',
 ] as const;
 
+/**
+ * The user-agent choices in the Network tab's conditions panel. `'default'` sends the platform's
+ * own; the rest impersonate a browser or crawler, and `'custom'` takes a string you type. Applies
+ * to the app's requests and to a declared WebView (via `devtools.getWebViewUserAgent`).
+ */
 export type UserAgentPresetId = (typeof USER_AGENT_PRESET_IDS)[number];
 
 export const USER_AGENT_PRESET_LABELS: Record<UserAgentPresetId, string> = {
