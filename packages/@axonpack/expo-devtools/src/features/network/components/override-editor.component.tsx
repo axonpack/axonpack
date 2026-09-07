@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
@@ -10,7 +10,7 @@ import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-sty
 import type { NetworkLogEntry } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
 
-export function OverrideEditor({
+function OverrideEditorBase({
   entry,
   onClose,
 }: {
@@ -117,6 +117,8 @@ export function OverrideEditor({
     </BottomSheet>
   );
 }
+
+export const OverrideEditor = memo(OverrideEditorBase);
 
 const useStyles = makeThemedStyles((COLORS) => ({
   content: {

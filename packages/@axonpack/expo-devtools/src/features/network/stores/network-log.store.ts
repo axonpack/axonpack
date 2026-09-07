@@ -1,5 +1,6 @@
 import { EventEmitter } from 'expo';
 
+import { coalesceNotify } from '../../../core/utils/coalesce-notify.util';
 import type { ResolvedNetworkConditions } from './network-conditions.store';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
 import type { RequestField } from '../utils/request-body.util';
@@ -262,6 +263,7 @@ let preserveLog = true;
 
 let enabled = false;
 const emitter = new EventEmitter<NetworkLogEvents>();
+const notify = coalesceNotify(emitter);
 
 export const networkLogStore = {
   getSnapshot(): NetworkLogEntry[] {
@@ -286,15 +288,15 @@ export const networkLogStore = {
   },
   setEnabled(nextEnabled: boolean) {
     enabled = nextEnabled;
-    emitter.emit('change');
+    notify();
   },
   setPaused(nextPaused: boolean) {
     paused = nextPaused;
-    emitter.emit('change');
+    notify();
   },
   setPreserveLog(nextPreserveLog: boolean) {
     preserveLog = nextPreserveLog;
-    emitter.emit('change');
+    notify();
   },
   notifyNavigation() {
     if (!preserveLog) {
@@ -303,14 +305,14 @@ export const networkLogStore = {
       socketMessages = new Map();
       streamEvents = new Map();
       remerge();
-      emitter.emit('change');
+      notify();
     }
   },
   add(entry: Omit<NetworkLogEntry, 'kind'>) {
     if (!enabled || paused) return;
     entries = [{ ...entry, kind: 'http' as const }, ...entries].slice(0, MAX_ENTRIES);
     remerge();
-    emitter.emit('change');
+    notify();
   },
   getWebSocketSnapshot(): WebSocketLogEntry[] {
     return socketEntries;
@@ -325,7 +327,7 @@ export const networkLogStore = {
       MAX_ENTRIES
     );
     remerge();
-    emitter.emit('change');
+    notify();
   },
   /**
    * Deliberately not gated on `paused`: a socket opened while recording lives on, and dropping the
@@ -341,7 +343,7 @@ export const networkLogStore = {
     });
     if (changed) {
       remerge();
-      emitter.emit('change');
+      notify();
     }
   },
   addWebSocketMessage(id: string, message: WebSocketMessage) {
@@ -355,7 +357,7 @@ export const networkLogStore = {
     // The row for a socket shows how many messages it has carried, so the list snapshot has to
     // change too — otherwise that count is read once and never again.
     remerge();
-    emitter.emit('change');
+    notify();
   },
   getStreamEvents(id: string): readonly ServerSentEvent[] {
     return streamEvents.get(id) ?? NO_EVENTS;
@@ -374,13 +376,13 @@ export const networkLogStore = {
     );
     // The row shows how many events have arrived, so the list snapshot has to change with it.
     remerge();
-    emitter.emit('change');
+    notify();
   },
   update(id: string, patch: Partial<NetworkLogEntry>) {
     if (!enabled) return;
     entries = entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
     remerge();
-    emitter.emit('change');
+    notify();
   },
   clear() {
     entries = [];
@@ -388,6 +390,6 @@ export const networkLogStore = {
     socketMessages = new Map();
     streamEvents = new Map();
     remerge();
-    emitter.emit('change');
+    notify();
   },
 };
