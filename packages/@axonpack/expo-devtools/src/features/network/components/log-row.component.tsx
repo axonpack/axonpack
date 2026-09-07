@@ -49,7 +49,7 @@ function LogRowBase({
   eventCount?: number;
 
   onPress: (entry: NetworkLogEntry) => void;
-  onOverride?: (url: string) => void;
+  onOverride?: (entry: NetworkLogEntry) => void;
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();

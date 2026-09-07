@@ -5,10 +5,19 @@ import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
 import { TextArea } from '../../../core/components/ui/text-area.ui';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { MONOSPACE } from '../../../core/constants/typography.const';
+import { formatJson } from '../../../core/utils/format-json.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
+import type { NetworkLogEntry } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
 
-export function OverrideEditor({ url, onClose }: { url: string | null; onClose: () => void }) {
+export function OverrideEditor({
+  entry,
+  onClose,
+}: {
+  entry: NetworkLogEntry | null;
+  onClose: () => void;
+}) {
+  const url = entry?.url ?? null;
   const styles = useStyles();
   const COLORS = useThemeColors();
   const [status, setStatus] = useState('200');
@@ -16,14 +25,16 @@ export function OverrideEditor({ url, onClose }: { url: string | null; onClose: 
   const [body, setBody] = useState('');
 
   // Reloaded whenever a different row opens the sheet, so editing an existing rule starts from it
-  // rather than from whatever the last one held.
+  // rather than from whatever the last one held — and, with no rule yet, from what the server
+  // actually answered, so overriding a response means editing it rather than retyping it.
   useEffect(() => {
-    if (url === null) return;
-    const existing = networkOverridesStore.find(url);
-    setStatus(String(existing?.status ?? 200));
-    setContentType(existing?.contentType ?? 'application/json');
-    setBody(existing?.body ?? '');
-  }, [url]);
+    if (entry === null) return;
+    const existing = networkOverridesStore.find(entry.url);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStatus(String(existing?.status ?? entry.statusCode ?? 200));
+    setContentType(existing?.contentType ?? entry.mimeType ?? 'application/json');
+    setBody(existing?.body ?? (entry.responseBody ? formatJson(entry.responseBody) : ''));
+  }, [entry]);
 
   function save() {
     if (url === null) return;
