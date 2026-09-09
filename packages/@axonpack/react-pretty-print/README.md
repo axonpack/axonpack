@@ -95,6 +95,11 @@ Optional. `(items: MenuItem[], event: unknown) => void`, fired on long-press (Re
 right-click (web). Enables the gesture; without it, no menu is requested. See
 [The context menu](#the-context-menu).
 
+### matcher
+
+Optional. A `Matcher` — see [Search](#search). Drives highlighting **and** expansion: the branches
+holding a match open, everything else collapses.
+
 ---
 
 ## `<XmlTree />`
@@ -114,6 +119,13 @@ to show alongside it.
 ### theme
 
 Optional, defaults to `DARK_THEME`.
+
+### matcher
+
+Optional. A `Matcher` — see [Search](#search). Matches element names, attribute names, attribute
+values, text and character data. An element opens only for a match _inside_ it: one matching on its
+own name or attributes is painted where it sits, since that says nothing about whether its contents
+are worth unfolding.
 
 ---
 
@@ -165,6 +177,12 @@ rather wait, or pass `Infinity` to remove the cap:
 Tokenizing walks the string once per rule per position, so cost grows with length times the size of
 the language's rule table — a megabyte of minified source is enough to block the thread. That is the
 trade you're making when you raise it.
+
+### matcher
+
+Optional. A `Matcher` — see [Search](#search). Matched runs are painted, including a match that
+spans a token boundary: matching happens once over the whole string and the ranges are clipped per
+token, so `x=1` highlights across the identifier, the operator and the number.
 
 Nothing here mounts a scroller. A long line needs one, and only you know whether the block is
 already inside a `ScrollView` or a container with `overflow-x`.
@@ -233,6 +251,42 @@ children.
 `example-native/components/ContextMenu.tsx` and `example-web/src/components/ContextMenu.tsx` are
 working implementations of each — copy one.
 
+## Search
+
+All three renderers take a `matcher`, which is plain data rather than a callback:
+
+```ts
+type Matcher = { pattern: RegExp | null; invalid: boolean };
+```
+
+That shape is the contract. If your app already compiles a matcher for its own list filtering, pass
+it straight in — TypeScript matches structurally, so there is nothing to import and nothing to
+convert. If you don't have one, `buildMatcher` compiles a query:
+
+```tsx
+import { buildMatcher, DEFAULT_SEARCH_MODES } from '@axonpack/react-pretty-print';
+
+const matcher = buildMatcher({ text: query, ...DEFAULT_SEARCH_MODES, matchCase: false });
+
+<JsonTree primitives={domPrimitives} value={data} matcher={matcher} theme={theme} />;
+```
+
+`SearchModes` are `matchCase`, `wholeWord` and `regex`. Two behaviours worth knowing:
+
+- **An uncompilable pattern is no search, not no results.** A half-typed regex gives
+  `{ pattern: null, invalid: true }`, and the tree keeps its normal expansion rather than collapsing
+  to nothing. Read `invalid` if you want to mark the input.
+- **A closed node still previews its contents.** The search walk looks at the leaves underneath it,
+  so a branch with a match opens; a branch without one stays closed and shows its preview as usual.
+
+The band's colour is the `matchHighlight` token, translucent so the matched text keeps its syntax
+colour. `findMatches`, `clipMatches`, `splitByMatches` and `testMatch` are exported for building
+your own row filters against the same matcher.
+
+Both examples have a search bar at the top with the three mode toggles wired up —
+`example-web/src/components/SearchBar.tsx` and `example-native/components/SearchBar.tsx` — including
+the invalid-pattern state.
+
 ## Themes
 
 A palette is a flat set of colour roles, never a stylesheet, so nothing has to be translated between
@@ -271,6 +325,26 @@ and `crisp`.
 Every palette clears a WCAG contrast ratio against its own background: 4.5:1 for body text, 7:1 on
 `crisp`, never below 3:1 for any token. Writing your own is a plain object; the shipped set's
 construction rules are in `src/themes/palettes.const.ts`'s header.
+
+### The monospace font on React Native
+
+Every shipped palette says `fontFamily: 'monospace'`. That is correct on the web and on Android, and
+**wrong on iOS**: `monospace` is an Android family name, iOS finds no font by it, and it falls back
+to the proportional system font without warning — which stays invisible until something has to line
+up. Nothing here can call `Platform.select`, because importing a platform is the one thing this
+design rules out, so override the token:
+
+```tsx
+import { Platform } from 'react-native';
+import { DARK_THEME } from '@axonpack/react-pretty-print/themes';
+
+const MONOSPACE = Platform.select({ ios: 'Menlo', default: 'monospace' });
+const theme = { ...DARK_THEME, fontFamily: MONOSPACE };
+```
+
+It has to be a single family name, not a CSS stack: React Native looks the string up verbatim, so
+`"Menlo, monospace"` matches nothing on either platform. `Menlo` ships with every iOS.
+`example-native/fonts.ts` is this, and nothing on the DOM needs it.
 
 ## Languages
 
@@ -314,7 +388,8 @@ parsed output and skip the components.
 
 ## Types
 
-`JsonValue`, `Language`, `Token`, `TokenType`, `MenuItem`, `Primitives`, `JsonTreeProps`,
+`JsonValue`, `Language`, `Token`, `TokenType`, `MenuItem`, `Matcher`, `MatchRange`, `SearchModes`,
+`SearchQuery`, `TextSegment`, `Primitives`, `JsonTreeProps`,
 `XmlTreeProps`, `CodeHighlightProps`, `XmlNode`, `XmlElement`, `XmlText`, `XmlCData`,
 `XmlParseResult` from the root; `PrettyPrintTheme` from `/themes`.
 
