@@ -38,6 +38,14 @@
       "expo-source": "./src/index.ts",
       "default": "./build/index.js"
     },
+    "./themes": {
+      "types": {
+        "expo-source": "./src/themes/index.ts",
+        "default": "./build/themes/index.d.ts"
+      },
+      "expo-source": "./src/themes/index.ts",
+      "default": "./build/themes/index.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

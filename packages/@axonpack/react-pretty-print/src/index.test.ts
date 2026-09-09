@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 
 import * as api from './index';
-
-const themeNames = Object.keys(api).filter((name) => name.endsWith('_THEME'));
+import * as themes from './themes';
 
 /**
  * The layer barrels expose everything beside them, including the internal `JsonNode`/`XmlNode`
@@ -10,12 +9,8 @@ const themeNames = Object.keys(api).filter((name) => name.endsWith('_THEME'));
  * exports that aren't palettes: a barrel that starts leaking, or a rename that silently drops one,
  * fails here rather than in a consumer's build. Type-only exports don't exist at runtime.
  */
-test('the published surface, palettes aside, is exactly this', () => {
-  const rest = Object.keys(api)
-    .filter((name) => !name.endsWith('_THEME'))
-    .sort();
-
-  expect(rest).toEqual([
+test('the published surface is exactly this', () => {
+  expect(Object.keys(api).sort()).toEqual([
     'ARRAY_CHUNK_SIZE',
     'CodeHighlight',
     'JsonTree',
@@ -37,11 +32,18 @@ test('the published surface, palettes aside, is exactly this', () => {
   ]);
 });
 
-test('the palettes reach the root entry', () => {
-  expect(themeNames).toHaveLength(130);
-  expect(themeNames).toContain('DARK_THEME');
-  expect(themeNames).toContain('LIGHT_THEME');
-  expect(themeNames).toContain('AZURE_DARK_VIVID_THEME');
+/**
+ * The palettes are ~52KB, so they are their own entry point rather than part of the root barrel: a
+ * consumer that only wants a renderer should not pull them in to find out it didn't need them.
+ */
+test('the palettes are on their own entry point, not the root one', () => {
+  expect(Object.keys(api).filter((name) => name.endsWith('_THEME'))).toEqual([]);
+
+  const names = Object.keys(themes).filter((name) => name.endsWith('_THEME'));
+  expect(names).toHaveLength(130);
+  expect(names).toContain('DARK_THEME');
+  expect(names).toContain('LIGHT_THEME');
+  expect(names).toContain('AZURE_DARK_VIVID_THEME');
 });
 
 test('the internal renderers and style builders stay internal', () => {
