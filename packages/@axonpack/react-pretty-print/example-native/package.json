@@ -2,12 +2,13 @@
   "name": "pretty-print-example-native",
   "version": "1.0.0",
   "private": true,
-  "description": "Expo consumer of @axonpack/react-pretty-print — react-native's own View/Text/Pressable, no adapter",
+  "description": "Expo consumer of @axonpack/react-pretty-print \u2014 react-native's own View/Text/Pressable, no adapter",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
     "android": "expo run:android",
+    "test": "bun test .",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
