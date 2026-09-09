@@ -60,3 +60,54 @@ test('formatted newlines survive on the DOM, which collapses whitespace', () => 
   expect(html).toContain('white-space:pre');
   expect(text(html)).toContain('\n  b: 1;');
 });
+
+test('the highlight cap is overridable in both directions', () => {
+  const long = 'const a = 1;'.repeat(60); // 720 chars
+  const highlighted = (html: string) => html.includes(`color:${DARK_THEME.keyword}`);
+
+  // Default cap: well under it, so this highlights.
+  expect(
+    highlighted(
+      renderToStaticMarkup(
+        <CodeHighlight primitives={domPrimitives} code={long} language="javascript" />
+      )
+    )
+  ).toBe(true);
+
+  // Lowered below the input, so it renders as one unstyled block instead.
+  const capped = renderToStaticMarkup(
+    <CodeHighlight
+      primitives={domPrimitives}
+      code={long}
+      language="javascript"
+      maxHighlightLength={100}
+    />
+  );
+  expect(highlighted(capped)).toBe(false);
+  expect(capped.match(/<span/g)).toHaveLength(1);
+  // Nothing is truncated — only the highlighting is skipped.
+  expect(text(capped)).toBe(long);
+
+  // Raised past the default, so a body over 50k still highlights.
+  const huge = 'const a = 1;'.repeat(5000); // 60k chars
+  expect(
+    highlighted(
+      renderToStaticMarkup(
+        <CodeHighlight
+          primitives={domPrimitives}
+          code={huge}
+          language="javascript"
+          maxHighlightLength={Infinity}
+        />
+      )
+    )
+  ).toBe(true);
+  // ...and is left alone at the default.
+  expect(
+    highlighted(
+      renderToStaticMarkup(
+        <CodeHighlight primitives={domPrimitives} code={huge} language="javascript" />
+      )
+    )
+  ).toBe(false);
+});

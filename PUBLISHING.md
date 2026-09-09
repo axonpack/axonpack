@@ -63,7 +63,7 @@ run by hand from your own machine, for when you don't want to go through GitHub.
    bun run release
    ```
 
-   This runs `turbo run build` (compiles `@axonpack/expo-devtools`'s `src` → `build`, which is what
+   This runs `turbo run build` (compiles each package's `src` → `build`, which is what
    actually gets published) followed by `changeset publish`, which pushes to npm any package whose
    version isn't live on the registry yet, and tags each one it publishes
    (e.g. `@axonpack/expo-devtools@0.2.0`) as a local git tag.

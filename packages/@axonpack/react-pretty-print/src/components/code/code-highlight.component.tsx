@@ -20,6 +20,15 @@ export type CodeHighlightProps = {
    * unreadable without it; turn it off for source you already formatted yourself.
    */
   format?: boolean;
+  /**
+   * Above this many characters the source renders unhighlighted. Defaults to
+   * `MAX_HIGHLIGHT_LENGTH`; raise it if you would rather wait, or pass `Infinity` to remove the cap.
+   *
+   * The cap exists because tokenizing walks the string once per rule per position, so cost grows
+   * with length times the size of the language's rule table — a megabyte of minified source is
+   * enough to block the thread. That is the trade being made when this is raised.
+   */
+  maxHighlightLength?: number;
 };
 
 export function CodeHighlight({
@@ -28,13 +37,12 @@ export function CodeHighlight({
   language,
   theme = DARK_THEME,
   format = true,
+  maxHighlightLength = MAX_HIGHLIGHT_LENGTH,
 }: CodeHighlightProps) {
   const { Text } = primitives;
   const styles = useMemo(() => buildCodeStyles(theme), [theme]);
 
-  // Above the cap the tokenizer walks the whole string per rule per character; a body that big
-  // renders unhighlighted rather than freezing the thread.
-  if (language === 'plain' || code.length > MAX_HIGHLIGHT_LENGTH) {
+  if (language === 'plain' || code.length > maxHighlightLength) {
     return (
       <Text style={styles.block} selectable>
         {code}

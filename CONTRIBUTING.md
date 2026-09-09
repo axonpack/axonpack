@@ -1,8 +1,10 @@
 # Contributing to Axonpack
 
 Thanks for taking the time to contribute! This repo hosts `@axonpack/*` — free, open-source
-foundation libraries for React Native / Expo apps. Only `@axonpack/expo-devtools` is implemented so far;
-its [documentation](https://axonpack.github.io/docs/expo-devtools) covers what it does, and its
+foundation libraries for React Native / Expo apps. Two are implemented:
+[`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) and
+[`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print). The devtools
+[documentation](https://axonpack.github.io/docs/expo-devtools) covers what it does, and its
 [notes](./packages/@axonpack/expo-devtools/notes/README.md) record what is built, area by area, and
 what is still open.
 
@@ -30,16 +32,20 @@ Always run `bun install` from the **repo root**, not from inside a package or ex
 workspace linking depends on the root lockfile. This also runs `prepare` (husky git hooks)
 automatically.
 
-> New scoped package? The root `workspaces` glob is non-standard: `apps/*`, `packages/*`,
-> `packages/@axonpack/*`, and `packages/@axonpack/expo-devtools/example`. A plain `packages/*` glob doesn't
-> match `packages/@axonpack/expo-devtools` (two levels deep). Each package's own `example/` app also needs
-> its own explicit workspace entry, or its `@axonpack/<package>` dependency won't resolve locally.
+> New scoped package? The root `workspaces` glob is non-standard: `packages/*`,
+> `packages/@axonpack/*`, and one entry per example app. A plain `packages/*` glob doesn't
+> match `packages/@axonpack/expo-devtools` (two levels deep), so scoped packages need the second entry.
+> Each package's own example app also needs its own explicit workspace entry, or its
+> `@axonpack/<package>` dependency won't resolve locally — `@axonpack/react-pretty-print` has two
+> examples, so it has two entries. There is deliberately **no `apps/*`**.
 
 ## Project structure
 
 ```
 packages/@axonpack/<name>/       # a published package
 packages/@axonpack/<name>/example/  # its Expo example/demo app
+                                 #   (react-pretty-print has example-web + example-native instead,
+                                 #    since it serves React and React Native both)
 apps/                          # currently empty — reserved for future standalone apps
 notes/@axonpack/<name>/          # symlinks to that package's own notes — see notes/README.md
 ```
@@ -74,6 +80,20 @@ bun run start   # Expo Go / dev client, no native rebuild
 bun run ios     # or: bun run android — full native build via prebuild
 ```
 
+`@axonpack/react-pretty-print` has two, because it serves React and React Native from one
+implementation and both halves need exercising:
+
+```sh
+cd packages/@axonpack/react-pretty-print
+bun run build   # the web example resolves the compiled build/, so this comes first
+
+cd example-web
+bun run dev     # plain React on http://localhost:3000
+
+cd ../example-native
+bun run start   # Expo Go
+```
+
 ## Coding conventions
 
 Read these before opening a PR — they're enforced in review, not just style suggestions:
@@ -88,8 +108,9 @@ commitlint (see `commitlint.config.js`):
 
 - **Type** — one of `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`,
   `chore`, `revert`, `wip`, `release`.
-- **Scope** — optional, but if given it must exactly match an existing package name (currently only
-  `@axonpack/expo-devtools`).
+- **Scope** — optional, but if given it must be one of the names in `scope-enum`
+  (`commitlint.config.js`): `@axonpack/expo-devtools`, `@axonpack/react-pretty-print`, `linter` or
+  `docs`. Commits touching a package's example app conventionally take no scope.
 
 ```
 feat(@axonpack/expo-devtools): add cookie jar visibility for webview requests

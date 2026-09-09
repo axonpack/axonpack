@@ -24,7 +24,8 @@
   },
   "files": [
     "build",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "notes"
   ],
   "main": "build/index.js",
   "types": "build/index.d.ts",
