@@ -21,7 +21,8 @@ highlighters need a prop for.
 `domPrimitives` ships with the package, so a web project needs nothing but React:
 
 ```tsx
-import { JsonTree, domPrimitives, LIGHT_THEME } from '@axonpack/react-pretty-print';
+import { JsonTree, domPrimitives } from '@axonpack/react-pretty-print';
+import { LIGHT_THEME } from '@axonpack/react-pretty-print/themes';
 
 <JsonTree primitives={domPrimitives} value={data} theme={LIGHT_THEME} />;
 <XmlTree primitives={domPrimitives} source={xml} />;
@@ -103,8 +104,9 @@ the other as a fixed-position `div`.
 
 ## Layout
 
-Layer first, domain second. One entry point — `@axonpack/react-pretty-print` — and every folder has
-an `index.ts`.
+Layer first, domain second, and every folder has an `index.ts`. Two entry points:
+`@axonpack/react-pretty-print` for the renderers and the pure logic, and
+`@axonpack/react-pretty-print/themes` for the palettes.
 
 ```
 src/
@@ -143,13 +145,17 @@ Longhand properties only, for the same reason: RN understands `paddingVertical` 
 
 ## Palettes
 
-130, all in `src/themes/palettes.const.ts`, all plain `PrettyPrintTheme` objects named `*_THEME`,
-so a bundler drops the ones you don't import. `DARK_THEME` and `LIGHT_THEME` come first and are what
-the renderers default to: they are the only achromatic pair, since every other palette is tinted
-toward its base hue.
+130, all in `src/themes/palettes.const.ts`, all plain `PrettyPrintTheme` objects named `*_THEME`.
+`DARK_THEME` and `LIGHT_THEME` come first and are what the renderers default to: they are the only
+achromatic pair, since every other palette is tinted toward its base hue.
+
+They are their own entry point rather than part of the root barrel — 130 palettes is ~52KB, and a
+consumer that only wants a renderer shouldn't pull that in to find out it didn't need it.
+`PrettyPrintTheme` lives there too, and a bundler still drops whichever palettes you don't name.
 
 ```ts
-import { AZURE_DARK_VIVID_THEME, ROSE_LIGHT_MUTED_THEME } from '@axonpack/react-pretty-print';
+import type { PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
+import { AZURE_DARK_VIVID_THEME, DARK_THEME } from '@axonpack/react-pretty-print/themes';
 ```
 
 The set is named `<hue>_<mode>_<character>_THEME` — 16 hues x dark/light x four characters
