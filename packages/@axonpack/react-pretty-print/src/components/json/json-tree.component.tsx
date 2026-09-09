@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { JsonNode } from './json-node.component';
 import {
   collectExpandablePaths,
+  collectMatchingPaths,
   formatCopyValue,
   hasChildren,
   isExpandable,
@@ -11,6 +12,7 @@ import {
 import type { Primitives } from '../shared/primitives.ui';
 import { DARK_THEME, type PrettyPrintTheme } from '../../themes';
 import { buildTreeStyles } from '../../utils/shared/tree-styles.util';
+import type { Matcher } from '../../utils/shared/text-search.util';
 
 const ROOT_PATH = '$';
 
@@ -30,6 +32,12 @@ export type JsonTreeProps = {
    * portal, and there is no shared subset to render here.
    */
   onRequestMenu?: (items: MenuItem[], event: unknown) => void;
+  /**
+   * Drives both highlighting and expansion: the branches holding a match open, the rest collapse.
+   * Pass the matcher your search UI already compiled; the shape is plain data, so nothing needs
+   * converting. `null` is no search.
+   */
+  matcher?: Matcher | null;
 };
 
 export function JsonTree({
@@ -40,12 +48,28 @@ export function JsonTree({
   defaultExpanded = true,
   onCopy,
   onRequestMenu,
+  matcher = null,
 }: JsonTreeProps) {
   const { View } = primitives;
   const styles = useMemo(() => buildTreeStyles(theme), [theme]);
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() =>
-    defaultExpanded ? new Set([ROOT_PATH]) : new Set()
-  );
+  /**
+   * A search rebuilds the expansion from scratch: open exactly the branches holding a match, and
+   * collapse the rest. An uncompilable pattern matches everything, so it counts as no search.
+   */
+  function expansionFor(active: Matcher | null): Set<string> {
+    if (active?.pattern) return collectMatchingPaths(ROOT_PATH, value, active, rootLabel);
+    return defaultExpanded ? new Set([ROOT_PATH]) : new Set();
+  }
+
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => expansionFor(matcher));
+  const [previousMatcher, setPreviousMatcher] = useState(matcher);
+
+  // Keyed on the matcher, not on the set it derives: `value` is often re-parsed on every render
+  // upstream, so comparing the set — or the value — would loop.
+  if (matcher !== previousMatcher) {
+    setPreviousMatcher(matcher);
+    setExpandedPaths(expansionFor(matcher));
+  }
 
   function toggle(path: string) {
     setExpandedPaths((prev) => {
@@ -108,6 +132,7 @@ export function JsonTree({
         value={value}
         depth={0}
         expandedPaths={expandedPaths}
+        matcher={matcher}
         onToggle={toggle}
         onLongPress={
           onRequestMenu

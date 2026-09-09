@@ -7,7 +7,9 @@ import {
   isPlainObject,
   type JsonValue,
 } from '../../utils/json/json-tree.util';
+import { HighlightedText } from '../shared/highlighted-text.ui';
 import type { Primitives } from '../shared/primitives.ui';
+import { findMatches, type Matcher } from '../../utils/shared/text-search.util';
 import { INDENT_PER_DEPTH, type TreeStyles } from '../../utils/shared/tree-styles.util';
 
 type NodeProps = {
@@ -19,6 +21,7 @@ type NodeProps = {
   depth: number;
   indexOffset?: number;
   expandedPaths: Set<string>;
+  matcher?: Matcher | null;
   onToggle: (path: string) => void;
   onLongPress?: (path: string, value: JsonValue, event: unknown) => void;
 };
@@ -32,10 +35,12 @@ export function JsonNode({
   depth,
   indexOffset = 0,
   expandedPaths,
+  matcher = null,
   onToggle,
   onLongPress,
 }: NodeProps) {
   const { View, Text, Pressable } = primitives;
+  const highlight = styles.matchHighlight.backgroundColor;
   const expandable = hasChildren(value);
   const expanded = expandable && expandedPaths.has(path);
 
@@ -51,11 +56,23 @@ export function JsonNode({
         <Text style={styles.text}>
           {label !== undefined && (
             <Text style={styles.key}>
-              {label}
+              <HighlightedText
+                primitives={primitives}
+                text={label}
+                ranges={findMatches(label, matcher)}
+                style={styles.key}
+                highlight={highlight}
+              />
               {': '}
             </Text>
           )}
-          <ValuePreview primitives={primitives} styles={styles} value={value} />
+          <ValuePreview
+            primitives={primitives}
+            styles={styles}
+            value={value}
+            matcher={matcher}
+            highlight={highlight}
+          />
         </Text>
       </Pressable>
       {expanded && (
@@ -67,6 +84,7 @@ export function JsonNode({
           depth={depth + 1}
           indexOffset={indexOffset}
           expandedPaths={expandedPaths}
+          matcher={matcher}
           onToggle={onToggle}
           onLongPress={onLongPress}
         />
@@ -79,18 +97,51 @@ function ValuePreview({
   primitives,
   styles,
   value,
+  matcher,
+  highlight,
 }: {
   primitives: Primitives;
   styles: TreeStyles;
   value: JsonValue;
+  matcher: Matcher | null;
+  highlight: string;
 }) {
   const { Text } = primitives;
-  // Containers keep their preview when expanded, the way Chrome and Firefox do — and it shows
-  // content rather than a bare `{…}`.
+
+  // A closed container shows a summary, which is not searchable content of its own — the search
+  // walk looks at the leaves underneath it instead.
   if (isExpandable(value)) return <Text style={styles.punctuation}>{buildPreview(value)}</Text>;
-  if (typeof value === 'string') return <Text style={styles.string}>{`"${value}"`}</Text>;
-  if (typeof value === 'number') return <Text style={styles.number}>{String(value)}</Text>;
-  if (typeof value === 'boolean') return <Text style={styles.boolean}>{String(value)}</Text>;
+
+  if (typeof value === 'string') {
+    return (
+      <Text style={styles.string}>
+        "
+        <HighlightedText
+          primitives={primitives}
+          text={value}
+          ranges={findMatches(value, matcher)}
+          style={styles.string}
+          highlight={highlight}
+        />
+        "
+      </Text>
+    );
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    const rendered = String(value);
+    return (
+      <HighlightedText
+        primitives={primitives}
+        text={rendered}
+        ranges={findMatches(rendered, matcher)}
+        style={typeof value === 'number' ? styles.number : styles.boolean}
+        highlight={highlight}
+      />
+    );
+  }
+
+  // `null` renders unhighlighted, which is what the search walk assumes.
   return <Text style={styles.nullValue}>null</Text>;
 }
 
@@ -102,13 +153,14 @@ function JsonChildren({
   depth,
   indexOffset,
   expandedPaths,
+  matcher,
   onToggle,
   onLongPress,
 }: Omit<NodeProps, 'label' | 'value'> & {
   value: JsonValue[] | { [key: string]: JsonValue };
   indexOffset: number;
 }) {
-  const shared = { primitives, styles, depth, expandedPaths, onToggle, onLongPress };
+  const shared = { primitives, styles, depth, expandedPaths, matcher, onToggle, onLongPress };
 
   if (Array.isArray(value)) {
     if (value.length > ARRAY_CHUNK_SIZE) {

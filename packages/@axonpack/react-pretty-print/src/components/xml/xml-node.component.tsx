@@ -1,5 +1,7 @@
 import type { XmlNode as XmlNodeValue } from '../../utils/xml/parse-xml.util';
+import { HighlightedText } from '../shared/highlighted-text.ui';
 import type { Primitives } from '../shared/primitives.ui';
+import { findMatches, type Matcher } from '../../utils/shared/text-search.util';
 import { INDENT_PER_DEPTH, type TreeStyles } from '../../utils/shared/tree-styles.util';
 
 type XmlNodeProps = {
@@ -9,6 +11,7 @@ type XmlNodeProps = {
   path: string;
   depth: number;
   expandedPaths: Set<string>;
+  matcher?: Matcher | null;
   onToggle: (path: string) => void;
 };
 
@@ -23,17 +26,27 @@ export function XmlNode({
   path,
   depth,
   expandedPaths,
+  matcher = null,
   onToggle,
 }: XmlNodeProps) {
   const { View, Text, Pressable } = primitives;
+  const highlight = styles.matchHighlight.backgroundColor;
   const indent = { paddingLeft: depth * INDENT_PER_DEPTH };
+  const paint = (text: string, style: unknown, selectable?: boolean) => (
+    <HighlightedText
+      primitives={primitives}
+      text={text}
+      ranges={findMatches(text, matcher)}
+      style={style}
+      highlight={highlight}
+      selectable={selectable}
+    />
+  );
 
   if (node.kind === 'text') {
     return (
       <View style={{ ...styles.wrapRow, ...indent }}>
-        <Text style={{ ...styles.text, ...styles.nullValue }} selectable>
-          {node.value}
-        </Text>
+        {paint(node.value, { ...styles.text, ...styles.nullValue }, true)}
       </View>
     );
   }
@@ -42,9 +55,7 @@ export function XmlNode({
     return (
       <View style={{ ...styles.wrapRow, ...indent }}>
         <Text style={{ ...styles.mono, ...styles.punctuation }}>{'<![CDATA['}</Text>
-        <Text style={{ ...styles.text, ...styles.string }} selectable>
-          {node.value}
-        </Text>
+        {paint(node.value, { ...styles.text, ...styles.string }, true)}
         <Text style={{ ...styles.mono, ...styles.punctuation }}>{']]>'}</Text>
       </View>
     );
@@ -61,13 +72,11 @@ export function XmlNode({
         <View style={styles.toggle}>
           {hasChildren && <Text style={styles.toggleGlyph}>{expanded ? '▾' : '▸'}</Text>}
         </View>
-        <Text style={{ ...styles.mono, ...styles.key }} selectable>
-          {`<${node.name}`}
-        </Text>
+        {paint(`<${node.name}`, { ...styles.mono, ...styles.key }, true)}
         {node.attributes.map((attribute) => (
           <Text key={attribute.name} style={styles.mono} selectable>
-            <Text style={styles.punctuation}>{`${attribute.name}=`}</Text>
-            <Text style={styles.string}>{`"${attribute.value}"`}</Text>
+            <Text style={styles.punctuation}>{paint(attribute.name, styles.punctuation)}=</Text>
+            <Text style={styles.string}>"{paint(attribute.value, styles.string)}"</Text>
           </Text>
         ))}
         {/* Closed on its own line only when something is inside it, which is how the shape reads. */}
@@ -85,6 +94,7 @@ export function XmlNode({
               path={`${path}.${index}`}
               depth={depth + 1}
               expandedPaths={expandedPaths}
+              matcher={matcher}
               onToggle={onToggle}
             />
           ))}

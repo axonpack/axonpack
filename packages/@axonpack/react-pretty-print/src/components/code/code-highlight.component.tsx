@@ -5,8 +5,16 @@ import {
   MAX_HIGHLIGHT_LENGTH,
   tokenize,
   type Language,
+  type TokenType,
 } from '../../utils/code/code-highlight.util';
+import { HighlightedText } from '../shared/highlighted-text.ui';
 import type { Primitives } from '../shared/primitives.ui';
+import {
+  clipMatches,
+  findMatches,
+  type Matcher,
+  type MatchRange,
+} from '../../utils/shared/text-search.util';
 import { buildCodeStyles } from '../../utils/code/code-styles.util';
 import { DARK_THEME, type PrettyPrintTheme } from '../../themes';
 
@@ -29,6 +37,11 @@ export type CodeHighlightProps = {
    * enough to block the thread. That is the trade being made when this is raised.
    */
   maxHighlightLength?: number;
+  /**
+   * Paints a background behind every run matching this. Pass the matcher your search UI already
+   * compiled; the shape is plain data, so nothing needs converting.
+   */
+  matcher?: Matcher | null;
 };
 
 export function CodeHighlight({
@@ -38,26 +51,50 @@ export function CodeHighlight({
   theme = DARK_THEME,
   format = true,
   maxHighlightLength = MAX_HIGHLIGHT_LENGTH,
+  matcher = null,
 }: CodeHighlightProps) {
   const { Text } = primitives;
   const styles = useMemo(() => buildCodeStyles(theme), [theme]);
 
   if (language === 'plain' || code.length > maxHighlightLength) {
     return (
-      <Text style={styles.block} selectable>
-        {code}
-      </Text>
+      <HighlightedText
+        primitives={primitives}
+        text={code}
+        ranges={findMatches(code, matcher)}
+        style={styles.block}
+        highlight={theme.matchHighlight}
+        selectable
+      />
     );
   }
 
   const source = format ? formatCode(code, language) : code;
+  // Matched once against the whole string, then clipped per token, so a match spanning a token
+  // boundary still paints across both halves.
+  const matches = findMatches(source, matcher);
+
+  // A plain loop rather than an offset accumulated inside a `map` callback: the running cursor is
+  // only correct while the callback runs exactly once, in order, which is not a promise React makes.
+  const spans: { text: string; type: TokenType; ranges: MatchRange[] }[] = [];
+  let cursor = 0;
+  for (const token of tokenize(source, language)) {
+    const start = cursor;
+    cursor += token.text.length;
+    spans.push({ ...token, ranges: clipMatches(matches, start, cursor) });
+  }
 
   return (
     <Text style={styles.block} selectable>
-      {tokenize(source, language).map((token, index) => (
-        <Text key={index} style={styles[token.type]}>
-          {token.text}
-        </Text>
+      {spans.map((span, index) => (
+        <HighlightedText
+          key={index}
+          primitives={primitives}
+          text={span.text}
+          ranges={span.ranges}
+          style={styles[span.type]}
+          highlight={theme.matchHighlight}
+        />
       ))}
     </Text>
   );
