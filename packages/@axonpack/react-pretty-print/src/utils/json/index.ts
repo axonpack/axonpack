@@ -3,6 +3,7 @@ export {
   buildPreview,
   chunkArrayRange,
   collectExpandablePaths,
+  collectMatchingPaths,
   formatCopyValue,
   hasChildren,
   isExpandable,

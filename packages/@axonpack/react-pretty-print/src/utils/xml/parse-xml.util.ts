@@ -1,3 +1,5 @@
+import { testMatch, type Matcher } from '../shared/text-search.util';
+
 /**
  * XML into a tree, without a parser.
  *
@@ -144,4 +146,46 @@ export function parseXml(source: string): XmlParseResult {
   if (stack.length > 0) return { error: `<${stack[stack.length - 1].name}> was never closed.` };
   if (!root) return { error: 'No elements found.' };
   return { root };
+}
+
+/** An element matches on its own name or any of its attributes; a leaf on the text it renders. */
+function nodeMatches(node: XmlNode, matcher: Matcher): boolean {
+  if (node.kind === 'element') {
+    return (
+      testMatch(node.name, matcher) ||
+      node.attributes.some(
+        (attribute) => testMatch(attribute.name, matcher) || testMatch(attribute.value, matcher)
+      )
+    );
+  }
+  return testMatch(node.value, matcher);
+}
+
+function walkForMatches(node: XmlNode, path: string, matcher: Matcher, open: Set<string>): boolean {
+  const selfMatched = nodeMatches(node, matcher);
+  if (node.kind !== 'element') return selfMatched;
+
+  let childMatched = false;
+  node.children.forEach((child, index) => {
+    if (walkForMatches(child, `${path}.${index}`, matcher, open)) childMatched = true;
+  });
+
+  // Opened only for a match *below* it: an element matching on its own name says nothing about
+  // whether its contents are worth unfolding.
+  if (childMatched) open.add(path);
+  return selfMatched || childMatched;
+}
+
+/**
+ * Every element that has to be open for the matches inside it to be on screen — nothing else, so a
+ * search collapses the branches it didn't hit.
+ */
+export function collectMatchingPaths(
+  root: XmlElement,
+  path: string,
+  matcher: Matcher
+): Set<string> {
+  const open = new Set<string>();
+  walkForMatches(root, path, matcher, open);
+  return open;
 }
