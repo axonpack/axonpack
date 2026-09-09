@@ -31,6 +31,22 @@ import type { PrettyPrintTheme } from './theme.const';
  * `boolean` shares `number`'s colour deliberately: both are literals, and painting `2` and `true`
  * differently is noise rather than information.
  *
+ * `fontFamily` is `monospace` in every palette here, which is correct on the web and on Android and
+ * **wrong on iOS**: `monospace` is an Android family name, iOS finds no font by it, and it falls back
+ * to the proportional system font without a word. Nothing in this package can call `Platform.select`
+ * — importing a platform is the one thing the design rules out — so a React Native caller has to
+ * override the token:
+ *
+ *     const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
+ *     const theme = { ...DARK_THEME, fontFamily: MONO };
+ *
+ * `example-native/App.tsx` does exactly that. A caller on the DOM needs nothing.
+ *
+ * `matchHighlight` is the palette's own `accent` with an alpha, so a highlighted run belongs to the
+ * palette and can never collide with a token colour. Translucent on purpose: the text sits on top of
+ * it and has to stay readable. The alpha is the lowest at which the band is actually visible against
+ * that palette's background — 25% for all but one of these.
+ *
  * `punctuation`, `toggle` and `null` share one muted tone — the palette's own text pulled toward its
  * own background — so a collapsed preview stays recessive instead of competing with real content.
  *
@@ -55,6 +71,7 @@ export const DARK_THEME: PrettyPrintTheme = {
   comment: '#6a9955',
   accent: '#dcdcaa',
   tag: '#569cd6',
+  matchHighlight: '#dcdcaa40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -74,6 +91,7 @@ export const LIGHT_THEME: PrettyPrintTheme = {
   comment: '#008000',
   accent: '#795e26',
   tag: '#800000',
+  matchHighlight: '#795e2640',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -92,6 +110,7 @@ export const CRIMSON_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#76a29e',
   accent: '#bc945c',
   tag: '#ac6bc2',
+  matchHighlight: '#bc945c40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -110,6 +129,7 @@ export const CRIMSON_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#5ebab2',
   accent: '#f19d27',
   tag: '#c63ff3',
+  matchHighlight: '#f19d2740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -128,6 +148,7 @@ export const CRIMSON_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#6eaaa5',
   accent: '#cf974a',
   tag: '#c072da',
+  matchHighlight: '#cf974a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -146,6 +167,7 @@ export const CRIMSON_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#68b1ab',
   accent: '#df9a3a',
   tag: '#ce7bea',
+  matchHighlight: '#df9a3a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -164,6 +186,7 @@ export const CRIMSON_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#517673',
   accent: '#8d6a3a',
   tag: '#8b43a3',
+  matchHighlight: '#8d6a3a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -182,6 +205,7 @@ export const CRIMSON_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#367d77',
   accent: '#a3630a',
   tag: '#a50ed8',
+  matchHighlight: '#a3630a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -200,6 +224,7 @@ export const CRIMSON_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#447470',
   accent: '#8d6225',
   tag: '#9430b5',
+  matchHighlight: '#8d622540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -218,6 +243,7 @@ export const CRIMSON_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#315e5a',
   accent: '#764d13',
   tag: '#8b1daf',
+  matchHighlight: '#764d1340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -236,6 +262,7 @@ export const AMBER_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#768ca2',
   accent: '#acbc5c',
   tag: '#c167a3',
+  matchHighlight: '#acbc5c40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -254,6 +281,7 @@ export const AMBER_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#5e8cba',
   accent: '#d0f127',
   tag: '#f127ae',
+  matchHighlight: '#d0f12740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -272,6 +300,7 @@ export const AMBER_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#7e99b4',
   accent: '#b9cf4a',
   tag: '#da72b7',
+  matchHighlight: '#b9cf4a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -290,6 +319,7 @@ export const AMBER_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#82a1bf',
   accent: '#c3df3a',
   tag: '#e977c3',
+  matchHighlight: '#c3df3a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -308,6 +338,7 @@ export const AMBER_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#5d7389',
   accent: '#6c7731',
   tag: '#a34383',
+  matchHighlight: '#6c773140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -326,6 +357,7 @@ export const AMBER_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#4573a1',
   accent: '#657808',
   tag: '#d80e94',
+  matchHighlight: '#65780840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -344,6 +376,7 @@ export const AMBER_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#53708d',
   accent: '#63711e',
   tag: '#b53089',
+  matchHighlight: '#63711e40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -362,6 +395,7 @@ export const AMBER_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#3d5976',
   accent: '#4f5c0f',
   tag: '#9e1a72',
+  matchHighlight: '#4f5c0f40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -380,6 +414,7 @@ export const GOLD_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#7d83a6',
   accent: '#8cbc5c',
   tag: '#c26b88',
+  matchHighlight: '#8cbc5c40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -398,6 +433,7 @@ export const GOLD_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#7481c3',
   accent: '#8cf127',
   tag: '#f23a78',
+  matchHighlight: '#8cf12740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -416,6 +452,7 @@ export const GOLD_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#9299bf',
   accent: '#8ccf4a',
   tag: '#dd7e9e',
+  matchHighlight: '#8ccf4a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -434,6 +471,7 @@ export const GOLD_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#939cc8',
   accent: '#8cdf3a',
   tag: '#ea7ba0',
+  matchHighlight: '#8cdf3a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -452,6 +490,7 @@ export const GOLD_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#5d6489',
   accent: '#577b32',
   tag: '#a34363',
+  matchHighlight: '#577b3240',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -470,6 +509,7 @@ export const GOLD_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#4554a1',
   accent: '#458108',
   tag: '#d80e51',
+  matchHighlight: '#45810840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -488,6 +528,7 @@ export const GOLD_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#555f91',
   accent: '#4d7920',
   tag: '#b5305d',
+  matchHighlight: '#4d792040',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -506,6 +547,7 @@ export const GOLD_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#49548d',
   accent: '#386010',
   tag: '#a71b4a',
+  matchHighlight: '#38601040',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -524,6 +566,7 @@ export const CITRON_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#8a80a8',
   accent: '#64bc5c',
   tag: '#c16e67',
+  matchHighlight: '#64bc5c40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -542,6 +585,7 @@ export const CITRON_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#8e7bc6',
   accent: '#38f127',
   tag: '#f24536',
+  matchHighlight: '#38f12740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -560,6 +604,7 @@ export const CITRON_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#a095c1',
   accent: '#55cf4a',
   tag: '#dc827a',
+  matchHighlight: '#55cf4a59',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -578,6 +623,7 @@ export const CITRON_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#a397c9',
   accent: '#47df3a',
   tag: '#e98177',
+  matchHighlight: '#47df3a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -596,6 +642,7 @@ export const CITRON_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#685d89',
   accent: '#3a7f34',
   tag: '#a34b43',
+  matchHighlight: '#3a7f3440',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -614,6 +661,7 @@ export const CITRON_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#5c45a1',
   accent: '#138609',
   tag: '#d81f0e',
+  matchHighlight: '#13860940',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -632,6 +680,7 @@ export const CITRON_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#645591',
   accent: '#297d21',
   tag: '#b53b30',
+  matchHighlight: '#297d2140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -650,6 +699,7 @@ export const CITRON_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#5e4c94',
   accent: '#176510',
   tag: '#a2261a',
+  matchHighlight: '#17651040',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -668,6 +718,7 @@ export const LIME_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#957da6',
   accent: '#5cbc74',
   tag: '#bc845c',
+  matchHighlight: '#5cbc7440',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -686,6 +737,7 @@ export const LIME_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#a274c3',
   accent: '#27f15a',
   tag: '#f17b27',
+  matchHighlight: '#27f15a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -704,6 +756,7 @@ export const LIME_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#aa8fbd',
   accent: '#4acf6b',
   tag: '#d28a56',
+  matchHighlight: '#4acf6b40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -722,6 +775,7 @@ export const LIME_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#b293c8',
   accent: '#3adf63',
   tag: '#e18747',
+  matchHighlight: '#3adf6340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -740,6 +794,7 @@ export const LIME_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#765d89',
   accent: '#347f47',
   tag: '#98643e',
+  matchHighlight: '#347f4740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -758,6 +813,7 @@ export const LIME_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#7a45a1',
   accent: '#098628',
   tag: '#bb550c',
+  matchHighlight: '#09862840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -776,6 +832,7 @@ export const LIME_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#785591',
   accent: '#217d38',
   tag: '#a15c2b',
+  matchHighlight: '#217d3840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -794,6 +851,7 @@ export const LIME_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#6e478a',
   accent: '#106526',
   tag: '#884616',
+  matchHighlight: '#10652640',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -812,6 +870,7 @@ export const EMERALD_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#a47996',
   accent: '#5cbcbc',
   tag: '#acbc5c',
+  matchHighlight: '#5cbcbc40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -830,6 +889,7 @@ export const EMERALD_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#bf69a2',
   accent: '#27f1f1',
   tag: '#d0f127',
+  matchHighlight: '#27f1f140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -848,6 +908,7 @@ export const EMERALD_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#bb8bab',
   accent: '#4acfcf',
   tag: '#b9cf4a',
+  matchHighlight: '#4acfcf40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -866,6 +927,7 @@ export const EMERALD_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#c48db2',
   accent: '#3adfdf',
   tag: '#c3df3a',
+  matchHighlight: '#3adfdf40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -884,6 +946,7 @@ export const EMERALD_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#895d7a',
   accent: '#327b7b',
   tag: '#6c7731',
+  matchHighlight: '#327b7b40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -902,6 +965,7 @@ export const EMERALD_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#a14582',
   accent: '#088181',
   tag: '#657808',
+  matchHighlight: '#08818140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -920,6 +984,7 @@ export const EMERALD_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#91557d',
   accent: '#207979',
   tag: '#63711e',
+  matchHighlight: '#20797940',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -938,6 +1003,7 @@ export const EMERALD_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#80426b',
   accent: '#106060',
   tag: '#4f5c0f',
+  matchHighlight: '#10606040',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -956,6 +1022,7 @@ export const JADE_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#a47988',
   accent: '#5c9cbc',
   tag: '#8cbc5c',
+  matchHighlight: '#5c9cbc40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -974,6 +1041,7 @@ export const JADE_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#c06d89',
   accent: '#27aef1',
   tag: '#8cf127',
+  matchHighlight: '#27aef140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -992,6 +1060,7 @@ export const JADE_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#bd8f9e',
   accent: '#4aa2cf',
   tag: '#8ccf4a',
+  matchHighlight: '#4aa2cf40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1010,6 +1079,7 @@ export const JADE_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#c690a2',
   accent: '#3aa8df',
   tag: '#8cdf3a',
+  matchHighlight: '#3aa8df40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1028,6 +1098,7 @@ export const JADE_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#895d6b',
   accent: '#3d7794',
   tag: '#577b32',
+  matchHighlight: '#3d779440',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1046,6 +1117,7 @@ export const JADE_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#a14563',
   accent: '#0b7ab1',
   tag: '#458108',
+  matchHighlight: '#0b7ab140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1064,6 +1136,7 @@ export const JADE_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#915569',
   accent: '#297499',
   tag: '#4d7920',
+  matchHighlight: '#29749940',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1082,6 +1155,7 @@ export const JADE_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#834459',
   accent: '#155c7f',
   tag: '#386010',
+  matchHighlight: '#155c7f40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1100,6 +1174,7 @@ export const TEAL_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#a67d7d',
   accent: '#6785c1',
   tag: '#6cbc5c',
+  matchHighlight: '#6785c140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1118,6 +1193,7 @@ export const TEAL_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#c06d6d',
   accent: '#4982f3',
   tag: '#49f127',
+  matchHighlight: '#4982f340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1136,6 +1212,7 @@ export const TEAL_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#bd8f8f',
   accent: '#7a9bdc',
   tag: '#60cf4a',
+  matchHighlight: '#7a9bdc40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1154,6 +1231,7 @@ export const TEAL_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#c69090',
   accent: '#779de9',
   tag: '#55df3a',
+  matchHighlight: '#779de940',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1172,6 +1250,7 @@ export const TEAL_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#895d5d',
   accent: '#4363a3',
   tag: '#407f34',
+  matchHighlight: '#4363a340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1190,6 +1269,7 @@ export const TEAL_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#a14545',
   accent: '#0e51d8',
   tag: '#1e8609',
+  matchHighlight: '#0e51d840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1208,6 +1288,7 @@ export const TEAL_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#915555',
   accent: '#305db5',
   tag: '#307d21',
+  matchHighlight: '#305db540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1226,6 +1307,7 @@ export const TEAL_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#834444',
   accent: '#1e51b8',
   tag: '#1e6510',
+  matchHighlight: '#1e51b840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1244,6 +1326,7 @@ export const CYAN_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#a27e76',
   accent: '#7583c7',
   tag: '#5cbc5c',
+  matchHighlight: '#7583c740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1262,6 +1345,7 @@ export const CYAN_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#bc7162',
   accent: '#6179f5',
   tag: '#27f127',
+  matchHighlight: '#6179f540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1280,6 +1364,7 @@ export const CYAN_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#b99088',
   accent: '#8695df',
   tag: '#4acf4a',
+  matchHighlight: '#8695df40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1298,6 +1383,7 @@ export const CYAN_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#c29389',
   accent: '#8999ec',
   tag: '#3adf3a',
+  matchHighlight: '#8999ec40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1316,6 +1402,7 @@ export const CYAN_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#89645d',
   accent: '#4353a3',
   tag: '#347f34',
+  matchHighlight: '#4353a340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1334,6 +1421,7 @@ export const CYAN_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#a15445',
   accent: '#0e2fd8',
   tag: '#098609',
+  matchHighlight: '#0e2fd840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1352,6 +1440,7 @@ export const CYAN_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#915f55',
   accent: '#3046b5',
   tag: '#217d21',
+  matchHighlight: '#3046b540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1370,6 +1459,7 @@ export const CYAN_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#7d4a40',
   accent: '#203cc5',
   tag: '#106510',
+  matchHighlight: '#203cc540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1388,6 +1478,7 @@ export const AZURE_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#a28976',
   accent: '#837dca',
   tag: '#5cbc74',
+  matchHighlight: '#837dca40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1406,6 +1497,7 @@ export const AZURE_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#ba855e',
   accent: '#7a6ff6',
   tag: '#27f15a',
+  matchHighlight: '#7a6ff640',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1424,6 +1516,7 @@ export const AZURE_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#b08f78',
   accent: '#958ee1',
   tag: '#4acf6b',
+  matchHighlight: '#958ee140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1442,6 +1535,7 @@ export const AZURE_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#bb967c',
   accent: '#9d96ee',
   tag: '#3adf63',
+  matchHighlight: '#9d96ee40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1460,6 +1554,7 @@ export const AZURE_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#866d5b',
   accent: '#4b43a3',
   tag: '#347f47',
+  matchHighlight: '#4b43a340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1478,6 +1573,7 @@ export const AZURE_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#9a6642',
   accent: '#1f0ed8',
   tag: '#098628',
+  matchHighlight: '#1f0ed840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1496,6 +1592,7 @@ export const AZURE_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#87664f',
   accent: '#3b30b5',
   tag: '#217d38',
+  matchHighlight: '#3b30b540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1514,6 +1611,7 @@ export const AZURE_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#6f5039',
   accent: '#2e20c5',
   tag: '#106526',
+  matchHighlight: '#2e20c540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1532,6 +1630,7 @@ export const COBALT_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#a29776',
   accent: '#9572c5',
   tag: '#5cbc94',
+  matchHighlight: '#9572c540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1550,6 +1649,7 @@ export const COBALT_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#baa35e',
   accent: '#9f61f5',
   tag: '#27f19d',
+  matchHighlight: '#9f61f540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1568,6 +1668,7 @@ export const COBALT_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#aa9b6e',
   accent: '#a882de',
   tag: '#4acf97',
+  matchHighlight: '#a882de40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1586,6 +1687,7 @@ export const COBALT_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#b19f68',
   accent: '#b289ec',
   tag: '#3adf9a',
+  matchHighlight: '#b289ec40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1604,6 +1706,7 @@ export const COBALT_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#797053',
   accent: '#6b43a3',
   tag: '#347f5f',
+  matchHighlight: '#6b43a340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1622,6 +1725,7 @@ export const COBALT_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#847139',
   accent: '#620ed8',
   tag: '#08814f',
+  matchHighlight: '#620ed840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1640,6 +1744,7 @@ export const COBALT_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#776b46',
   accent: '#6830b5',
   tag: '#207954',
+  matchHighlight: '#6830b540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1658,6 +1763,7 @@ export const COBALT_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#625632',
   accent: '#6520c5',
   tag: '#10603f',
+  matchHighlight: '#6520c540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1676,6 +1782,7 @@ export const SAPPHIRE_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#9ea276',
   accent: '#aa67c1',
   tag: '#5cbcb4',
+  matchHighlight: '#aa67c140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1694,6 +1801,7 @@ export const SAPPHIRE_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#b3ba5e',
   accent: '#c43af2',
   tag: '#27f1e0',
+  matchHighlight: '#c43af240',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1712,6 +1820,7 @@ export const SAPPHIRE_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#a5aa6e',
   accent: '#c072da',
   tag: '#4acfc4',
+  matchHighlight: '#c072da40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1730,6 +1839,7 @@ export const SAPPHIRE_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#abb168',
   accent: '#ce7bea',
   tag: '#3adfd1',
+  matchHighlight: '#ce7bea40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1748,6 +1858,7 @@ export const SAPPHIRE_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#70734e',
   accent: '#8b43a3',
   tag: '#327b75',
+  matchHighlight: '#8b43a340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1766,6 +1877,7 @@ export const SAPPHIRE_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#707632',
   accent: '#a50ed8',
   tag: '#088177',
+  matchHighlight: '#a50ed840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1784,6 +1896,7 @@ export const SAPPHIRE_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#696d40',
   accent: '#9430b5',
   tag: '#1f756e',
+  matchHighlight: '#9430b540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1802,6 +1915,7 @@ export const SAPPHIRE_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#54582d',
   accent: '#8b1daf',
   tag: '#10605a',
+  matchHighlight: '#8b1daf40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1820,6 +1934,7 @@ export const INDIGO_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#94a276',
   accent: '#be60be',
   tag: '#5cacbc',
+  matchHighlight: '#be60be40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1838,6 +1953,7 @@ export const INDIGO_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#9cba5e',
   accent: '#f127f1',
   tag: '#27d0f1',
+  matchHighlight: '#f127f140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1856,6 +1972,7 @@ export const INDIGO_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#96aa6e',
   accent: '#d562d5',
   tag: '#4ab9cf',
+  matchHighlight: '#d562d540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1874,6 +1991,7 @@ export const INDIGO_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#98b168',
   accent: '#e76ee7',
   tag: '#3ac3df',
+  matchHighlight: '#e76ee740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1892,6 +2010,7 @@ export const INDIGO_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#6a7651',
   accent: '#a343a3',
   tag: '#377986',
+  matchHighlight: '#a343a340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1910,6 +2029,7 @@ export const INDIGO_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#627934',
   accent: '#c90dc9',
   tag: '#097d95',
+  matchHighlight: '#c90dc940',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1928,6 +2048,7 @@ export const INDIGO_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#617042',
   accent: '#b12fb1',
   tag: '#237585',
+  matchHighlight: '#b12fb140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1946,6 +2067,7 @@ export const INDIGO_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#4c5b2f',
   accent: '#951895',
   tag: '#125e6e',
+  matchHighlight: '#95189540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1964,6 +2086,7 @@ export const VIOLET_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#89a276',
   accent: '#bf63a8',
   tag: '#5c94bc',
+  matchHighlight: '#bf63a840',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -1982,6 +2105,7 @@ export const VIOLET_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#85ba5e',
   accent: '#f127bf',
   tag: '#279df1',
+  matchHighlight: '#f127bf40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2000,6 +2124,7 @@ export const VIOLET_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#87aa6e',
   accent: '#d76abc',
   tag: '#4a97cf',
+  matchHighlight: '#d76abc40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2018,6 +2143,7 @@ export const VIOLET_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#86b168',
   accent: '#e873cb',
   tag: '#4ba3e2',
+  matchHighlight: '#e873cb40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2036,6 +2162,7 @@ export const VIOLET_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#607651',
   accent: '#a3438b',
   tag: '#40759c',
+  matchHighlight: '#a3438b40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2054,6 +2181,7 @@ export const VIOLET_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#537d36',
   accent: '#d30da2',
   tag: '#0c75c0',
+  matchHighlight: '#d30da240',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2072,6 +2200,7 @@ export const VIOLET_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#587444',
   accent: '#b53094',
   tag: '#2b70a1',
+  matchHighlight: '#b5309440',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2090,6 +2219,7 @@ export const VIOLET_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#445e31',
   accent: '#9e1a7d',
   tag: '#175b8c',
+  matchHighlight: '#9e1a7d40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2108,6 +2238,7 @@ export const MAGENTA_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#76a276',
   accent: '#c16785',
   tag: '#7280c5',
+  matchHighlight: '#c1678540',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2126,6 +2257,7 @@ export const MAGENTA_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#5eba5e',
   accent: '#f22c6e',
   tag: '#5c75f5',
+  matchHighlight: '#f22c6e40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2144,6 +2276,7 @@ export const MAGENTA_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#6eaa6e',
   accent: '#da7294',
   tag: '#7e8edd',
+  matchHighlight: '#da729440',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2162,6 +2295,7 @@ export const MAGENTA_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#68b168',
   accent: '#ea7ba0',
   tag: '#8999ec',
+  matchHighlight: '#ea7ba040',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2180,6 +2314,7 @@ export const MAGENTA_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#537953',
   accent: '#a34363',
   tag: '#4353a3',
+  matchHighlight: '#a3436340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2198,6 +2333,7 @@ export const MAGENTA_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#378137',
   accent: '#d80e51',
   tag: '#0e2fd8',
+  matchHighlight: '#d80e5140',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2216,6 +2352,7 @@ export const MAGENTA_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#467746',
   accent: '#b5305d',
   tag: '#3046b5',
+  matchHighlight: '#b5305d40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2234,6 +2371,7 @@ export const MAGENTA_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#326232',
   accent: '#a71b4a',
   tag: '#203cc5',
+  matchHighlight: '#a71b4a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2252,6 +2390,7 @@ export const ROSE_DARK_MUTED_THEME: PrettyPrintTheme = {
   comment: '#76a28c',
   accent: '#be6f60',
   tag: '#9175c7',
+  matchHighlight: '#be6f6040',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2270,6 +2409,7 @@ export const ROSE_DARK_VIVID_THEME: PrettyPrintTheme = {
   comment: '#5eba8c',
   accent: '#f14927',
   tag: '#9566f5',
+  matchHighlight: '#f1492740',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2288,6 +2428,7 @@ export const ROSE_DARK_SOFT_THEME: PrettyPrintTheme = {
   comment: '#6eaa8c',
   accent: '#d67966',
   tag: '#a182de',
+  matchHighlight: '#d6796640',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2306,6 +2447,7 @@ export const ROSE_DARK_CRISP_THEME: PrettyPrintTheme = {
   comment: '#68b18c',
   accent: '#e7826e',
   tag: '#ad8dec',
+  matchHighlight: '#e7826e40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2324,6 +2466,7 @@ export const ROSE_LIGHT_MUTED_THEME: PrettyPrintTheme = {
   comment: '#537966',
   accent: '#a35343',
   tag: '#6343a3',
+  matchHighlight: '#a3534340',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2342,6 +2485,7 @@ export const ROSE_LIGHT_VIVID_THEME: PrettyPrintTheme = {
   comment: '#367d59',
   accent: '#d82f0e',
   tag: '#510ed8',
+  matchHighlight: '#d82f0e40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2360,6 +2504,7 @@ export const ROSE_LIGHT_SOFT_THEME: PrettyPrintTheme = {
   comment: '#44745c',
   accent: '#b54630',
   tag: '#5d30b5',
+  matchHighlight: '#b5463040',
   fontFamily: 'monospace',
   fontSize: 12,
 };
@@ -2378,6 +2523,7 @@ export const ROSE_LIGHT_CRISP_THEME: PrettyPrintTheme = {
   comment: '#315e47',
   accent: '#9e301a',
   tag: '#5720c5',
+  matchHighlight: '#9e301a40',
   fontFamily: 'monospace',
   fontSize: 12,
 };
