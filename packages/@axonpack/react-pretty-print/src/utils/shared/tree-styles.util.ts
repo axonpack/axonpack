@@ -3,6 +3,14 @@ import type { PrettyPrintTheme } from '../../themes';
 export const INDENT_PER_DEPTH = 14;
 
 /**
+ * The floor for a tree row, which is a tap target: every row toggles, and on a touch screen a row
+ * that only fits its 12px text is a row people miss. Named rather than written inline at each use,
+ * because a dimension deciding whether something can be *hit* is not a styling detail — picked by
+ * eye once, it drifts back under the floor the next time the type size changes.
+ */
+export const ROW_MIN_HEIGHT = 28;
+
+/**
  * Every style here has to mean the same thing to RN's layout engine and to CSS, and the two
  * disagree on three defaults rather than on property names:
  *
@@ -21,7 +29,7 @@ export function buildTreeStyles(theme: PrettyPrintTheme) {
       display: 'flex' as const,
       flexDirection: 'row' as const,
       alignItems: 'flex-start' as const,
-      minHeight: 22,
+      minHeight: ROW_MIN_HEIGHT,
       paddingTop: 4,
       paddingBottom: 4,
     },
@@ -62,7 +70,7 @@ export function buildTreeStyles(theme: PrettyPrintTheme) {
       flexWrap: 'wrap' as const,
       columnGap: 4,
       alignItems: 'flex-start' as const,
-      minHeight: 22,
+      minHeight: ROW_MIN_HEIGHT,
       paddingTop: 4,
       paddingBottom: 4,
     },
@@ -78,6 +86,7 @@ export function buildTreeStyles(theme: PrettyPrintTheme) {
     number: { color: theme.number },
     boolean: { color: theme.boolean },
     nullValue: { color: theme.null },
+    matchHighlight: { backgroundColor: theme.matchHighlight },
   };
 }
 
