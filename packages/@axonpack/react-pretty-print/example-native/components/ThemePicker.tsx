@@ -1,6 +1,8 @@
 import type { PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
+import { MONOSPACE } from '../fonts';
+
 /**
  * A horizontal strip of every palette. Each chip is painted in the palette it selects, so the strip
  * previews the whole set — which is the point on a phone, where a list of 130 names tells you
@@ -56,5 +58,5 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   label: { fontSize: 11 },
-  sample: { fontSize: 11, fontFamily: 'monospace' },
+  sample: { fontSize: 11, fontFamily: MONOSPACE },
 });
