@@ -94,6 +94,17 @@ cd ../example-native
 bun run start   # Expo Go
 ```
 
+Both examples have their own tests — the fixtures they render are load-bearing, since the examples
+are how all 38 languages and 130 palettes actually get looked at:
+
+```sh
+cd packages/@axonpack/react-pretty-print/example-web    && bun run test
+cd packages/@axonpack/react-pretty-print/example-native && bun run test
+```
+
+There is no root `test` task: `@axonpack/expo-devtools` runs jest in watch mode unless `CI` is set,
+so `turbo run test` from the root would hang locally. Run them per workspace.
+
 ## Coding conventions
 
 Read these before opening a PR — they're enforced in review, not just style suggestions:

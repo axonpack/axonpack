@@ -46,7 +46,9 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*` — free OSS 
 ### `@axonpack/react-pretty-print` example apps
 
 - `example-web` — `bun run dev` (bun's own dev server, **port 3000**; `--port` is ignored), `bun run build`, `bun run test`, `bun run check-types`. Plain React, no react-native-web and no bundler alias. It deliberately has **no tsconfig `paths` shortcut**, so it resolves the package through its `exports` exactly as an npm consumer does — it is the only check in the repo that the published shape is correct, and it fails if `build/` is missing.
-- `example-native` — `bun run start` (Expo Go), `bun run ios` / `android`, `bun run check-types`. Resolves the `expo-source` condition to `src`, so Metro picks up edits with no rebuild.
+- `example-native` — `bun run start` (Expo Go), `bun run ios` / `android`, `bun run test`, `bun run check-types`. Resolves the `expo-source` condition to `src`, so Metro picks up edits with no rebuild.
+- Both examples have tests, and they cover different halves. `example-web` renders — `App` mounts every renderer, both pickers and four panels at once, so anything that throws on render fails there. `example-native` covers only the platform-free fixtures, because **`react-native` cannot be imported under `bun test`**: it ships Flow syntax that bun will not parse (`Unexpected typeof` at `react-native/index.js`). A native render test would need a jest + jest-expo setup, which neither example has.
+- There is deliberately **no root `test` turbo task**. `@axonpack/expo-devtools`'s test script runs jest in watch mode unless `CI`/`EXPO_NONINTERACTIVE` is set, so a `turbo run test` from the root would hang on it locally. Run tests per workspace, or set `CI=1` first.
 - Run `bun run build` in the package first, or the web example's typecheck has no `.d.ts` to resolve. `turbo run check-types` handles that ordering itself.
 
 ### Docs site (the `docs/` submodule)
