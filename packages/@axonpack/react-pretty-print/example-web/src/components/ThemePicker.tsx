@@ -1,4 +1,4 @@
-import type { PrettyPrintTheme } from '@axonpack/react-pretty-print';
+import type { PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 
 /**
  * A horizontal strip of every palette, each chip painted in the palette it selects so the strip

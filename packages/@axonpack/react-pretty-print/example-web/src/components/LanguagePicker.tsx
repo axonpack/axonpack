@@ -1,4 +1,5 @@
-import type { Language, PrettyPrintTheme } from '@axonpack/react-pretty-print';
+import type { Language } from '@axonpack/react-pretty-print';
+import type { PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 
 /** All 38 languages as a wrapping row of chips — one panel is shown for whichever is selected. */
 export function LanguagePicker({

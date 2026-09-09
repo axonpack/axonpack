@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import * as pretty from '@axonpack/react-pretty-print';
+import * as themes from '@axonpack/react-pretty-print/themes';
 import {
   CodeHighlight,
-  DARK_THEME,
   domPrimitives,
   JsonTree,
   XmlTree,
   SUPPORTED_LANGUAGES,
   type Language,
   type MenuItem,
-  type PrettyPrintTheme,
 } from '@axonpack/react-pretty-print';
+import { DARK_THEME, type PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 
 import { ContextMenu, type MenuState } from './components/ContextMenu';
 import { Panel } from './components/Panel';
@@ -18,8 +17,8 @@ import { LanguagePicker } from './components/LanguagePicker';
 import { ThemePicker } from './components/ThemePicker';
 import { CODE_SAMPLES, sampleData, sampleXml } from './sample-data';
 
-/** Every `*_THEME` the package exports, by name — 146 of them. */
-const PALETTES = Object.entries(pretty)
+/** Every palette the `/themes` entry point exports, by name. */
+const PALETTES = Object.entries(themes)
   .filter((entry): entry is [string, PrettyPrintTheme] => entry[0].endsWith('_THEME'))
   .sort(([a], [b]) => a.localeCompare(b));
 

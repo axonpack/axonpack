@@ -1,4 +1,4 @@
-import type { PrettyPrintTheme } from '@axonpack/react-pretty-print';
+import type { PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 /**

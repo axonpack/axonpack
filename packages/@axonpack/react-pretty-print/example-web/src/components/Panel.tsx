@@ -1,4 +1,4 @@
-import type { PrettyPrintTheme } from '@axonpack/react-pretty-print';
+import type { PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 import type { ReactNode } from 'react';
 
 /** A titled, bordered block — the examples show four renderers and each needs the same frame. */
