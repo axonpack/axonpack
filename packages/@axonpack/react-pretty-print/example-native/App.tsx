@@ -1,16 +1,19 @@
 import * as themes from '@axonpack/react-pretty-print/themes';
 import {
+  buildMatcher,
   CodeHighlight,
+  DEFAULT_SEARCH_MODES,
   JsonTree,
-  XmlTree,
   SUPPORTED_LANGUAGES,
+  XmlTree,
   type Language,
   type MenuItem,
+  type SearchQuery,
 } from '@axonpack/react-pretty-print';
 import { DARK_THEME, type PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 import * as Clipboard from 'expo-clipboard';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -22,8 +25,10 @@ import {
 
 import { ContextMenu, type MenuState } from './components/ContextMenu';
 import { Panel } from './components/Panel';
+import { SearchBar } from './components/SearchBar';
 import { LanguagePicker } from './components/LanguagePicker';
 import { ThemePicker } from './components/ThemePicker';
+import { MONOSPACE } from './fonts';
 import { CODE_SAMPLES, sampleData, sampleXml } from './sample-data';
 
 // react-native's own components satisfy `Primitives` as-is — the point of the injection boundary.
@@ -44,10 +49,17 @@ export default function App() {
   const [name, setName] = useState('DARK_THEME');
   const [format, setFormat] = useState(true);
   const [language, setLanguage] = useState<Language>('javascript');
+  const [query, setQuery] = useState<SearchQuery>({ text: '', ...DEFAULT_SEARCH_MODES });
+
+  // Keyed on the query object, so the matcher's identity only changes when the search does — which
+  // is what the tree keys its expansion on. Recompiling per render would reset it on every keystroke.
+  const matcher = useMemo(() => buildMatcher(query), [query]);
   const [menu, setMenu] = useState<MenuState | null>(null);
 
   // The palette states the surface it was designed against; nothing renders it, so the screen does.
-  const theme = PALETTES.find(([key]) => key === name)?.[1] ?? DARK_THEME;
+  const picked = PALETTES.find(([key]) => key === name)?.[1] ?? DARK_THEME;
+  // Every palette ships `monospace`, which is silently proportional on iOS — see ./fonts.
+  const theme = { ...picked, fontFamily: MONOSPACE };
   const surface = theme.background;
   const ink = theme.text;
 
@@ -62,6 +74,13 @@ export default function App() {
           Tap a row to expand, long-press for the menu.
         </Text>
 
+        <SearchBar
+          query={query}
+          invalid={matcher?.invalid ?? false}
+          theme={theme}
+          onChange={setQuery}
+        />
+
         <ThemePicker palettes={PALETTES} selected={name} onSelect={setName} />
 
         <Panel title="JsonTree" theme={theme}>
@@ -70,6 +89,7 @@ export default function App() {
             value={sampleData}
             rootLabel="response"
             theme={theme}
+            matcher={matcher}
             onCopy={(text) => Clipboard.setStringAsync(text)}
             onRequestMenu={(items: MenuItem[], event) => {
               // `event` is `unknown` by design — the package never reads it, so the cast is here.
@@ -80,7 +100,7 @@ export default function App() {
         </Panel>
 
         <Panel title="XmlTree" theme={theme}>
-          <XmlTree primitives={primitives} source={sampleXml} theme={theme} />
+          <XmlTree primitives={primitives} source={sampleXml} theme={theme} matcher={matcher} />
         </Panel>
 
         <Pressable

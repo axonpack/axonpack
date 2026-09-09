@@ -1,18 +1,22 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as themes from '@axonpack/react-pretty-print/themes';
 import {
   CodeHighlight,
   domPrimitives,
   JsonTree,
   XmlTree,
+  buildMatcher,
+  DEFAULT_SEARCH_MODES,
   SUPPORTED_LANGUAGES,
   type Language,
   type MenuItem,
+  type SearchQuery,
 } from '@axonpack/react-pretty-print';
 import { DARK_THEME, type PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
 
 import { ContextMenu, type MenuState } from './components/ContextMenu';
 import { Panel } from './components/Panel';
+import { SearchBar } from './components/SearchBar';
 import { LanguagePicker } from './components/LanguagePicker';
 import { ThemePicker } from './components/ThemePicker';
 import { CODE_SAMPLES, sampleData, sampleXml } from './sample-data';
@@ -26,6 +30,11 @@ export function App() {
   const [name, setName] = useState('DARK_THEME');
   const [format, setFormat] = useState(true);
   const [language, setLanguage] = useState<Language>('javascript');
+  const [query, setQuery] = useState<SearchQuery>({ text: '', ...DEFAULT_SEARCH_MODES });
+
+  // Keyed on the query object, so the matcher's identity only changes when the search does — which
+  // is what the tree keys its expansion on. Recompiling per render would reset it on every keystroke.
+  const matcher = useMemo(() => buildMatcher(query), [query]);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -47,6 +56,13 @@ export function App() {
         right-click for the menu.
       </p>
 
+      <SearchBar
+        query={query}
+        invalid={matcher?.invalid ?? false}
+        theme={theme}
+        onChange={setQuery}
+      />
+
       <ThemePicker palettes={PALETTES} selected={name} onSelect={setName} />
       {copied !== null && (
         <span style={{ marginLeft: 12, fontSize: 12, opacity: 0.7 }}>
@@ -60,6 +76,7 @@ export function App() {
           value={sampleData}
           rootLabel="response"
           theme={theme}
+          matcher={matcher}
           onCopy={(copiedText) => {
             navigator.clipboard.writeText(copiedText);
             setCopied(copiedText);
@@ -73,7 +90,7 @@ export function App() {
       </Panel>
 
       <Panel title="XmlTree" theme={theme}>
-        <XmlTree primitives={domPrimitives} source={sampleXml} theme={theme} />
+        <XmlTree primitives={domPrimitives} source={sampleXml} theme={theme} matcher={matcher} />
       </Panel>
 
       <label style={{ display: 'block', fontSize: 13, margin: '0 0 12px' }}>
@@ -99,6 +116,7 @@ export function App() {
           language={language}
           theme={theme}
           format={format}
+          matcher={matcher}
         />
       </Panel>
 
