@@ -13,21 +13,30 @@ test('the published surface is exactly this', () => {
   expect(Object.keys(api).sort()).toEqual([
     'ARRAY_CHUNK_SIZE',
     'CodeHighlight',
+    'DEFAULT_SEARCH_MODES',
     'JsonTree',
     'MAX_HIGHLIGHT_LENGTH',
+    'MAX_SEARCHABLE_LENGTH',
     'SUPPORTED_LANGUAGES',
     'XmlTree',
+    'buildMatcher',
     'buildPreview',
     'chunkArrayRange',
+    'clipMatches',
     'collectExpandablePaths',
+    'collectMatchingPaths',
+    'collectMatchingXmlPaths',
     'detectLanguage',
     'domPrimitives',
+    'findMatches',
     'formatCode',
     'formatCopyValue',
     'hasChildren',
     'isExpandable',
     'isPlainObject',
     'parseXml',
+    'splitByMatches',
+    'testMatch',
     'tokenize',
   ]);
 });
@@ -52,4 +61,5 @@ test('the internal renderers and style builders stay internal', () => {
   expect(api).not.toHaveProperty('buildTreeStyles');
   expect(api).not.toHaveProperty('buildCodeStyles');
   expect(api).not.toHaveProperty('INDENT_PER_DEPTH');
+  expect(api).not.toHaveProperty('ROW_MIN_HEIGHT');
 });
