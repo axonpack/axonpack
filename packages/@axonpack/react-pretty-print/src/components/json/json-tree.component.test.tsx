@@ -41,6 +41,16 @@ test('rows lay out as flex on the DOM, where a div is display:block by default',
   expect(html).toContain('flex-shrink:0');
 });
 
+test('a row is at least the tap floor tall, since every row toggles', () => {
+  const html = renderToStaticMarkup(<JsonTree primitives={domPrimitives} value={value} />);
+
+  const heights = [...html.matchAll(/min-height:(\d+)px/g)].map((m) => Number(m[1]));
+  expect(heights.length).toBeGreaterThan(0);
+  for (const height of heights) {
+    expect(height).toBeGreaterThanOrEqual(28);
+  }
+});
+
 test('defaultExpanded false collapses the root', () => {
   const html = renderToStaticMarkup(
     <JsonTree primitives={domPrimitives} value={value} defaultExpanded={false} />
