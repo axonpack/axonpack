@@ -2,7 +2,6 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   FlatList,
-  Keyboard,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -61,20 +60,9 @@ export function ConsoleView() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-
   const listRef = useRef<FlatList<ConsoleLogEntry>>(null);
 
   const followingTail = useRef(true);
-
-  useEffect(() => {
-    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      shown.remove();
-      hidden.remove();
-    };
-  }, []);
 
   const countsByLevel = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -266,7 +254,7 @@ export function ConsoleView() {
       {}
       {isReplEnabled() && <ConsolePrompt onSubmit={scrollToBottom} />}
       {}
-      {!keyboardVisible && <InsetPadding edge="bottom" />}
+      <InsetPadding edge="bottom" avoidKeyboard />
     </View>
   );
 }

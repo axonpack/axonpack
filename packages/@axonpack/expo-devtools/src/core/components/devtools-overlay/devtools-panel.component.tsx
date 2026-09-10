@@ -1,5 +1,5 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
@@ -29,19 +29,15 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
   const insets = useSafeAreaInsets();
 
   const [tab, setTab] = useState<DevtoolsTab>(devtoolsTabStore.get);
-  const consoleEntries = useSyncExternalStore(
+  // Crashes as well as errors: a crash is its own level now, and counting only `error` quietly
+  // stopped the badge reporting the very rows most worth walking over to. Counted by the store so
+  // this subscribes to the number, not to the log — every tab stays mounted, so re-rendering here
+  // on every line the app logs re-renders all of them.
+  const consoleErrorCount = useSyncExternalStore(
     consoleLogStore.subscribe,
-    consoleLogStore.getSnapshot
+    consoleLogStore.getErrorCount
   );
   const crashRecords = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
-
-  // Crashes as well as errors: a crash is its own level now, and counting only `error` quietly
-  // stopped the badge reporting the very rows most worth walking over to.
-  const consoleErrorCount = useMemo(
-    () =>
-      consoleEntries.filter((entry) => entry.level === 'error' || entry.level === 'crash').length,
-    [consoleEntries]
-  );
 
   const unseenCrashCount = useMemo(
     () => crashRecords.filter((record) => !record.seen).length,
@@ -68,10 +64,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
   }, [tab]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.panel}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {}
+    <View style={styles.panel}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <DevtoolsTabBar
           tab={tab}
@@ -93,7 +86,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
       <View style={styles.tabPanel}>{tabContent}</View>
 
       <CrashInspectionSheet />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

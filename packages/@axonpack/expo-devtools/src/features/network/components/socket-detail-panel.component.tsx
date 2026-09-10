@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { memo, useSyncExternalStore } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { SocketMessageRow } from './socket-message-row.component';
@@ -17,7 +17,7 @@ function keyExtractor(message: WebSocketMessage): string {
   return message.id;
 }
 
-export function SocketDetailPanel({
+function SocketDetailPanelBase({
   entry,
   onClose,
 }: {
@@ -73,6 +73,8 @@ const EMPTY: readonly WebSocketMessage[] = [];
 function renderMessage({ item }: { item: WebSocketMessage }) {
   return <SocketMessageRow message={item} />;
 }
+
+export const SocketDetailPanel = memo(SocketDetailPanelBase);
 
 const useStyles = makeThemedStyles((COLORS) => ({
   header: {

@@ -66,7 +66,12 @@ export function NetworkView() {
   const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
-  const [overrideUrl, setOverrideUrl] = useState<string | null>(null);
+  const [overrideEntry, setOverrideEntry] = useState<NetworkLogEntry | null>(null);
+
+  // Stable, so the sheets below can be memoised: the list re-renders on every request, and an open
+  // detail panel re-rendering with it is the most expensive thing in the tab.
+  const closeEntry = useCallback(() => setSelectedEntry(null), []);
+  const closeOverride = useCallback(() => setOverrideEntry(null), []);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -227,7 +232,7 @@ export function NetworkView() {
             item.eventStream ? networkLogStore.getStreamEvents(item.id).length : undefined
           }
           onPress={setSelectedEntry}
-          onOverride={setOverrideUrl}
+          onOverride={setOverrideEntry}
         />
       ),
     [bigRows, matcher]
@@ -334,15 +339,15 @@ export function NetworkView() {
 
       <DetailPanel
         entry={selectedEntry?.kind === 'http' ? selectedEntry : null}
-        onClose={() => setSelectedEntry(null)}
+        onClose={closeEntry}
         stackedHeaders={stackedHeaders}
       />
 
-      <OverrideEditor url={overrideUrl} onClose={() => setOverrideUrl(null)} />
+      <OverrideEditor entry={overrideEntry} onClose={closeOverride} />
 
       <SocketDetailPanel
         entry={selectedEntry?.kind === 'websocket' ? selectedEntry : null}
-        onClose={() => setSelectedEntry(null)}
+        onClose={closeEntry}
       />
     </View>
   );
