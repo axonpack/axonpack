@@ -67,7 +67,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   track: {
     height: TRACK_HEIGHT,
     borderRadius: TRACK_HEIGHT / 2,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     overflow: 'hidden',

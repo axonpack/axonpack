@@ -1,9 +1,14 @@
 import { EventEmitter } from 'expo';
 
+import { coalesceNotify } from '../../../core/utils/coalesce-notify.util';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
 import type { CrashKind } from '../../crash/stores/crash.store';
 import type { ConsoleArg } from '../utils/format-console-args.util';
 
+/**
+ * A console row's severity. The first five mirror the `console` method that produced the row;
+ * `'input'` and `'result'` are the `>` prompt's own echo of what you typed and what came back.
+ */
 export type ConsoleLogLevel =
   | 'log'
   | 'info'
@@ -15,17 +20,33 @@ export type ConsoleLogLevel =
   /** A crash, written by the crash capture rather than by anything the app called. */
   | 'crash';
 
+/**
+ * One row in the Console tab. Read them with `devtools.consoleLogStore.getSnapshot()`; the store
+ * keeps the most recent 500, newest first.
+ */
 export type ConsoleLogEntry = {
+  /** Unique id for this row, stable for as long as it is in the buffer. */
   id: string;
+  /** Which `console` method produced it, or the prompt's own input/result. */
   level: ConsoleLogLevel;
-
+  /**
+   * The arguments as they were logged, kept apart so the UI can render an object as a tree and a
+   * string as text. Use `text` if you only want a line to print.
+   */
   parts: ConsoleArg[];
-
+  /** The whole row flattened to one string — what search matches and what Copy copies. */
   text: string;
+  /** When it was logged, as `Date.now()` milliseconds. */
   timestamp: number;
-
+  /**
+   * How many identical rows this one stands for. Consecutive duplicates collapse into a single row
+   * with a count, the way a browser console does. `1` unless that happened.
+   */
   count: number;
-
+  /**
+   * Where the row came from: `'native'` for the app's own console, or the `webviewSources` name of
+   * the page that logged it.
+   */
   source?: string;
   /** Set when this row is the console's echo of an error that also became a crash report. */
   crashId?: string;
@@ -43,6 +64,7 @@ export type ConsoleLogEntry = {
    * the crash store — that buffer is far shorter than this one, so a row outlives its record.
    */
   crashName?: string;
+  /** The crash's message, laid out under `crashName` on the row. */
   crashMessage?: string;
   /** Written by a run that already ended, and read back at this one's startup. */
   crashFromPreviousLaunch?: boolean;
@@ -64,10 +86,24 @@ let paused = false;
 
 let enabled = false;
 const emitter = new EventEmitter<ConsoleLogEvents>();
+const notify = coalesceNotify(emitter);
 
 export const consoleLogStore = {
   getSnapshot(): ConsoleLogEntry[] {
     return entries;
+  },
+  /**
+   * How many rows are worth a badge — errors and crashes. A number rather than the rows themselves,
+   * so a subscriber that only shows the count re-renders when the count changes instead of on every
+   * line the app logs. That difference is load-bearing: the panel keeps its tabs mounted, so one
+   * re-render there is a re-render of every tab.
+   */
+  getErrorCount(): number {
+    let count = 0;
+    for (const entry of entries) {
+      if (entry.level === 'error' || entry.level === 'crash') count++;
+    }
+    return count;
   },
   isPaused(): boolean {
     return paused;
@@ -81,11 +117,11 @@ export const consoleLogStore = {
   },
   setEnabled(nextEnabled: boolean) {
     enabled = nextEnabled;
-    emitter.emit('change');
+    notify();
   },
   setPaused(nextPaused: boolean) {
     paused = nextPaused;
-    emitter.emit('change');
+    notify();
   },
   add(entry: ConsoleLogEntry, options?: { force?: boolean }) {
     if (!enabled) return;
@@ -115,14 +151,14 @@ export const consoleLogStore = {
     } else {
       entries = [entry, ...entries].slice(0, MAX_ENTRIES);
     }
-    emitter.emit('change');
+    notify();
   },
   update(id: string, patch: Partial<ConsoleLogEntry>) {
     entries = entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
-    emitter.emit('change');
+    notify();
   },
   clear() {
     entries = [];
-    emitter.emit('change');
+    notify();
   },
 };

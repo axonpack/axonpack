@@ -58,14 +58,14 @@ describe('captureCrash', () => {
 });
 
 describe('captureCrash persistence', () => {
-  it('persists a native exception, the one kind that still ends the app', () => {
+  it('persists a native exception, the kind the panel is not alive to show', () => {
     captureCrash(new Error('x'), 'native-exception');
     expect(mockPersistCrashRecord).toHaveBeenCalledTimes(1);
   });
 
-  // The process survives every JavaScript tier now, so the panel is alive to show the record. Writing
-  // it down would report it again at the next launch, as a crash the process did not survive.
-  it('does not persist a fatal JS error, which no longer ends the app', () => {
+  // It does end the app, but React Native reports it to the native side on the way out and the
+  // native handler writes that crash down. Persisting this one too would show it as two rows.
+  it('does not persist a fatal JS error, which the native tier records instead', () => {
     captureCrash(new Error('x'), 'js-fatal');
     expect(mockPersistCrashRecord).not.toHaveBeenCalled();
   });

@@ -11,9 +11,17 @@
 /** Accepting a plain value too is what lets a sync driver share one code path with an async one. */
 type MaybePromise<T> = T | Promise<T>;
 
+/**
+ * Whether a store's driver answers immediately (`'sync'`, e.g. MMKV) or with a promise (`'async'`,
+ * e.g. AsyncStorage). Shown as a badge on the store; the tab awaits every read either way, so this
+ * never changes how a driver is called.
+ */
 export type StorageAdapterKind = 'async' | 'sync';
 
-/** What the driver actually handed back, so a stored `1` doesn't render as the string `"1"`. */
+/**
+ * What the driver actually handed back, so a stored `1` doesn't render as the string `"1"`. Also
+ * what an edit is written back as, which is why editing a number keeps it a number.
+ */
 export type StorageValueType = 'string' | 'number' | 'boolean' | 'buffer';
 
 /**
@@ -28,9 +36,14 @@ export const ALL_VALUE_TYPES: readonly StorageValueType[] = [
   'buffer',
 ];
 
+/**
+ * One value as a custom driver reports it. Return this from `getItem` when the store holds more than
+ * strings; a plain string (or `null`) is accepted too and read as `valueType: 'string'`.
+ */
 export type StorageReadResult = {
   /** `null` is an absent key. `''` is a value — a store can legitimately hold an empty string. */
   text: string | null;
+  /** What the driver actually held, so the tab can badge and re-write it correctly. */
   valueType: StorageValueType;
 };
 
@@ -44,9 +57,19 @@ export type StorageReadValue = string | null | undefined | StorageReadResult;
  */
 export type StorageKeyBlacklist = RegExp | ((key: string) => boolean);
 
+/**
+ * What `defineStorageAdapter` takes — the escape hatch for a store none of the three built-in
+ * factories cover (an in-memory `Map`, a SQLite table, your own wrapper).
+ *
+ * Only `name` and `getItem` are required; leave `setItem` / `removeItem` out and the store is
+ * inspectable but not editable.
+ */
 export type StorageAdapterConfig = {
+  /** What the store is called in the tab's store picker. */
   name: string;
+  /** Whether the driver is synchronous. Defaults to `'async'`; a badge only. */
   kind?: StorageAdapterKind;
+  /** Inspect but never write. Defaults to `false`, or to `storage.readOnly` when that is set. */
   readOnly?: boolean;
   /**
    * A fixed key list, for a store that cannot enumerate itself (SecureStore). Passing it turns
@@ -60,35 +83,75 @@ export type StorageAdapterConfig = {
   supportedTypes?: readonly StorageValueType[];
   /** Keys the tab must not read, list, or write. */
   blacklist?: StorageKeyBlacklist;
+  /**
+   * How the store lists what it holds. Leave it out only when you passed `keys` instead — without
+   * either, the tab has nothing to read.
+   */
   getAllKeys?: () => MaybePromise<readonly string[]>;
+  /**
+   * Reads one key. Return a string, `null` for an absent key, or a `StorageReadResult` when the
+   * store holds more than strings. The only required behaviour of a driver.
+   */
   getItem: (key: string) => MaybePromise<StorageReadValue>;
   /** A batch read, when the driver has one. Keys absent from the result are treated as unset. */
   getMany?: (keys: string[]) => MaybePromise<Map<string, StorageReadResult>>;
+  /**
+   * Writes one key, with the type the value was read as so an edit keeps it. Omit to make the store
+   * read-only; the tab then hides its edit affordances rather than failing on them.
+   */
   setItem?: (key: string, text: string, valueType: StorageValueType) => MaybePromise<unknown>;
+  /** Deletes one key. Omit and the tab offers no delete for this store. */
   removeItem?: (key: string) => MaybePromise<unknown>;
 };
 
+/**
+ * A ready-to-register store, as returned by `asyncStorageAdapter`, `mmkvAdapter`,
+ * `secureStoreAdapter` and `defineStorageAdapter`. Pass them to
+ * `createDevtoolsClient({ storage: { adapters } })`; you never build this shape by hand.
+ */
 export type StorageAdapterDefinition = {
+  /** The store's display name. */
   name: string;
+  /** Whether the driver is synchronous. */
   kind: StorageAdapterKind;
+  /** Inspect but never write. Unset here means "no opinion" — `storage.readOnly` then decides. */
   readOnly?: boolean;
+  /**
+   * Whether the store can list its own keys. `false` for a fixed `keys` list (SecureStore), which is
+   * what makes the tab say so instead of implying the store is empty.
+   */
   canEnumerate: boolean;
+  /** The value types this store can hold, used to bound what the editor offers. */
   supportedTypes: StorageValueType[];
   /** Resolved from `blacklist`; always present, and answers `false` when nothing was declared. */
   isHidden: (key: string) => boolean;
+  /** Whether a blacklist was declared at all, so the tab can say some keys are hidden. */
   hasBlacklist: boolean;
+  /** Lists the store's keys, blacklisted ones already removed. */
   getAllKeys: () => Promise<string[]>;
+  /** Reads one key, normalised to a `StorageReadResult`. */
   getItem: (key: string) => Promise<StorageReadResult>;
+  /** Batch read, when the driver had one — the tab prefers it over per-key reads. */
   getMany?: (keys: string[]) => Promise<Map<string, StorageReadResult>>;
+  /** Writes one key. Absent when the driver cannot write. */
   setItem?: (key: string, text: string, valueType: StorageValueType) => Promise<void>;
+  /** Deletes one key. Absent when the driver cannot delete. */
   removeItem?: (key: string) => Promise<void>;
 };
 
+/**
+ * A registered store as the Storage tab sees it: a `StorageAdapterDefinition` with its id assigned
+ * and the read-only question settled. Produced at `init()`; read it from
+ * `devtools.storageStore.getSnapshot()`.
+ */
 export type StorageAdapter = Omit<StorageAdapterDefinition, 'readOnly'> & {
   /** Slug of `name`, suffixed on collision — the stable key every store lookup goes through. */
   id: string;
+  /** Settled from the adapter's own `readOnly`, then `storage.readOnly`, then `false`. */
   readOnly: boolean;
+  /** `true` when the driver can write and the store is not read-only. */
   canEdit: boolean;
+  /** `true` when the driver can delete and the store is not read-only. */
   canDelete: boolean;
 };
 
@@ -113,8 +176,22 @@ function toReadResult(value: StorageReadValue): StorageReadResult {
 }
 
 /**
- * The escape hatch every other factory below is written in terms of. It duck-types nothing — it
- * takes exactly what it is handed and only normalises sync answers to promises.
+ * Registers any store of your own with the Storage tab — an in-memory `Map`, a SQLite table, a
+ * wrapper around something else. The escape hatch the three factories below are written in terms of.
+ *
+ * ```ts
+ * defineStorageAdapter({
+ *   name: 'Memory',
+ *   kind: 'sync',
+ *   getAllKeys: () => [...map.keys()],
+ *   getItem: (key) => map.get(key) ?? null,
+ *   setItem: (key, text) => map.set(key, text),
+ *   removeItem: (key) => map.delete(key),
+ * });
+ * ```
+ *
+ * It duck-types nothing — it takes exactly what it is handed and only normalises sync answers to
+ * promises.
  */
 export function defineStorageAdapter(config: StorageAdapterConfig): StorageAdapterDefinition {
   const { keys: fixedKeys, getAllKeys, getItem, getMany, setItem, removeItem } = config;
@@ -161,22 +238,38 @@ export function defineStorageAdapter(config: StorageAdapterConfig): StorageAdapt
   };
 }
 
+/**
+ * The parts of `@react-native-async-storage/async-storage` this package uses. Duck-typed rather than
+ * imported, so the library stays the consumer's dependency — pass `AsyncStorage` itself as `driver`.
+ *
+ * Only the two reads are required; without `setItem` / `removeItem` the store is inspect-only.
+ */
 export type AsyncStorageLikeDriver = {
+  /** Lists every key in the store. */
   getAllKeys: () => MaybePromise<readonly string[]>;
+  /** Reads one key; `null` for an absent one. */
   getItem: (key: string) => MaybePromise<string | null>;
   /** The batch read as of async-storage 3. */
   getMany?: (keys: string[]) => MaybePromise<Record<string, string | null>>;
   /** The batch read in async-storage 1 and 2, kept because plenty of apps are still there. */
   multiGet?: (keys: string[]) => MaybePromise<readonly (readonly [string, string | null])[]>;
+  /** Writes one key. Omit to make the store read-only. */
   setItem?: (key: string, value: string) => MaybePromise<unknown>;
+  /** Deletes one key. Omit and the tab offers no delete. */
   removeItem?: (key: string) => MaybePromise<unknown>;
 };
 
 /**
- * `@react-native-async-storage/async-storage` and anything copying its API.
+ * Registers `@react-native-async-storage/async-storage`, or anything copying its API, with the
+ * Storage tab.
  *
- * Every call goes through the driver object rather than a destructured reference: a driver method
- * may well be bound to a native instance, and pulling it off the object would strand `this`.
+ * ```ts
+ * storage: { adapters: [asyncStorageAdapter({ driver: AsyncStorage })] }
+ * ```
+ *
+ * `name` defaults to `'AsyncStorage'`. Values are always strings here, whatever they were written
+ * as. Every call goes through the driver object rather than a destructured reference: a driver
+ * method may well be bound to a native instance, and pulling it off the object would strand `this`.
  */
 export function asyncStorageAdapter(config: {
   driver: AsyncStorageLikeDriver;
@@ -231,23 +324,45 @@ export function asyncStorageAdapter(config: {
   });
 }
 
+/**
+ * The parts of `react-native-mmkv` this package uses — pass your MMKV instance as `driver`. Both
+ * majors fit: MMKV 4's `remove` and 2/3's `delete` are both accepted.
+ *
+ * MMKV cannot say what type a key holds, so the typed getters are probed in turn; declare the ones
+ * your instance has and values come back as the types they were written as.
+ */
 export type MmkvLikeDriver = {
+  /** Lists every key in the instance. */
   getAllKeys: () => readonly string[];
+  /** Reads a string value; `undefined` for an absent key. The one required read. */
   getString: (key: string) => string | undefined;
+  /** Reads a number value. Without it, stored numbers surface as strings. */
   getNumber?: (key: string) => number | undefined;
+  /** Reads a boolean value. Without it, stored booleans surface as strings. */
   getBoolean?: (key: string) => boolean | undefined;
   /**
    * Structural rather than `ArrayBuffer` or `Uint8Array`: MMKV 4 returns the former where 2 and 3
    * returned the latter, and the byte length is the only part of it this tab reports anyway.
    */
   getBuffer?: (key: string) => { byteLength: number } | undefined;
+  /** Writes a string, number or boolean. Omit to make the store read-only. */
   set?: (key: string, value: string | number | boolean) => unknown;
   /** MMKV 4 renamed `delete` to `remove`; both are accepted so either major works. */
   delete?: (key: string) => unknown;
+  /** MMKV 4's delete. Either this or `delete` enables deleting. */
   remove?: (key: string) => unknown;
 };
 
-/** `react-native-mmkv` and anything copying its API. */
+/**
+ * Registers a `react-native-mmkv` instance, or anything copying its API, with the Storage tab.
+ *
+ * ```ts
+ * storage: { adapters: [mmkvAdapter({ driver: mmkv, name: 'MMKV (cache)' })] }
+ * ```
+ *
+ * `name` defaults to `'MMKV'`. Reads are synchronous and keep their types, so a number stays a
+ * number when you edit it.
+ */
 export function mmkvAdapter(config: {
   driver: MmkvLikeDriver;
   name?: string;
@@ -337,15 +452,34 @@ function writeMmkvValue(
   driver.set?.(key, text);
 }
 
+/**
+ * The parts of `expo-secure-store` this package uses — pass the module itself as `driver`. `TOptions`
+ * is its own options type, inferred from what you pass, so a `keychainService` or
+ * `requireAuthentication` option type-checks the way it does in your own calls.
+ *
+ * The keychain cannot be listed, so `secureStoreAdapter` also needs a `keys` list.
+ */
 export type SecureStoreLikeDriver<TOptions = never> = {
+  /** Reads one key; `null` for an absent one. The one required method. */
   getItemAsync: (key: string, options?: TOptions) => MaybePromise<string | null>;
+  /** Writes one key. Omit to make the store read-only. */
   setItemAsync?: (key: string, value: string, options?: TOptions) => MaybePromise<unknown>;
+  /** Deletes one key. Omit and the tab offers no delete. */
   deleteItemAsync?: (key: string, options?: TOptions) => MaybePromise<unknown>;
 };
 
 /**
- * `expo-secure-store`. It has no way to list what it holds — the keychain/keystore is addressed by
- * key, not enumerated — so you name the keys worth watching and the tab says that's what it's doing.
+ * Registers `expo-secure-store` with the Storage tab.
+ *
+ * It has no way to list what it holds — the keychain/keystore is addressed by key, not enumerated —
+ * so you name the keys worth watching and the tab says that's what it's doing:
+ *
+ * ```ts
+ * secureStoreAdapter({ driver: SecureStore, keys: ['session', 'pin'] })
+ * ```
+ *
+ * `keys` also takes a function, resolved on every read, for an app that tracks its own key list.
+ * `name` defaults to `'SecureStore'`, and `options` is passed through to every driver call.
  */
 export function secureStoreAdapter<TOptions>(config: {
   driver: SecureStoreLikeDriver<TOptions>;

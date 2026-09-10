@@ -102,7 +102,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     borderRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
     gap: 2,
   },
   fileName: {

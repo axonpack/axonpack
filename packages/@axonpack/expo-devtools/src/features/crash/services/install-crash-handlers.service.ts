@@ -37,9 +37,11 @@ const installed = {
 
 /**
  * React Native installs its own global handler at startup (`setUpErrorHandling.js`), so ours wraps
- * rather than replaces: capture first, then hand the error on untouched. Passing it on is what keeps
- * LogBox, the red box and RN's own native reporting working — and, for a fatal error, what lets the
- * process end the way React Native intends.
+ * rather than replaces: capture first, then hand the error on untouched, fatal or not. Passing it on
+ * is what keeps LogBox, the red box and RN's own native reporting working, what lets a fatal error
+ * end the process the way React Native intends, and what keeps another reporter's own `ErrorUtils`
+ * wrapper — which is exactly what `previous` is when Sentry or Crashlytics went in first — seeing
+ * every error this one sees.
  */
 function installJsErrorHandler() {
   const errorUtils = (globalThis as ErrorUtilsHost).ErrorUtils;
@@ -49,15 +51,11 @@ function installJsErrorHandler() {
   errorUtils.setGlobalHandler((error, isFatal) => {
     captureCrash(error, isFatal ? 'js-fatal' : 'js-error');
 
-    // A fatal error stops here. React Native's own handler is what reports it to the native side,
-    // and that report is what ends the process — so not calling it is the whole of how the app keeps
-    // running. In development that handler draws the red box instead of reporting anything, which is
-    // why the same error has never ended the app there; this makes a release build behave the way
-    // development always has.
-    if (isFatal) return;
-
-    // A non-fatal one is passed on untouched: the default handler only logs it, so keeping it back
-    // would cost the warning and save nothing.
+    // Recorded, then passed on untouched. A fatal error ends the app from here: React Native's own
+    // handler is what reports it to the native side, and that report is what kills the process, so
+    // the crash arrives at the next launch as the native exception it became and every other
+    // reporter sees it too. In development that handler draws the red box instead of reporting
+    // anything, so the app carries on there as it always has.
     previous?.(error, isFatal);
   });
 }
@@ -75,15 +73,17 @@ function describeRejection(rejection: unknown): string {
 /**
  * Two things worth knowing here.
  *
- * `enablePromiseRejectionTracker` is a **single-slot** API — installing ours displaces whatever was
- * there. In production nothing was: RN only registers its tracker under `__DEV__`
- * (`Libraries/Core/polyfillPromise.js`), so an unhandled rejection in a release build is currently
- * silent, and this is the tier that adds the most coverage.
+ * `enablePromiseRejectionTracker` is a **single-slot** API with no getter — installing ours displaces
+ * whatever was there, and there is nothing to chain to. In production nothing was there: RN only
+ * registers its tracker under `__DEV__` (`Libraries/Core/polyfillPromise.js`), so an unhandled
+ * rejection in a release build is otherwise silent, and this is the tier that adds the most coverage.
+ * An app whose own reporter wants this slot has to turn the tier off — see `handlers` in the client
+ * config.
  *
- * In development it *does* displace RN's, which is what feeds LogBox. Re-emitting through
- * `console.error` restores that: RN's `installConsoleErrorReporter` routes `console.error` into
- * LogBox, so the yellow/red box still appears. Doing it that way rather than importing
- * `ExceptionsManager` keeps us off a deep, version-specific path into RN's internals.
+ * In development it *does* displace RN's, which is what feeds LogBox — so the rejection is re-emitted
+ * through `console.error`, which RN's `installConsoleErrorReporter` routes into LogBox. That keeps us
+ * off a deep, version-specific path into `ExceptionsManager`, and the console patch recognises the
+ * error it just linked, so the re-emit reaches the real console without writing a second row.
  */
 function installRejectionHandler() {
   const hermes = (globalThis as ErrorUtilsHost).HermesInternal;
@@ -97,6 +97,7 @@ function installRejectionHandler() {
           ? rejection
           : new Error(`Unhandled promise rejection: ${describeRejection(rejection)}`);
       captureCrash(error, 'unhandled-rejection');
+      if (__DEV__) console.error(error);
     },
     onHandled: (id) => {
       if (__DEV__) {

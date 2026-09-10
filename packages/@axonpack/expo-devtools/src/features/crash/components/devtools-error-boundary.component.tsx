@@ -6,10 +6,19 @@ import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { captureCrash } from '../services/capture-crash.service';
 
+/** Props for `<DevtoolsErrorBoundary />`, which catches render errors in the tree below it. */
 export type DevtoolsErrorBoundaryProps = {
+  /** The tree to protect. Wrap it as high as you can — usually around the whole app. */
   children: ReactNode;
-  /** Replaces the built-in screen. `reset` remounts the subtree that threw. */
+  /**
+   * Your own error screen in place of the built-in one. `reset` remounts the subtree that threw, so
+   * wire it to a Try again button. Defaults to the built-in screen (the message and that button).
+   */
   fallback?: (error: Error, reset: () => void) => ReactNode;
+  /**
+   * Called with the error and React's `componentStack` after the crash is recorded — the place to
+   * forward a render error to your own reporter. Not called at all by default.
+   */
   onError?: (error: Error, info: ErrorInfo) => void;
 };
 

@@ -79,7 +79,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   image: {
     width: '100%',
     height: 240,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
     borderRadius: 6,
   },
   webview: {

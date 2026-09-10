@@ -6,6 +6,15 @@
  * There is no "whether" to go with it — a captured crash always opens a sheet. The gate is capture
  * itself: nothing reaches here unless `crash.enabled` and the devtools gates let it.
  */
+/**
+ * How much a crash sheet shows. Set through `crash.popupDetail`, not by hand.
+ *
+ * - `'full'` — the developer sheet: message, stack, device, breadcrumbs.
+ * - `'compact'` — a plain notice with Share, Copy and Dismiss, naming nothing about this package.
+ *
+ * `crash.popupDetail: 'auto'` — the default — picks `'full'` when the panel is shipping and
+ * `'compact'` when it is not.
+ */
 export type CrashPopupDetail = 'full' | 'compact';
 
 /**

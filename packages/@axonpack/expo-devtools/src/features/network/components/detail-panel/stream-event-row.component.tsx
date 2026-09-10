@@ -2,19 +2,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CopyIconButton } from '../../../../core/components/ui/copy-icon-button.ui';
 import { MONOSPACE } from '../../../../core/constants/typography.const';
+import { formatJson } from '../../../../core/utils/format-json.util';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 import type { ServerSentEvent } from '../../stores/network-log.store';
-
-/** Pretty-printed when the payload is JSON, which is what most streams carry, and left alone if not. */
-function formatData(data: string): string {
-  const trimmed = data.trim();
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return data;
-  try {
-    return JSON.stringify(JSON.parse(trimmed), null, 2);
-  } catch {
-    return data;
-  }
-}
 
 export function StreamEventRow({ event }: { event: ServerSentEvent }) {
   const styles = useStyles();
@@ -35,7 +25,7 @@ export function StreamEventRow({ event }: { event: ServerSentEvent }) {
         <CopyIconButton value={event.data} />
       </View>
       <Text style={styles.data} selectable>
-        {formatData(event.data)}
+        {formatJson(event.data)}
       </Text>
     </View>
   );

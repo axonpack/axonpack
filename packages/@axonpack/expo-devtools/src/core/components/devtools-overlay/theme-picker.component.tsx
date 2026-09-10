@@ -27,7 +27,7 @@ export function ThemePicker() {
     <>
       <IconButton
         name="palette"
-        color={COLORS.textSecondary}
+        color={COLORS.toolbarText}
         label="Theme"
         onPress={(event: GestureResponderEvent) =>
           setAnchor({ x: event.nativeEvent.pageX, y: event.nativeEvent.pageY })

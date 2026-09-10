@@ -1,96 +1,179 @@
 import { EventEmitter } from 'expo';
 
+/**
+ * One reading of the JS heap, taken every `performance.sampleIntervalMs`. This is the JS engine's
+ * heap, not the app's total memory — see `SystemMemorySample` for that.
+ *
+ * Both sizes are absent on a runtime with no `performance.memory` implementation (JSC, V8), which
+ * the Performance tab reports rather than charting zeroes.
+ */
 export type MemorySample = {
+  /** When the reading was taken, as `Date.now()` milliseconds. */
   timestamp: number;
+  /** Bytes currently allocated on the JS heap. */
   usedJSHeapSize?: number;
+  /** Bytes the JS heap has reserved from the OS — always at least `usedJSHeapSize`. */
   totalJSHeapSize?: number;
 };
 
+/**
+ * A block of the JS thread long enough to drop frames, reported by `PerformanceObserver`. Only
+ * blocks of at least `performance.longTaskThresholdMs` are kept.
+ */
 export type LongTaskEntry = {
+  /** Unique id for this entry. */
   id: string;
-
+  /** When it was recorded, as `Date.now()` milliseconds. */
   timestamp: number;
+  /** What the platform called it — usually `'self'`; React Native rarely attributes further. */
   name: string;
-
+  /** How long the thread was blocked, in milliseconds. */
   duration: number;
-
+  /** When the block began, in `performance.now()` milliseconds since app start. */
   startTime: number;
 };
 
+/**
+ * How long the app took to start, read once when recording begins. Every field is optional and most
+ * are filled in only by a platform whose native code reports them, so the Startup section shows what
+ * it has rather than guessing at the rest.
+ *
+ * The first four come from React Native's own `performance.rnStartupTiming`; the last five are this
+ * package's, and the two native ones need the native module (so they are absent in Expo Go).
+ */
 export type StartupTiming = {
+  /** React Native's start marker, in milliseconds. */
   startTime?: number;
+  /** React Native's end-of-startup marker, in milliseconds. */
   endTime?: number;
+  /** When the JS runtime began initialising, in milliseconds. */
   initializeRuntimeStart?: number;
+  /** When the bundle's entry point began executing, in milliseconds. */
   executeJavaScriptBundleEntryPointStart?: number;
-
+  /** True process start from the OS, as `Date.now()` milliseconds. Needs the native module. */
   processStart?: number;
+  /** When this package's native module was initialised, as `Date.now()` milliseconds. */
   nativeModuleInit?: number;
+  /** When this package's JS was first evaluated, as `Date.now()` milliseconds. */
   jsBundleEval?: number;
+  /** When `devtools.init()` ran, as `Date.now()` milliseconds. */
   initCalled?: number;
+  /** When the overlay first rendered, as `Date.now()` milliseconds — the end of a usable startup. */
   firstRender?: number;
 };
 
+/**
+ * A mark or measure the app recorded through `devtools.mark()` / `devtools.measure()`, listed under
+ * User timing in the Performance tab.
+ */
 export type UserTimingEntry = {
+  /** Unique id for this entry. */
   id: string;
+  /** When it was recorded, as `Date.now()` milliseconds. */
   timestamp: number;
-
+  /** A point in time (`'mark'`) or a span between two (`'measure'`). */
   kind: 'mark' | 'measure';
+  /** The name you passed. */
   name: string;
-
+  /** Where the entry sits on the timeline, in `performance.now()` milliseconds since app start. */
   startTime: number;
-
+  /** The span's length in milliseconds. Always `0` for a mark. */
   duration: number;
-
+  /** Your `detail` value, rendered to a string for display. Absent when none was given. */
   detail?: string;
 };
 
+/**
+ * A tap or key press that took at least `performance.interactionThresholdMs` to handle, from the
+ * Event Timing API.
+ */
 export type InteractionEntry = {
+  /** Unique id for this entry. */
   id: string;
+  /** When it was recorded, as `Date.now()` milliseconds. */
   timestamp: number;
-
+  /** The event type — `'click'`, `'keydown'`. */
   name: string;
+  /** When the event fired, in `performance.now()` milliseconds since app start. */
   startTime: number;
-
+  /** Event to next paint, in milliseconds — what the user actually waited. */
   duration: number;
-
+  /** Time inside the handler itself, in milliseconds. `0` when the platform did not report it. */
   processingDuration: number;
 };
 
+/**
+ * One reading of real device memory, from the native module — the app's actual footprint, unlike
+ * `MemorySample`, which is only the JS heap. Every field is absent without the native module.
+ */
 export type SystemMemorySample = {
+  /** When the reading was taken, as `Date.now()` milliseconds. */
   timestamp: number;
+  /** The app's resident memory in bytes — the number the OS kills a process over. */
   appBytes?: number;
+  /** Physical RAM on the device, in bytes. */
   totalBytes?: number;
-
+  /** Bytes the app could still allocate before it is at risk. */
   availableToAppBytes?: number;
 };
 
+/** Device disk space, from the native module. Read once when recording begins. */
 export type StorageInfo = {
+  /** Total size of the volume in bytes. */
   totalBytes?: number;
+  /** Free space in bytes. */
   freeBytes?: number;
 };
 
+/**
+ * How many entries the platform reported but could not be delivered, per kind. Non-zero means the
+ * observer's own buffer overflowed — the tab says so rather than showing a silently partial list.
+ */
 export type PerformanceDropped = {
+  /** Long tasks dropped by the observer. */
   longTasks: number;
+  /** Interactions dropped by the observer. */
   interactions: number;
 };
 
+/**
+ * What this platform can actually measure, probed at startup. The Performance tab uses it to say a
+ * section is unavailable rather than render an empty chart.
+ */
 export type PerformanceSupport = {
+  /** `performance.memory` exists — true on Hermes, false on JSC and V8. */
   memory: boolean;
-
+  /** The native module is present, so real device memory can be read. */
   systemMemory: boolean;
+  /** `PerformanceObserver` supports `'longtask'` on this platform and RN version. */
   longTasks: boolean;
+  /** `PerformanceObserver` supports `'event'` on this platform and RN version. */
   interactions: boolean;
 };
 
+/**
+ * Everything the Performance tab holds, as one value. Each series keeps at most
+ * `performance.historySize` entries, newest first, and is empty until recording starts — the
+ * Performance tab defaults to paused.
+ */
 export type PerformanceSnapshot = {
+  /** JS heap readings, oldest first. */
   memory: MemorySample[];
+  /** Device memory readings, oldest first. */
   systemMemory: SystemMemorySample[];
+  /** Disk space, read once. Absent without the native module. */
   storage?: StorageInfo;
+  /** Recorded long tasks, newest first. */
   longTasks: LongTaskEntry[];
+  /** Your marks and measures, newest first. */
   userTiming: UserTimingEntry[];
+  /** Recorded slow interactions, newest first. */
   interactions: InteractionEntry[];
+  /** Startup markers. Absent until they have been read. */
   startup?: StartupTiming;
+  /** What this platform can measure. */
   support: PerformanceSupport;
+  /** Entries the platform's observers dropped. */
   dropped: PerformanceDropped;
 };
 

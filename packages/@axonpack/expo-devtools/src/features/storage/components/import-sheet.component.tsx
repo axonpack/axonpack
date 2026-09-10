@@ -2,20 +2,19 @@ import * as Clipboard from 'expo-clipboard';
 import { useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { applyStorageImport, type StorageImportResult } from '../services/import-storage.service';
+import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
+import { Chip } from '../../../core/components/ui/chip.ui';
+import { TextArea } from '../../../core/components/ui/text-area.ui';
+import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import type { StorageAdapter } from '../services/define-adapter.service';
+import { applyStorageImport, type StorageImportResult } from '../services/import-storage.service';
 import type { StorageEntry } from '../stores/storage.store';
 import {
   parseStorageExport,
   planStorageImport,
   type StorageImportPlan,
 } from '../utils/build-storage-export.util';
-import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
-import { Chip } from '../../../core/components/ui/chip.ui';
-import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
-import { TextArea } from '../../../core/components/ui/text-area.ui';
-import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
-import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 
 type Reading =
   | { state: 'empty' }
@@ -193,8 +192,6 @@ export function ImportSheet({
             </Text>
           </TouchableOpacity>
         </View>
-
-        <InsetPadding edge="bottom" />
       </View>
     </BottomSheet>
   );

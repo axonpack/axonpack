@@ -1,10 +1,10 @@
+import { crashStore } from '../../stores/crash.store';
+import { resetCrashCapture } from '../capture-crash.service';
 import {
   drainOnce,
   installCrashHandlers,
   resetCrashHandlers,
 } from '../install-crash-handlers.service';
-import { crashStore } from '../../stores/crash.store';
-import { resetCrashCapture } from '../capture-crash.service';
 
 const mockDrainNativeCrashRecords = jest.fn(() => [] as Record<string, unknown>[]);
 const mockInstallNativeCrashHandler = jest.fn();
@@ -20,7 +20,11 @@ jest.mock('../native-crash.service', () => ({
 
 type ErrorHandler = (error: unknown, isFatal: boolean) => void;
 
-const ALL_HANDLERS = { jsErrors: true, unhandledRejections: true, nativeExceptions: true };
+const ALL_HANDLERS = {
+  jsErrors: true,
+  unhandledRejections: true,
+  nativeExceptions: true,
+};
 
 let previousErrorUtils: unknown;
 let previousHermes: unknown;
@@ -53,17 +57,18 @@ function installFakeErrorUtils(existing?: ErrorHandler) {
 }
 
 describe('the JS error handler', () => {
-  it('captures a fatal error and withholds it, so the app is not ended', () => {
+  it('captures a fatal error and hands it on, so it ends the app and other reporters see it', () => {
     const rnHandler = jest.fn();
     const currentHandler = installFakeErrorUtils(rnHandler);
 
     installCrashHandlers(ALL_HANDLERS);
-    currentHandler()?.(new Error('boom'), true);
+    const error = new Error('boom');
+    currentHandler()?.(error, true);
 
+    // Recorded here first, then passed on: that handler reports the error to the native side, and
+    // that report is what ends the process.
     expect(crashStore.getSnapshot()[0]?.kind).toBe('js-fatal');
-    // Not calling this is the whole mechanism: it reports the error to the native side, and that
-    // report is what ends the process.
-    expect(rnHandler).not.toHaveBeenCalled();
+    expect(rnHandler).toHaveBeenCalledWith(error, true);
   });
 
   it('records a non-fatal error as a non-fatal kind', () => {
@@ -95,6 +100,16 @@ describe('the JS error handler', () => {
 });
 
 describe('the rejection tracker', () => {
+  let consoleError: jest.SpyInstance;
+
+  beforeEach(() => {
+    consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleError.mockRestore();
+  });
+
   it('captures an unhandled rejection', () => {
     let onUnhandled: ((id: number, rejection: unknown) => void) | undefined;
     (globalThis as Record<string, unknown>).HermesInternal = {
@@ -127,6 +142,25 @@ describe('the rejection tracker', () => {
     onUnhandled?.(2, { code: 401 });
 
     expect(crashStore.getSnapshot()[0]?.message).toContain('401');
+  });
+
+  // Ours displaces React Native's tracker, and that tracker is what feeds LogBox in development.
+  it('re-emits through console.error, so LogBox still shows a rejection in development', () => {
+    let onUnhandled: ((id: number, rejection: unknown) => void) | undefined;
+    (globalThis as Record<string, unknown>).HermesInternal = {
+      enablePromiseRejectionTracker: (options: {
+        onUnhandled: (id: number, rejection: unknown) => void;
+      }) => {
+        onUnhandled = options.onUnhandled;
+      },
+    };
+    installFakeErrorUtils();
+
+    installCrashHandlers(ALL_HANDLERS);
+    const rejection = new Error('rejected');
+    onUnhandled?.(3, rejection);
+
+    expect(consoleError).toHaveBeenCalledWith(rejection);
   });
 });
 

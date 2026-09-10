@@ -196,7 +196,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   buttonDisabled: {
     borderColor: COLORS.border,
-    backgroundColor: COLORS.toolbarBackground,
+    backgroundColor: COLORS.surface,
   },
   buttonLabel: {
     fontSize: 13,

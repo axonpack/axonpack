@@ -1,5 +1,41 @@
 # @axonpack/expo-devtools
 
+## 2.5.4
+
+### Patch Changes
+
+- - **Badges, cards and progress tracks sit above the panel** rather than looking punched into it, on Dracula, Monokai and One Dark
+  - **A theme whose header is a different shade from its panel keeps readable tabs** — the labels take their colour from the header now, worked out from it when your theme doesn't say
+  - **A custom theme can set `surface`** for anything raised inside a tab, and `toolbarText` / `toolbarTextActive` for the header's own labels
+
+## 2.5.3
+
+### Patch Changes
+
+- - **The status bar follows the theme you picked** — light icons on a dark theme, dark ones on a light theme, and your app's own back when the panel closes
+  - **The strip above the toolbar is gone** — the header now paints the area behind the status bar, in every theme
+  - **A custom theme can declare its own `statusBarStyle`**, or leave it out and have it read off the theme's colours
+  - **`<DevtoolsOverlay statusBar="app" />`** leaves the status bar alone, for an app that manages it itself
+  - **Tapping a WebSocket row opens it** — the panel used to close itself as it appeared
+
+## 2.5.2
+
+### Patch Changes
+
+- 5489081: - **Your own crash reporter sees JavaScript errors again** — Sentry, Crashlytics or anything else installed alongside now receives every error this catches, fatal ones included
+  - **A fatal error ends the app**, as it did before these tools were added, and is reported at the next launch
+  - **React Native's red box is back for fatal errors** in development
+  - **Unhandled rejections show in the red box too**, rather than only in the Console tab
+
+## 2.5.1
+
+### Patch Changes
+
+- 4d9c674: - **`defaultTheme` only accepts a theme you have** — a built-in palette or one of your own from `themes`; anything else is a type error before the app runs
+  - **Every option explains itself in your editor** — hover any field of `createDevtoolsClient` for what it does and what it defaults to
+  - **The same for what the tools hand back** — crash records, request and console entries, storage adapters and performance samples all document their fields
+  - **Custom theme colours are named on hover**, so you can see what each one paints before you override it
+
 ## 2.5.0
 
 ### Minor Changes

@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 
 import type { ContextMenuItem } from '../../../core/components/ui/context-menu.ui';
+import { formatJson } from '../../../core/utils/format-json.util';
 import type { StorageEntry } from '../stores/storage.store';
 
 export function buildStorageCopyMenuItems(entry: StorageEntry): ContextMenuItem[] {
@@ -22,12 +23,4 @@ export function buildStorageCopyMenuItems(entry: StorageEntry): ContextMenuItem[
         ]
       : []),
   ];
-}
-
-function formatJson(text: string): string {
-  try {
-    return JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    return text;
-  }
 }

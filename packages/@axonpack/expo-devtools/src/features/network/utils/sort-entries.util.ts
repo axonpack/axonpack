@@ -13,7 +13,7 @@ export type NetworkSort = {
   descending: boolean;
 };
 
-export const DEFAULT_NETWORK_SORT: NetworkSort = { key: 'time', descending: false };
+export const DEFAULT_NETWORK_SORT: NetworkSort = { key: 'time', descending: true };
 
 export const SORT_KEYS: NetworkSortKey[] = ['time', 'size', 'duration', 'status'];
 

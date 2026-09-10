@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CookiesTab } from './cookies-tab.component';
@@ -42,7 +42,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'initiator', label: 'Initiator' },
 ];
 
-export function DetailPanel({
+function DetailPanelBase({
   entry,
   onClose,
   stackedHeaders,
@@ -51,6 +51,7 @@ export function DetailPanel({
   onClose: () => void;
   stackedHeaders: boolean;
 }) {
+  console.log('DetailPanel', { entry, stackedHeaders });
   const styles = useStyles();
   const COLORS = useThemeColors();
   const [tab, setTab] = useState<Tab>('headers');
@@ -186,6 +187,13 @@ export function DetailPanel({
     </>
   );
 }
+
+/**
+ * Memoised because the tab around it re-renders on every request the app makes, and this is the most
+ * expensive thing in it — a body to highlight, a JSON tree to build — for an entry that has not
+ * changed. Its `onClose` is a stable callback upstream for the same reason.
+ */
+export const DetailPanel = memo(DetailPanelBase);
 
 const useStyles = makeThemedStyles((COLORS) => ({
   tabBarRow: {
