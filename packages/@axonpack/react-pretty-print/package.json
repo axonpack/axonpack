@@ -1,7 +1,7 @@
 {
   "name": "@axonpack/react-pretty-print",
-  "version": "0.0.0",
-  "description": "Interactive JSON tree for React and React Native \u2014 you supply the View and Text primitives",
+  "version": "0.1.0",
+  "description": "Interactive JSON tree for React and React Native — you supply the View and Text primitives",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
     "json",
