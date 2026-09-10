@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "pretty-print-example",
+    "slug": "pretty-print-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "io.github.axonpack.prettyprintexample"
+    },
+    "android": {
+      "package": "io.github.axonpack.prettyprintexample"
+    }
+  }
+}
