@@ -1,10 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 import { IconButton } from './icon-button.ui';
+import { InsetPadding } from './inset-padding.ui';
 import { HIT_SLOP } from '../../constants/metrics.const';
+import { useAnimatedKeyboard } from '../../services/use-animated-keyboard.service';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
+// The slide is animated on the JS driver, not because a transform needs to be but because the sheet
+// also sizes itself against the keyboard: one native-driven prop hands the whole view's props to the
+// native animated module, which then rejects `maxHeight` — layout props it cannot animate.
 const OFFSCREEN_Y = 400;
 const SLIDE_IN_MS = 220;
 const SLIDE_OUT_MS = 180;
@@ -21,11 +26,14 @@ export function BottomSheet({
   headerContent?: ReactNode;
   children: ReactNode;
 }) {
+  // console.log('BottomSheet', { visible, headerContent });
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const [translateY] = useState(() => new Animated.Value(OFFSCREEN_Y));
+  const translateY = new Animated.Value(OFFSCREEN_Y);
   const [shouldRender, setShouldRender] = useState(visible);
   const [prevVisible, setPrevVisible] = useState(visible);
+  const windowDimentions = useWindowDimensions();
+  const keyboard = useAnimatedKeyboard();
 
   if (visible !== prevVisible) {
     setPrevVisible(visible);
@@ -37,7 +45,7 @@ export function BottomSheet({
       Animated.timing(translateY, {
         toValue: 0,
         duration: SLIDE_IN_MS,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
       return;
     }
@@ -49,7 +57,7 @@ export function BottomSheet({
     Animated.timing(translateY, {
       toValue: OFFSCREEN_Y,
       duration: SLIDE_OUT_MS,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(({ finished }) => {
       // Only a slide-out that ran to the end means the sheet is off screen. An interrupted one is
       // the next open taking the value over, and unmounting on that closes the sheet in the same
@@ -67,7 +75,19 @@ export function BottomSheet({
         activeOpacity={1}
         onPress={onClose}
       />
-      <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+      <Animated.View
+        style={[
+          styles.sheet,
+          {
+            transform: [{ translateY }],
+            // Measured against what the keyboard leaves of the screen, not the screen: the cap is
+            // there to keep the sheet inside the space it actually has.
+            maxHeight: Animated.multiply(
+              Animated.subtract(windowDimentions.height, keyboard.height),
+              0.9
+            ),
+          },
+        ]}>
         <View style={styles.handleRow}>
           <View style={styles.handle} />
         </View>
@@ -81,6 +101,7 @@ export function BottomSheet({
           />
         </View>
         {children}
+        <InsetPadding edge="bottom" avoidKeyboard />
       </Animated.View>
     </View>
   );
@@ -95,7 +116,6 @@ const useStyles = makeThemedStyles((COLORS) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: '90%',
     backgroundColor: COLORS.background,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,

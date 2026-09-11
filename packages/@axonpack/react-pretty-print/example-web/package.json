@@ -1,0 +1,21 @@
+{
+  "name": "pretty-print-example-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plain React consumer of @axonpack/react-pretty-print \u2014 no react-native, no bundler config",
+  "scripts": {
+    "dev": "bun index.html",
+    "build": "bun build ./index.html --outdir dist",
+    "test": "bun test src",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@axonpack/react-pretty-print": "*",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "@types/react-dom": "~19.2.7"
+  }
+}

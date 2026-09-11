@@ -1,5 +1,6 @@
 import { EventEmitter } from 'expo';
 
+import { coalesceNotify } from '../../../core/utils/coalesce-notify.util';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
 import type { CrashKind } from '../../crash/stores/crash.store';
 import type { ConsoleArg } from '../utils/format-console-args.util';
@@ -85,10 +86,24 @@ let paused = false;
 
 let enabled = false;
 const emitter = new EventEmitter<ConsoleLogEvents>();
+const notify = coalesceNotify(emitter);
 
 export const consoleLogStore = {
   getSnapshot(): ConsoleLogEntry[] {
     return entries;
+  },
+  /**
+   * How many rows are worth a badge — errors and crashes. A number rather than the rows themselves,
+   * so a subscriber that only shows the count re-renders when the count changes instead of on every
+   * line the app logs. That difference is load-bearing: the panel keeps its tabs mounted, so one
+   * re-render there is a re-render of every tab.
+   */
+  getErrorCount(): number {
+    let count = 0;
+    for (const entry of entries) {
+      if (entry.level === 'error' || entry.level === 'crash') count++;
+    }
+    return count;
   },
   isPaused(): boolean {
     return paused;
@@ -102,11 +117,11 @@ export const consoleLogStore = {
   },
   setEnabled(nextEnabled: boolean) {
     enabled = nextEnabled;
-    emitter.emit('change');
+    notify();
   },
   setPaused(nextPaused: boolean) {
     paused = nextPaused;
-    emitter.emit('change');
+    notify();
   },
   add(entry: ConsoleLogEntry, options?: { force?: boolean }) {
     if (!enabled) return;
@@ -136,14 +151,14 @@ export const consoleLogStore = {
     } else {
       entries = [entry, ...entries].slice(0, MAX_ENTRIES);
     }
-    emitter.emit('change');
+    notify();
   },
   update(id: string, patch: Partial<ConsoleLogEntry>) {
     entries = entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
-    emitter.emit('change');
+    notify();
   },
   clear() {
     entries = [];
-    emitter.emit('change');
+    notify();
   },
 };

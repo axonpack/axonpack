@@ -3,7 +3,6 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
 import { Chip } from '../../../core/components/ui/chip.ui';
-import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { TextArea } from '../../../core/components/ui/text-area.ui';
 import { TextField } from '../../../core/components/ui/text-field.ui';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
@@ -154,8 +153,6 @@ export function AddKeySheet({
             <Text style={styles.addLabel}>{saving ? 'Adding…' : 'Add key'}</Text>
           </TouchableOpacity>
         </View>
-
-        <InsetPadding edge="bottom" />
       </View>
     </BottomSheet>
   );

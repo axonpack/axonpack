@@ -9,8 +9,8 @@ import { networkOverridesStore } from '../stores/network-overrides.store';
 
 export function buildEntryCopyMenuItems(
   entry: NetworkLogEntry,
-  /** Opens the override sheet for this URL. Absent where there is no sheet to open. */
-  onOverride?: (url: string) => void
+  /** Opens the override sheet on this entry. Absent where there is no sheet to open. */
+  onOverride?: (entry: NetworkLogEntry) => void
 ): ContextMenuItem[] {
   const blocked = networkOverridesStore.find(entry.url)?.action === 'block';
 
@@ -56,6 +56,6 @@ export function buildEntryCopyMenuItems(
           ? networkOverridesStore.remove(entry.url)
           : networkOverridesStore.set({ url: entry.url, action: 'block' }),
     },
-    ...(onOverride ? [{ label: 'Override response…', onPress: () => onOverride(entry.url) }] : []),
+    ...(onOverride ? [{ label: 'Override response…', onPress: () => onOverride(entry) }] : []),
   ];
 }

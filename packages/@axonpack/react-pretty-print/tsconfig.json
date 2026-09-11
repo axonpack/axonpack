@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "jsx": "react-jsx",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "moduleDetection": "force",
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "rootDir": "./src",
+    "outDir": "./build"
+  },
+  "include": ["./src"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+}
