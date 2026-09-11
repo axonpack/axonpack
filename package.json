@@ -9,7 +9,8 @@
     "check-types": "turbo run check-types",
     "prepare": "husky",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "version-packages": "changeset version && bun run sync:docs-changelog",
+    "sync:docs-changelog": "test -f docs/scripts/sync-changelog.mjs && node docs/scripts/sync-changelog.mjs || echo \"docs/ not checked out, skipping changelog sync\"",
     "release": "turbo run prepare && changeset publish"
   },
   "devDependencies": {

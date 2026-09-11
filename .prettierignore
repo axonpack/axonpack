@@ -9,7 +9,6 @@ packages/@axonpack/expo-devtools/example/android
 packages/@axonpack/react-pretty-print/example-native/ios
 packages/@axonpack/react-pretty-print/example-native/android
 
-# Submodules with their own history and formatting, same as `marketing` above — the root `format`
-# task would rewrite their files and leave the gitlink permanently dirty.
+# Submodule with its own history and formatting, same as `marketing` above — the root `format`
+# task would rewrite its files and leave the gitlink permanently dirty.
 docs
-landing-page

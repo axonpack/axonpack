@@ -4,8 +4,8 @@
 
 # Axonpack
 
-Free, open-source foundation libraries for React Native and Expo apps: small, focused,
-dependency-light packages you drop in rather than a framework you adopt.
+Axonpack ends the guesswork when things break. Answers you and your agent can both read: every
+request, error, log and stored value, captured on the device and copied out as structured JSON.
 
 **[Documentation](https://axonpack.github.io/docs)**
 
