@@ -38,3 +38,5 @@ yarn-error.log*
 *.pem
 
 examples
+# Registered git worktrees for sibling branches. They are checkouts, never content of this one.
+worktrees/
