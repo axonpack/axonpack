@@ -1,7 +1,7 @@
 # Hero plan
 
-- **Slogan:** Axonpack ends the guesswork when things break. *Answers you and your agent can
-  both read.* Replaces the retired "Small, focused, dependency-light..." in
+- **Slogan:** Axonpack ends the guesswork when things break. _Answers you and your agent can
+  both read._ Replaces the retired "Small, focused, dependency-light..." in
   `docs/src/content.json:69`, `docs/README.md:5`, `README.md:8`.
 - **Lead:** Every request, error, log and stored value captured on the device, and copied out as
   structured JSON. No desktop window, no socket, no proxy.
