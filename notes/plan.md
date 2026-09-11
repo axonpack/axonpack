@@ -32,6 +32,14 @@ On-device, prod-safe debug tools with no desktop app: network, console, storage,
 crash tabs behind a draggable dev button. Its notes, area by area:
 [packages/@axonpack/expo-devtools/notes](../packages/@axonpack/expo-devtools/notes/README.md).
 
+## @axonpack/react-pretty-print
+
+_Shipped._
+
+JSON tree, XML tree and syntax highlighter for React and React Native from one implementation — the
+caller passes the container, text and pressable components in. Its notes, area by area:
+[packages/@axonpack/react-pretty-print/notes](../packages/@axonpack/react-pretty-print/notes/README.md).
+
 ## @axonpack/api-kit
 
 _Planned — no package yet._

@@ -33,18 +33,19 @@ request, error, log and stored value, captured on the device and copied out as s
 </div>
 
 > [!NOTE]
-> Early days. Only [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) is implemented so far.
-> `@axonpack/lite-storage`, `@axonpack/api-kit`, and `@axonpack/i18n` are planned. See its
-> [documentation](https://axonpack.github.io/docs/expo-devtools) for what the one that exists does.
+> Early days. [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) and
+> [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print) are implemented;
+> `@axonpack/lite-storage`, `@axonpack/api-kit` and `@axonpack/i18n` are planned.
 
 ## Packages
 
 This is a [Turborepo](https://turborepo.dev) + [Bun workspaces](https://bun.sh/docs/install/workspaces)
 monorepo. Each package under `packages/@axonpack/*` is published independently.
 
-| Package                                                         | Description                                                                                 | Version                                                                                                                   |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) | On-device network, console, performance, storage and crash devtools for React Native / Expo | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools) |
+| Package                                                                   | Description                                                                                   | Version                                                                                                                             |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools)           | On-device network, console, performance, storage and crash devtools for React Native / Expo   | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)           |
+| [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print) | JSON tree, XML tree and syntax highlighter for React and React Native from one implementation | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print) |
 
 Full documentation is at **[axonpack.github.io/docs](https://axonpack.github.io/docs)** — installation, guides, an
 exhaustive reference and the changelog. Start with

@@ -1,0 +1,16 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@axonpack/react-pretty-print": [
+        "../src/index"
+      ]
+    }
+  },
+  "include": [
+    "./*.ts",
+    "./*.tsx",
+    "./components/*.tsx"
+  ]
+}
