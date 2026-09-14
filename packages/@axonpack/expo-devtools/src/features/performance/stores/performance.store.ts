@@ -56,7 +56,7 @@ export type StartupTiming = {
   nativeModuleInit?: number;
   /** When this package's JS was first evaluated, as `Date.now()` milliseconds. */
   jsBundleEval?: number;
-  /** When `devtools.init()` ran, as `Date.now()` milliseconds. */
+  /** When the devtools started, as `Date.now()` milliseconds. */
   initCalled?: number;
   /** When the overlay first rendered, as `Date.now()` milliseconds — the end of a usable startup. */
   firstRender?: number;

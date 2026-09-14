@@ -5,16 +5,16 @@ type DevtoolsReadyEvents = {
 };
 
 /**
- * Whether `init()` has actually brought the panel up.
+ * Whether a client has actually brought the panel up.
  *
  * `DevtoolsOverlay` reads this and draws nothing until it flips, which makes the launcher button
  * self-guarding: an unguarded mount in a release build shows no button rather than one that opens
- * empty lists. It is set at the *end* of `init()`, past the `enabled` gate, so `enabled: false` —
- * the crash-capture-only configuration — leaves it false and the panel unreachable.
+ * empty lists. It is set at the *end* of the start, past the `enabled` gate, so `enabled: false`
+ * leaves it false and the panel unreachable.
  *
- * A store rather than a plain boolean because the order isn't guaranteed: `init()` normally runs at
- * module scope, before anything renders, but an app that calls it from an effect mounts the overlay
- * first, and that overlay has to re-render when it flips.
+ * A store rather than a plain boolean because the overlay can render before the flip: the provider
+ * starts its client as it renders, so the first paint of a deeply nested overlay is in step, but a
+ * provider mounted later is not, and that overlay has to re-render when it flips.
  */
 let ready = false;
 

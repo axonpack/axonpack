@@ -1,8 +1,8 @@
+import { devtools } from '@axonpack/expo-devtools';
 import { useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from './ActionButton';
-import { devtools } from '../devtools';
 
 const PROMPT_HINT =
   "At the > prompt, try: appInfo · double(21) · $modules('components') · " +

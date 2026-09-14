@@ -44,7 +44,7 @@ export type ConsoleLogEntry = {
    */
   count: number;
   /**
-   * Where the row came from: `'native'` for the app's own console, or the `webviewSources` name of
+   * Where the row came from: `'native'` for the app's own console, or the `useDevtoolsWebView` name of
    * the page that logged it.
    */
   source?: string;

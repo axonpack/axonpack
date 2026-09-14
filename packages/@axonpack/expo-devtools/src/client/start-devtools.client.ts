@@ -3,10 +3,7 @@ import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
 import { themeStore } from '../core/stores/theme.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
 import { patchConsole } from '../features/console/services/patch-console.service';
-import {
-  getWebViewConsoleInjectedJavaScript,
-  handleWebViewConsoleMessage,
-} from '../features/console/services/webview-console-logger.service';
+import { setWebViewConsoleCapture } from '../features/console/services/webview-console-logger.service';
 import { consoleLogStore } from '../features/console/stores/console-log.store';
 import {
   configureCrashCapture,
@@ -26,13 +23,6 @@ import { patchWebSocket } from '../features/network/services/patch-websocket.ser
 import { patchXHR } from '../features/network/services/patch-xhr.service';
 import { setStreamCapture } from '../features/network/services/record-stream-events.service';
 import {
-  getWebViewConditionsRef,
-  getWebViewUserAgent,
-  shouldAllowWebViewRequest,
-} from '../features/network/services/webview-conditions.service';
-import {
-  getWebViewInjectedJavaScriptBeforeContentLoaded,
-  handleWebViewNetworkMessage,
   setWebViewSocketCapture,
   setWebViewStreamCapture,
 } from '../features/network/services/webview-network-logger.service';
@@ -54,12 +44,6 @@ import {
 } from '../features/storage/services/define-adapter.service';
 import { configureStorageReads } from '../features/storage/services/read-storage.service';
 import { storageStore } from '../features/storage/stores/storage.store';
-
-type WebViewMessageEventLike = {
-  nativeEvent: {
-    data: string;
-  };
-};
 
 /**
  * The switches name the **kind of traffic**, not the mechanism that carried it. A request is a request
@@ -169,7 +153,7 @@ export type DevtoolsPerformanceConfig = {
 
 /**
  * Crash reporting: which crashes are caught, what the sheet in front of the user looks like, and
- * where records go afterwards. The only part of this package that can run without `init()` — see
+ * where records go afterwards. The only part of this package that runs with the devtools off — see
  * `enableWhileDevtoolsDisabled`.
  */
 export type DevtoolsCrashConfig = {
@@ -181,23 +165,22 @@ export type DevtoolsCrashConfig = {
    */
   enabled?: boolean;
   /**
-   * Keep capturing crashes even when the devtools are off — which, in this package, means nothing
-   * more than an app that never calls `init()`. The usual `if (__DEV__) devtools.init()` in a
-   * release build is exactly that case. Defaults to `false`.
+   * Keep capturing crashes even when the devtools are off — `enabled: false`, which is what a
+   * release build usually says. Defaults to `false`.
    *
    * So this flag installs the crash handlers when the client is **constructed**, making it the one
-   * deliberate exception to "nothing in this package runs until `init()`". Setting it is the consent
-   * `init()` would otherwise have given, and it buys earlier coverage: handlers installed at import
-   * catch what is thrown before `init()` would have run.
+   * deliberate exception to "nothing in this package runs until the provider starts it". Setting it
+   * is the consent that start would otherwise have given, and it buys earlier coverage: handlers
+   * installed at import catch what is thrown before the provider mounts.
    *
    * On its own it captures **native exceptions only** — the crashes that end the app — and reports
-   * them in the compact sheet. A later `init()` upgrades it: the JS tiers install too and the full
-   * sheet takes over. It brings nothing else with it either way: no panel, no REPL, no console
-   * capture, no request bodies.
+   * them in the compact sheet. An enabled client upgrades it as it starts: the JS tiers install too
+   * and the full sheet takes over. It brings nothing else with it either way: no panel, no REPL, no
+   * console capture, no request bodies.
    */
   enableWhileDevtoolsDisabled?: boolean;
   /**
-   * Which tiers to capture once `init()` has run. All default to `true`.
+   * Which tiers to capture once the devtools have started. All default to `true`.
    *
    * Before that — an app relying on `enableWhileDevtoolsDisabled` alone — only `nativeExceptions`
    * runs whatever these say: the JS tiers report errors the app survived, which is a developer's
@@ -335,15 +318,26 @@ export type DevtoolsStorageConfig = {
 };
 
 /**
- * Everything `createDevtoolsClient` accepts. Every field is optional and the defaults suit most
- * apps — a bare `createDevtoolsClient()` captures requests, console output and crashes.
+ * Everything `<DevtoolsProvider config={...} />` accepts. Every field is optional and the defaults
+ * suit most apps — a provider with no config at all captures requests, console output and crashes.
  *
- * The two type parameters are inferred from the config you pass; you never write them out.
+ * The type parameter is inferred from the `themes` you pass; you never write it out.
  */
-export type DevtoolsClientConfig<
-  TWebviewSources extends readonly string[],
-  TThemeName extends string = never,
-> = {
+export type DevtoolsConfig<TThemeName extends string = never> = {
+  /**
+   * Whether the devtools run at all. Defaults to `true`.
+   *
+   * This is the production gate, and it is the only one: with it off, `<DevtoolsProvider />` patches
+   * nothing, records nothing, draws no launcher button, and `useDevtoolsPanel().show()` opens
+   * nothing. Shipping the code is free — the cost is in starting it, and this is what withholds that.
+   *
+   * ```tsx
+   * <DevtoolsProvider config={{ enabled: __DEV__ }}>
+   * ```
+   *
+   * Crash capture is the one thing that can outlive it — see `crash.enableWhileDevtoolsDisabled`.
+   */
+  enabled?: boolean;
   // `NoInfer` is what closes the set: without it this property is an inference site of its own, so
   // a name that was never registered would widen `TThemeName` rather than fail to compile.
   /**
@@ -366,25 +360,6 @@ export type DevtoolsClientConfig<
    * A name declared here becomes a valid value for `defaultTheme`.
    */
   themes?: Record<TThemeName, ThemeConfig>;
-  /**
-   * Names for the WebViews the panel captures from. A name labels one WebView's requests and
-   * console output, and is what you pass when wiring that WebView up:
-   *
-   * ```tsx
-   * <WebView
-   *   injectedJavaScriptBeforeContentLoaded={devtools.getWebViewInjectedJavaScriptBeforeContentLoaded('checkout')}
-   *   onMessage={devtools.handleWebViewMessage}
-   * />
-   * ```
-   *
-   * The list is both the accepted set of names and a runtime allowlist: an undeclared name is a
-   * type error at the call site, and `handleWebViewMessage` ignores messages from a source that is
-   * not listed. Omit it and messages from any source are accepted.
-   *
-   * It sits at the top level rather than under `network` because the Console tab captures from a
-   * declared WebView as well.
-   */
-  webviewSources?: TWebviewSources;
   /** The Network tab: which kinds of traffic are captured, and whether it starts recording. */
   network?: DevtoolsNetworkConfig;
   /** The Console tab: log capture, the `>` prompt, and what that prompt can reach. */
@@ -397,26 +372,24 @@ export type DevtoolsClientConfig<
   crash?: DevtoolsCrashConfig;
 };
 
+let started = false;
+
 /**
- * Creates the devtools client — the package's one entry point. Call it once, at module scope, and
- * export the result so the rest of the app can reach it.
+ * Configures and starts everything: installs the network and console patches, attaches the crash
+ * handlers and brings the panel up. `<DevtoolsProvider />` calls this as it renders and nothing else
+ * does, which is why the package exports no `init` of its own.
  *
- * It only builds the client: `init()` is what installs the instrumentation, and `<DevtoolsOverlay />`
- * is what renders the panel.
- *
- * ```ts
- * export const devtools = createDevtoolsClient({ defaultTheme: 'dark' });
- * if (__DEV__) devtools.init();
- * ```
- *
- * Every option is optional — `createDevtoolsClient()` captures requests, console output and crashes
- * with sensible defaults. See `DevtoolsClientConfig` for what can be configured.
+ * Idempotent, and it reads the config **once**: the patches are global and go in one time, so a
+ * config object rebuilt on a later render changes nothing. A no-op with `enabled: false`, apart from
+ * the crash capture that asked to outlive it.
  */
-export function createDevtoolsClient<
-  const TWebviewSources extends readonly string[] = readonly string[],
-  TThemeName extends string = never,
->(config?: DevtoolsClientConfig<TWebviewSources, TThemeName>) {
-  const webviewSources = config?.webviewSources;
+export function startDevtools<TThemeName extends string = never>(
+  config?: DevtoolsConfig<TThemeName>
+) {
+  if (started) return;
+  started = true;
+
+  const enabled = config?.enabled ?? true;
   const {
     http: captureHttp = true,
     websocket: captureSockets = true,
@@ -455,12 +428,13 @@ export function createDevtoolsClient<
   } = config?.crash ?? {};
 
   /**
-   * Crash capture is the only part of this package that can run without `init()`, so it is the only
-   * thing here with a gate of its own.
+   * Crash capture is the only part of this package that can run with the devtools off, so it is the
+   * only thing here with a gate of its own.
    *
    * `panelAvailable` says whether a devtools panel is coming up, which is simply whether this is the
-   * `init()` call. The factory-time call cannot know that `init()` is coming, so it takes the
-   * cautious side of every choice — native tier only, compact sheet — and `init()` upgrades it.
+   * start call rather than the factory-time one. The factory cannot know the provider is about to
+   * mount, so it takes the cautious side of every choice — native tier only, compact sheet — and the
+   * start upgrades it.
    */
   function initCrashCapture(panelAvailable: boolean) {
     if (!crashEnabled) return;
@@ -473,8 +447,8 @@ export function createDevtoolsClient<
     );
     configureCrashCapture({
       /**
-       * Belt to the handler braces below. The JS handlers are not installed at all before `init()`,
-       * but `DevtoolsErrorBoundary` calls `captureCrash` directly — it is a component the app
+       * Belt to the handler braces below. The JS handlers are not installed at all until the client
+       * starts, but `DevtoolsErrorBoundary` calls `captureCrash` directly — it is a component the app
        * mounts, not a handler we install — so the policy has to live here too.
        */
       jsTiers: panelAvailable,
@@ -483,17 +457,17 @@ export function createDevtoolsClient<
       redact: redactCrash,
       onCrash,
     });
-    // Without `init()`, only the tier that ends the app is installed — see `handlers`. Each tier
-    // installs at most once, so the `init()` call adds the JS ones rather than doubling up.
+    // With the devtools off, only the tier that ends the app is installed — see `handlers`. Each
+    // tier installs at most once, so the start call adds the JS ones rather than doubling up.
     installCrashHandlers({
       jsErrors: panelAvailable && (crashHandlers?.jsErrors ?? true),
       unhandledRejections: panelAvailable && (crashHandlers?.unhandledRejections ?? true),
       nativeExceptions: crashHandlers?.nativeExceptions ?? true,
     });
 
-    // The factory-time path never reaches `init()`, so its drain has to happen here — there is no
-    // console to wait for in a build with no panel, and a record left on disk would be reported at
-    // some arbitrary later launch instead. `init()` drains after the console is recording.
+    // The factory-time path may never be followed by a start, so its drain has to happen here —
+    // there is no console to wait for in a build with no panel, and a record left on disk would be
+    // reported at some arbitrary later launch instead. The start drains after the console records.
     if (!panelAvailable) drainOnce();
 
     if (turnOffLogBox) {
@@ -505,190 +479,148 @@ export function createDevtoolsClient<
 
   /**
    * Registering a palette patches nothing and starts nothing — it fills a lookup that only a render
-   * reads. Doing it here rather than in `init()` is what lets the crash sheet honour `defaultTheme`
-   * in a build where `init()` is never called.
+   * reads. Doing it here rather than in the start is what lets the crash sheet honour `defaultTheme`
+   * in a build where `enabled` is off.
    */
   if (config?.themes) themeStore.register(config.themes);
   if (config?.defaultTheme) themeStore.setDefaultId(config.defaultTheme);
 
-  // The exception to "nothing runs until `init()`", and the flag above is the opt-in for it.
-  if (crashSurvivesDisabled) initCrashCapture(false);
+  if (!enabled) {
+    // The one subsystem allowed to run with the devtools off, and the flag is the opt-in for it.
+    if (crashSurvivesDisabled) initCrashCapture(false);
+    return;
+  }
 
-  return {
-    /**
-     * Starts the devtools: installs the network and console patches, attaches the crash handlers and
-     * makes the overlay appear. Call it once, as early in startup as possible.
-     *
-     * Nothing in this package records anything until this runs, so wrapping the call is the whole
-     * production gate:
-     *
-     * ```ts
-     * if (__DEV__) devtools.init();
-     * ```
-     */
-    init() {
-      // First among the subsystems, so the handlers are already listening if anything below throws.
-      // Safe to re-run when the factory already installed the native tier: this is where the JS
-      // tiers get added and the full sheet takes over.
-      initCrashCapture(true);
+  // First among the subsystems, so the handlers are already listening if anything below throws.
+  initCrashCapture(true);
 
-      networkLogStore.setEnabled(true);
-      if (networkStartsPaused) networkLogStore.setPaused(true);
-      if (captureHttp) {
-        // Every transport a request can leave by, which is what one switch over requests has to mean.
-        patchFetch();
-        patchXHR();
-        // Before the app's first request on purpose: on Android the phase listener goes in by
-        // replacing React Native's OkHttp client factory, and that client is built once, on first use.
-        installNativeTimingReporter();
-      }
-      if (captureSockets) patchWebSocket();
-      // One observer carries both of that client's kinds, so it is told which of them are wanted
-      // rather than being attached or not.
-      observeNitroFetch({ http: captureHttp, websocket: captureSockets });
-      // The page's own of each, which no patch above can see: a page runs in its own engine.
-      setWebViewSocketCapture(captureSockets);
-      setWebViewStreamCapture(captureStreams);
-      setStreamCapture(captureStreams);
-      if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
-      if (consoleStartsPaused) consoleLogStore.setPaused(true);
-      if (captureConsole) patchConsole();
+  networkLogStore.setEnabled(true);
+  if (networkStartsPaused) networkLogStore.setPaused(true);
+  if (captureHttp) {
+    // Every transport a request can leave by, which is what one switch over requests has to mean.
+    patchFetch();
+    patchXHR();
+    // Before the app's first request on purpose: on Android the phase listener goes in by
+    // replacing React Native's OkHttp client factory, and that client is built once, on first use.
+    installNativeTimingReporter();
+  }
+  if (captureSockets) patchWebSocket();
+  // One observer carries both of that client's kinds, so it is told which of them are wanted
+  // rather than being attached or not.
+  observeNitroFetch({ http: captureHttp, websocket: captureSockets });
+  // The page's own of each, which no patch above can see: a page runs in its own engine.
+  setWebViewSocketCapture(captureSockets);
+  setWebViewStreamCapture(captureStreams);
+  setStreamCapture(captureStreams);
+  if (captureConsole || enableRepl) consoleLogStore.setEnabled(true);
+  if (consoleStartsPaused) consoleLogStore.setPaused(true);
+  if (captureConsole) patchConsole();
+  // A page's console, which no patch above can see. The flag lives over there because
+  // `useDevtoolsWebView` reads it without a client — see `setWebViewConsoleCapture`.
+  setWebViewConsoleCapture(captureConsole);
 
-      // After the console is recording, not with the handlers: a crash from the last run writes a
-      // console row as well as a report now, and draining before this point threw that row away.
-      drainOnce();
-      configureRepl(enableRepl, replContext);
+  // After the console is recording, not with the handlers: a crash from the last run writes a
+  // console row as well as a report now, and draining before this point threw that row away.
+  drainOnce();
+  configureRepl(enableRepl, replContext);
 
-      performanceStore.setHistorySize(historySize);
-      performanceStore.setEnabled(true);
+  performanceStore.setHistorySize(historySize);
+  performanceStore.setEnabled(true);
 
-      if (performanceStartsPaused) performanceStore.setPaused(true);
+  if (performanceStartsPaused) performanceStore.setPaused(true);
 
-      startPerformanceCollectors({
-        sampleIntervalMs,
-        longTaskThresholdMs,
-        interactionThresholdMs,
-      });
+  startPerformanceCollectors({
+    sampleIntervalMs,
+    longTaskThresholdMs,
+    interactionThresholdMs,
+  });
 
-      configureStorageReads({ maxKeys: storageMaxKeys });
-      if (storageAdapters?.length) {
-        storageStore.setAdapters(
-          resolveStorageAdapters(storageAdapters, { readOnly: storageReadOnly })
-        );
-      }
-      storageStore.setEnabled(true);
+  configureStorageReads({ maxKeys: storageMaxKeys });
+  if (storageAdapters?.length) {
+    storageStore.setAdapters(
+      resolveStorageAdapters(storageAdapters, { readOnly: storageReadOnly })
+    );
+  }
+  storageStore.setEnabled(true);
 
-      // Last, so the launcher button appears only once there is a working panel behind it. Anything
-      // above throwing leaves the overlay hidden, which is the honest outcome.
-      devtoolsReadyStore.markReady();
-    },
-    /**
-     * The script that makes one WebView's requests and logs visible to the panel. A page runs in its
-     * own JS engine, so it has to be instrumented from the inside.
-     *
-     * Pass a name from `webviewSources`, hand the result to `injectedJavaScriptBeforeContentLoaded`,
-     * and wire `onMessage` to `handleWebViewMessage` — without both halves nothing arrives.
-     */
-    getWebViewInjectedJavaScriptBeforeContentLoaded(source: TWebviewSources[number]) {
-      const scripts = [getWebViewInjectedJavaScriptBeforeContentLoaded(source)];
-      if (captureConsole) scripts.push(getWebViewConsoleInjectedJavaScript(source));
-      return scripts.join('\n');
-    },
-    /**
-     * Records a named point in time, shown under User timing in the Performance tab. The app's own
-     * equivalent of `performance.mark`.
-     *
-     * ```ts
-     * devtools.mark('checkout:start');
-     * ```
-     */
-    mark(name: string, options?: MarkOptions) {
-      recordMark(name, options);
-    },
-    /**
-     * Records a named duration, shown under User timing in the Performance tab. Takes two marks, or
-     * an options object with explicit `start` / `end` / `duration` values:
-     *
-     * ```ts
-     * devtools.measure('checkout', 'checkout:start', 'checkout:done');
-     * devtools.measure('checkout', { duration: 820 });
-     * ```
-     *
-     * With no start given, the mark of the same name is used; with no end, now. Passing `start`,
-     * `end` and `duration` together throws, since the three can disagree.
-     */
-    measure(name: string, startOrOptions?: string | MeasureOptions, endMark?: string) {
-      recordMeasure(name, startOrOptions, endMark);
-    },
-    /** Drops recorded marks — the one named, or all of them when called with no name. */
-    clearMarks(name?: string) {
-      clearRecordedMarks(name);
-    },
-    /** Drops recorded measures — the one named, or all of them when called with no name. */
-    clearMeasures(name?: string) {
-      clearRecordedMeasures(name);
-    },
-    /**
-     * Extra keys attached to every crash record from here on — user id, current route, feature
-     * flags. Empty until you call this.
-     *
-     * Each call **replaces** the whole context rather than merging into it; pass `null` to clear it.
-     *
-     * ```ts
-     * devtools.setCrashContext({ userId: user.id, route: 'checkout' });
-     * ```
-     */
-    setCrashContext,
-    /**
-     * Whether a WebView should be allowed to load right now — `false` while the Network tab's
-     * conditions are set to offline. Use it in `onShouldStartLoadWithRequest` so a page obeys the
-     * offline switch the way the app's own requests do.
-     */
-    shouldAllowWebViewRequest,
-    /**
-     * The other half of the WebView wiring: give this to a WebView's `onMessage` and the panel
-     * receives that page's requests and logs.
-     *
-     * Returns `true` when the message was one of ours, so an app that also uses `postMessage` for
-     * its own purposes can pass on the rest:
-     *
-     * ```tsx
-     * onMessage={(event) => {
-     *   if (devtools.handleWebViewMessage(event)) return;
-     *   handleMyOwnMessage(event);
-     * }}
-     * ```
-     */
-    handleWebViewMessage(event: WebViewMessageEventLike) {
-      if (handleWebViewNetworkMessage(event, webviewSources)) return true;
-      return captureConsole && handleWebViewConsoleMessage(event, webviewSources);
-    },
-    /**
-     * A `ref` callback for one declared WebView, which lets the panel push network conditions —
-     * offline, throttling, a custom user agent — into that page. Optional: without it the WebView
-     * still logs, it just ignores those conditions.
-     *
-     * ```tsx
-     * <WebView ref={devtools.getWebViewRef('checkout')} />
-     * ```
-     */
-    getWebViewRef(source: TWebviewSources[number]) {
-      return getWebViewConditionsRef(source);
-    },
-    /**
-     * The user agent currently set in the Network tab's conditions, or `undefined` when none is.
-     * Pass it to a WebView's `userAgent` prop so the page identifies itself the way the panel says.
-     */
-    getWebViewUserAgent,
-    /** The captured requests, for reading or clearing them from code. */
-    networkLogStore,
-    /** The Network tab's conditions — offline, throttling, user agent — settable from code. */
-    networkConditionsStore,
-    /** The captured console entries, for reading or clearing them from code. */
-    consoleLogStore,
-    /** The registered stores and the keys last read from them. */
-    storageStore,
-    /** The crash records held in memory, for reporting or clearing them from code. */
-    crashStore,
-  };
+  // Last, so the launcher button appears only once there is a working panel behind it. Anything
+  // above throwing leaves the overlay hidden, which is the honest outcome.
+  devtoolsReadyStore.markReady();
 }
+
+/** Test-only; the patches themselves are not undone, so this is for the gate tests alone. */
+export function resetDevtoolsStart() {
+  started = false;
+}
+
+/**
+ * The imperative half of the package, for the things a panel cannot do for you: naming a span you
+ * want timed, attaching context to a crash, reading a log from code. A module-level object rather
+ * than something the provider hands out, because every store behind it is a singleton already:
+ *
+ * ```ts
+ * import { devtools } from '@axonpack/expo-devtools';
+ *
+ * devtools.mark('checkout:start');
+ * ```
+ *
+ * Nothing on it does anything until a provider has started with `enabled: true`, so call sites need
+ * no guard of their own.
+ */
+export const devtools = {
+  /**
+   * Records a named point in time, shown under User timing in the Performance tab. The app's own
+   * equivalent of `performance.mark`.
+   *
+   * ```ts
+   * devtools.mark('checkout:start');
+   * ```
+   */
+  mark(name: string, options?: MarkOptions) {
+    recordMark(name, options);
+  },
+  /**
+   * Records a named duration, shown under User timing in the Performance tab. Takes two marks, or
+   * an options object with explicit `start` / `end` / `duration` values:
+   *
+   * ```ts
+   * devtools.measure('checkout', 'checkout:start', 'checkout:done');
+   * devtools.measure('checkout', { duration: 820 });
+   * ```
+   *
+   * With no start given, the mark of the same name is used; with no end, now. Passing `start`,
+   * `end` and `duration` together throws, since the three can disagree.
+   */
+  measure(name: string, startOrOptions?: string | MeasureOptions, endMark?: string) {
+    recordMeasure(name, startOrOptions, endMark);
+  },
+  /** Drops recorded marks — the one named, or all of them when called with no name. */
+  clearMarks(name?: string) {
+    clearRecordedMarks(name);
+  },
+  /** Drops recorded measures — the one named, or all of them when called with no name. */
+  clearMeasures(name?: string) {
+    clearRecordedMeasures(name);
+  },
+  /**
+   * Extra keys attached to every crash record from here on — user id, current route, feature
+   * flags. Empty until you call this.
+   *
+   * Each call **replaces** the whole context rather than merging into it; pass `null` to clear it.
+   *
+   * ```ts
+   * devtools.setCrashContext({ userId: user.id, route: 'checkout' });
+   * ```
+   */
+  setCrashContext,
+  /** The captured requests, for reading or clearing them from code. */
+  networkLogStore,
+  /** The Network tab's conditions — offline, throttling, user agent — settable from code. */
+  networkConditionsStore,
+  /** The captured console entries, for reading or clearing them from code. */
+  consoleLogStore,
+  /** The registered stores and the keys last read from them. */
+  storageStore,
+  /** The crash records held in memory, for reporting or clearing them from code. */
+  crashStore,
+};

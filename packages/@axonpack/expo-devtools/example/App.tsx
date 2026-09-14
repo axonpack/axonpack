@@ -1,4 +1,4 @@
-import { DevtoolsOverlay } from '@axonpack/expo-devtools';
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -10,6 +10,7 @@ import { PerformanceDemo } from './components/PerformanceDemo';
 import { RequestsScreen } from './components/RequestsScreen';
 import { StorageDemo } from './components/StorageDemo';
 import { TabBar } from './components/TabBar';
+import { devtoolsConfig } from './devtools';
 
 const TABS = [
   { key: 'requests' as const, label: 'Requests' },
@@ -25,18 +26,24 @@ export default function App() {
   );
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <TabBar tabs={TABS} activeKey={tab} onChange={setTab} />
-        {tab === 'requests' ? <RequestsScreen /> : null}
-        {tab === 'console' ? <ConsoleDemo /> : null}
-        {tab === 'performance' ? <PerformanceDemo /> : null}
-        {tab === 'storage' ? <StorageDemo /> : null}
-        {tab === 'crash' ? <CrashDemo /> : null}
-        <DevtoolsOverlay size={52} color="#ffffff" iconColor="#1a73e8" />
-        <StatusBar style="auto" />
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <DevtoolsProvider
+      config={devtoolsConfig}
+      size={52}
+      color="#ffffff"
+      iconColor="#1a73e8"
+      showFloatingButton={true}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea}>
+          <TabBar tabs={TABS} activeKey={tab} onChange={setTab} />
+          {tab === 'requests' ? <RequestsScreen /> : null}
+          {tab === 'console' ? <ConsoleDemo /> : null}
+          {tab === 'performance' ? <PerformanceDemo /> : null}
+          {tab === 'storage' ? <StorageDemo /> : null}
+          {tab === 'crash' ? <CrashDemo /> : null}
+          <StatusBar style="auto" />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </DevtoolsProvider>
   );
 }
 

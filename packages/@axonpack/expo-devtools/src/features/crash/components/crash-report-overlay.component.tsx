@@ -47,7 +47,7 @@ export function CrashReportOverlay() {
   const pending = records.find((record) => !record.seen && !retiredIds.has(record.id)) ?? null;
 
   /**
-   * Read per render rather than captured once: `init()` may not have run yet the first time this
+   * Read per render rather than captured once: the client may not have started the first time this
    * mounts, and the default is the safe one either way.
    */
   const compact = getCrashPopupDetail() === 'compact';

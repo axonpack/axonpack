@@ -4,7 +4,7 @@
  * Network patches globals it knows exist and Performance reads platform APIs, but a key-value store
  * is a separate install with its own native code (`@react-native-async-storage/async-storage`,
  * `react-native-mmkv`, `expo-secure-store`), and this package deliberately holds no dependency on
- * any of them. So the consumer hands its stores over at `createDevtoolsClient` time, and every
+ * any of them. So the consumer hands its stores over in the provider's config, and every
  * driver shape is normalised here into one internal adapter the rest of the tab talks to.
  */
 
@@ -76,7 +76,7 @@ export type StorageAdapterConfig = {
    * `canEnumerate` off, which is what makes the UI say so instead of implying the store is empty.
    *
    * A function is resolved on every read, for an app that keeps the list of what it stored somewhere
-   * of its own — the keys are then as current as the app is, rather than as current as `init()`.
+   * of its own — the keys are then as current as the app is, rather than as current as the start.
    */
   keys?: readonly string[] | (() => MaybePromise<readonly string[]>);
   /** The types this store can hold. Defaults to all four — declare it when the store is narrower. */
@@ -107,7 +107,7 @@ export type StorageAdapterConfig = {
 /**
  * A ready-to-register store, as returned by `asyncStorageAdapter`, `mmkvAdapter`,
  * `secureStoreAdapter` and `defineStorageAdapter`. Pass them to
- * `createDevtoolsClient({ storage: { adapters } })`; you never build this shape by hand.
+ * `config.storage.adapters`; you never build this shape by hand.
  */
 export type StorageAdapterDefinition = {
   /** The store's display name. */
@@ -141,7 +141,7 @@ export type StorageAdapterDefinition = {
 
 /**
  * A registered store as the Storage tab sees it: a `StorageAdapterDefinition` with its id assigned
- * and the read-only question settled. Produced at `init()`; read it from
+ * and the read-only question settled. Produced as the client starts; read it from
  * `devtools.storageStore.getSnapshot()`.
  */
 export type StorageAdapter = Omit<StorageAdapterDefinition, 'readOnly'> & {

@@ -1,6 +1,5 @@
+import { useDevtoolsWebView } from '@axonpack/expo-devtools';
 import { WebView } from 'react-native-webview';
-
-import { devtools } from '../devtools';
 
 /**
  * A page that exercises what only a page can do: its own `EventSource`, its own `WebSocket`, its own
@@ -70,19 +69,13 @@ const PAGE_HARNESS = `
 `;
 
 export function WebViewPageApisDemo() {
+  const devtoolsWebView = useDevtoolsWebView('page-apis');
+
   return (
     <WebView
-      ref={devtools.getWebViewRef('page-apis')}
+      {...devtoolsWebView}
       injectedJavaScript={PAGE_HARNESS}
-      userAgent={devtools.getWebViewUserAgent()}
       source={{ uri: 'https://postman-echo.com/get' }}
-      injectedJavaScriptBeforeContentLoaded={devtools.getWebViewInjectedJavaScriptBeforeContentLoaded(
-        'page-apis'
-      )}
-      onShouldStartLoadWithRequest={devtools.shouldAllowWebViewRequest}
-      onMessage={(event) => {
-        devtools.handleWebViewMessage(event);
-      }}
     />
   );
 }

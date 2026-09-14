@@ -155,7 +155,7 @@ export const DARK_PALETTE: Palette = {
 
 /**
  * Any theme's id: a built-in one or a name you registered through `themes`. The loose type behind
- * the theme store — `createDevtoolsClient`'s `defaultTheme` is the checked version of it.
+ * the theme store — the config's `defaultTheme` is the checked version of it.
  */
 export type ThemeId = string;
 
@@ -167,7 +167,7 @@ export type ThemeId = string;
 export type BuiltInThemeId =
   'light' | 'dark' | 'dracula' | 'nord' | 'monokai' | 'one-dark' | 'solarized-light';
 
-/** A custom palette, as passed to `createDevtoolsClient({ themes })`. */
+/** A custom palette, as passed in the config's `themes`. */
 /**
  * The status bar's content while the panel is open. `'light'` means light icons, for a dark
  * background — the same sense `expo-status-bar`'s `style` has.

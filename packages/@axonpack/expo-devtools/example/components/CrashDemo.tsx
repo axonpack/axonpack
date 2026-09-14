@@ -1,10 +1,9 @@
-import { DevtoolsErrorBoundary } from '@axonpack/expo-devtools';
+import { DevtoolsErrorBoundary, devtools } from '@axonpack/expo-devtools';
 import { requireOptionalNativeModule } from 'expo';
 import { useState, useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from './ActionButton';
-import { devtools } from '../devtools';
 
 /**
  * The same optional module the package itself uses. Reached directly here only so the demo can crash

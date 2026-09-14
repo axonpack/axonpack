@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   asyncStorageAdapter,
-  createDevtoolsClient,
   defineStorageAdapter,
   mmkvAdapter,
   secureStoreAdapter,
+  type DevtoolsConfig,
 } from '@axonpack/expo-devtools';
 import * as SecureStore from 'expo-secure-store';
 import { createMMKV } from 'react-native-mmkv';
@@ -28,7 +28,7 @@ export const memoryStore = new Map<string, string>();
 
 export const SECURE_KEYS = ['session', 'pin'];
 
-export const devtools = createDevtoolsClient({
+export const devtoolsConfig = {
   defaultTheme: 'empathika',
   themes: {
     midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
@@ -58,7 +58,6 @@ export const devtools = createDevtoolsClient({
       },
     },
   },
-  webviewSources: ['example-webview', 'test2', 'page-apis'],
   network: {
     disabledByDefault: false,
     // By kind of traffic, not by transport: requests, sockets and streams, however they were made.
@@ -74,9 +73,10 @@ export const devtools = createDevtoolsClient({
     },
   },
   /**
-   * `enableWhileDevtoolsDisabled` is what a real app would pair with `enabled: __DEV__`: `init()` is
-   * then safe to call unconditionally, and a release build installs the crash handlers and nothing
-   * else — no panel, no REPL, no request bodies. The example leaves the rest on so every tab works.
+   * `enableWhileDevtoolsDisabled` is what a real app would pair with `enabled: __DEV__`: the provider
+   * mount is then safe to leave in unguarded, and a release build installs the crash handlers and
+   * nothing else — no panel, no REPL, no request bodies. The example leaves `enabled` alone so every
+   * tab works.
    */
   crash: {
     enableWhileDevtoolsDisabled: true,
@@ -112,4 +112,6 @@ export const devtools = createDevtoolsClient({
     ],
     maxKeys: 1000,
   },
-});
+  // `satisfies` rather than a plain object: it is what checks `defaultTheme` against the themes
+  // declared above, which is the job the old factory call used to do.
+} satisfies DevtoolsConfig<'midnight' | 'empathika'>;

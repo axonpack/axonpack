@@ -1,4 +1,4 @@
-export { createDevtoolsClient } from './client/create-devtools-client.client';
+export { devtools } from './client/start-devtools.client';
 export type {
   BuiltInThemeId,
   Palette,
@@ -7,15 +7,19 @@ export type {
   ThemeId,
 } from './core/constants/theme.const';
 export type {
-  DevtoolsClientConfig,
+  DevtoolsConfig,
   DevtoolsConsoleConfig,
   DevtoolsNetworkConfig,
   DevtoolsPerformanceConfig,
   DevtoolsStorageConfig,
   DevtoolsCrashConfig,
-} from './client/create-devtools-client.client';
-export { DevtoolsOverlay } from './core/components/devtools-overlay/devtools-overlay.component';
-export type { DevtoolsOverlayProps } from './core/components/devtools-overlay/devtools-overlay.component';
+} from './client/start-devtools.client';
+export { DevtoolsProvider } from './core/components/devtools-provider.component';
+export type { DevtoolsProviderProps } from './core/components/devtools-provider.component';
+export { useDevtoolsPanel } from './core/services/use-devtools-panel.service';
+export type { DevtoolsPanelControls } from './core/services/use-devtools-panel.service';
+export { useDevtoolsWebView } from './core/services/use-devtools-webview.service';
+export type { DevtoolsWebViewProps } from './core/services/use-devtools-webview.service';
 export { CrashReportOverlay } from './features/crash/components/crash-report-overlay.component';
 export type { CrashPopupDetail } from './features/crash/services/crash-popup.service';
 export { DevtoolsErrorBoundary } from './features/crash/components/devtools-error-boundary.component';
