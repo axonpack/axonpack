@@ -1,7 +1,7 @@
 # Reference
 
 Every control, section and field in the panel, and the whole public API. The
-[README](./README.md) is the tour; this is the map.
+[guides](https://axonpack.github.io/docs/expo-devtools) are the tour; this is the map.
 
 This file ships inside the package. The same reference, split into pages and searchable, is at
 [axonpack.github.io/docs/expo-devtools/reference](https://axonpack.github.io/docs/expo-devtools/reference).
@@ -22,8 +22,9 @@ panel crashes without it: the control says what it needs instead.
 
 ## The panel
 
-`<DevtoolsOverlay />` renders a draggable floating button. Tapping it opens a full-screen modal; the
-button itself never appears inside the modal.
+`<DevtoolsProvider>` renders a draggable floating button beside your app. Tapping it opens a
+full-screen modal; the button itself never appears inside the modal. With
+`showFloatingButton={false}` there is no button and `useDevtoolsPanel()` is the way in.
 
 ### Header row
 
@@ -54,17 +55,16 @@ rather than dropping a log. It opens with Refresh instead. Crashes has a clear b
 button — a crash is not a stream you can afford to have switched off. Debug has no toolbar at all:
 nothing there records or collects.
 
-Pausing and `.init()` are different switches, and the difference matters when you ship: until
-`.init()` runs, nothing is patched, observed or recorded anywhere. The record button only pauses a
-tab that `.init()` already turned on. There is no UI for the `.init()` gate, which is the point of it.
+Pausing and `enabled` are different switches, and the difference matters when you ship: with
+`enabled: false` nothing is patched, observed or recorded anywhere. The record button only pauses a
+tab that a started client already turned on. There is no UI for `enabled`, which is the point of it.
 
-`.init()` is the only gate, and it controls both **capture** and **access**: the overlay subscribes to
-whether `.init()` finished and draws nothing until it has, so an unguarded mount in a release build
-shows no button rather than a panel over empty lists. There is no config flag that says "off" —
-not calling `.init()` is what says it.
+`enabled` is the only gate, and it controls both **capture** and **access**: the provider installs
+nothing and draws no button, so the mount can stay in a release build rather than being wrapped in a
+condition of its own.
 
-The one thing it keeps rendering is the crash report sheet, which is meant to work in production.
-Guarding the mount as well is still worth doing; it just is not what keeps the panel out.
+The one thing it keeps rendering is the crash report sheet, which is meant to work in production; see
+`crash.enableWhileDevtoolsDisabled` for capturing without the rest of the devtools.
 
 ---
 
@@ -331,7 +331,7 @@ privacy-manifest declaration onto every app that embeds it.
 
 The measured block comes from the native module's real process start time, so it works where the
 platform's own markers are all null. Its phase boundaries are this package's own load points, so they
-shift a little with your import order; the earlier you call `.init()`, the truer _App setup_ is. The
+shift with where you mount the provider: _App setup_ ends when it first renders. The
 platform block is `performance.rnStartupTiming`, and a dash means the platform never reported that
 marker. The whole section is hidden when neither is available.
 
@@ -516,10 +516,9 @@ section reports something that happened; these go out and cause it.
 
 Blocking the JS thread shows up as a long task and drops the JS frame rate. Blocking the main thread
 freezes the screen while every JS number stays healthy. That gap is the blind spot the frame-rate card
-warns about, and this is how you see it for yourself. The crash paths are **not** gated on
-`__DEV__`, and they do **not** go through any store, so `.init()` is not what keeps them out of a
-release: they work as soon as the panel is on screen. What gates them is whether you rendered
-`<DevtoolsOverlay />` at all.
+warns about, and this is how you see it for yourself. The crash paths are **not** gated on `__DEV__`,
+and they do **not** go through any store: they work as soon as the panel is on screen. What keeps them
+out of a release is `enabled: false`, which is what makes the panel unreachable.
 
 Both crash paths are captured by the Crashes tab when crash reporting is on. A JS crash is reported
 before you let go of the button; a main-thread crash ends the process and is read back off disk at the
@@ -529,22 +528,37 @@ next launch.
 
 ## API
 
-### `createDevtoolsClient(config?)`
+### `<DevtoolsProvider>`
 
-Returns the client. Call it once, module-scope, and export the instance. Everything else hangs off
-it.
+Wrap your app in it once, at the root. It starts the devtools as it renders and hosts the panel; there
+is no `init` to call.
+
+| Prop                 | Type                                   | Default  | What it does                                                                     |
+| -------------------- | -------------------------------------- | -------- | -------------------------------------------------------------------------------- |
+| `config`             | `DevtoolsConfig`                       | `{}`     | Everything below. Read once, on the first render.                                |
+| `showFloatingButton` | `boolean`                              | `true`   | Draw the launcher button. Off leaves the panel reachable via `useDevtoolsPanel`. |
+| `iconComponent`      | `ComponentType`                        | none     | Your own glyph in place of the bug icon. Given the resolved `size`.              |
+| `size`               | `number`                               | `44`     | Diameter of the button, in dp.                                                   |
+| `color`              | `string`                               | accent   | Button fill.                                                                     |
+| `iconColor`          | `string`                               | white    | The built-in glyph only.                                                         |
+| `statusBar`          | `'app' \| 'auto' \| 'light' \| 'dark'` | `'auto'` | What the status bar content does while the panel is open.                        |
+
+The provider is generic over your theme names, so `config.defaultTheme` only accepts a built-in id or
+a key of `config.themes`.
+
+### `DevtoolsConfig`
 
 | Option                               | Type                          | Default     | What it does                                                                          |
 | ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).          |
 | `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                         |
 | `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
-| `webviewSources`                     | `readonly string[]`           | `undefined` | Names of `<WebView>`s allowed to report in, for both the Network and Console tabs.    |
 | `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                           |
 | `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                     |
 | `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                   |
 | `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                          |
 | `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.            |
-| `console.repl`                       | `boolean`                     | `__DEV__`   | Show the `>` prompt.                                                                  |
+| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                          |
 | `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
 | `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                  |
 | `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.    |
@@ -556,14 +570,13 @@ it.
 | `storage.maxKeys`                    | `number`                      | `1000`      | Keys read per store before the tab stops and says how many it skipped.                |
 | `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.               |
 
-`webviewSources` uses a `const` type parameter, so the literal names flow into the WebView helpers'
-parameter types: passing an undeclared name is a compile error, and at runtime a message from an
-undeclared source is dropped.
+`crash` is documented on its own, under
+[Crash reporting](https://axonpack.github.io/docs/expo-devtools/crash-reporting).
 
 ### Storage adapters
 
 Four factories, all built on the last one. Each returns a `StorageAdapterDefinition` for
-`storage.adapters`; ids are assigned from the names at `init()`, suffixed on collision.
+`storage.adapters`; ids are assigned from the names as the provider starts, suffixed on collision.
 
 ```ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -572,7 +585,7 @@ import { createMMKV } from 'react-native-mmkv';
 
 const mmkv = createMMKV();
 
-createDevtoolsClient({
+const config = {
   storage: {
     adapters: [
       asyncStorageAdapter({ driver: AsyncStorage }),
@@ -592,7 +605,7 @@ createDevtoolsClient({
       }),
     ],
   },
-});
+} satisfies DevtoolsConfig;
 ```
 
 | Factory                                | For                                                                                                                                               |
@@ -626,21 +639,25 @@ string whatever went in; MMKV takes all four. The Add-key sheet offers only thes
 the store would have flattened is never offered in the first place. Binary is never offered for
 either creating or editing — there is no text form of the bytes to round-trip.
 
-### Client methods
+### `devtools`
 
-| Member                                                                         | What it does                                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `init()`                                                                       | Installs everything: the fetch/XHR patches, the console patch, the REPL context, the performance collectors, your storage adapters, and your themes. Until this runs, nothing is captured and no store is read. Call once, as early as possible. |
-| `mark(name, options?)`                                                         | Records a user-timing mark. `options`: `{ detail?, startTime? }`.                                                                                                                                                                                |
-| `measure(name, startOrOptions?, endMark?)`                                     | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree.                                                           |
-| `clearMarks(name?)`                                                            | Drops recorded marks, all of them or one name.                                                                                                                                                                                                   |
-| `clearMeasures(name?)`                                                         | Drops recorded measures, all of them or one name.                                                                                                                                                                                                |
-| `getWebViewInjectedJavaScriptBeforeContentLoaded(source)`                      | The script to hand a `<WebView>`'s `injectedJavaScriptBeforeContentLoaded`. Covers both requests and console output.                                                                                                                             |
-| `handleWebViewMessage(event)`                                                  | Feed a `<WebView>`'s `onMessage` events here. Returns `true` when it consumed one.                                                                                                                                                               |
-| `getWebViewRef(source)`                                                        | A ref to attach to the `<WebView>`, so a throttle change reaches an already-open page.                                                                                                                                                           |
-| `getWebViewUserAgent()`                                                        | The current user-agent override, for the `userAgent` prop.                                                                                                                                                                                       |
-| `shouldAllowWebViewRequest`                                                    | For `onShouldStartLoadWithRequest`. Blocks navigation while Offline is on.                                                                                                                                                                       |
-| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore` | The underlying stores, if you want to read or drive them yourself.                                                                                                                                                                               |
+A module-level object, imported from the package root. For the things the panel cannot do for you.
+
+```ts
+import { devtools } from '@axonpack/expo-devtools';
+```
+
+| Member                                                                                       | What it does                                                                                                                                                                           |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mark(name, options?)`                                                                       | Records a user-timing mark. `options`: `{ detail?, startTime? }`.                                                                                                                      |
+| `measure(name, startOrOptions?, endMark?)`                                                   | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree. |
+| `clearMarks(name?)`                                                                          | Drops recorded marks, all of them or one name.                                                                                                                                         |
+| `clearMeasures(name?)`                                                                       | Drops recorded measures, all of them or one name.                                                                                                                                      |
+| `setCrashContext(context)`                                                                   | Keys attached to every crash record from here on. Replaces rather than merges; `null` clears.                                                                                          |
+| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore`, `crashStore` | The underlying stores, if you want to read or drive them yourself.                                                                                                                     |
+
+Nothing on it does anything until a provider has started with `enabled: true`, so call sites need no
+guard of their own.
 
 #### User timing
 
@@ -655,32 +672,68 @@ forwarded to the real `performance.mark`/`measure` too, so the entries exist on 
 as well. Nothing is _observed_ from that timeline, which is why React's own internal measures never
 appear in the list.
 
-### `<DevtoolsOverlay />`
+### `useDevtoolsPanel()`
 
-| Prop            | Type                              | Default     | What it does                                                       |
-| --------------- | --------------------------------- | ----------- | ------------------------------------------------------------------ |
-| `iconComponent` | `ComponentType<{ size: number }>` | none        | Renders in place of the built-in glyph. Given the resolved `size`. |
-| `size`          | `number`                          | `44`        | Diameter of the button, in dp.                                     |
-| `color`         | `string`                          | accent blue | Button fill.                                                       |
-| `iconColor`     | `string`                          | `'#ffffff'` | The built-in glyph only; an `iconComponent` colours itself.        |
+Opens and closes the panel from your own UI, which is what makes `showFloatingButton={false}` usable.
 
-The button is draggable, stays inside the screen, and keeps a 44dp touch area through `hitSlop` even
-at a smaller `size`. Mounting it is also what marks _first render_ for the startup breakdown.
+| Member     | What it is                                                                                                |
+| ---------- | --------------------------------------------------------------------------------------------------------- |
+| `visible`  | Whether the panel is open right now.                                                                      |
+| `enabled`  | Whether the devtools are running. `false` in a build with `enabled: false`, and then `show` does nothing. |
+| `show()`   | Opens the panel.                                                                                          |
+| `hide()`   | Closes it.                                                                                                |
+| `toggle()` | Either way.                                                                                               |
 
-The overlay renders whether or not `.init()` has run: it takes no `enabled` prop and reads no store to
-decide. Guard the mount itself when you don't want the panel reachable, as in the README's quick start.
+It reads the same state the launcher button does, so the two stay in step. Branch your own trigger on
+`enabled` and a release build has no dead button in it.
+
+### `useDevtoolsWebView(source?)`
+
+Returns the props one `<WebView>` needs to report in. `source` is the label its rows carry, defaulting
+to `'webview'`; name each one when the app has more than one. Any string works, and it is only a label.
+
+```tsx
+const devtoolsWebView = useDevtoolsWebView('checkout');
+
+<WebView {...devtoolsWebView} source={{ uri }} />;
+```
+
+| Prop returned                           | What it does                                                                             |
+| --------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `injectedJavaScriptBeforeContentLoaded` | Patches `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` and `console` in the page. |
+| `onMessage`                             | Receives what the page reports. Returns `true` when the message was one of ours.         |
+| `ref`                                   | Lets a conditions change reach an already-loaded page.                                   |
+| `userAgent`                             | The current user-agent override, so the page identifies itself the way the panel says.   |
+| `onShouldStartLoadWithRequest`          | Blocks navigation while Offline is on.                                                   |
+
+Everything it returns is inert until the devtools are running: the injected script is empty, and with
+no `onMessage` behind it `react-native-webview` does not install the page bridge at all. Replace a prop
+with your own and you lose what it did, so compose rather than overwrite. That is what `onMessage`
+returning `true` is for.
+
+### The launcher button
+
+The button is draggable, stays inside the screen, and keeps a 44dp touch area through `hitSlop` even at
+a smaller `size`. Rendering it is also what marks _first render_ for the startup breakdown. Its props
+are the loose ones on [`<DevtoolsProvider>`](#devtoolsprovider); `showFloatingButton={false}` takes it
+away without taking the panel with it.
+
+`statusBar` decides what the status bar _content_ does while the panel is open, since the panel's header
+extends behind it: `'auto'` follows the active theme's own `statusBarStyle`, `'app'` leaves whatever the
+app set, and `'light'` / `'dark'` force it. Whatever the app had is restored on close. On iOS this needs
+`UIViewControllerBasedStatusBarAppearance` set to `false` in `Info.plist`, which is what an Expo app's
+own template does.
 
 ### Themes
 
 A theme patches a base rather than redefining everything:
 
-```ts
-createDevtoolsClient({
-  defaultTheme: 'midnight',
-  themes: {
-    midnight: { base: 'dark', colors: { accent: '#a78bfa' } },
-  },
-});
+```tsx
+<DevtoolsProvider
+  config={{
+    defaultTheme: 'midnight',
+    themes: { midnight: { base: 'dark', colors: { accent: '#a78bfa' } } },
+  }}>
 ```
 
 Built-in ids: `light`, `dark`, `dracula`, `nord`, `monokai`, `one-dark`, `solarized-light`. Reuse one
@@ -688,11 +741,12 @@ as your own name and you replace it. A `defaultTheme` naming something unregiste
 than leaving the panel unstyled. The choice lives in memory for the session. Persisting it would
 mean taking a storage dependency for a colour scheme.
 
-The 22 tokens of `Palette`:
+The 25 tokens of `Palette`:
 
 | Group    | Tokens                                                                                      |
 | -------- | ------------------------------------------------------------------------------------------- |
-| Surfaces | `background`, `toolbarBackground`, `toolbarOverlay`, `sectionTint`, `border`                |
+| Surfaces | `background`, `toolbarBackground`, `toolbarOverlay`, `surface`, `sectionTint`, `border`     |
+| Chrome   | `toolbarText`, `toolbarTextActive`                                                          |
 | Text     | `textPrimary`, `textSecondary`                                                              |
 | Status   | `accent`, `pending`, `success`, `error`, `warning`, `errorSurface`, `warningSurface`        |
 | Search   | `matchHighlight`                                                                            |
@@ -704,15 +758,18 @@ property if you override it.
 
 ### Exported types
 
-`DevtoolsClientConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
-`DevtoolsStorageConfig`, `DevtoolsOverlayProps`, `BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`,
+`DevtoolsConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
+`DevtoolsStorageConfig`, `DevtoolsCrashConfig`, `DevtoolsProviderProps`, `DevtoolsPanelControls`,
+`DevtoolsWebViewProps`, `BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`,
 `NetworkLogEntry`, `NetworkLogStatus`, `ResolvedNetworkConditions`, `ThrottlePresetId`,
 `ThrottleProfile`, `UserAgentPresetId`, `ConsoleLogEntry`, `ConsoleLogLevel`, `LongTaskEntry`,
 `MemorySample`, `StartupTiming`, `UserTimingEntry`, `MarkOptions`, `MeasureOptions`,
 `StorageAdapter`, `StorageAdapterConfig`, `StorageAdapterDefinition`, `StorageAdapterKind`,
 `StorageKeyBlacklist`,
 `StorageAdapterState`, `StorageEntry`, `StorageReadResult`, `StorageValueType`, `StoredValueKind`,
-`AsyncStorageLikeDriver`, `MmkvLikeDriver`, `SecureStoreLikeDriver`.
+`AsyncStorageLikeDriver`, `MmkvLikeDriver`, `SecureStoreLikeDriver`, `CrashRecord`, `CrashKind`,
+`CrashBreadcrumb`, `CrashBreadcrumbCategory`, `CrashDeviceInfo`, `CrashNativeDetail`,
+`CrashPopupDetail`, `DevtoolsErrorBoundaryProps`, `StatusBarStyle`.
 
 ---
 

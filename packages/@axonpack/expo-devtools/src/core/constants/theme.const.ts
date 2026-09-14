@@ -189,8 +189,8 @@ export type ThemeConfig = {
    * Status bar content for this theme — `'light'` for light icons over a dark panel, `'dark'` for
    * dark icons over a light one. Worked out from the theme's toolbar colour when left out.
    *
-   * Only used when the app asks for it: `<DevtoolsOverlay statusBar="auto" />`. By default the panel
-   * leaves the status bar to the app.
+   * Used whenever the provider's `statusBar` is `'auto'`, which is its default. Pass
+   * `statusBar="app"` to leave the status bar to the app instead.
    */
   statusBarStyle?: StatusBarStyle;
 };

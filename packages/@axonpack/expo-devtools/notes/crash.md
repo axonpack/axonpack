@@ -60,11 +60,10 @@ Which tier caught a crash decides how much it can say:
   A `DevtoolsErrorBoundary` around a subtree is the stronger tool where it fits, because unmounting
   that subtree actually discards the broken state instead of stepping over it.
 
-- **It has the only gate that isn't `init()`.** Setting the flag installs the handlers when the
-  client is _constructed_, so an app keeps its usual development-only `init()` call and still
-  reports crashes from release. That is the consent `init()` would have given, and it buys earlier
-  coverage: handlers installed at import catch what is thrown before `init()` would have run.
-- **Before `init()`, only the native tier is installed.** The JS tiers report errors the app
+- **It has the only gate that isn't `enabled`.** Setting the flag installs the handlers even when
+  the devtools are off, so an app keeps its usual `enabled: __DEV__` and still reports crashes from
+  release. That is the consent starting would have given.
+- **With the devtools off, only the native tier is installed.** The JS tiers report errors the app
   survived, which is a developer's concern, and the sheet there is in front of a user. A fatal JS
   error still arrives, because React Native turns it into a native exception on its way to killing
   the process.
@@ -76,9 +75,9 @@ Which tier caught a crash decides how much it can say:
 - **Non-fatal records are not persisted.** The app survived them, and re-reporting one at the next
   launch would be a bug.
 - **The sheet has two forms, and the wrong one in release is a real problem.** The full sheet is a
-  debugging tool — tabs, a stack tree, raw JSON, this package's own logo. In front of somebody
-  using the app that is a category error, so the compact notice is the default until `init()` has
-  run.
+  debugging tool: tabs, a stack tree, raw JSON, this package's own logo. In front of somebody using
+  the app that is a category error, so the compact notice is the default wherever the devtools are
+  off.
 - **Dismissing the notice retires the whole backlog**, not just the report on screen. A launch can
   drain a pile of records at once, and dismissing one used to put the next straight back up in the
   same sheet with nothing animating between them: the exit button read as dead. The records are all

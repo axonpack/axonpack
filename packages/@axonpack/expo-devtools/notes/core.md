@@ -17,23 +17,31 @@ button that opens the panel, and the palette everything is drawn in.
 
 ## Decisions worth knowing
 
-- **A factory, not a Provider.** The client installs instrumentation; it renders nothing, and the UI
-  is mounted separately. Nothing about capturing a request needs to be inside the React tree.
-- **`init()` is the whole gate.** There is no config flag that says the same thing: not calling it
-  _is_ how the devtools are off. That is what makes shipping this code to production free — guard
-  the one call and the entire package is inert. Crash reporting is the single, deliberate exception.
-- **Two gates, easily confused.** Each store's internal `enabled` flag is what `init()` flips, and
+- **One provider, and no client object.** The provider is a mount, not a context: it calls
+  `startDevtools(config)` during render and lays the panel out beside the app. Nothing about
+  capturing a request needs to be inside the React tree, which is why the rest of the API is two
+  hooks and a module-level `devtools` object rather than something the provider hands down.
+- **During render, not in an effect.** A parent's effects run after its children's, so an effect
+  would install the patches after the app's first mount and miss what that mount requested.
+  `startDevtools` is idempotent, so calling it on every render costs a comparison.
+- **`config.enabled` is the whole gate.** That is what makes shipping this code to production free:
+  one flag and the entire package is inert, mount included. Crash reporting is the single,
+  deliberate exception. The config is read once, on the first render, because the patches are global
+  and go in one time, so `enabled` cannot be flipped mid-session.
+- **Two gates, easily confused.** Each store's internal `enabled` flag is what the start flips, and
   nothing in the UI can turn it back on. `paused` is what the record button controls. A config
-  option asking for "off by default" maps to `paused`, never to `enabled` — mapping it to `enabled`
-  would leave a tab permanently dead.
-- **The launcher button is self-guarding.** It subscribes to a store that `init()` flips at its very
-  end, and draws nothing until then, so an app that mounts it without a development check ships no
-  button rather than one that opens empty lists. A store rather than a boolean because the order
-  isn't guaranteed: `init()` normally runs at module scope, but an app calling it from an effect
-  mounts the overlay first.
-- **Themes are registered by the factory, not by `init()`.** Registering a palette patches nothing
-  and starts nothing, and the crash notice is a piece of UI that can render in a release build where
-  `init()` never ran — it has to be able to find the palette.
+  option asking for "off by default" maps to `paused`, never to `enabled`, because mapping it to
+  `enabled` would leave a tab permanently dead.
+- **The panel is a store, not provider state.** `panel-visibility.store.ts` holds whether it is open,
+  because the launcher button is optional: an app that hides it opens the panel through
+  `useDevtoolsPanel`, from a call site nowhere near the component holding the modal.
+- **The launcher button is self-guarding.** It subscribes to a store the start flips at its very end,
+  and draws nothing until then, so nothing is drawn in a build that never started. A store rather
+  than a boolean because a provider mounted later in a session is not in step with a render that
+  already happened.
+- **Themes are registered before the `enabled` check.** Registering a palette patches nothing and
+  starts nothing, and the crash notice is a piece of UI that can render in a release build with the
+  devtools off, so it has to be able to find the palette.
 - **Every stylesheet is built through a theme factory.** `StyleSheet.create` copies the colour
   values it is handed, so a sheet built at module load can never follow a theme. Naming the
   factory's parameter `COLORS` is what made the migration mechanical: hundreds of in-style usages

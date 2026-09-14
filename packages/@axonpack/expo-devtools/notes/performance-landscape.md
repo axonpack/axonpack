@@ -97,8 +97,8 @@ and buffers everything until content appears, which yields ~25 extra Android-onl
 
 **Us.** We read `performance.rnStartupTiming` (four nullable fields) and add our own native
 `getStartupTimestamps` — `sysctl` `kinfo_proc.p_starttime` on iOS, `Process.getStartUptimeMillis()`
-on Android — then stitch in three JS-side stamps: module evaluation, `init()`, and first overlay
-mount. The UI labels these as phases ("Native startup", "Bundle eval", "App setup", "To first
+on Android — then stitch in three JS-side stamps: module evaluation, the provider's start, and first
+overlay mount. The UI labels these as phases ("Native startup", "Bundle eval", "App setup", "To first
 render") rather than claiming platform milestones, because that's what they honestly are.
 
 **Difference that matters.** Their breakdown is finer and platform-truthful; ours is coarser but

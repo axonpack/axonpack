@@ -10,9 +10,9 @@ import { crashOverlayOwnerStore } from '../stores/crash-overlay-owner.store';
 import { crashStore } from '../stores/crash.store';
 
 /**
- * Mounting this twice is harmless rather than something to get right: `DevtoolsOverlay` mounts one
- * itself and a production build mounts one directly, and `crashOverlayOwnerStore` hands the sheet to
- * whichever mounted first so the other draws nothing.
+ * Mounting this twice is harmless rather than something to get right: `<DevtoolsProvider />` mounts
+ * one itself, with the devtools on or off, and a production build may mount one directly.
+ * `crashOverlayOwnerStore` hands the sheet to whichever mounted first, so the other draws nothing.
  */
 export function CrashReportOverlay() {
   const styles = useStyles();

@@ -45,25 +45,21 @@ here, so you install only what you need.
 ### @axonpack/expo-devtools
 
 Browser-style devtools inside your app: tap a floating button for Network, Console, Performance and
-Storage on the device itself. No desktop debugger, no cable, and nothing is captured until you call
-`init()`, which is what makes shipping the code to production free.
+Storage on the device itself. No desktop debugger, no cable, and nothing is captured unless
+`enabled` says so, which is what makes shipping the code to production free.
 
 ```sh
 npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview expo-clipboard
 ```
 
 ```tsx
-import { createDevtoolsClient, DevtoolsOverlay } from "@axonpack/expo-devtools";
-
-const devtools = createDevtoolsClient();
-devtools.init(); // once at startup, installs the fetch/XHR/console patches
+import { DevtoolsProvider } from "@axonpack/expo-devtools";
 
 export default function App() {
   return (
-    <>
+    <DevtoolsProvider config={{ enabled: __DEV__ }}>
       <YourApp />
-      <DevtoolsOverlay />
-    </>
+    </DevtoolsProvider>
   );
 }
 ```

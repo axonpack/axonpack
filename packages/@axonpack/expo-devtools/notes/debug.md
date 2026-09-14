@@ -31,8 +31,8 @@ button, while a main-thread crash ends the process and is read back off disk at 
 - **Busy-wait rather than sleep.** Sleeping suspends the thread and lets the OS schedule other work,
   which is not what a blocked thread looks like. Spinning is the accurate simulation.
 - **The crash paths are not gated on development builds.** Reaching them needs the panel, which
-  needs `init()`, so the `init()` call is the single gate for everything here — the same rule the
-  rest of the package follows.
+  needs a started client, so `config.enabled` is the single gate for everything here, the same rule
+  the rest of the package follows.
 - **The message names the package, not the tab.** It becomes the crash record's message and outlives
   the UI around it; whoever reads it in a bug report cares that the devtools caused it, not where
   the button happened to live that release.

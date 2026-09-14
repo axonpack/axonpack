@@ -57,7 +57,7 @@ export type StartupTiming = {
   /** When this package's JS was first evaluated, as `Date.now()` milliseconds. */
   jsBundleEval?: number;
   /** When the devtools started, as `Date.now()` milliseconds. */
-  initCalled?: number;
+  devtoolsStart?: number;
   /** When the overlay first rendered, as `Date.now()` milliseconds — the end of a usable startup. */
   firstRender?: number;
 };
