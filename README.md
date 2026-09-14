@@ -7,7 +7,7 @@
 Axonpack ends the guesswork when things break. Answers you and your agent can both read: every
 request, error, log and stored value, captured on the device and copied out as structured JSON.
 
-**[Documentation](https://axonpack.github.io/docs)**
+**[Documentation](https://axonpack.github.io/docs)** · [Expo Devtools](https://axonpack.github.io/docs/expo-devtools) · [React Pretty Print](https://axonpack.github.io/docs/react-pretty-print)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-fe5196.svg)](https://www.conventionalcommits.org)
@@ -32,44 +32,106 @@ request, error, log and stored value, captured on the device and copied out as s
 
 </div>
 
-> [!NOTE]
-> Early days. [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) and
-> [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print) are implemented;
-> `@axonpack/lite-storage`, `@axonpack/api-kit` and `@axonpack/i18n` are planned.
-
 ## Packages
 
-This is a [Turborepo](https://turborepo.dev) + [Bun workspaces](https://bun.sh/docs/install/workspaces)
-monorepo. Each package under `packages/@axonpack/*` is published independently.
+Each package is published to npm and versioned independently. Nothing here depends on anything else
+here, so you install only what you need.
 
-| Package                                                                   | Description                                                                                   | Version                                                                                                                             |
-| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools)           | On-device network, console, performance, storage and crash devtools for React Native / Expo   | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)           |
-| [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print) | JSON tree, XML tree and syntax highlighter for React and React Native from one implementation | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print) |
+| Package                                                                                                                                  | Description                                                                                                 | Version                                                                                                                             | Downloads                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools)<br/>[Docs](https://axonpack.github.io/docs/expo-devtools)                | On-device network, console, performance, storage and crash devtools for React Native and Expo               | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)           | [![downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)           |
+| [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print)<br/>[Docs](https://axonpack.github.io/docs/react-pretty-print) | Collapsible JSON and XML trees and a syntax highlighter, for React and React Native from one implementation | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print) | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print) |
 
-Full documentation is at **[axonpack.github.io/docs](https://axonpack.github.io/docs)** — installation, guides, an
-exhaustive reference and the changelog. Start with
-[`@axonpack/expo-devtools`](https://axonpack.github.io/docs/expo-devtools).
+### @axonpack/expo-devtools
+
+Browser-style devtools inside your app: tap a floating button for Network, Console, Performance and
+Storage on the device itself. No desktop debugger, no cable, and nothing is captured until you call
+`init()`, which is what makes shipping the code to production free.
+
+```sh
+npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview expo-clipboard
+```
+
+```tsx
+import { createDevtoolsClient, DevtoolsOverlay } from "@axonpack/expo-devtools";
+
+const devtools = createDevtoolsClient();
+devtools.init(); // once at startup, installs the fetch/XHR/console patches
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <DevtoolsOverlay />
+    </>
+  );
+}
+```
+
+[Installation](https://axonpack.github.io/docs/expo-devtools/installation) · [Quick start](https://axonpack.github.io/docs/expo-devtools/quick-start) · [Production](https://axonpack.github.io/docs/expo-devtools/production) · [Changelog](https://axonpack.github.io/docs/expo-devtools/changelog)
+
+### @axonpack/react-pretty-print
+
+One implementation of collapsible JSON and XML trees and a syntax highlighter, for both React and
+React Native. You pass the container, text and pressable components in; the package owns expansion
+state, array chunking, collapsed-node previews, an XML parser, a 38-language tokenizer and 130
+palettes. It has no dependencies and imports neither `react-native` nor the DOM, so a web project
+configures no bundler alias and a native project writes no adapter.
+
+```sh
+npm install @axonpack/react-pretty-print
+```
+
+```tsx
+import { JsonTree, domPrimitives } from "@axonpack/react-pretty-print";
+import { LIGHT_THEME } from "@axonpack/react-pretty-print/themes";
+
+<JsonTree primitives={domPrimitives} value={response} theme={LIGHT_THEME} />;
+```
+
+[JSON tree](https://axonpack.github.io/docs/react-pretty-print/json-tree) · [Primitives](https://axonpack.github.io/docs/react-pretty-print/primitives) · [Reference](https://axonpack.github.io/docs/react-pretty-print/reference)
+
+## Repository layout
+
+A [Turborepo](https://turborepo.dev) + [Bun workspaces](https://bun.sh/docs/install/workspaces)
+monorepo.
+
+```
+packages/@axonpack/*   published libraries, one folder each
+packages/linter        shared oxlint base config, internal and deliberately unscoped
+docs                   the documentation site, a git submodule with its own install
+```
+
+`docs` is a submodule of [`axonpack/axonpack.github.io`](https://github.com/axonpack/axonpack.github.io),
+and it builds and deploys itself. It is not a workspace member, so the root `install`, `build`,
+`lint` and `check-types` all skip it by design. Run `bun install` inside `docs/` to work on it.
 
 ## Development
 
-This repo uses **Bun only** (pinned via `devEngines.packageManager`, Bun 1.3.14, Node >= 24).
+Bun only, pinned via `devEngines.packageManager` (Bun 1.3.14, Node >= 24).
 
 ```sh
-git clone https://github.com/axonpack/axonpack.git
+git clone --recurse-submodules https://github.com/axonpack/axonpack.git
 cd axonpack
 bun install
 ```
 
-```sh
-bun run build         # turbo run build
-bun run lint          # turbo run lint
-bun run check-types   # turbo run check-types
-bun run format        # prettier --write "**/*.{ts,tsx,md}"
-```
+Already cloned without `--recurse-submodules`? `git submodule update --init` fills in `docs/`.
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full workflow, coding conventions, commit
-format, and how to run a package's example app.
+| Command               | What it does                                             |
+| --------------------- | -------------------------------------------------------- |
+| `bun run build`       | `turbo run build` across every workspace that defines it |
+| `bun run lint`        | `turbo run lint` (oxlint)                                |
+| `bun run check-types` | `turbo run check-types` (`tsc --noEmit`)                 |
+| `bun run format`      | Prettier over the repo                                   |
+| `bun run dev:docs`    | Start the documentation site                             |
+| `bun run changeset`   | Record a release note for a change                       |
+
+Run `bun install` from the repository root, not from inside a package: Bun's workspace linking
+depends on the root lockfile.
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full workflow, coding conventions, commit format,
+and how to run a package's example app.
 
 ## Contributing
 
