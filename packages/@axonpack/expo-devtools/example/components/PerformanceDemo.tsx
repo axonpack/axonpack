@@ -1,8 +1,8 @@
+import { devtools } from '@axonpack/expo-devtools';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from './ActionButton';
-import { devtools } from '../devtools';
 
 function blockThread(ms: number) {
   const until = Date.now() + ms;

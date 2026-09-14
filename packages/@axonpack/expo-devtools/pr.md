@@ -18,14 +18,14 @@ cable, nothing to attach. A floating button opens an on-device panel with six ta
 
 Points that may matter for the listing:
 
-- **Safe to leave in a production build.** Nothing is patched and nothing is recorded until `init()`
-  is called, so guarding that single call leaves the entire package inert.
+- **Safe to leave in a production build.** Nothing is patched and nothing is recorded unless the
+  provider is configured with `enabled: true`, so that single flag leaves the entire package inert.
 - **Registers rather than discovers storage.** The consumer passes in its own store adapters, so the
   package depends on no storage library and forces none on anyone.
 - **One small native module** (iOS Swift + Android Kotlin, via the Expo Modules API), used only to
   block the main thread and read the real process start time. Everything else is TypeScript, and the
   package degrades gracefully in Expo Go where that module is absent.
-- No config plugin and no `app.json` changes — install, call `init()`, mount `<DevtoolsOverlay />`.
+- No config plugin and no `app.json` changes: install it and wrap the app in one provider.
 - iOS and Android. MIT.
 
 Docs: https://axonpack.github.io/docs/expo-devtools

@@ -64,8 +64,8 @@ const EMPTY_SNAPSHOT: StorageSnapshot = { adapters: [] };
 let snapshot: StorageSnapshot = EMPTY_SNAPSHOT;
 
 /**
- * Same disabled-until-`init()` gate as every other store here. Nothing in this feature reads a
- * single key before `init()` runs, which is what makes shipping the tab to production free.
+ * Same disabled-until-started gate as every other store here. Nothing in this feature reads a
+ * single key until the client starts, which is what makes shipping the tab to production free.
  *
  * There is deliberately **no `paused` flag**. The other three tabs pause a stream that costs
  * something continuously; storage is a pull, so its cost is per read and its toolbar carries a

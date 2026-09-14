@@ -163,7 +163,7 @@ export function adoptPersistedCrash(partial: Partial<CrashRecord>): CrashRecord 
   return record;
 }
 
-/** Test-only; the options are otherwise set once by `init()`. */
+/** Test-only; the options are otherwise set once, as the client starts. */
 export function resetCrashCapture() {
   options = DEFAULT_OPTIONS;
   context = {};

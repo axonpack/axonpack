@@ -883,10 +883,7 @@ function applyStreamEvent(source: string, payload: WebViewStreamPayload) {
   }
 }
 
-export function handleWebViewNetworkMessage(
-  event: WebViewMessageEventLike,
-  allowedSources?: readonly string[]
-): boolean {
+export function handleWebViewNetworkMessage(event: WebViewMessageEventLike): boolean {
   if (!networkLogStore.isEnabled()) return false;
 
   let parsed: unknown;
@@ -905,10 +902,6 @@ export function handleWebViewNetworkMessage(
   }
 
   const message = parsed as WebViewMessage;
-
-  if (allowedSources && !allowedSources.includes(message.source)) {
-    return false;
-  }
 
   if (message.type === 'navigation') {
     pushConditionsToWebView(message.source);

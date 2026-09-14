@@ -73,8 +73,8 @@ The open list above is a menu, not an order. What is worth doing next, and why, 
 3. **Requests from a native HTTP client that never touches JavaScript.** Now the largest hole in
    capture rather than in display: a JSI client answers no patch, and the only way in is whatever
    observer API it publishes for itself.
-4. **Capture requests made before the panel is set up.** Everything before `init()` is invisible,
-   which is most of a cold start.
+4. **Capture requests made before the panel is set up.** Everything before the provider's first
+   render is invisible, which is most of a cold start.
 5. **The row's own size figure.** The two sizes are separated in the detail panel, but the size on the
    row is still the single `size` field, which is the declared length when there is one and the body's
    length otherwise. Deciding what one column should say — and it should probably say what crossed the
@@ -251,7 +251,7 @@ Three paths, because no one of them can see the others' traffic:
   whose phase fields are all stamped from three instants a patch already sees. The real measurements
   are one layer lower — `URLSessionTaskMetrics` on iOS, an OkHttp `EventListener` on Android — so the
   native module collects them there and JavaScript only attaches them to a row.
-- **The listener goes in with the application, not with `init()`.** Android's phases come from an
+- **The listener goes in with the application, not with the JS start.** Android's phases come from an
   OkHttp `EventListener`, installed by replacing the client factory `OkHttpClientProvider` hands out —
   which has to happen before anything asks for a client. Installed from JavaScript it reported a
   successful install and then delivered nothing at all, because by the time JavaScript runs, startup
@@ -371,7 +371,7 @@ Three paths, because no one of them can see the others' traffic:
   producible — but the timings that make a HAR worth opening somewhere else are the ones that would be
   `-1`, so Export stays a plain JSON dump.
 - **Tools for something outside the app to read the log with.** A coding agent asking what the app
-  just requested is a real use, and the reason it is not here is the same property that makes `init()`
-  the whole production story: the panel is in the app's own process and nothing outside it can be
+  just requested is a real use, and the reason it is not here is the same property that makes
+  `enabled` the whole production story: the panel is in the app's own process and nothing outside it can be
   addressed. Exposing the log would mean a channel to a dev server, which this package does not have
   and does not want — a tool that needs one is a different tool, not a tab.

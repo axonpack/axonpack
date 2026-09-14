@@ -25,7 +25,7 @@ type ErrorUtilsHost = {
 
 /**
  * Per tier, not one flag for the lot: `enableWhileDevtoolsDisabled` installs the native tier when
- * the client is built, and a later `init()` has to be able to add the JS tiers on top. A single
+ * the client is built, and the start has to be able to add the JS tiers on top. A single
  * `installed` guard would have silently refused that second call.
  */
 const installed = {
