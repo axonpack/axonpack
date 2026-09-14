@@ -19,7 +19,7 @@ type CrashOverlayOwnerEvents = {
  *
  * A list rather than a single slot so ownership *passes on*. With a plain counter an instance that
  * lost the claim stayed a loser for life, and unmounting the winner — which is what
- * `DevtoolsOverlay` does the moment `init()` lands and it swaps branches — left nobody drawing the
+ * `DevtoolsOverlay` does the moment the start lands and it swaps branches — left nobody drawing the
  * sheet at all.
  */
 let mounted: object[] = [];

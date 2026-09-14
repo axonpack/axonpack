@@ -10,9 +10,9 @@ import { crashOverlayOwnerStore } from '../stores/crash-overlay-owner.store';
 import { crashStore } from '../stores/crash.store';
 
 /**
- * Mounting this twice is harmless rather than something to get right: `DevtoolsOverlay` mounts one
- * itself and a production build mounts one directly, and `crashOverlayOwnerStore` hands the sheet to
- * whichever mounted first so the other draws nothing.
+ * Mounting this twice is harmless rather than something to get right: `<DevtoolsProvider />` mounts
+ * one itself, with the devtools on or off, and a production build may mount one directly.
+ * `crashOverlayOwnerStore` hands the sheet to whichever mounted first, so the other draws nothing.
  */
 export function CrashReportOverlay() {
   const styles = useStyles();
@@ -47,7 +47,7 @@ export function CrashReportOverlay() {
   const pending = records.find((record) => !record.seen && !retiredIds.has(record.id)) ?? null;
 
   /**
-   * Read per render rather than captured once: `init()` may not have run yet the first time this
+   * Read per render rather than captured once: the client may not have started the first time this
    * mounts, and the default is the safe one either way.
    */
   const compact = getCrashPopupDetail() === 'compact';

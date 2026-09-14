@@ -1,9 +1,9 @@
 import { Text, View } from 'react-native';
 
+import { CollapsibleSection } from '../../../core/components/ui/collapsible-section.ui';
+import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import type { StartupTiming } from '../stores/performance.store';
 import { diffMs, formatMs } from '../utils/format-metrics.util';
-import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
-import { CollapsibleSection } from '../../../core/components/ui/collapsible-section.ui';
 
 function Row({ label, value }: { label: string; value: string }) {
   const styles = useStyles();
@@ -50,11 +50,11 @@ export function StartupTimingSection({ startup }: { startup?: StartupTiming }) {
             />
             <Row
               label="App setup"
-              value={formatMs(diffMs(measured.jsBundleEval, measured.initCalled))}
+              value={formatMs(diffMs(measured.jsBundleEval, measured.devtoolsStart))}
             />
             <Row
               label="To first render"
-              value={formatMs(diffMs(measured.initCalled, measured.firstRender))}
+              value={formatMs(diffMs(measured.devtoolsStart, measured.firstRender))}
             />
             <Text style={styles.note}>
               Process start to first render, measured once at launch. The phase boundaries are where

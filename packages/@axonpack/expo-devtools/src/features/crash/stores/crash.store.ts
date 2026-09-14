@@ -116,7 +116,7 @@ let maxRecords = DEFAULT_MAX_RECORDS;
 
 /**
  * The same disabled-until-init gate every store here has — but this one is flipped by
- * `initCrashReporting()` rather than `init()`, because crash capture is the single subsystem meant
+ * `initCrashReporting()` rather than the client's own start, because crash capture is the single subsystem meant
  * to be able to run in a release build. There is no `paused` flag: a crash is not a stream, and a
  * record you chose not to keep is a crash nobody ever hears about.
  */

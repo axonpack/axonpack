@@ -9,6 +9,7 @@ import { markFirstRender } from '../../../features/performance/services/read-sta
 import { HIT_SLOP } from '../../constants/metrics.const';
 import type { StatusBarStyle } from '../../constants/theme.const';
 import { devtoolsReadyStore } from '../../stores/devtools-ready.store';
+import { panelVisibilityStore } from '../../stores/panel-visibility.store';
 import {
   makeThemedStyles,
   useStatusBarStyle,
@@ -21,8 +22,8 @@ const TAP_THRESHOLD = 4;
 const GLYPH_RATIO = 0.45;
 
 /**
- * Props for `<DevtoolsOverlay />` — the draggable launcher button that opens the panel. All optional;
- * `<DevtoolsOverlay />` on its own is the normal usage.
+ * How the draggable launcher button looks. All optional — `<DevtoolsProvider client={devtools}>` on
+ * its own gives you the default bug glyph on the theme's accent colour.
  */
 export type DevtoolsOverlayProps = {
   /**
@@ -77,18 +78,12 @@ function getInitialPosition(size: number): { x: number; y: number } {
 }
 
 /**
- * The draggable launcher button, and the panel it opens. Mount it once, anywhere inside your app's
- * tree — it renders nothing until `devtools.init()` has run, so a build that never calls `init()`
- * pays for nothing and shows nothing.
+ * The panel, the launcher button that opens it, and the crash report sheet. Internal: it is mounted
+ * by `<DevtoolsProvider />` and never by the app directly, so there is one host and the provider
+ * decides whether the button is part of it.
  *
- * ```tsx
- * <>
- *   <App />
- *   <DevtoolsOverlay />
- * </>
- * ```
- *
- * It also mounts the crash report sheet, so a dev build gets that without wiring a second component.
+ * `showButton` hides the button only. The panel stays mounted either way, because `useDevtoolsPanel`
+ * is the other thing that opens it and an app that hid the button is exactly the app using that.
  */
 export function DevtoolsOverlay({
   iconComponent: IconComponent,
@@ -96,22 +91,23 @@ export function DevtoolsOverlay({
   color,
   iconColor = '#ffffff',
   statusBar = 'auto',
-}: DevtoolsOverlayProps = {}) {
+  showButton = true,
+}: DevtoolsOverlayProps & { showButton?: boolean } = {}) {
   const styles = useStyles();
   const COLORS = useThemeColors();
   const themeStatusBarStyle = useStatusBarStyle();
 
   /**
-   * Subscribed rather than read once: `init()` usually runs at module scope, before anything
-   * renders, but an app that calls it from an effect mounts this first and needs the button to
-   * appear when it lands.
+   * Subscribed rather than read once: the provider starts its client as it renders, which is before
+   * this, but a provider mounted later in a session is not, and the button has to appear when the
+   * start lands.
    */
   const ready = useSyncExternalStore(devtoolsReadyStore.subscribe, devtoolsReadyStore.isReady);
 
   const fill = color ?? COLORS.accent;
   useEffect(markFirstRender, []);
 
-  const [open, setOpen] = useState(false);
+  const open = useSyncExternalStore(panelVisibilityStore.subscribe, panelVisibilityStore.isOpen);
   const [pan] = useState(() => new Animated.ValueXY(getInitialPosition(size)));
 
   const [panResponder] = useState(() =>
@@ -129,7 +125,7 @@ export function DevtoolsOverlay({
       onPanResponderRelease: (_event, gestureState) => {
         pan.flattenOffset();
         if (Math.abs(gestureState.dx) + Math.abs(gestureState.dy) < TAP_THRESHOLD) {
-          setOpen(true);
+          panelVisibilityStore.show();
         }
         pan.stopAnimation(({ x, y }) => {
           const { width, height } = Dimensions.get('window');
@@ -146,36 +142,38 @@ export function DevtoolsOverlay({
   const barStyle = resolveBarStyle(statusBar, themeStatusBarStyle);
 
   /**
-   * No `init()`, no button. The panel is the only way to reach the Debug tab and the console REPL,
-   * so hiding it is what makes an unguarded mount in a release build harmless rather than a
+   * Not started, nothing to open. The panel is the only way to reach the Debug tab and the console
+   * REPL, so drawing neither it nor the button is what makes `enabled: false` harmless rather than a
    * reachable devtools panel over empty lists.
    *
    * The crash overlay is deliberately outside that: it is the one subsystem meant to run in
-   * production, and an app that mounts this component unguarded should still get its crash reports.
+   * production, and it works without the devtools being on at all.
    */
   if (!ready) return <CrashReportOverlay />;
 
   return (
     <>
-      <Animated.View
-        style={[
-          styles.fab,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: fill,
-            transform: [{ translateX: pan.x }, { translateY: pan.y }],
-          },
-        ]}
-        hitSlop={HIT_SLOP.default}
-        {...panResponder.panHandlers}>
-        {IconComponent ? (
-          <IconComponent size={glyphSize} />
-        ) : (
-          <MaterialIcons name="bug-report" size={glyphSize} color={iconColor} />
-        )}
-      </Animated.View>
+      {showButton && (
+        <Animated.View
+          style={[
+            styles.fab,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: fill,
+              transform: [{ translateX: pan.x }, { translateY: pan.y }],
+            },
+          ]}
+          hitSlop={HIT_SLOP.default}
+          {...panResponder.panHandlers}>
+          {IconComponent ? (
+            <IconComponent size={glyphSize} />
+          ) : (
+            <MaterialIcons name="bug-report" size={glyphSize} color={iconColor} />
+          )}
+        </Animated.View>
+      )}
 
       {/*
         Outside the `Modal` on purpose: a `StatusBar` mounted inside one does not reach the status
@@ -190,12 +188,12 @@ export function DevtoolsOverlay({
           fine. */}
       <CrashReportOverlay />
 
-      <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} animationType="slide" onRequestClose={panelVisibilityStore.hide}>
         <SafeAreaProvider style={{ flex: 1, backgroundColor: COLORS.background }}>
           {/* No `top` edge: the panel's header takes that inset itself, so the area behind the
               status bar is the toolbar's colour rather than a strip of the panel background. */}
           <SafeAreaView edges={['left', 'right']} style={styles.modal}>
-            <DevtoolsPanel onClose={() => setOpen(false)} />
+            <DevtoolsPanel onClose={panelVisibilityStore.hide} />
           </SafeAreaView>
         </SafeAreaProvider>
       </Modal>

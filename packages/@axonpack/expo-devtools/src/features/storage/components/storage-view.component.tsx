@@ -60,7 +60,7 @@ export function StorageView() {
   const flatListRef = useRef<FlatList<StorageEntry>>(null);
   const sectionListRef = useRef<SectionList<StorageEntry>>(null);
 
-  // Read on mount rather than on `init()`: a store the panel is never opened on shouldn't be read at
+  // Read on mount rather than at start: a store the panel is never opened on shouldn't be read at
   // all, and a store read at launch would be stale by the time anyone looked.
   useEffect(() => {
     readAllAdapters();

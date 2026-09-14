@@ -113,15 +113,17 @@ describe('a socket opened inside a WebView', () => {
     });
   });
 
-  // Any page can post a message wearing our marker, including one nobody here wrote.
-  it('ignores a socket from a page that was never declared', () => {
+  /**
+   * There is no list of accepted names any more: whatever the page calls itself becomes the label on
+   * the row. Only our own marker decides whether a message is ours at all.
+   */
+  it('logs a socket from any source, labelled with the name it gave', () => {
     const handled = handleWebViewNetworkMessage(
-      socketEvent({ socketId: 1, event: 'connect', url: 'wss://elsewhere.test' }),
-      ['checkout']
+      socketEvent({ socketId: 1, event: 'connect', url: 'wss://elsewhere.test' })
     );
 
-    expect(handled).toBe(false);
-    expect(networkLogStore.getWebSocketSnapshot()).toHaveLength(0);
+    expect(handled).toBe(true);
+    expect(networkLogStore.getWebSocketSnapshot()[0]).toMatchObject({ source: 'shop' });
   });
 });
 

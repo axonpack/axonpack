@@ -155,7 +155,7 @@ export const DARK_PALETTE: Palette = {
 
 /**
  * Any theme's id: a built-in one or a name you registered through `themes`. The loose type behind
- * the theme store — `createDevtoolsClient`'s `defaultTheme` is the checked version of it.
+ * the theme store — the config's `defaultTheme` is the checked version of it.
  */
 export type ThemeId = string;
 
@@ -167,7 +167,7 @@ export type ThemeId = string;
 export type BuiltInThemeId =
   'light' | 'dark' | 'dracula' | 'nord' | 'monokai' | 'one-dark' | 'solarized-light';
 
-/** A custom palette, as passed to `createDevtoolsClient({ themes })`. */
+/** A custom palette, as passed in the config's `themes`. */
 /**
  * The status bar's content while the panel is open. `'light'` means light icons, for a dark
  * background — the same sense `expo-status-bar`'s `style` has.
@@ -189,8 +189,8 @@ export type ThemeConfig = {
    * Status bar content for this theme — `'light'` for light icons over a dark panel, `'dark'` for
    * dark icons over a light one. Worked out from the theme's toolbar colour when left out.
    *
-   * Only used when the app asks for it: `<DevtoolsOverlay statusBar="auto" />`. By default the panel
-   * leaves the status bar to the app.
+   * Used whenever the provider's `statusBar` is `'auto'`, which is its default. Pass
+   * `statusBar="app"` to leave the status bar to the app instead.
    */
   statusBarStyle?: StatusBarStyle;
 };

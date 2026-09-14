@@ -25,6 +25,17 @@ type WebViewMessageEventLike = {
   };
 };
 
+/**
+ * Off when the consumer set `console.capture: false`. A module flag rather than something the client
+ * closes over, because `useDevtoolsWebView` is what wires a page up now and it has no client to ask.
+ * The store's own `enabled` cannot answer this: `console.repl` alone turns the store on.
+ */
+let captureConsole = true;
+
+export function setWebViewConsoleCapture(enabled: boolean) {
+  captureConsole = enabled;
+}
+
 let entryCounter = 0;
 
 function nextEntryId(source: string): string {
@@ -33,7 +44,7 @@ function nextEntryId(source: string): string {
 }
 
 export function getWebViewConsoleInjectedJavaScript(webviewName: string): string {
-  if (!consoleLogStore.isEnabled()) {
+  if (!captureConsole || !consoleLogStore.isEnabled()) {
     return 'true;';
   }
 
@@ -180,11 +191,8 @@ export function getWebViewConsoleInjectedJavaScript(webviewName: string): string
   true;`;
 }
 
-export function handleWebViewConsoleMessage(
-  event: WebViewMessageEventLike,
-  allowedSources?: readonly string[]
-): boolean {
-  if (!consoleLogStore.isEnabled()) return false;
+export function handleWebViewConsoleMessage(event: WebViewMessageEventLike): boolean {
+  if (!captureConsole || !consoleLogStore.isEnabled()) return false;
 
   let parsed: unknown;
   try {
@@ -202,10 +210,6 @@ export function handleWebViewConsoleMessage(
   }
 
   const message = parsed as WebViewConsoleMessage;
-
-  if (allowedSources && !allowedSources.includes(message.source)) {
-    return false;
-  }
 
   const payload = message.payload;
   if (

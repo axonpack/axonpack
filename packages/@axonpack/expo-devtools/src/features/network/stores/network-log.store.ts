@@ -100,7 +100,8 @@ export type NetworkLogEntry = {
   progress?: { direction: 'upload' | 'download'; loaded: number; total?: number };
 
   /**
-   * Which WebView made it — the `webviewSources` name. Absent for the app's own requests.
+   * Which WebView made it — the name passed to `useDevtoolsWebView`. Absent for the app's own
+   * requests.
    */
   source?: string;
   /**
@@ -199,7 +200,7 @@ export type WebSocketLogEntry = {
    * read this field, and a socket is a row in that same list.
    */
   method: 'WS';
-  /** Which WebView opened it — the `webviewSources` name. Absent for the app's own sockets. */
+  /** Which WebView opened it — the `useDevtoolsWebView` name. Absent for the app's own sockets. */
   source?: string;
   /** React Native's own handle for the socket, which is what its native events are keyed by. */
   socketId: number;

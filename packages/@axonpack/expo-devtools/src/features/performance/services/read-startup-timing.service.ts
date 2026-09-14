@@ -18,7 +18,7 @@ type PlatformStartupHost = {
   reactNativeStartupTiming?: StartupTiming;
 };
 
-let initCalledMs: number | undefined;
+let devtoolsStartMs: number | undefined;
 let firstRenderMs: number | undefined;
 
 function readPlatformMarkers(): Partial<StartupTiming> {
@@ -57,13 +57,13 @@ function publish() {
     ...readPlatformMarkers(),
     ...readNativeMarkers(),
     jsBundleEval: JS_BUNDLE_EVAL_MS,
-    initCalled: initCalledMs,
+    devtoolsStart: devtoolsStartMs,
     firstRender: firstRenderMs,
   });
 }
 
 export function readStartupTiming() {
-  initCalledMs ??= Date.now();
+  devtoolsStartMs ??= Date.now();
   publish();
 }
 
