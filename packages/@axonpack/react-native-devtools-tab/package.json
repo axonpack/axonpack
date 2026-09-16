@@ -50,10 +50,29 @@
     "@rsbuild/core": "^2.2.7",
     "@types/bun": "^1.3.14",
     "@types/jsdom": "^21.1.7",
+    "@types/react": "~19.1.17",
     "jsdom": "^20.0.3",
+    "react": "19.2.3",
+    "react-reconciler": "0.33.0",
     "typescript": "~5.9.3"
   },
   "engines": {
     "node": ">=20"
+  },
+  "peerDependencies": {
+    "@rsbuild/core": "^2.0.0",
+    "react": "^19.2.0",
+    "react-dom": "*"
+  },
+  "peerDependenciesMeta": {
+    "@rsbuild/core": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "react-reconciler": "^0.33.0"
   }
 }

@@ -17,6 +17,8 @@ declare module "node:fs" {
       path: string,
       callback: (error: Error | null, data: FileContents) => void,
     ): void;
+    mkdirSync(path: string, options: { recursive: boolean }): void;
+    writeFileSync(path: string, contents: string): void;
   };
   export default fs;
 }
@@ -24,6 +26,7 @@ declare module "node:fs" {
 declare module "node:path" {
   const path: {
     join(...parts: string[]): string;
+    resolve(...parts: string[]): string;
     dirname(target: string): string;
     extname(target: string): string;
     normalize(target: string): string;

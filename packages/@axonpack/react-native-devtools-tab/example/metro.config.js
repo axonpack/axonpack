@@ -3,4 +3,8 @@ const {
   withReactNativeDevtoolsPanel,
 } = require("@axonpack/react-native-devtools-tab/metro");
 
-module.exports = withReactNativeDevtoolsPanel(getDefaultConfig(__dirname));
+const { withExecExperiment } = require("./exec-experiment");
+
+module.exports = withExecExperiment(
+  withReactNativeDevtoolsPanel(getDefaultConfig(__dirname)),
+);

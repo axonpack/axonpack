@@ -1,18 +1,24 @@
 import {
   ACTION,
   HELLO,
+  MUTATE,
   REGISTER,
   STATE,
 } from "../core/constants/message.const";
 import type {
   StateUpdate,
   TabAction,
+  TabMutation,
   TabRegistration,
 } from "../core/constants/message.const";
 import {
   createMessageChannel,
   type MessageChannel,
 } from "../core/services/message-channel.service";
+import {
+  createRemoteRoot,
+  type RemoteRoot,
+} from "./services/apply-remote-ops.service";
 import { renderInto } from "./services/render-node.service";
 import { resolveLayout, slicesOf } from "./services/resolve-layout.service";
 
@@ -56,6 +62,7 @@ export function startPanel(
   let layout: TabRegistration["layout"] | null = null;
   let slices = new Set<string>();
   let state: Record<string, unknown> = {};
+  let remote: RemoteRoot | null = null;
 
   const draw = (): void => {
     if (!layout) return;
@@ -67,6 +74,21 @@ export function startPanel(
   channel.onMessage(REGISTER, (payload) => {
     const registration = payload as TabRegistration;
     if (registration?.id !== tabId) return;
+
+    // A component is drawn from the changes React made, not from a description, so this tab has
+    // nothing to render until they arrive. Re-made on every registration, because one arriving twice
+    // means the app is starting the tab over.
+    if (registration.remote) {
+      root.replaceChildren();
+      remote = createRemoteRoot(root, (handler, value) => {
+        channel.send(ACTION, {
+          id: tabId,
+          action: handler,
+          payload: value,
+        } satisfies TabAction);
+      });
+      return;
+    }
 
     // A tab with its own page never loads this one, so an absent layout here means a registration
     // that was not meant for us rather than a mistake.
@@ -87,6 +109,11 @@ export function startPanel(
     // The point of slices: a tab that does not read what changed does not redraw. With one tab open
     // per DevTools panel, this is also what stops one busy slice redrawing every other tab.
     if (Object.keys(update.state).some((slice) => slices.has(slice))) draw();
+  });
+
+  channel.onMessage(MUTATE, (payload) => {
+    const mutation = payload as TabMutation;
+    if (mutation?.id === tabId) remote?.apply(mutation.ops);
   });
 
   // The app almost always started first, so its registration is already gone. Ask for it rather than

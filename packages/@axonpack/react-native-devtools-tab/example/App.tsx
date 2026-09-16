@@ -7,7 +7,7 @@ import { counter, escaping, gallery, toggleBusy } from "./devtools";
 /**
  * A playground for the tab, not a demo of an app.
  *
- * Three tabs are registered at import. This screen only shows what comes back from them, because
+ * Six tabs are registered at import. This screen only shows what comes back from them, because
  * that is the half you cannot see in DevTools.
  */
 export default function App() {
@@ -40,9 +40,10 @@ export default function App() {
       <StatusBar style="auto" />
       <Text style={styles.title}>react-native-devtools-tab</Text>
       <Text style={styles.hint}>
-        Open React Native DevTools. Three tabs are registered: Gallery, Counter
-        and Escaping. Only Gallery and Counter redraw, once a second. Escaping
-        reads no slice that changes, so it should sit perfectly still.
+        Open React Native DevTools. Six tabs are registered: Gallery, Counter,
+        Escaping, Shell, React and Page. Only Gallery and Counter redraw, once a
+        second. Escaping reads no slice that changes, so it should sit perfectly
+        still.
       </Text>
 
       <Text style={styles.heading}>What the tabs sent back</Text>

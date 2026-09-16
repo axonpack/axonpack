@@ -114,16 +114,55 @@ const answer = await tab.request("ping");
 Nothing is sent until somebody opens the tab, and what you send before that is kept and flushed when
 they do. A release build has no debugger connection at all, so the channel stays quiet.
 
-## Drawing it yourself
+## Giving it a React component
 
-If the vocabulary is not enough, ignore it and serve your own page:
+When the vocabulary is not enough, pass a component:
+
+```tsx
+function Session() {
+  const [user, setUser] = useState("nobody");
+  useEffect(() => auth.onChange(setUser), []);
+
+  return (
+    <div>
+      <p>signed in as {user}</p>
+      <button onClick={() => auth.signOut()}>sign out</button>
+    </div>
+  );
+}
+
+ReactNativeDevtoolsPanel.registerTab({
+  id: "session",
+  name: "Session",
+  component: Session,
+});
+```
+
+Nothing to build, nothing to serve, nothing to configure. Hooks, effects, context and any component
+it composes all work, because this is React.
+
+**It runs in the app, not in the panel.** React renders it here against a renderer that reports what
+it drew rather than touching a DOM, and the panel builds the real elements from that. That is what
+lets `onClick` reach `auth` directly: the app's own state is in the same place as the handler, so
+there is no message to write. It is also why the JSX is `div` and `button` rather than `View` and
+`Pressable` — the elements are made at the other end, in a browser.
+
+Changes cross as changes, not as a new tree, so the panel keeps the element it already had. An input
+holds its caret and a scrolled list stays where it was while something above re-renders.
+
+What a component cannot do is touch a real element. A `ref` gets a stand-in, so a canvas, a
+measurement, or a third-party DOM widget has nothing to work with, and an event arrives as a
+description rather than the event itself. For those, give a `page` instead: a path to a component
+that the dev server builds for the browser, which then runs where the DOM is.
 
 ```ts
-import { createPanelChannel } from "@axonpack/react-native-devtools-tab/panel";
-
-const app = createPanelChannel();
-app.onMessage("metrics", render);
+registerTab({ id: "flame", name: "Flame", page: "./panel/flame.tsx" });
 ```
+
+A page is read relative to the project root, and needs `@rsbuild/core`, `react` and `react-dom`
+installed there; they are optional peers here because only a project with a page needs them. Edit it
+and reload the tab. A page served from somewhere else works too: give `url` and talk to the app with
+`createPanelChannel` from `@axonpack/react-native-devtools-tab/panel`.
 
 ## How it works
 

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 
+import { pageUrl } from "../../core/constants/devtools.const";
 import { withReactNativeDevtoolsPanel } from "../index";
 
 /**
@@ -37,4 +38,27 @@ test("is a valid template with nothing left uninterpolated", () => {
   // which is a build error; a stray one that survives is a placeholder that never got filled.
   expect(script).not.toContain("${");
   expect(script.length).toBeGreaterThan(1000);
+});
+
+/** The right-hand side of the one line that decides what a tab shows. */
+function iframeSrc(tab: Record<string, string>): string {
+  const expression = script.match(/iframe\.src =\s*([\s\S]*?);\n/)?.[1];
+  if (!expression) throw new Error("the iframe src line has moved");
+  return new Function("tab", `return ${expression}`)(tab) as string;
+}
+
+test("a tab shows its own url, its built component, or the described layout", () => {
+  expect(iframeSrc({ id: "a", url: "https://example.test/panel" })).toBe(
+    "https://example.test/panel",
+  );
+
+  // The same URL the dev server answers on, built independently at each end, so this is what stops
+  // the two spellings drifting apart.
+  expect(iframeSrc({ id: "a", page: "./panel/app.tsx" })).toBe(
+    pageUrl("./panel/app.tsx"),
+  );
+
+  expect(iframeSrc({ id: "a b" })).toBe(
+    "/devtools-tab/panel/index.html?tab=a%20b",
+  );
 });

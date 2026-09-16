@@ -1,7 +1,10 @@
+import { NativeModules } from "react-native";
 import {
   ReactNativeDevtoolsPanel,
   ref,
 } from "@axonpack/react-native-devtools-tab";
+
+import PanelUI from "./PanelUI";
 
 /**
  * A tab per thing worth checking. Each layout crosses the wire once, at registration; after that
@@ -118,8 +121,98 @@ setInterval(() => {
   tick += 1;
   gallery.setState({ tick: String(tick) });
   counter.setState({ tick: String(tick) });
+  // The React tab reads no slice, so it is sent a plain message and decides for itself.
+  ReactNativeDevtoolsPanel.send("clock", tick);
 }, 1000);
 
 export function toggleBusy(): void {
   counter.setState({ busy: !counter.getState().busy });
 }
+
+/**
+ * Experiment: a tab that runs shell commands on the dev machine.
+ *
+ * Nothing but the tab vocabulary is used here, so there is no page to write. What there is no way
+ * around is the Metro half: a browser panel cannot spawn a process and neither can Hermes, so the
+ * button press comes back here and this fetches the dev server, which is Node and can.
+ */
+export const shell = ReactNativeDevtoolsPanel.registerTab({
+  id: "shell",
+  name: "Shell",
+  icon: "\u2325",
+  state: {
+    cmd: "uname -a && pwd && whoami",
+    status: "idle",
+    exit: "-",
+    lines: [] as string[][],
+  },
+  layout: {
+    kind: "stack",
+    children: [
+      { kind: "heading", value: "Run a command where Metro is" },
+      { kind: "input", action: "typed", value: ref("cmd") },
+      {
+        kind: "row",
+        children: [
+          { kind: "button", label: "Run", action: "run" },
+          { kind: "field", label: "status", value: ref("status") },
+          { kind: "field", label: "exit", value: ref("exit") },
+        ],
+      },
+      { kind: "divider" },
+      { kind: "table", columns: ["output"], rows: ref("lines") },
+    ],
+  },
+});
+
+/**
+ * Only the app knows how to reach the dev server: it is `localhost` on a simulator, a LAN address on
+ * a real device, and the bundle it was loaded from is the one thing that always names it correctly.
+ */
+const devServer = String(NativeModules.SourceCode?.scriptURL ?? "").match(
+  /^https?:\/\/[^/]+/,
+)?.[0];
+
+// Held rather than sent, because a keystroke is not worth a redraw. It goes into state when Run is
+// pressed, which is also what leaves the command that ran sitting in the box afterwards.
+let command = shell.getState().cmd;
+
+shell.onAction("typed", (value) => {
+  command = String(value);
+});
+
+shell.onAction("run", async () => {
+  shell.setState({ cmd: command, status: "running", exit: "-", lines: [] });
+
+  try {
+    const response = await fetch(`${devServer}/exec-experiment/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cmd: command }),
+    });
+    const result = await response.json();
+    const output = `${result.stdout}${result.stderr}`.trimEnd();
+
+    shell.setState({
+      status: "done",
+      exit: String(result.code),
+      lines: output ? output.split("\n").map((line) => [line]) : [],
+    });
+  } catch (error) {
+    shell.setState({ status: "failed", lines: [[String(error)]] });
+  }
+});
+
+/**
+ * The other way to fill a tab: a component of your own, with React in it.
+ *
+ * The path, not the component. The panel is a separate engine, so a function has nothing to send and
+ * importing it here would put `react-dom` in the app's bundle. The dev server reads this path,
+ * builds it for the browser and serves it.
+ */
+ReactNativeDevtoolsPanel.registerTab({
+  id: "react",
+  name: "React",
+  icon: "⚛",
+  component: PanelUI,
+});
