@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DevTools tab</title>
+  </head>
+  <body>
+    <script>
+      // A panel that fails renders as a blank tab, and its errors go to the iframe's own console,
+      // which nobody thinks to open. Put them on the page instead.
+      window.addEventListener("error", function (event) {
+        document.body.textContent = String(
+          (event.error && event.error.stack) || event.message,
+        );
+      });
+    </script>
+  </body>
+</html>

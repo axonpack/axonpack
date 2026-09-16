@@ -1,0 +1,24 @@
+{
+  "name": "react-native-devtools-tab-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playground for the tab: switch between described UIs and watch the channel both ways",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "expo": "expo",
+    "web": "expo start --web",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@axonpack/react-native-devtools-tab": "workspace:*",
+    "expo": "~57.0.8",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  }
+}

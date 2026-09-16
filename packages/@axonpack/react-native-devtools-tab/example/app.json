@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "react-native-devtools-tab-example",
+    "slug": "react-native-devtools-tab-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": { "bundleIdentifier": "io.github.axonpack.rndevtoolstab.example" },
+    "android": { "package": "io.github.axonpack.rndevtoolstab.example" }
+  }
+}
