@@ -3,11 +3,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 
-import {
-  DEVTOOLS_ID,
-  DEVTOOLS_ROUTE,
-  pageUrl,
-} from "../core/constants/devtools.const";
+import { DEVTOOLS_ID, DEVTOOLS_ROUTE } from "../core/constants/devtools.const";
 
 /**
  * Puts a tab of your own in React Native DevTools, by serving the DevTools frontend from a route of
@@ -128,13 +124,7 @@ class TabPanel extends UI.View.SimpleView {
     this.setHideOnDetach();
 
     const iframe = document.createElement('iframe');
-    // A tab may bring its own page, or name a component for the dev server to build into one. Ours
-    // is the default, not the only option.
-    iframe.src =
-      tab.url ||
-      (tab.page
-        ? '${ROUTE}/pages/' + encodeURIComponent(tab.page) + '/'
-        : '${ROUTE}/panel/index.html?tab=' + encodeURIComponent(tab.id));
+    iframe.src = '${ROUTE}/panel/index.html?tab=' + encodeURIComponent(tab.id);
     iframe.style.cssText = 'width:100%;height:100%;border:0';
     this.contentElement.appendChild(iframe);
     this.iframe = iframe;
@@ -182,135 +172,6 @@ const main = async () => {
 
 main().catch((error) => console.error('[devtools] panel failed to start', error));
 `;
-}
-
-/**
- * The consumer gives a component, so the entry that mounts it is generated rather than written by
- * hand. It lives beside the build output instead of in their source tree, which is also what keeps
- * `react-dom` resolving from their project rather than from this package.
- */
-function pageEntry(source: string): string {
-  return `import { createElement } from 'react';
-import { createRoot } from 'react-dom/client';
-import Component from ${JSON.stringify(source)};
-
-const root = document.getElementById('root');
-if (root) createRoot(root).render(createElement(Component));
-`;
-}
-
-function pageTemplate(name: string): string {
-  return `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>${name}</title>
-<style>
-  :root { color-scheme: dark light; }
-  html, body, #root { height: 100%; }
-  body { margin: 0; background: #1e1e1e; color: #dddddd;
-         font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
-  @media (prefers-color-scheme: light) { body { background: #ffffff; color: #202020; } }
-</style>
-</head>
-<body><div id="root"></div></body>
-</html>
-`;
-}
-
-type Rsbuild = {
-  onAfterBuild: (fn: () => void) => void;
-  build: (options?: { watch?: boolean }) => Promise<unknown>;
-};
-
-type Page = {
-  /** Where the build writes, and so what requests are answered from. */
-  dist: string;
-  /** Settles when there is something to serve, and rejects with whatever stopped the build. */
-  ready: Promise<void>;
-};
-
-/**
- * Builds one page, and keeps building it.
- *
- * Watched rather than built once, so editing the component and reloading the tab is the whole loop.
- * rsbuild is resolved from the consumer's project rather than from here: it is theirs to install,
- * being needed only by projects that declare a page.
- */
-function startPage(
-  source: string,
-  file: string,
-  projectRoot: string,
-  roots: string[],
-): Page {
-  // Keyed by the path itself rather than by a flattened name, so two components cannot land on one
-  // build directory.
-  const base = path.join(
-    projectRoot,
-    "node_modules/.cache/axonpack-devtools-tab",
-    source,
-  );
-  // A sibling of the generated files, not their folder: rsbuild empties its own dist before a build.
-  const dist = path.join(base, "dist");
-  const entry = path.join(base, "entry.js");
-  const template = path.join(base, "index.html");
-  const prefix = pageUrl(source);
-
-  const ready = (async (): Promise<void> => {
-    fs.mkdirSync(base, { recursive: true });
-    fs.writeFileSync(entry, pageEntry(file));
-    fs.writeFileSync(template, pageTemplate(source));
-
-    const { createRsbuild } = require<{
-      createRsbuild: (options: {
-        cwd: string;
-        rsbuildConfig: Record<string, unknown>;
-      }) => Promise<Rsbuild>;
-    }>(require.resolve("@rsbuild/core", { paths: roots }));
-
-    const rsbuild = await createRsbuild({
-      cwd: base,
-      rsbuildConfig: {
-        // An `environments` block, not a bare `source`/`output` pair: without one rsbuild builds
-        // nothing at all, silently, with no error and no assets.
-        environments: {
-          web: {
-            source: { entry: { index: entry } },
-            output: {
-              target: "web",
-              distPath: { root: dist },
-              assetPrefix: prefix,
-            },
-            html: { template },
-            performance: { chunkSplit: { strategy: "all-in-one" } },
-            // Spelled out because rsbuild's default is the classic runtime, which needs `React` in
-            // scope, and a component written today imports hooks rather than the namespace.
-            tools: {
-              swc: { jsc: { transform: { react: { runtime: "automatic" } } } },
-            },
-          },
-        },
-        // A watch build is a development build, where `output.assetPrefix` is ignored in favour of
-        // this one. Both are set to where the page is actually served, because the default is the
-        // server root and the assets would be looked for outside the page.
-        dev: { assetPrefix: prefix },
-        logLevel: "error",
-      },
-    });
-
-    // Registered before the build starts, because a watch build resolves without waiting for the
-    // first compile and the tab asks for the page the moment it opens.
-    const first = new Promise<void>((resolve) => {
-      rsbuild.onAfterBuild(() => resolve());
-    });
-    await rsbuild.build({ watch: true });
-    await first;
-  })();
-
-  // Nothing awaits this until a request arrives, and an unhandled rejection would take Metro down.
-  void ready.catch(() => {});
-
-  return { dist, ready };
 }
 
 type Incoming = {
@@ -495,23 +356,6 @@ export function withReactNativeDevtoolsPanel<
 
   pointDebuggerAt(roots);
 
-  // A tab names its own component, so nothing here knows the set up front: the first request for one
-  // is what starts building it. That also means a tab nobody opens costs nothing.
-  const building = new Map<string, Page>();
-  const pageFor = (source: string): Page | null => {
-    const file = path.resolve(projectRoot, source);
-    // The path arrives over the debugger channel, so it is checked rather than trusted. Metro
-    // already bundles any entry in the project on request; outside it is another matter.
-    if (!file.startsWith(projectRoot)) return null;
-
-    let page = building.get(file);
-    if (!page) {
-      page = startPage(source, file, projectRoot, roots);
-      building.set(file, page);
-    }
-    return page;
-  };
-
   /** Answers one of our routes, or reports that the request was not ours. */
   const handle = (request: Incoming, response: Outgoing): boolean => {
     const url = (request.url ?? "").split("?")[0];
@@ -521,34 +365,6 @@ export function withReactNativeDevtoolsPanel<
 
     if (rest === "/host.js") {
       serve(response, hostScript(), "application/javascript");
-      return true;
-    }
-
-    if (rest.startsWith("/pages/")) {
-      const [encoded, ...within] = rest.slice("/pages/".length).split("/");
-      const page = encoded ? pageFor(decodeURIComponent(encoded)) : null;
-
-      if (!page) {
-        response.statusCode = 404;
-        response.end("no such page");
-        return true;
-      }
-
-      page.ready.then(
-        () => sendFile(page.dist, within.join("/") || "index.html", response),
-        (error: unknown) => {
-          // Shown as the page itself, because a build that failed otherwise reads as a blank tab.
-          response.statusCode = 500;
-          const message = String(
-            (error as { message?: string })?.message ?? error,
-          );
-          serve(
-            response,
-            `<pre>${message.replace(/</g, "&lt;")}</pre>`,
-            "text/html",
-          );
-        },
-      );
       return true;
     }
 

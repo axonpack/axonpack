@@ -3,10 +3,8 @@ import {
   HELLO,
   MUTATE,
   REGISTER,
-  STATE,
 } from "../core/constants/message.const";
 import type {
-  StateUpdate,
   TabAction,
   TabMutation,
   TabRegistration,
@@ -19,8 +17,6 @@ import {
   createRemoteRoot,
   type RemoteRoot,
 } from "./services/apply-remote-ops.service";
-import { renderInto } from "./services/render-node.service";
-import { resolveLayout, slicesOf } from "./services/resolve-layout.service";
 
 /**
  * The panel's half, for the page shown in one tab.
@@ -50,65 +46,29 @@ export function createPanelChannel(): MessageChannel {
  * Boots the page for one tab.
  *
  * Each DevTools tab loads this page with its own id, and ignores everything addressed to the others.
- * The layout arrives once; after that only state does, and the page redraws itself the way a
- * component would.
+ * Nothing here decides what the tab looks like: the app's React does, and this builds the elements
+ * it asks for.
  */
 export function startPanel(
   tabId: string,
   root: HTMLElement = document.body,
 ): MessageChannel {
   const channel = createPanelChannel();
-
-  let layout: TabRegistration["layout"] | null = null;
-  let slices = new Set<string>();
-  let state: Record<string, unknown> = {};
   let remote: RemoteRoot | null = null;
-
-  const draw = (): void => {
-    if (!layout) return;
-    renderInto(root, resolveLayout(layout, state), (action, payload) => {
-      channel.send(ACTION, { id: tabId, action, payload } satisfies TabAction);
-    });
-  };
 
   channel.onMessage(REGISTER, (payload) => {
     const registration = payload as TabRegistration;
     if (registration?.id !== tabId) return;
 
-    // A component is drawn from the changes React made, not from a description, so this tab has
-    // nothing to render until they arrive. Re-made on every registration, because one arriving twice
-    // means the app is starting the tab over.
-    if (registration.remote) {
-      root.replaceChildren();
-      remote = createRemoteRoot(root, (handler, value) => {
-        channel.send(ACTION, {
-          id: tabId,
-          action: handler,
-          payload: value,
-        } satisfies TabAction);
-      });
-      return;
-    }
-
-    // A tab with its own page never loads this one, so an absent layout here means a registration
-    // that was not meant for us rather than a mistake.
-    if (!registration.layout) return;
-
-    layout = registration.layout;
-    slices = slicesOf(registration.layout);
-    state = registration.state ?? {};
-    draw();
-  });
-
-  channel.onMessage(STATE, (payload) => {
-    const update = payload as StateUpdate;
-    if (update?.id !== tabId) return;
-
-    state = { ...state, ...update.state };
-
-    // The point of slices: a tab that does not read what changed does not redraw. With one tab open
-    // per DevTools panel, this is also what stops one busy slice redrawing every other tab.
-    if (Object.keys(update.state).some((slice) => slices.has(slice))) draw();
+    // Re-made on every registration, because one arriving twice means the app is starting over.
+    root.replaceChildren();
+    remote = createRemoteRoot(root, (handler, value) => {
+      channel.send(ACTION, {
+        id: tabId,
+        action: handler,
+        payload: value,
+      } satisfies TabAction);
+    });
   });
 
   channel.onMessage(MUTATE, (payload) => {
@@ -123,10 +83,6 @@ export function startPanel(
   return channel;
 }
 
-export { renderInto, renderNode } from "./services/render-node.service";
-export { resolveLayout, slicesOf } from "./services/resolve-layout.service";
-export type { UiNode, UiTone, Ref } from "../core/constants/ui-node.const";
-export { ref } from "../core/constants/ui-node.const";
 export type {
   MessageChannel,
   MessageListener,

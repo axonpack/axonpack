@@ -1,31 +1,30 @@
 /*
-  The tab's whole stylesheet. Tones in `ui-node.const.ts` resolve to these variables rather than to
-  colours, so a theme change is one block here.
+  The page a tab is drawn into, and nothing more.
+
+  What the tab looks like is the consumer's component, styled however they style it. All this does is
+  stop the iframe defaulting to a white page inside a dark DevTools, and give the root something to
+  fill.
 */
 :root {
   color-scheme: dark light;
   --bg: #1e1e1e;
   --fg: #dddddd;
-  --muted: #8a8a8a;
-  --line: #333333;
-  --success: #6ac48a;
-  --warning: #e0b050;
-  --error: #f08a8a;
-  --raised: rgba(127, 127, 127, 0.15);
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #ffffff;
     --fg: #202020;
-    --muted: #6a6a6a;
-    --line: #e0e0e0;
   }
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  padding: 12px;
   background: var(--bg);
   color: var(--fg);
   font:
@@ -33,79 +32,4 @@ body {
     SFMono-Regular,
     Menlo,
     monospace;
-}
-
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.heading {
-  font-size: 13px;
-  font-weight: 600;
-}
-.field {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.field .label {
-  min-width: 120px;
-  color: var(--muted);
-}
-.badge {
-  padding: 1px 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-}
-.divider {
-  height: 1px;
-  background: var(--line);
-}
-.json {
-  margin: 0;
-  padding: 8px;
-  background: var(--raised);
-  border-radius: 4px;
-  white-space: pre-wrap;
-}
-.table {
-  border-collapse: collapse;
-  width: 100%;
-}
-.table th {
-  text-align: left;
-  color: var(--muted);
-  font-weight: 500;
-}
-.table th,
-.table td {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--line);
-}
-.button {
-  font: inherit;
-  color: var(--fg);
-  background: var(--raised);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-.button:hover {
-  background: rgba(127, 127, 127, 0.25);
-}
-.input {
-  font: inherit;
-  color: var(--fg);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 4px 8px;
 }

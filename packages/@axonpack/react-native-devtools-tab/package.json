@@ -60,17 +60,7 @@
     "node": ">=20"
   },
   "peerDependencies": {
-    "@rsbuild/core": "^2.0.0",
-    "react": "^19.2.0",
-    "react-dom": "*"
-  },
-  "peerDependenciesMeta": {
-    "@rsbuild/core": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
+    "react": "^19.2.0"
   },
   "dependencies": {
     "react-reconciler": "^0.33.0"

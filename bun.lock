@@ -104,14 +104,8 @@
         "typescript": "~5.9.3",
       },
       "peerDependencies": {
-        "@rsbuild/core": "^2.0.0",
         "react": "^19.2.0",
-        "react-dom": "*",
       },
-      "optionalPeers": [
-        "@rsbuild/core",
-        "react-dom",
-      ],
     },
     "packages/@axonpack/react-native-devtools-tab/example": {
       "name": "react-native-devtools-tab-example",
@@ -124,10 +118,7 @@
         "react-native": "0.86.0",
       },
       "devDependencies": {
-        "@rsbuild/core": "^2.2.7",
         "@types/react": "~19.2.2",
-        "@types/react-dom": "~19.2.2",
-        "react-dom": "19.2.3",
         "typescript": "~6.0.3",
       },
     },

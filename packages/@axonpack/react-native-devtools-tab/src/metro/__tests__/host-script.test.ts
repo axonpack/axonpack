@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 
-import { pageUrl } from "../../core/constants/devtools.const";
 import { withReactNativeDevtoolsPanel } from "../index";
 
 /**
@@ -47,17 +46,8 @@ function iframeSrc(tab: Record<string, string>): string {
   return new Function("tab", `return ${expression}`)(tab) as string;
 }
 
-test("a tab shows its own url, its built component, or the described layout", () => {
-  expect(iframeSrc({ id: "a", url: "https://example.test/panel" })).toBe(
-    "https://example.test/panel",
-  );
-
-  // The same URL the dev server answers on, built independently at each end, so this is what stops
-  // the two spellings drifting apart.
-  expect(iframeSrc({ id: "a", page: "./panel/app.tsx" })).toBe(
-    pageUrl("./panel/app.tsx"),
-  );
-
+test("a tab's iframe loads this package's page, named by the tab", () => {
+  // Encoded rather than interpolated, because an id is whatever the app called it.
   expect(iframeSrc({ id: "a b" })).toBe(
     "/devtools-tab/panel/index.html?tab=a%20b",
   );
