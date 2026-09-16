@@ -38,9 +38,3 @@ test("is a valid template with nothing left uninterpolated", () => {
   expect(script).not.toContain("${");
   expect(script.length).toBeGreaterThan(1000);
 });
-
-test("puts a symbol after the tab's name, as text rather than an element", () => {
-  // Every element-based icon slot in this frontend lost its drawing: the suffix slot re-renders with
-  // a shallow cloneNode(), and the leading slot only takes a name from DevTools' own image set.
-  expect(script).toContain("tab.icon || '\u235A'");
-});

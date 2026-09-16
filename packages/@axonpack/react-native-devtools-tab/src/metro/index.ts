@@ -118,7 +118,7 @@ class TabPanel extends UI.View.SimpleView {
     // frontend's own icon slots take an element, and every way of putting one there loses its
     // drawing: the suffix slot re-renders with a shallow cloneNode(), and the leading slot only
     // accepts a name from DevTools' own image set. Text has none of that.
-    super(tab.name + ' ' + (tab.icon || '/.'), true, tab.id);
+    super(tab.name + ' ' + (tab.icon || '🛝'), true, tab.id);
     // Keeps the iframe alive when another tab is selected, so a tab does not lose everything it has
     // been sent every time somebody looks at Console.
     this.setHideOnDetach();
