@@ -18,11 +18,11 @@ import {
 } from "./core/services/message-channel.service";
 import {
   createRemote,
-  expose,
   type Remote,
   type RemoteMethods,
 } from "./core/services/remote.service";
 import { connectFuseboxTransport } from "./device/services/fusebox-channel.service";
+import { createState, type TabState } from "./device/hooks/state.hook";
 import {
   createRemoteTree,
   type RemoteTree,
@@ -33,10 +33,12 @@ export type {
   MessageListener,
 } from "./core/services/message-channel.service";
 export type { Remote, RemoteMethods } from "./core/services/remote.service";
+export type { TabState } from "./device/hooks/state.hook";
 
 const channel = createMessageChannel();
 const registrations = new Map<string, TabRegistration>();
 const trees = new Map<string, RemoteTree>();
+const mounts = new Map<string, () => void>();
 
 void connectFuseboxTransport(DEVTOOLS_ID).then((transport) => {
   if (transport) channel.attach(transport);
@@ -48,15 +50,20 @@ channel.onMessage(HELLO, () => {
   for (const registration of registrations.values()) {
     channel.send(REGISTER, registration);
 
-    // The changes that built this tab went to a panel that was not there. Its tree is replayed as
-    // though it were being drawn for the first time, which is what keeps a component's own state
-    // through a panel reload: it is never re-mounted.
     const tree = trees.get(registration.id);
+
     if (tree) {
+      // Already drawn once, for a panel that has since gone. Replaying the tree it holds is what
+      // keeps a component's own state through a panel reload: it is never re-mounted.
       channel.send(MUTATE, {
         id: registration.id,
         ops: tree.replay(),
       } satisfies TabMutation);
+    } else {
+      // Nobody has ever looked at this tab, so nothing has been rendered for it. Mounting now is
+      // what keeps a release build free: there is no panel to ask, so a component never runs, its
+      // effects never start, and nothing it does costs anything.
+      mounts.get(registration.id)?.();
     }
   }
 });
@@ -91,6 +98,30 @@ export type TabOptions = {
   component: ComponentType;
 };
 
+export type Tab = {
+  readonly id: string;
+  /**
+   * Draws the tab again, for when something the component reads has changed underneath it.
+   *
+   * The only thing the app ever has to tell a tab. A press inside one needs nothing at all: the
+   * handler runs here, so it changes the app the way any other code would.
+   *
+   * ```ts
+   * const session = ReactNativeDevtoolsPanel.registerTab({ id: 'session', name: 'Session', component: Session });
+   *
+   * function signIn(user) {
+   *   current = user;
+   *   session.redraw();
+   * }
+   * ```
+   *
+   * React reconciles rather than starting over, so the component keeps its own state and the panel
+   * keeps the elements it already has. Cheap enough to call on every change, and free before anybody
+   * opens the tab.
+   */
+  redraw: () => void;
+};
+
 /**
  * The app's side of React Native DevTools.
  *
@@ -119,19 +150,35 @@ export type TabOptions = {
  * });
  * ```
  *
- * `send`, `onMessage`, `request`, `handle`, `expose` and `remote` are the channel underneath, for
- * talking to anything else listening on this app's debugger connection.
+ * `state` is how a tab and the app keep in step. `send`, `onMessage`, `request`, `handle` and
+ * `remote` are the channel underneath, for talking to anything else on this app's debugger
+ * connection; a tab needs none of them.
  */
 export type ReactNativeDevtoolsPanel = MessageChannel & {
   /** Adds a tab to React Native DevTools. Call it once per tab, as many times as you have tabs. */
-  registerTab: (options: TabOptions) => void;
-  /** Offers an object's functions to the far end. Call the returned function to withdraw them. */
-  expose: <T extends RemoteMethods>(methods: T) => () => void;
+  registerTab: (options: TabOptions) => Tab;
+  /**
+   * A value the app and its tabs share.
+   *
+   * ```tsx
+   * const session = ReactNativeDevtoolsPanel.state({ user: 'nobody' });
+   *
+   * function Session() {
+   *   const { user } = session.use();
+   *   return <button onClick={() => session.set({ user: 'ada' })}>signed in as {user}</button>;
+   * }
+   * ```
+   *
+   * `use()` is an ordinary hook, so the app's own screens can read the same value the same way, and
+   * either side setting it redraws the other. Nothing is sent: a tab's component runs in the app, so
+   * this is one object with two readers.
+   */
+  state: <TValue>(initial: TValue) => TabState<TValue>;
   /** A typed handle on what the far end exposed, callable as if its functions were local. */
   remote: <T extends RemoteMethods>() => Remote<T>;
 };
 
-function registerTab(options: TabOptions): void {
+function registerTab(options: TabOptions): Tab {
   const registration: TabRegistration = {
     id: options.id,
     name: options.name,
@@ -140,20 +187,37 @@ function registerTab(options: TabOptions): void {
   registrations.set(options.id, registration);
   channel.send(REGISTER, registration);
 
-  const tree = createRemoteTree((ops) =>
-    channel.send(MUTATE, { id: options.id, ops } satisfies TabMutation),
-  );
-  trees.set(options.id, tree);
+  const draw = (): void => {
+    let tree = trees.get(options.id);
+
+    if (!tree) {
+      tree = createRemoteTree((ops) =>
+        channel.send(MUTATE, { id: options.id, ops } satisfies TabMutation),
+      );
+      trees.set(options.id, tree);
+    }
+
+    tree.render(createElement(options.component));
+  };
+
+  mounts.set(options.id, draw);
 
   // A handler is named by where it sits in the tree rather than by a name somebody chose, so it
   // needs no registering and two tabs cannot collide.
   channel.onMessage(ACTION, (payload) => {
     const event = payload as TabAction;
-    if (event?.id === options.id) tree.dispatch(event.action, event.payload);
+    if (event?.id === options.id)
+      trees.get(options.id)?.dispatch(event.action, event.payload);
   });
 
-  // After the registration, so the panel has the tab before anything arrives for it to draw.
-  tree.render(createElement(options.component));
+  return {
+    id: options.id,
+    // Nothing to draw again until somebody has opened DevTools, which is the whole of the production
+    // gate: no panel, no render, no effects.
+    redraw: () => {
+      if (trees.has(options.id)) draw();
+    },
+  };
 }
 
 export const ReactNativeDevtoolsPanel: ReactNativeDevtoolsPanel = {
@@ -163,6 +227,6 @@ export const ReactNativeDevtoolsPanel: ReactNativeDevtoolsPanel = {
     channel.request(method, params, options),
   handle: (method, handler) => channel.handle(method, handler),
   registerTab,
-  expose: (methods) => expose(channel, methods),
+  state: (initial) => createState(initial),
   remote: () => createRemote(channel),
 };

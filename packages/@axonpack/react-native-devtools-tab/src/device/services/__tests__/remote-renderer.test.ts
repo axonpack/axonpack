@@ -1,4 +1,4 @@
-import { createElement, useState } from "react";
+import { createElement, useState, useSyncExternalStore } from "react";
 
 import { expect, test } from "bun:test";
 import { JSDOM } from "jsdom";
@@ -120,4 +120,48 @@ test("removing a node stops its handlers answering", async () => {
   expect(container.textContent).not.toContain("count me");
   tree.dispatch(pressed[handler].handler, null);
   expect(calls).toBe(1);
+});
+
+test("a tab follows the app's own store, and writes back to it", async () => {
+  const { container, tree, pressed, click } = mount();
+
+  // The app's state, as any state library would hold it.
+  let state = { requests: 0 };
+  const listeners = new Set<() => void>();
+  const store = {
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    snapshot: () => state,
+    bump: () => {
+      state = { requests: state.requests + 1 };
+      for (const listener of listeners) listener();
+    },
+  };
+
+  function Panel() {
+    const session = useSyncExternalStore(store.subscribe, store.snapshot);
+    return createElement(
+      "button",
+      { onClick: store.bump },
+      `requests ${session.requests}`,
+    );
+  }
+
+  tree.render(createElement(Panel));
+  await settle();
+  expect(container.textContent).toContain("requests 0");
+
+  // The app changes it. No message is sent: the tab is subscribed to the same object.
+  store.bump();
+  await settle();
+  expect(container.textContent).toContain("requests 1");
+
+  // The tab changes it, and the app sees it, because the handler runs on the app's side.
+  click(container.querySelector("button")!);
+  tree.dispatch(pressed.at(-1)!.handler, pressed.at(-1)!.payload);
+  await settle();
+  expect(store.snapshot().requests).toBe(2);
+  expect(container.textContent).toContain("requests 2");
 });

@@ -34,17 +34,3 @@ export function createRemote<T extends RemoteMethods>(
     },
   });
 }
-
-/** Offers an object's functions to the other end. Call the returned function to withdraw them. */
-export function expose<T extends RemoteMethods>(
-  channel: MessageChannel,
-  methods: T,
-): () => void {
-  const removers = Object.entries(methods).map(([name, fn]) =>
-    channel.handle(name, (params) =>
-      (fn as (value: unknown) => unknown)(params),
-    ),
-  );
-
-  return () => removers.forEach((remove) => remove());
-}

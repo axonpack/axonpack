@@ -4,7 +4,7 @@ import {
   createMessageChannel,
   type Envelope,
 } from "../message-channel.service";
-import { createRemote, expose } from "../remote.service";
+import { createRemote } from "../remote.service";
 
 /** Two channels wired to each other, the way the app and the panel are. */
 function pair() {
@@ -70,10 +70,8 @@ test("rejects rather than hanging when nothing handles the method", async () => 
 
 test("calls the other end as if its functions were local", async () => {
   const { a, b } = pair();
-  expose(b, {
-    greet: (name: string) => `hello ${name}`,
-    slow: async () => "eventually",
-  });
+  b.handle("greet", (name) => `hello ${String(name)}`);
+  b.handle("slow", async () => "eventually");
 
   const remote = createRemote<{
     greet: (name: string) => string;
@@ -97,9 +95,9 @@ test("a call nobody answers rejects instead of hanging", async () => {
   ).rejects.toThrow("did not answer");
 });
 
-test("withdrawing exposed methods stops answering them", async () => {
+test("taking a handler back off stops it answering", async () => {
   const { a, b } = pair();
-  const withdraw = expose(b, { ping: () => "pong" });
+  const withdraw = b.handle("ping", () => "pong");
   withdraw();
 
   expect(a.request("ping")).rejects.toThrow("No handler");

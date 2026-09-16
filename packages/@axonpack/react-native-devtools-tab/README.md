@@ -55,6 +55,44 @@ made at the other end, in a browser.
 Changes cross as changes, not as a new tree, so the panel keeps the element it already had. An input
 holds its caret and a scrolled list stays where it was while something above it re-renders.
 
+## Talking to the app
+
+A tab's component runs in the app, so most of this is not communication at all.
+
+- **Tab to app:** call it. `onClick={() => auth.signOut()}` is a function call, not a message.
+- **App to tab:** share the value, and both sides read it with the same hook.
+
+```tsx
+const session = ReactNativeDevtoolsPanel.state({ user: "nobody" });
+
+function Session() {
+  const { user } = session.use();
+  return (
+    <button onClick={() => session.set({ user: "ada" })}>
+      signed in as {user}
+    </button>
+  );
+}
+```
+
+`session.use()` works in the tab and in the app's own screens alike, on the same object, so either
+one setting it redraws the other. `get` and `subscribe` are there for everything that is not a
+component. Setting a value to what it already was redraws nothing.
+
+Any state library the app already uses works the same way, because a tab is real React: Zustand,
+Jotai, MobX, an emitter. What does not reach a tab is **React context** — a tab is its own root, so
+the app's providers are in a different tree.
+
+`registerTab` also returns `{ redraw }`, for state that lives somewhere neither of those covers.
+
+## The bridge
+
+`send`, `onMessage`, `request` and `handle` on `ReactNativeDevtoolsPanel` ride the debugger
+connection the tabs use, and it is generic in both directions. It is how the render itself crosses.
+
+A tab does not need it: with the component in the app, both ends of that bridge belong to this
+package, so there is nothing of yours on the far side to talk to.
+
 ## What it cannot do
 
 Touch a real element. A `ref` gets a stand-in, so a canvas, a measurement or a DOM library has

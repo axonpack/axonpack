@@ -1,6 +1,6 @@
 import { ReactNativeDevtoolsPanel } from "@axonpack/react-native-devtools-tab";
 
-import Counter from "./tabs/Counter";
+import Session from "./tabs/Session";
 import Escaping from "./tabs/Escaping";
 import Shell from "./tabs/Shell";
 
@@ -10,7 +10,7 @@ ReactNativeDevtoolsPanel.registerTab({
   id: "counter",
   name: "Counter",
   icon: "◴",
-  component: Counter,
+  component: Session,
 });
 
 ReactNativeDevtoolsPanel.registerTab({
