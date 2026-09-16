@@ -1,3 +1,6 @@
+// Side-effect import: connects this package's React Native DevTools panel as early as possible.
+import './core/services/connect-react-native-devtools-panel.service';
+
 export { devtools } from './client/start-devtools.client';
 export type {
   BuiltInThemeId,
