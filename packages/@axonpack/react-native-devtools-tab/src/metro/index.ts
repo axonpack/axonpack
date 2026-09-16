@@ -13,12 +13,12 @@ import { DEVTOOLS_ID, DEVTOOLS_ROUTE } from "../core/constants/devtools.const";
  * ```js
  * // metro.config.js
  * const { getDefaultConfig } = require('expo/metro-config');
- * const { withDevtoolsTab } = require('@axonpack/react-native-devtools-tab/metro');
+ * const {
+ *   withReactNativeDevtoolsPanel,
+ * } = require('@axonpack/react-native-devtools-tab/metro');
  *
- * module.exports = withDevtoolsTab(getDefaultConfig(__dirname), { id: 'my-app', name: 'My App' });
+ * module.exports = withReactNativeDevtoolsPanel(getDefaultConfig(__dirname));
  * ```
- *
- * The `id` has to match the one the app passed to `createDevtoolsTab`.
  */
 
 // This file has no relative imports, and must not grow any. It is the one thing here that Node
@@ -112,13 +112,19 @@ const connectToApp = async (onMessage) => {
   return null;
 };
 
-class DevtoolsTabPanel extends UI.View.SimpleView {
+class TabPanel extends UI.View.SimpleView {
   constructor(tab) {
-    super(tab.name + ' ' + (tab.icon || '🪜'), true, tab.id);
+    // The symbol is part of the title, and written as an escape so no tool can mangle it. The
+    // frontend's own icon slots take an element, and every way of putting one there loses its
+    // drawing: the suffix slot re-renders with a shallow cloneNode(), and the leading slot only
+    // accepts a name from DevTools' own image set. Text has none of that.
+    super(tab.name + ' ' + (tab.icon || '/.'), true, tab.id);
+    // Keeps the iframe alive when another tab is selected, so a tab does not lose everything it has
+    // been sent every time somebody looks at Console.
     this.setHideOnDetach();
 
     const iframe = document.createElement('iframe');
-    
+    // A tab may bring its own page. Ours is the default, not the only option.
     iframe.src = tab.url || '${ROUTE}/panel/index.html?tab=' + encodeURIComponent(tab.id);
     iframe.style.cssText = 'width:100%;height:100%;border:0';
     this.contentElement.appendChild(iframe);
@@ -140,7 +146,7 @@ const main = async () => {
     if (message?.type !== 'tab:register' || !body?.id) return;
     if (panels.has(body.id)) return;
 
-    const panel = new DevtoolsTabPanel(body);
+    const panel = new TabPanel(body);
     panels.set(body.id, panel);
     inspector.addPanel(panel);
 
@@ -284,7 +290,7 @@ function serve(
   response.end(body);
 }
 
-export type DevtoolsTabOptions = {
+export type ReactNativeDevtoolsPanelOptions = {
   /**
    * Where React Native DevTools' own files are, for a layout this cannot work out for itself. A
    * monorepo that hoists oddly is the case that needs it.
@@ -292,12 +298,12 @@ export type DevtoolsTabOptions = {
   frontendPath?: string;
 };
 
-export function withDevtoolsTab<
+export function withReactNativeDevtoolsPanel<
   TConfig extends {
     projectRoot?: string;
     server?: { enhanceMiddleware?: unknown };
   },
->(config: TConfig, options: DevtoolsTabOptions = {}): TConfig {
+>(config: TConfig, options: ReactNativeDevtoolsPanelOptions = {}): TConfig {
   const base = DEVTOOLS_ROUTE;
   const roots = projectRoots(config.projectRoot ?? process.cwd());
   const frontend = options.frontendPath ?? findFrontend(roots);

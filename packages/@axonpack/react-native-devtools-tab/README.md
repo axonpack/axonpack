@@ -17,11 +17,13 @@ bun add @axonpack/react-native-devtools-tab
 // metro.config.js
 const { getDefaultConfig } = require("expo/metro-config");
 const {
-  withDevtoolsTab,
+  withReactNativeDevtoolsPanel,
 } = require("@axonpack/react-native-devtools-tab/metro");
 
 // `id` names the route and the message domain. Tabs name themselves.
-module.exports = withDevtoolsTab(getDefaultConfig(__dirname), { id: "my-app" });
+module.exports = withReactNativeDevtoolsPanel(getDefaultConfig(__dirname), {
+  id: "my-app",
+});
 ```
 
 ```ts
@@ -68,7 +70,7 @@ reads changes the state and redraws nothing.
 
 ## Several tabs
 
-`DevTools.registerTab` as many times as you like. Each becomes its own entry in the DevTools tab strip, with
+`ReactNativeDevtoolsPanel.registerTab` as many times as you like. Each becomes its own entry in the DevTools tab strip, with
 its own state, its own layout and its own redraws. A tab that reads nothing another tab writes never
 redraws when that tab does.
 
@@ -77,7 +79,7 @@ redraws when that tab does.
 Each tab carries a symbol after its name, defaulting to the Axonpack mark. Pass `icon` to change it:
 
 ```ts
-DevTools.registerTab({ id: 'flags', name: 'Feature flags', icon: '⚑', ... });
+ReactNativeDevtoolsPanel.registerTab({ id: 'flags', name: 'Feature flags', icon: '⚑', ... });
 ```
 
 Any character works, including an emoji. It is text rather than an image: React Native DevTools' own

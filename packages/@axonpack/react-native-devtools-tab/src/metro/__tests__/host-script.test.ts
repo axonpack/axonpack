@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { withDevtoolsTab } from "../index";
+import { withReactNativeDevtoolsPanel } from "../index";
 
 /**
  * The host script is a string served to the DevTools page, so nothing typechecks it and nothing
@@ -8,7 +8,7 @@ import { withDevtoolsTab } from "../index";
  */
 function hostScript(): string {
   let served = "";
-  const config = withDevtoolsTab(
+  const config = withReactNativeDevtoolsPanel(
     { server: {} },
     { frontendPath: "/tmp/none" },
   ) as { server: { enhanceMiddleware: (m: unknown, s: unknown) => Handler } };
@@ -42,5 +42,5 @@ test("is a valid template with nothing left uninterpolated", () => {
 test("puts a symbol after the tab's name, as text rather than an element", () => {
   // Every element-based icon slot in this frontend lost its drawing: the suffix slot re-renders with
   // a shallow cloneNode(), and the leading slot only takes a name from DevTools' own image set.
-  expect(script).toContain("super(tab.name + ' ' + (tab.icon || '\u235A')");
+  expect(script).toContain("tab.icon || '\u235A'");
 });

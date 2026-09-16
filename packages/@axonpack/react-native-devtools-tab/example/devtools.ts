@@ -1,11 +1,14 @@
-import { DevTools, ref } from "@axonpack/react-native-devtools-tab";
+import {
+  ReactNativeDevtoolsPanel,
+  ref,
+} from "@axonpack/react-native-devtools-tab";
 
 /**
  * A tab per thing worth checking. Each layout crosses the wire once, at registration; after that
  * only the slices below do.
  */
 
-export const gallery = DevTools.registerTab({
+export const gallery = ReactNativeDevtoolsPanel.registerTab({
   id: "gallery",
   name: "Gallery",
   state: {
@@ -54,7 +57,7 @@ export const gallery = DevTools.registerTab({
   },
 });
 
-export const counter = DevTools.registerTab({
+export const counter = ReactNativeDevtoolsPanel.registerTab({
   id: "counter",
   name: "Counter",
   icon: "◴",
@@ -79,7 +82,7 @@ export const counter = DevTools.registerTab({
  * Reads no slice the others write, so it never redraws. Useful for watching in DevTools while the
  * counter ticks: if this one flickers, the slice filtering is broken.
  */
-export const escaping = DevTools.registerTab({
+export const escaping = ReactNativeDevtoolsPanel.registerTab({
   id: "escaping",
   name: "Escaping",
   icon: "⚑",
@@ -95,7 +98,7 @@ export const escaping = DevTools.registerTab({
 });
 
 /** The other direction: the panel, or anything else, can call these and wait for an answer. */
-DevTools.expose({
+ReactNativeDevtoolsPanel.expose({
   ping: () => "pong",
   echo: (value: unknown) => value,
   slow: async () => {

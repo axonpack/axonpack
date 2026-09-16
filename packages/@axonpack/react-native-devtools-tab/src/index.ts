@@ -103,7 +103,7 @@ export type Tab<TState extends Record<string, unknown>> = {
  * Every method here is already bound to the one channel, so nothing takes it as an argument.
  */
 /** Everything the app side does, on the one channel an app has. */
-export type DevTools = MessageChannel & {
+export type ReactNativeDevtoolsPanel = MessageChannel & {
   /**
    * Adds a tab to React Native DevTools. Call it once per tab, as many times as you have tabs.
    *
@@ -165,9 +165,9 @@ function registerTab<TState extends Record<string, unknown>>(
  * this stays quiet.
  *
  * ```ts
- * import { DevTools, ref } from '@axonpack/react-native-devtools-tab';
+ * import { ReactNativeDevtoolsPanel, ref } from '@axonpack/react-native-devtools-tab';
  *
- * const session = DevTools.registerTab({
+ * const session = ReactNativeDevtoolsPanel.registerTab({
  *   id: 'session',
  *   name: 'Session',
  *   icon: 'bug',
@@ -189,7 +189,7 @@ function registerTab<TState extends Record<string, unknown>>(
  * `send`, `onMessage`, `request`, `handle`, `expose` and `remote` are underneath for anything the
  * tab vocabulary does not cover.
  */
-export const DevTools: DevTools = {
+export const ReactNativeDevtoolsPanel: ReactNativeDevtoolsPanel = {
   send: (type, payload) => channel.send(type, payload),
   onMessage: (type, listener) => channel.onMessage(type, listener),
   request: (method, params, options) =>
