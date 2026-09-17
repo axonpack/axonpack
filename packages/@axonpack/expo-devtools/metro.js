@@ -1,5 +1,5 @@
 /**
- * The Metro half of this package: one line in `metro.config.js` and the devtools tab is served.
+ * The Metro half of this package: one line in `metro.config.js` and the panel page is served.
  *
  * Plain CommonJS on purpose, and not compiled. `metro.config.js` is loaded by Node with `require`,
  * and everything else here is built by `tsc` into ES modules for Metro to bundle. Keeping this file
@@ -7,8 +7,6 @@
  */
 const fs = require('node:fs');
 const path = require('node:path');
-
-const { withReactNativeDevtoolsTab } = require('@axonpack/react-native-devtools-tab/metro');
 
 /** Where this package's own panel page is served from. */
 const ROUTE = '/axonpack-panel';
@@ -24,24 +22,24 @@ const TYPES = {
 };
 
 /**
- * Serves the Axonpack tab from the dev server.
+ * Serves the Axonpack panel page from the dev server.
  *
  * ```js
+ * // metro.config.js
  * const { getDefaultConfig } = require('expo/metro-config');
  * const { withDevtools } = require('@axonpack/expo-devtools/metro');
  *
  * module.exports = withDevtools(getDefaultConfig(__dirname));
  * ```
  */
-function withDevtools(config, options) {
+function withDevtools(config) {
   const panel = path.join(__dirname, 'dist/panel');
-  const wrapped = withReactNativeDevtoolsTab(config, options);
-  const previous = wrapped.server && wrapped.server.enhanceMiddleware;
+  const previous = config.server && config.server.enhanceMiddleware;
 
   return {
-    ...wrapped,
+    ...config,
     server: {
-      ...wrapped.server,
+      ...config.server,
       enhanceMiddleware: (middleware, server) => {
         const next = previous ? previous(middleware, server) : middleware;
 

@@ -19,7 +19,6 @@
       "name": "@axonpack/expo-devtools",
       "version": "3.0.0",
       "dependencies": {
-        "@axonpack/react-native-devtools-tab": "^0.1.0",
         "@changesets/changelog-git": "^0.2.1",
         "@expo/vector-icons": "^15.1.1",
       },
@@ -89,7 +88,7 @@
     },
     "packages/@axonpack/react-native-devtools-tab": {
       "name": "@axonpack/react-native-devtools-tab",
-      "version": "0.1.0",
+      "version": "0.0.0",
       "dependencies": {
         "react-reconciler": "^0.33.0",
       },
