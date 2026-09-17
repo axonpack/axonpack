@@ -4,13 +4,12 @@ import {
   MUTATE,
   REGISTER,
 } from "../core/constants/message.const";
-import type {
-  TabAction,
-  TabMutation,
-  TabRegistration,
-} from "../core/constants/message.const";
-import type { MessageChannel } from "../core/services/message-channel.service";
+import type { TabAction, TabMutation } from "../core/constants/message.const";
 import { createPanelChannel } from "../core/services/panel-channel.service";
+import {
+  createTabChannel,
+  type TabChannel,
+} from "../core/services/tab-channel.service";
 import {
   createRemoteReceiver,
   type RemoteReceiver,
@@ -19,35 +18,30 @@ import {
 /**
  * Boots the page for one tab.
  *
- * Each DevTools tab loads this page with its own id, and ignores everything addressed to the others.
- * Nothing here decides what the tab looks like: the app's React does, and this builds the elements
- * it asks for.
+ * Each DevTools tab loads this page with its own id, and the channel is bound to it, so nothing here
+ * has to check who a message was for. Nothing here decides what the tab looks like either: the app's
+ * React does, and this builds the elements it asks for.
  */
 export function startRenderer(
   tabId: string,
   root: HTMLElement = document.body,
-): MessageChannel {
-  const channel = createPanelChannel();
+): TabChannel {
+  const channel = createTabChannel(createPanelChannel(), tabId);
   let remote: RemoteReceiver | null = null;
 
-  channel.onMessage(REGISTER, (payload) => {
-    const registration = payload as TabRegistration;
-    if (registration?.id !== tabId) return;
-
-    // Re-made on every registration, because one arriving twice means the app is starting over.
+  // Re-made on every registration, because one arriving twice means the app is starting over.
+  channel.onMessage(REGISTER, () => {
     root.replaceChildren();
-    remote = createRemoteReceiver(root, (handler, value) => {
+    remote = createRemoteReceiver(root, (handler, value) =>
       channel.send(ACTION, {
-        id: tabId,
         action: handler,
         payload: value,
-      } satisfies TabAction);
-    });
+      } satisfies TabAction),
+    );
   });
 
   channel.onMessage(MUTATE, (payload) => {
-    const mutation = payload as TabMutation;
-    if (mutation?.id === tabId) remote?.apply(mutation.ops);
+    remote?.apply((payload as TabMutation).ops);
   });
 
   // The app almost always started first, so its registration is already gone. Ask for it rather than
@@ -63,3 +57,5 @@ export type {
 } from "../core/services/message-channel.service";
 
 export { createPanelChannel } from "../core/services/panel-channel.service";
+export { createTabChannel } from "../core/services/tab-channel.service";
+export type { TabChannel } from "../core/services/tab-channel.service";

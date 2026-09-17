@@ -138,10 +138,20 @@ const main = async () => {
   const panels = new Map();
 
   const send = await connectToApp((message) => {
-    for (const panel of panels.values()) {
-      panel.iframe.contentWindow?.postMessage(message, '*');
-    }
     const body = message?.data;
+
+    // Every message the app sends names the tab it is for, so this is a lookup rather than a
+    // fan-out. Broadcasting meant an app with five tabs posted five copies of every render and four
+    // of them were dropped on arrival. A message with no id has no addressee, so it still goes to
+    // everyone.
+    if (body?.id != null) {
+      panels.get(body.id)?.iframe.contentWindow?.postMessage(message, '*');
+    } else {
+      for (const panel of panels.values()) {
+        panel.iframe.contentWindow?.postMessage(message, '*');
+      }
+    }
+
     if (message?.type !== 'tab:register' || !body?.id) return;
     if (panels.has(body.id)) return;
 

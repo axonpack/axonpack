@@ -29,7 +29,6 @@ function Session() {
 }
 
 ReactNativeDevtoolsPanel.registerTab({
-  id: "session",
   name: "Session",
   icon: "\u269b",
   component: Session,
@@ -89,6 +88,10 @@ into it, drawing a table, filtering a list.
 Call `registerTab` once per tab. Each gets its own React root, so one tab re-rendering does not
 touch another, and a tab nobody has opened still runs: it is the app rendering, not the panel.
 
+Tabs identify themselves. An id is built from `name` at startup, numbered if two tabs share a name,
+and every message is stamped and filtered with it, so two tabs never see each other's traffic and
+nothing you write can get that wrong.
+
 ## The tab's symbol
 
 `icon` is text shown after the tab's name, defaulting to this package's mark. Any character works,
@@ -101,7 +104,7 @@ React Native DevTools is a Chrome DevTools frontend fork, served by `@react-nati
 This serves that same frontend from its own route, adds a nonce to the page's CSP and injects one
 script, and that script re-imports the frontend's own modules to reach `InspectorView.addPanel`.
 The tab's body is an iframe, and it reaches the device over the debugger connection the frontend
-already has, tagged with your `id` so it never crosses React DevTools' own traffic.
+already has, tagged with the tab's own id so it never crosses React DevTools' own traffic.
 
 Inside that iframe is a custom React reconciler's other half. The app's React commits produce a list
 of changes (create this node, move that one, set these props) and the page replays them onto real

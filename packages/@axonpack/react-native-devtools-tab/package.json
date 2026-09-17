@@ -24,6 +24,7 @@
     "src/core/constants",
     "src/core/services/message-channel.service.ts",
     "src/core/services/panel-channel.service.ts",
+    "src/core/services/tab-channel.service.ts",
     "src/device",
     "src/renderer/start-renderer.ts",
     "src/renderer/services",

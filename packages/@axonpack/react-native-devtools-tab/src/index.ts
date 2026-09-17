@@ -13,6 +13,7 @@ import type {
   TabRegistration,
 } from "./core/constants/message.const";
 import { createMessageChannel } from "./core/services/message-channel.service";
+import { createTabChannel } from "./core/services/tab-channel.service";
 import { connectFuseboxTransport } from "./device/services/fusebox-transport.service";
 import {
   createRemoteSender,
@@ -20,42 +21,37 @@ import {
 } from "./device/services/remote-sender.service";
 
 const channel = createMessageChannel();
-const registrations = new Map<string, TabRegistration>();
-const senders = new Map<string, RemoteSender>();
-const mounts = new Map<string, () => void>();
 
 void connectFuseboxTransport(DEVTOOLS_ID).then((transport) => {
   if (transport) channel.attach(transport);
 });
 
-// A panel opened after the app started has missed every registration, so it asks rather than
-// waiting. Answering with everything held is also what makes reloading the panel recover.
-channel.onMessage(HELLO, () => {
-  for (const registration of registrations.values()) {
-    channel.send(REGISTER, registration);
+const taken = new Set<string>();
 
-    const sender = senders.get(registration.id);
+/**
+ * A tab names itself, from the name it already has.
+ *
+ * Nobody writes one, so nobody can collide with another package's tab or repeat their own. It is
+ * derived rather than random because it is also the DevTools panel's own id: the frontend keeps a
+ * panel per id, so a fresh one on every reload would leave the dead tab in the strip beside the new
+ * one. Derived, a reload lands on the tab that is already open.
+ */
+function idFor(name: string): string {
+  const base =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "tab";
 
-    if (sender) {
-      // Already drawn once, for a panel that has since gone. Replaying what it holds is what
-      // keeps a component's own state through a panel reload: it is never re-mounted.
-      channel.send(MUTATE, {
-        id: registration.id,
-        ops: sender.replay(),
-      } satisfies TabMutation);
-    } else {
-      // Nobody has ever looked at this tab, so nothing has been rendered for it. Mounting now is
-      // what keeps a release build free: there is no panel to ask, so a component never runs, its
-      // effects never start, and nothing it does costs anything.
-      mounts.get(registration.id)?.();
-    }
-  }
-});
+  let id = base;
+  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+  taken.add(id);
+
+  return id;
+}
 
 export type TabOptions = {
-  /** Identifies the tab among this app's tabs. */
-  id: string;
-  /** The label in the DevTools tab strip. */
+  /** The label in the DevTools tab strip, and what the tab's id is built from. */
   name: string;
   /**
    * A symbol shown after the tab's name. Defaults to the Axonpack mark.
@@ -83,6 +79,7 @@ export type TabOptions = {
 };
 
 export type Tab = {
+  /** Generated from `name`, and unique among this app's tabs. Nothing has to be done with it. */
   readonly id: string;
   /**
    * Draws the tab again, for when something the component reads has changed underneath it.
@@ -91,7 +88,7 @@ export type Tab = {
    * handler runs here, so it changes the app the way any other code would.
    *
    * ```ts
-   * const session = ReactNativeDevtoolsPanel.registerTab({ id: 'session', name: 'Session', component: Session });
+   * const session = ReactNativeDevtoolsPanel.registerTab({ name: 'Session', component: Session });
    *
    * function signIn(user) {
    *   current = user;
@@ -128,7 +125,6 @@ export type Tab = {
  * }
  *
  * ReactNativeDevtoolsPanel.registerTab({
- *   id: 'session',
  *   name: 'Session',
  *   component: Session,
  * });
@@ -143,43 +139,55 @@ export type ReactNativeDevtoolsPanel = {
 };
 
 function registerTab(options: TabOptions): Tab {
-  const registration: TabRegistration = {
-    id: options.id,
-    name: options.name,
-    icon: options.icon,
-  };
-  registrations.set(options.id, registration);
-  channel.send(REGISTER, registration);
+  const id = idFor(options.name);
+  const tab = createTabChannel(channel, id);
+  let sender: RemoteSender | null = null;
+
+  const announce = (): void =>
+    tab.send(REGISTER, {
+      name: options.name,
+      icon: options.icon,
+    } satisfies TabRegistration);
 
   const draw = (): void => {
-    let sender = senders.get(options.id);
-
-    if (!sender) {
-      sender = createRemoteSender((ops) =>
-        channel.send(MUTATE, { id: options.id, ops } satisfies TabMutation),
-      );
-      senders.set(options.id, sender);
-    }
-
+    sender ??= createRemoteSender((ops) =>
+      tab.send(MUTATE, { ops } satisfies TabMutation),
+    );
     sender.render(createElement(options.component));
   };
 
-  mounts.set(options.id, draw);
+  announce();
+
+  // A panel opened after the app started has missed the registration, so it asks rather than
+  // waiting. Answering is also what makes reloading the panel recover.
+  tab.onMessage(HELLO, () => {
+    announce();
+
+    if (sender) {
+      // Already drawn once, for a panel that has since gone. Replaying what it holds is what keeps
+      // the component's own state through a panel reload: it is never re-mounted.
+      tab.send(MUTATE, { ops: sender.replay() } satisfies TabMutation);
+    } else {
+      // Nobody has ever looked at this tab, so nothing has been rendered for it. Mounting now is
+      // what keeps a release build free: there is no panel to ask, so a component never runs, its
+      // effects never start, and nothing it does costs anything.
+      draw();
+    }
+  });
 
   // A handler is named by where it sits in the tree rather than by a name somebody chose, so it
   // needs no registering and two tabs cannot collide.
-  channel.onMessage(ACTION, (payload) => {
+  tab.onMessage(ACTION, (payload) => {
     const event = payload as TabAction;
-    if (event?.id === options.id)
-      senders.get(options.id)?.dispatch(event.action, event.payload);
+    sender?.dispatch(event.action, event.payload);
   });
 
   return {
-    id: options.id,
+    id,
     // Nothing to draw again until somebody has opened DevTools, which is the whole of the production
     // gate: no panel, no render, no effects.
     redraw: () => {
-      if (senders.has(options.id)) draw();
+      if (sender) draw();
     },
   };
 }

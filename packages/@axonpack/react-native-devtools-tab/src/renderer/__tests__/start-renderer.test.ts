@@ -59,7 +59,8 @@ function load(tab = "session") {
 test("asks to be described, then draws what the app rendered", async () => {
   const { dom, sent, errors, sender, register } = load();
 
-  expect(sent).toEqual([{ type: "tab:hello", data: undefined }]);
+  // Named, so the app answers this tab alone rather than every tab it has.
+  expect(sent).toEqual([{ type: "tab:hello", data: { id: "session" } }]);
 
   register();
   sender.render(createElement("p", null, "hello"));

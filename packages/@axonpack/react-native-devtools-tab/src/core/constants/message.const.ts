@@ -1,8 +1,9 @@
 /**
  * Every message type on the wire, and what each carries.
  *
- * Four of them are the tab protocol and the rest of the channel is the consumer's. Keeping the names
- * here means neither end can drift from the other.
+ * None of these name their tab, because the channel does. `createTabChannel` stamps the id on the
+ * way out and drops anything addressed elsewhere on the way in, so what actually crosses is the
+ * payload below plus that one field.
  */
 
 import type { RemoteOp } from "./remote-op.const";
@@ -19,13 +20,9 @@ export const ACTION = "tab:action";
 /** Panel to app, on load: "describe yourself", since the app usually started first. */
 export const HELLO = "tab:hello";
 
-export type TabRegistration = {
-  id: string;
-  name: string;
-  icon?: string;
-};
+export type TabRegistration = { name: string; icon?: string };
 
-export type TabMutation = { id: string; ops: RemoteOp[] };
+export type TabMutation = { ops: RemoteOp[] };
 
 /** `action` is the name a function prop was swapped for, not something anybody chose. */
-export type TabAction = { id: string; action: string; payload?: unknown };
+export type TabAction = { action: string; payload?: unknown };
