@@ -124,12 +124,17 @@ test("a keyboard handler is given the key it was pressed with", async () => {
   expect(sent).toEqual([
     {
       handler: "1:onKeyDown",
-      payload: {
-        type: "keydown",
-        key: "Enter",
-        target: { value: "ada", checked: false },
-        currentTarget: { value: "ada", checked: false },
-      },
+      // An argument list, because a callback is called with whatever it is called with.
+      payload: [
+        {
+          type: "keydown",
+          key: "Enter",
+          target: { value: "ada", checked: false },
+          currentTarget: { value: "ada", checked: false },
+          // React Native's TextInput reads the text from here rather than from the target.
+          nativeEvent: { text: "ada", eventCount: 1 },
+        },
+      ],
     },
   ]);
 });
@@ -212,4 +217,63 @@ test("React Native's responder props are not handed to react-native-web", async 
 
   view.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
   expect(sent.map((message) => message.handler)).toEqual(["1:onClick"]);
+});
+
+test("typing reaches React Native's own TextInput, which reads nativeEvent", async () => {
+  const { container, sent, apply } = draw();
+
+  // What `<TextInput onChangeText={…}/>` compiles to: the host element gets `onChange`, and React
+  // Native's own component is what turns that into `onChangeText`, by reading `nativeEvent.text`.
+  await apply(
+    {
+      op: "create",
+      id: 1,
+      type: "RCTSinglelineTextInputView",
+      props: { value: "", onChange: { handler: "1:onChange" } },
+    },
+    { op: "append", parent: 0, child: 1 },
+  );
+
+  const input = container.querySelector("input") as HTMLInputElement;
+
+  // Through the prototype's setter, because React tracks the value it last wrote and ignores an
+  // `input` event whose value it believes it already has.
+  Object.getOwnPropertyDescriptor(
+    dom.window.HTMLInputElement.prototype,
+    "value",
+  )!.set!.call(input, "ada");
+  input.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+
+  const change = sent.at(-1);
+  expect(change?.handler).toBe("1:onChange");
+  expect(change?.payload).toMatchObject([
+    { target: { value: "ada" }, nativeEvent: { text: "ada" } },
+  ]);
+});
+
+test("a callback given a plain value is given that value, not an event", async () => {
+  const { container, sent, apply } = draw();
+
+  // React Native's `TextInput` does not keep `onChangeText` to itself: it falls through to the host
+  // element, so the panel calls it, and react-native-web calls it the way React Native would, with
+  // the text. Describing that as an event handed the app `[object Object]` to store.
+  await apply(
+    {
+      op: "create",
+      id: 1,
+      type: "RCTSinglelineTextInputView",
+      props: { value: "", onChangeText: { handler: "1:onChangeText" } },
+    },
+    { op: "append", parent: 0, child: 1 },
+  );
+
+  const input = container.querySelector("input") as HTMLInputElement;
+  Object.getOwnPropertyDescriptor(
+    dom.window.HTMLInputElement.prototype,
+    "value",
+  )!.set!.call(input, "ada");
+  input.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+
+  const change = sent.find((message) => message.handler === "1:onChangeText");
+  expect(change?.payload).toEqual(["ada"]);
 });

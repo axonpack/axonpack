@@ -94,6 +94,22 @@ again. Nothing to add and nothing to wire up, and your component starts under it
 That button is for state a component reads but React is not watching. Everything else redraws on its
 own, because a tab is ordinary React.
 
+## Text inputs
+
+Use `defaultValue`, not `value`.
+
+A controlled `TextInput` keeps its native view in step by sending it a command, and a tab has no
+native view: the ref it gets is a stand-in, so React Native warns that `dispatchCommand` was given a
+ref that is not a native component, and typing throws. Uncontrolled, it never asks, and
+`onChangeText` still arrives on every keystroke.
+
+```tsx
+<TextInput defaultValue="" onChangeText={setQuery} />
+```
+
+Clear it by remounting, which is what a `key` that changes does. A `div`-and-`input` tab has none of
+this, because React and the browser own both ends of it.
+
 ## What it cannot do
 
 Touch a real element. A `ref` gets a stand-in, so a canvas, a measurement or a DOM library has

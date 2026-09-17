@@ -395,3 +395,67 @@ test("a handler comparing target with currentTarget sees one object, not two", a
 
   expect(pressedWith).toEqual({ same: true });
 });
+
+test("a callback the app passed through reaches it with its own argument", async () => {
+  const { container, sender, pressed } = mount();
+
+  let got: unknown = "untouched";
+
+  // What `<TextInput onChangeText={setValue}/>` leaves on the host element: React Native keeps
+  // `onChangeText` in the props it spreads, so the panel is the one calling it, with a string.
+  function Screen() {
+    return createElement("RCTSinglelineTextInputView", {
+      value: "",
+      onChangeText: (text: unknown) => {
+        got = text;
+      },
+    });
+  }
+
+  sender.render(createElement(Screen));
+  await settle();
+
+  const input = container.querySelector("input") as HTMLInputElement;
+  Object.getOwnPropertyDescriptor(
+    dom.window.HTMLInputElement.prototype,
+    "value",
+  )!.set!.call(input, "ada");
+  input.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+
+  const change = pressed.at(-1)!;
+  sender.dispatch(change.handler, change.payload);
+  await settle();
+
+  expect(got).toBe("ada");
+});
+
+test("a ref answers the methods React Native calls on a host instance", async () => {
+  const { sender } = mount();
+
+  let held: Record<string, unknown> | null = null;
+  const measured: number[] = [];
+
+  function Screen() {
+    return createElement("RCTSinglelineTextInputView", {
+      ref: (instance: Record<string, unknown> | null) => {
+        held = instance;
+      },
+    });
+  }
+
+  sender.render(createElement(Screen));
+  await settle();
+
+  // React Native's own components do all of these to a ref without asking whether they can.
+  const ref = held as unknown as Record<string, (...args: unknown[]) => void>;
+  expect(typeof ref.focus).toBe("function");
+  expect(typeof ref.blur).toBe("function");
+  expect(typeof ref.setNativeProps).toBe("function");
+
+  ref.focus();
+  ref.setNativeProps({ text: "ada" });
+  ref.measure((...box: unknown[]) => measured.push(...(box as number[])));
+
+  // Zeroes rather than a refusal, because a layout reading a measurement wants a number.
+  expect(measured).toEqual([0, 0, 0, 0, 0, 0]);
+});

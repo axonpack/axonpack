@@ -78,7 +78,14 @@ function componentFor(
  * (`event.target.value`) reads the same in the app as it would in a browser. `target` and
  * `currentTarget` are the same object on purpose: React Native's own press handling compares them
  * and gives up when they differ, which is how a `Pressable` in a tab still answers.
+ *
+ * `nativeEvent` is there for the same kind of reason. React Native's `TextInput` reads the typed
+ * text from `event.nativeEvent.text`, not from the target, so without this a tab's input took
+ * keystrokes and reported none of them. `eventCount` rises because `TextInput` keeps the last one
+ * it saw to settle races with a native field, and a number that never moves reads as no news.
  */
+let typed = 0;
+
 function describe(event: {
   type?: string;
   key?: string;
@@ -94,6 +101,7 @@ function describe(event: {
     key: event.key,
     target: fields,
     currentTarget: fields,
+    nativeEvent: { text: fields.value, eventCount: ++typed },
   };
 }
 
@@ -112,6 +120,34 @@ function describe(event: {
 const RESPONDER =
   /^on(Start|Move|Scroll|SelectionChange)ShouldSetResponder(Capture)?$|^onResponder/;
 
+/**
+ * Whether an argument is an event, and so wants describing rather than sending.
+ *
+ * A DOM event cannot cross and is no use flattened, but plenty of callbacks are handed a plain
+ * value instead: React Native's `onChangeText` gets a string, `onValueChange` gets a boolean. Those
+ * have to arrive as what they are.
+ */
+function isEvent(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+
+  return (
+    "nativeEvent" in value ||
+    "currentTarget" in value ||
+    typeof (value as { preventDefault?: unknown }).preventDefault === "function"
+  );
+}
+
+/** One argument, as it can travel. Anything that cannot is dropped rather than taking the call. */
+function argument(value: unknown): unknown {
+  if (isEvent(value)) return describe(value as Parameters<typeof describe>[0]);
+
+  try {
+    return JSON.parse(JSON.stringify(value)) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
 /** A function prop crossed as a name. This puts a function back, which calls that name home. */
 function bind(
   props: RemoteProps,
@@ -122,9 +158,10 @@ function bind(
   for (const [key, value] of Object.entries(props)) {
     if (RESPONDER.test(key)) continue;
 
+    // Every argument, not just the first, and as itself unless it is an event. A callback that was
+    // given a string used to be handed the description of an event that never happened.
     out[key] = isHandler(value)
-      ? (event: Parameters<typeof describe>[0]) =>
-          send(value.handler, describe(event ?? {}))
+      ? (...args: unknown[]) => send(value.handler, args.map(argument))
       : value;
   }
 

@@ -1,7 +1,14 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { useZustandTest } from "./zustand-test";
 import ZustandTest from "./tabs/ZustandTest";
+import { useState } from "react";
 
 /**
  * The app's half of the zustand test.
@@ -13,6 +20,7 @@ import ZustandTest from "./tabs/ZustandTest";
 export default function ZustandScreen() {
   const { count, theme, items, increment, toggleTheme, addItem } =
     useZustandTest();
+  const [state, setState] = useState("my state");
 
   return (
     <View style={styles.block}>
@@ -31,6 +39,13 @@ export default function ZustandScreen() {
           <Text style={styles.buttonText}>Add an item</Text>
         </Pressable>
       </View>
+      <Text style={styles.line}>{state}</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => setState((o) => "my new state -- " + o)}
+      >
+        <Text style={styles.buttonText}>Change state</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -39,7 +54,6 @@ const styles = StyleSheet.create({
   block: { gap: 8 },
   row: { flexDirection: "row", gap: 8 },
   button: {
-    flex: 1,
     backgroundColor: "#2b3040",
     borderRadius: 8,
     paddingVertical: 10,

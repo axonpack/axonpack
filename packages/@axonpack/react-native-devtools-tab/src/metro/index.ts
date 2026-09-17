@@ -232,9 +232,24 @@ const TYPES: Record<string, string> = {
   ".map": "application/json",
 };
 
+/**
+ * Where to look for the debugger's own packages, in the order that matters.
+ *
+ * Finding *a* copy is not enough: the frontend has to be the one the dev server serves, and the
+ * middleware has to be the one it will call, or the shortcut is rewritten on an object nobody
+ * loads and DevTools opens without the tab script in it. An install can easily hold three copies,
+ * which is what happens the moment a project updates React Native and something else stays behind.
+ *
+ * So the search starts at whatever is serving: `@expo/cli` for an Expo project, the community CLI
+ * plugin for a bare one. They are what `require` these at runtime, so their answer is the right
+ * answer. The rest are fallbacks for a layout where neither is installed.
+ */
 function projectRoots(projectRoot: string): string[] {
   const roots = [projectRoot];
+  const found = new Map<string, string>();
 
+  // Resolved against what has been found so far, because `@expo/cli` is usually a dependency of
+  // `expo` rather than of the app.
   for (const from of [
     "expo",
     "react-native",
@@ -242,15 +257,26 @@ function projectRoots(projectRoot: string): string[] {
     "@react-native/community-cli-plugin",
   ]) {
     try {
-      roots.push(
-        path.dirname(require.resolve(`${from}/package.json`, { paths: roots })),
+      const dir = path.dirname(
+        require.resolve(`${from}/package.json`, { paths: roots }),
       );
+      roots.push(dir);
+      found.set(from, dir);
     } catch {
       // Not every project has every one of these. The next candidate may still resolve.
     }
   }
 
-  return roots;
+  const serving = [
+    "@expo/cli",
+    "@react-native/community-cli-plugin",
+    "react-native",
+    "expo",
+  ]
+    .map((name) => found.get(name))
+    .filter((dir): dir is string => dir !== undefined);
+
+  return [...serving, projectRoot];
 }
 
 /** Its entry exports the directory its files live in, several levels below the package root. */

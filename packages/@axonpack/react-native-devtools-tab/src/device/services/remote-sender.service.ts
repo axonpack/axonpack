@@ -37,13 +37,14 @@ export type RemoteSender = {
   /** Every op needed to build what is currently drawn, for a panel that just opened. */
   replay: () => RemoteOp[];
   /** Runs the function a `create`/`update` swapped out, if it is still the current one. */
+  /** `payload` is the arguments the panel's callback was called with. */
   dispatch: (handler: string, payload: unknown) => void;
 };
 
 export function createRemoteSender(
   emit: (ops: RemoteOp[]) => void,
 ): RemoteSender {
-  const handlers = new Map<string, (payload: unknown) => void>();
+  const handlers = new Map<string, (...args: unknown[]) => void>();
   let pending: RemoteOp[] = [];
   let nextId = ROOT + 1;
 
@@ -131,7 +132,13 @@ export function createRemoteSender(
     ...staticHostConfig(),
 
     createInstance(type: string, props: RemoteProps): Instance {
-      const instance: Instance = { id: nextId++, type, children: [], props };
+      const instance: Instance = {
+        id: nextId++,
+        type,
+        children: [],
+        props,
+        ...standIn(),
+      };
       pending.push({
         op: "create",
         id: instance.id,
@@ -251,8 +258,39 @@ export function createRemoteSender(
     },
 
     dispatch(handler, payload) {
-      handlers.get(handler)?.(asEvent(payload));
+      // The panel sends what the callback was called with, so this calls it with the same. An older
+      // panel sent one event and nothing else, which arrives here as a single argument either way.
+      const args = Array.isArray(payload) ? payload : [payload];
+      handlers.get(handler)?.(...args.map(asEvent));
     },
+  };
+}
+
+/**
+ * What a `ref` gets, and why it answers at all.
+ *
+ * There is no element on this side, so a ref holds one of these. It used to hold only the node, and
+ * React Native's own components call methods on a ref as a matter of course: `TextInput` focuses
+ * one, `ScrollView` scrolls one, anything animated sets props on one. Each of those was a
+ * `TypeError: undefined is not a function` the moment somebody used the component the ordinary way.
+ *
+ * So they are here, and they do nothing. A measurement answers zeroes rather than refusing, because
+ * a layout that reads one wants a number and not a crash. What cannot be faked is a command: React
+ * Native sends those to a native view by handle, sees this is not one, and says so. That warning is
+ * the honest report of a thing this package cannot do.
+ */
+function standIn(): Record<string, unknown> {
+  const nothing = (): void => undefined;
+
+  return {
+    focus: nothing,
+    blur: nothing,
+    setNativeProps: nothing,
+    // Six zeroes: x, y, width, height, pageX, pageY.
+    measure: (back: (...box: number[]) => void) => back(0, 0, 0, 0, 0, 0),
+    measureInWindow: (back: (...box: number[]) => void) => back(0, 0, 0, 0),
+    measureLayout: (_relative: unknown, back: (...box: number[]) => void) =>
+      back(0, 0, 0, 0),
   };
 }
 
@@ -280,12 +318,15 @@ const LOCAL_ONLY = new Set(["children", "ref", "key"]);
  */
 function asEvent(payload: unknown): unknown {
   if (typeof payload !== "object" || payload === null) return payload;
+  // A plain value that happens to be an object, a style or a row, is an argument and not an event.
+  if (!("currentTarget" in payload) && !("nativeEvent" in payload))
+    return payload;
 
-  const event = {
+  const event: Record<string, unknown> = {
     preventDefault: () => undefined,
     stopPropagation: () => undefined,
     ...payload,
-  } as { target?: unknown; currentTarget?: unknown };
+  };
 
   if (event.target != null && event.currentTarget != null)
     event.currentTarget = event.target;
