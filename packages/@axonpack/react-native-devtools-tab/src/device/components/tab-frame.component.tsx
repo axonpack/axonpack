@@ -33,7 +33,7 @@ const REPO = "https://api.github.com/repos/axonpack/axonpack";
  * the loader was up for less than a frame and the button read as doing nothing at all. This is long
  * enough to see that it did.
  */
-const RENDER_DELAY = 1600;
+const RENDER_DELAY = 600;
 
 /**
  * The star count, or null until it arrives and for good if it never does.
@@ -128,7 +128,6 @@ export function TabFrame({
       {isLoading ? (
         <div className="axonpack-tab-loading">
           <span className="axonpack-tab-loading-glyph" />
-          <span>Rendering...</span>
         </div>
       ) : (
         createElement(component)

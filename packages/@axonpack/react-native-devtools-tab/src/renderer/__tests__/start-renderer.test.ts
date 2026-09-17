@@ -172,7 +172,9 @@ test("the refresh button holds a loader up, then draws the tab again", async () 
 
   // The point of the delay: a transition that awaits stays pending, so this is still up a frame
   // later rather than gone before anybody saw it.
-  expect(dom.window.document.body.textContent).toContain("Rendering");
+  expect(
+    dom.window.document.querySelector(".axonpack-tab-loading-glyph"),
+  ).not.toBeNull();
   expect(dom.window.document.body.textContent).not.toContain("tab body");
 
   for (let waited = 0; waited < 50; waited++) {
@@ -181,5 +183,7 @@ test("the refresh button holds a loader up, then draws the tab again", async () 
   }
 
   expect(dom.window.document.body.textContent).toContain("tab body");
-  expect(dom.window.document.body.textContent).not.toContain("Rendering");
+  expect(
+    dom.window.document.querySelector(".axonpack-tab-loading-glyph"),
+  ).toBeNull();
 });
