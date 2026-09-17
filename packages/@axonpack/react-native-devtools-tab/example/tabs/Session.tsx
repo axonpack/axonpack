@@ -1,4 +1,5 @@
 import { countRequest, session } from "../session";
+import ZustandTest from "./ZustandTest";
 
 /**
  * Reads the app, and writes back to it.
@@ -29,6 +30,8 @@ export default function Session() {
         </button>{" "}
         <button onClick={countRequest}>Count a request</button>
       </p>
+
+      <ZustandTest />
     </div>
   );
 }

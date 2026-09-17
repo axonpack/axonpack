@@ -1,29 +1,14 @@
 import { defineConfig } from "@rsbuild/core";
 
 /**
- * Two builds, one tool.
+ * One build: the Metro plugin Node loads.
  *
- * Only two things here have to be compiled: the page a browser loads, and the Metro plugin Node
- * loads. The app-side entry does not, because the only thing that ever imports it is a React Native
- * bundler, which reads TypeScript directly — so that export points at source and its types come from
- * the same file rather than from a generated `.d.ts`.
+ * Nothing else here is compiled. The app-side entry is read from source by a React Native bundler,
+ * which reads TypeScript directly, and a tab's page is built by the consumer's own Metro, from their
+ * own code, so this package ships no page of its own.
  */
 export default defineConfig({
   environments: {
-    /** The page shown inside the tab. */
-    web: {
-      source: { entry: { index: "./src/renderer/main.ts" } },
-      html: { template: "./src/renderer/index.html" },
-      output: {
-        target: "web",
-        distPath: { root: "dist/renderer" },
-        // Served from a sub-path of the dev server, so every asset URL has to be relative.
-        assetPrefix: "./",
-      },
-      performance: { chunkSplit: { strategy: "all-in-one" } },
-    },
-
-    /** The Metro plugin. Self-contained: its only imports are Node built-ins. */
     node: {
       source: { entry: { index: "./src/metro/index.ts" } },
       output: {

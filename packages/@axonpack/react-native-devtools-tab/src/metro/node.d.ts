@@ -17,6 +17,7 @@ declare module "node:fs" {
       path: string,
       callback: (error: Error | null, data: FileContents) => void,
     ): void;
+    existsSync(path: string): boolean;
   };
   export default fs;
 }

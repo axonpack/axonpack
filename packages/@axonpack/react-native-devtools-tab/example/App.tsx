@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 
 import "./devtools";
 import { countRequest, session } from "./session";
+import ZustandScreen from "./ZustandScreen";
 
 /**
  * A playground for the tab, not a demo of an app.
@@ -33,6 +34,8 @@ export default function App() {
           Count a request, and watch the Session tab follow
         </Text>
       </Pressable>
+
+      <ZustandScreen />
     </View>
   );
 }

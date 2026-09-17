@@ -4,25 +4,13 @@
  * None of these name their tab, because the channel does. `createTabChannel` stamps the id on the
  * way out and drops anything addressed elsewhere on the way in, so what actually crosses is the
  * payload below plus that one field.
+ *
+ * There is only one of them now. A tab's page is built by Metro and draws itself, so nothing about
+ * what a tab looks like crosses the debugger connection any more; this says a tab exists and what to
+ * call it, which is all the DevTools frontend needs to put it in the strip.
  */
-
-import type { RemoteOp } from "./remote-op.const";
 
 /** App to panel, once per tab: the tab exists, and this is what to call it. */
 export const REGISTER = "tab:register";
 
-/** App to panel, on every render: what React just changed. */
-export const MUTATE = "tab:mutate";
-
-/** Panel to app: something in the tab was clicked, typed in, or otherwise acted on. */
-export const ACTION = "tab:action";
-
-/** Panel to app, on load: "describe yourself", since the app usually started first. */
-export const HELLO = "tab:hello";
-
 export type TabRegistration = { name: string; icon?: string };
-
-export type TabMutation = { ops: RemoteOp[] };
-
-/** `action` is the name a function prop was swapped for, not something anybody chose. */
-export type TabAction = { action: string; payload?: unknown };
