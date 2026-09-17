@@ -5,7 +5,7 @@ import { createElement, useState } from "react";
 import { expect, test } from "bun:test";
 import { JSDOM, VirtualConsole } from "jsdom";
 
-import { createRemoteTree } from "../../device/services/remote-renderer.service";
+import { createRemoteSender } from "../../device/services/remote-sender.service";
 
 /**
  * Loads the built page the way a tab does, and drives it the way the app does.
@@ -13,7 +13,7 @@ import { createRemoteTree } from "../../device/services/remote-renderer.service"
  * Every way this page can fail looks identical from outside: a blank tab, with the error going to
  * the iframe's own console. Running it here turns that into a failing test.
  */
-const dist = path.resolve(import.meta.dir, "../../../dist/panel");
+const dist = path.resolve(import.meta.dir, "../../../dist/renderer");
 const settle = () => new Promise((resolve) => setTimeout(resolve, 40));
 
 function load(tab = "session") {
@@ -49,20 +49,20 @@ function load(tab = "session") {
     );
 
   // The app's half, with the debugger connection replaced by a direct hand-off.
-  const tree = createRemoteTree((ops) =>
+  const sender = createRemoteSender((ops) =>
     dom.window.postMessage({ type: "tab:mutate", data: { id: tab, ops } }, "*"),
   );
 
-  return { dom, sent, errors, tree, register };
+  return { dom, sent, errors, sender, register };
 }
 
 test("asks to be described, then draws what the app rendered", async () => {
-  const { dom, sent, errors, tree, register } = load();
+  const { dom, sent, errors, sender, register } = load();
 
   expect(sent).toEqual([{ type: "tab:hello", data: undefined }]);
 
   register();
-  tree.render(createElement("p", null, "hello"));
+  sender.render(createElement("p", null, "hello"));
   await settle();
 
   expect(errors).toEqual([]);
@@ -70,7 +70,7 @@ test("asks to be described, then draws what the app rendered", async () => {
 });
 
 test("a press reaches the app, and what it renders next comes back", async () => {
-  const { dom, sent, tree, register } = load();
+  const { dom, sent, sender, register } = load();
 
   function Panel() {
     const [count, setCount] = useState(0);
@@ -82,7 +82,7 @@ test("a press reaches the app, and what it renders next comes back", async () =>
   }
 
   register();
-  tree.render(createElement(Panel));
+  sender.render(createElement(Panel));
   await settle();
 
   const button = dom.window.document.querySelector("button")!;
@@ -100,7 +100,7 @@ test("a press reaches the app, and what it renders next comes back", async () =>
   };
   expect(id).toBe("session");
 
-  tree.dispatch(handler, payload);
+  sender.dispatch(handler, payload);
   await settle();
 
   expect(dom.window.document.body.textContent).toContain("count 1");
@@ -109,10 +109,10 @@ test("a press reaches the app, and what it renders next comes back", async () =>
 });
 
 test("ignores messages addressed to another tab", async () => {
-  const { dom, tree, register } = load();
+  const { dom, sender, register } = load();
 
   register("other");
-  tree.render(createElement("p", null, "wrong tab"));
+  sender.render(createElement("p", null, "wrong tab"));
   await settle();
 
   // The registration was for another tab, so this page never made a root to draw into.

@@ -12,32 +12,16 @@ import type {
   TabMutation,
   TabRegistration,
 } from "./core/constants/message.const";
+import { createMessageChannel } from "./core/services/message-channel.service";
+import { connectFuseboxTransport } from "./device/services/fusebox-transport.service";
 import {
-  createMessageChannel,
-  type MessageChannel,
-} from "./core/services/message-channel.service";
-import {
-  createRemote,
-  type Remote,
-  type RemoteMethods,
-} from "./core/services/remote.service";
-import { connectFuseboxTransport } from "./device/services/fusebox-channel.service";
-import { createState, type TabState } from "./device/hooks/state.hook";
-import {
-  createRemoteTree,
-  type RemoteTree,
-} from "./device/services/remote-renderer.service";
-
-export type {
-  MessageChannel,
-  MessageListener,
-} from "./core/services/message-channel.service";
-export type { Remote, RemoteMethods } from "./core/services/remote.service";
-export type { TabState } from "./device/hooks/state.hook";
+  createRemoteSender,
+  type RemoteSender,
+} from "./device/services/remote-sender.service";
 
 const channel = createMessageChannel();
 const registrations = new Map<string, TabRegistration>();
-const trees = new Map<string, RemoteTree>();
+const senders = new Map<string, RemoteSender>();
 const mounts = new Map<string, () => void>();
 
 void connectFuseboxTransport(DEVTOOLS_ID).then((transport) => {
@@ -50,14 +34,14 @@ channel.onMessage(HELLO, () => {
   for (const registration of registrations.values()) {
     channel.send(REGISTER, registration);
 
-    const tree = trees.get(registration.id);
+    const sender = senders.get(registration.id);
 
-    if (tree) {
-      // Already drawn once, for a panel that has since gone. Replaying the tree it holds is what
+    if (sender) {
+      // Already drawn once, for a panel that has since gone. Replaying what it holds is what
       // keeps a component's own state through a panel reload: it is never re-mounted.
       channel.send(MUTATE, {
         id: registration.id,
-        ops: tree.replay(),
+        ops: sender.replay(),
       } satisfies TabMutation);
     } else {
       // Nobody has ever looked at this tab, so nothing has been rendered for it. Mounting now is
@@ -150,32 +134,12 @@ export type Tab = {
  * });
  * ```
  *
- * `state` is how a tab and the app keep in step. `send`, `onMessage`, `request`, `handle` and
- * `remote` are the channel underneath, for talking to anything else on this app's debugger
- * connection; a tab needs none of them.
+ * A tab reaches the app by being part of it. Reading its state and calling into it are ordinary
+ * React, so there is nothing else on this object.
  */
-export type ReactNativeDevtoolsPanel = MessageChannel & {
+export type ReactNativeDevtoolsPanel = {
   /** Adds a tab to React Native DevTools. Call it once per tab, as many times as you have tabs. */
   registerTab: (options: TabOptions) => Tab;
-  /**
-   * A value the app and its tabs share.
-   *
-   * ```tsx
-   * const session = ReactNativeDevtoolsPanel.state({ user: 'nobody' });
-   *
-   * function Session() {
-   *   const { user } = session.use();
-   *   return <button onClick={() => session.set({ user: 'ada' })}>signed in as {user}</button>;
-   * }
-   * ```
-   *
-   * `use()` is an ordinary hook, so the app's own screens can read the same value the same way, and
-   * either side setting it redraws the other. Nothing is sent: a tab's component runs in the app, so
-   * this is one object with two readers.
-   */
-  state: <TValue>(initial: TValue) => TabState<TValue>;
-  /** A typed handle on what the far end exposed, callable as if its functions were local. */
-  remote: <T extends RemoteMethods>() => Remote<T>;
 };
 
 function registerTab(options: TabOptions): Tab {
@@ -188,16 +152,16 @@ function registerTab(options: TabOptions): Tab {
   channel.send(REGISTER, registration);
 
   const draw = (): void => {
-    let tree = trees.get(options.id);
+    let sender = senders.get(options.id);
 
-    if (!tree) {
-      tree = createRemoteTree((ops) =>
+    if (!sender) {
+      sender = createRemoteSender((ops) =>
         channel.send(MUTATE, { id: options.id, ops } satisfies TabMutation),
       );
-      trees.set(options.id, tree);
+      senders.set(options.id, sender);
     }
 
-    tree.render(createElement(options.component));
+    sender.render(createElement(options.component));
   };
 
   mounts.set(options.id, draw);
@@ -207,7 +171,7 @@ function registerTab(options: TabOptions): Tab {
   channel.onMessage(ACTION, (payload) => {
     const event = payload as TabAction;
     if (event?.id === options.id)
-      trees.get(options.id)?.dispatch(event.action, event.payload);
+      senders.get(options.id)?.dispatch(event.action, event.payload);
   });
 
   return {
@@ -215,18 +179,11 @@ function registerTab(options: TabOptions): Tab {
     // Nothing to draw again until somebody has opened DevTools, which is the whole of the production
     // gate: no panel, no render, no effects.
     redraw: () => {
-      if (trees.has(options.id)) draw();
+      if (senders.has(options.id)) draw();
     },
   };
 }
 
 export const ReactNativeDevtoolsPanel: ReactNativeDevtoolsPanel = {
-  send: (type, payload) => channel.send(type, payload),
-  onMessage: (type, listener) => channel.onMessage(type, listener),
-  request: (method, params, options) =>
-    channel.request(method, params, options),
-  handle: (method, handler) => channel.handle(method, handler),
   registerTab,
-  state: (initial) => createState(initial),
-  remote: () => createRemote(channel),
 };

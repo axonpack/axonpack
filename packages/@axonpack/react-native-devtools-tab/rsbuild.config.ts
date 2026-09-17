@@ -12,11 +12,11 @@ export default defineConfig({
   environments: {
     /** The page shown inside the tab. */
     web: {
-      source: { entry: { index: "./src/panel/main.ts" } },
-      html: { template: "./src/panel/index.html" },
+      source: { entry: { index: "./src/renderer/main.ts" } },
+      html: { template: "./src/renderer/index.html" },
       output: {
         target: "web",
-        distPath: { root: "dist/panel" },
+        distPath: { root: "dist/renderer" },
         // Served from a sub-path of the dev server, so every asset URL has to be relative.
         assetPrefix: "./",
       },
@@ -33,9 +33,6 @@ export default defineConfig({
       },
       tools: {
         rspack: {
-          // Spelled out because the default here is an ES module, and `metro.config.js` reaches this
-          // with a plain `require`.
-          experiments: { outputModule: false },
           output: {
             module: false,
             chunkFormat: "commonjs",

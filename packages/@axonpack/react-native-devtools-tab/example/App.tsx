@@ -7,8 +7,8 @@ import { countRequest, session } from "./session";
 /**
  * A playground for the tab, not a demo of an app.
  *
- * Press here and watch the Session tab: the app changes its own state and invalidates the method the
- * tab reads, so the tab reads it again. That is the whole of the traffic between them.
+ * Press here and watch the Session tab: a tab is a component rendered by the app's own React, so it
+ * subscribes to the same value the screen does and re-renders with it.
  */
 export default function App() {
   // The same hook the Session tab calls, on the same value.

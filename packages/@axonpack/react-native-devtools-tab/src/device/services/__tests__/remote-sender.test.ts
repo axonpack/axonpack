@@ -3,8 +3,8 @@ import { createElement, useState, useSyncExternalStore } from "react";
 import { expect, test } from "bun:test";
 import { JSDOM } from "jsdom";
 
-import { createRemoteRoot } from "../../../panel/services/apply-remote-ops.service";
-import { createRemoteTree } from "../remote-renderer.service";
+import { createRemoteReceiver } from "../../../renderer/services/remote-receiver.service";
+import { createRemoteSender } from "../remote-sender.service";
 
 /**
  * Both halves at once: React in one place, the DOM in another, with the ops carried by hand instead
@@ -13,18 +13,18 @@ import { createRemoteTree } from "../remote-renderer.service";
 function mount() {
   const dom = new JSDOM("<div id='root'></div>");
   const container = dom.window.document.getElementById("root") as HTMLElement;
-  // `createRemoteRoot` builds elements, so it needs the document the container belongs to.
+  // `createRemoteReceiver` builds elements, so it needs the document the container belongs to.
   (globalThis as Record<string, unknown>).document = dom.window.document;
 
   const pressed: { handler: string; payload: unknown }[] = [];
-  const root = createRemoteRoot(container, (handler, payload) =>
+  const receiver = createRemoteReceiver(container, (handler, payload) =>
     pressed.push({ handler, payload }),
   );
 
-  const tree = createRemoteTree((ops) => root.apply(ops));
+  const sender = createRemoteSender((ops) => receiver.apply(ops));
   return {
     container,
-    tree,
+    sender,
     pressed,
     click: (element: Element) =>
       element.dispatchEvent(new dom.window.Event("click")),
@@ -34,7 +34,7 @@ function mount() {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 test("a component's hooks run in the app and its DOM appears in the panel", async () => {
-  const { container, tree, pressed, click } = mount();
+  const { container, sender, pressed, click } = mount();
 
   function Panel() {
     const [count, setCount] = useState(0);
@@ -46,7 +46,7 @@ test("a component's hooks run in the app and its DOM appears in the panel", asyn
     );
   }
 
-  tree.render(createElement(Panel));
+  sender.render(createElement(Panel));
   await settle();
 
   expect(container.querySelector("div.wrap")).not.toBeNull();
@@ -57,7 +57,7 @@ test("a component's hooks run in the app and its DOM appears in the panel", asyn
   expect(pressed).toHaveLength(1);
 
   // The panel cannot run the handler, so it sends back the name the prop was swapped for.
-  tree.dispatch(pressed[0].handler, pressed[0].payload);
+  sender.dispatch(pressed[0].handler, pressed[0].payload);
   await settle();
   expect(container.textContent).toContain("count 1");
 
@@ -67,26 +67,26 @@ test("a component's hooks run in the app and its DOM appears in the panel", asyn
 });
 
 test("a panel opening later is told the tree that is already there", async () => {
-  const { tree } = mount();
+  const { sender } = mount();
 
   function Panel() {
     return createElement("p", null, "late");
   }
 
-  tree.render(createElement(Panel));
+  sender.render(createElement(Panel));
   await settle();
 
   // A second panel, with none of the earlier changes.
   const second = mount();
-  second.tree.render(null);
-  const root = createRemoteRoot(second.container, () => undefined);
-  root.apply(tree.replay());
+  second.sender.render(null);
+  const receiver = createRemoteReceiver(second.container, () => undefined);
+  receiver.apply(sender.replay());
 
   expect(second.container.textContent).toContain("late");
 });
 
 test("removing a node stops its handlers answering", async () => {
-  const { container, tree, pressed, click } = mount();
+  const { container, sender, pressed, click } = mount();
   let calls = 0;
 
   function Panel() {
@@ -101,7 +101,7 @@ test("removing a node stops its handlers answering", async () => {
     );
   }
 
-  tree.render(createElement(Panel));
+  sender.render(createElement(Panel));
   await settle();
 
   const counted = [...container.querySelectorAll("button")].find(
@@ -109,21 +109,21 @@ test("removing a node stops its handlers answering", async () => {
   )!;
   const handler = pressed.length;
   click(counted);
-  tree.dispatch(pressed[handler].handler, null);
+  sender.dispatch(pressed[handler].handler, null);
   expect(calls).toBe(1);
 
   click([...container.querySelectorAll("button")][0]);
-  tree.dispatch(pressed[pressed.length - 1].handler, null);
+  sender.dispatch(pressed[pressed.length - 1].handler, null);
   await settle();
 
   // Gone from the DOM, and the name it answered to no longer reaches anything.
   expect(container.textContent).not.toContain("count me");
-  tree.dispatch(pressed[handler].handler, null);
+  sender.dispatch(pressed[handler].handler, null);
   expect(calls).toBe(1);
 });
 
 test("a tab follows the app's own store, and writes back to it", async () => {
-  const { container, tree, pressed, click } = mount();
+  const { container, sender, pressed, click } = mount();
 
   // The app's state, as any state library would hold it.
   let state = { requests: 0 };
@@ -149,7 +149,7 @@ test("a tab follows the app's own store, and writes back to it", async () => {
     );
   }
 
-  tree.render(createElement(Panel));
+  sender.render(createElement(Panel));
   await settle();
   expect(container.textContent).toContain("requests 0");
 
@@ -160,8 +160,33 @@ test("a tab follows the app's own store, and writes back to it", async () => {
 
   // The tab changes it, and the app sees it, because the handler runs on the app's side.
   click(container.querySelector("button")!);
-  tree.dispatch(pressed.at(-1)!.handler, pressed.at(-1)!.payload);
+  sender.dispatch(pressed.at(-1)!.handler, pressed.at(-1)!.payload);
   await settle();
   expect(store.snapshot().requests).toBe(2);
   expect(container.textContent).toContain("requests 2");
+});
+
+test("a prop React stops rendering is taken off the element", async () => {
+  const { container, sender, pressed, click } = mount();
+
+  function Panel() {
+    const [busy, setBusy] = useState(true);
+    return createElement("button", {
+      onClick: () => setBusy(false),
+      title: busy ? "working" : undefined,
+    });
+  }
+
+  sender.render(createElement(Panel));
+  await settle();
+  expect(container.querySelector("button")!.getAttribute("title")).toBe(
+    "working",
+  );
+
+  click(container.querySelector("button")!);
+  sender.dispatch(pressed.at(-1)!.handler, pressed.at(-1)!.payload);
+  await settle();
+
+  // React sends only what changed, so a prop that went has to be named as gone rather than left out.
+  expect(container.querySelector("button")!.hasAttribute("title")).toBe(false);
 });

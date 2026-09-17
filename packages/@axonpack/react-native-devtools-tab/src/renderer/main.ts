@@ -1,5 +1,5 @@
-import "./panel.css";
-import { startPanel } from "./index";
+import "./renderer.css";
+import { startRenderer } from "./start-renderer";
 
 /**
  * The browser entry, and the only file rsbuild is pointed at.
@@ -10,7 +10,7 @@ import { startPanel } from "./index";
 const tabId = new URLSearchParams(window.location.search).get("tab");
 
 if (tabId) {
-  startPanel(tabId);
+  startRenderer(tabId);
 } else {
   document.body.textContent = "This page needs a ?tab= id.";
 }

@@ -4,7 +4,6 @@ import {
   createMessageChannel,
   type Envelope,
 } from "../message-channel.service";
-import { createRemote } from "../remote.service";
 
 /** Two channels wired to each other, the way the app and the panel are. */
 function pair() {
@@ -44,61 +43,4 @@ test("keeps what was sent before a transport existed, then flushes it", () => {
   });
 
   expect(posted).toEqual([{ type: "early", data: "held" }]);
-});
-
-test("answers a request with the handler result", async () => {
-  const { a, b } = pair();
-  b.handle("double", (params) => (params as number) * 2);
-
-  expect(await a.request<number>("double", 21)).toBe(42);
-});
-
-test("rejects rather than hanging when the far end throws", async () => {
-  const { a, b } = pair();
-  b.handle("boom", () => {
-    throw new Error("no");
-  });
-
-  expect(a.request("boom")).rejects.toThrow("no");
-});
-
-test("rejects rather than hanging when nothing handles the method", async () => {
-  const { a } = pair();
-
-  expect(a.request("missing")).rejects.toThrow("No handler");
-});
-
-test("calls the other end as if its functions were local", async () => {
-  const { a, b } = pair();
-  b.handle("greet", (name) => `hello ${String(name)}`);
-  b.handle("slow", async () => "eventually");
-
-  const remote = createRemote<{
-    greet: (name: string) => string;
-    slow: () => Promise<string>;
-  }>(a);
-
-  expect(await remote.greet("ada")).toBe("hello ada");
-  expect(await remote.slow()).toBe("eventually");
-});
-
-test("a call nobody answers rejects instead of hanging", async () => {
-  // A far end that takes the message and never replies, which is what a device looks like while it
-  // is reloading. Without the timeout the promise, and its entry in the pending map, live forever.
-  const silent = createMessageChannel({
-    post: () => undefined,
-    subscribe: () => undefined,
-  });
-
-  expect(
-    silent.request("nowhere", undefined, { timeoutMs: 10 }),
-  ).rejects.toThrow("did not answer");
-});
-
-test("taking a handler back off stops it answering", async () => {
-  const { a, b } = pair();
-  const withdraw = b.handle("ping", () => "pong");
-  withdraw();
-
-  expect(a.request("ping")).rejects.toThrow("No handler");
 });

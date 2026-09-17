@@ -23,10 +23,10 @@
     "src/index.ts",
     "src/core/constants",
     "src/core/services/message-channel.service.ts",
-    "src/core/services/remote.service.ts",
+    "src/core/services/panel-channel.service.ts",
     "src/device",
-    "src/panel/index.ts",
-    "src/panel/services",
+    "src/renderer/start-renderer.ts",
+    "src/renderer/services",
     "dist",
     "LICENSE",
     "CHANGELOG.md",
@@ -34,7 +34,7 @@
   ],
   "exports": {
     ".": "./src/index.ts",
-    "./panel": "./src/panel/index.ts",
+    "./renderer": "./src/renderer/start-renderer.ts",
     "./metro": "./dist/metro/index.cjs",
     "./package.json": "./package.json"
   },

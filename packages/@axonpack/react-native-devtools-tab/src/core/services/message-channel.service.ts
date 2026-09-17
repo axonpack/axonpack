@@ -13,30 +13,7 @@ export type MessageChannel = {
   send: (type: string, payload?: unknown) => void;
   /** Listens for what the other end sends. Call the returned function to stop. */
   onMessage: (type: string, listener: MessageListener) => () => void;
-  /** Calls a method the other end registered with `handle`, and waits for its answer. */
-  request: <TResult = unknown>(
-    method: string,
-    params?: unknown,
-    options?: { timeoutMs?: number },
-  ) => Promise<TResult>;
-  /** Answers `request` calls for one method. Call the returned function to stop. */
-  handle: (method: string, handler: (params: unknown) => unknown) => () => void;
 };
-
-/**
- * Request and response ride on one reserved message type rather than on a type per method, so
- * nothing has to be registered up front and a method name is just a string.
- */
-const RPC = "__rpc";
-
-type RpcFrame =
-  | { kind: "request"; id: string; method: string; params: unknown }
-  | { kind: "response"; id: string; result?: unknown; error?: string };
-
-let nextRequestId = 0;
-
-/** Long enough for a slow handler, short enough that a lost reply is noticed. */
-const DEFAULT_TIMEOUT_MS = 30_000;
 
 /** The one envelope both ends agree on, so a transport only has to carry an object. */
 export type Envelope = { type: string; data: unknown };
@@ -83,12 +60,6 @@ export function createMessageChannel(
 
   if (transport) attach(transport);
 
-  const pending = new Map<
-    string,
-    { resolve: (value: never) => void; reject: (why: Error) => void }
-  >();
-  const handlers = new Map<string, (params: unknown) => unknown>();
-
   const channel = {
     attach,
 
@@ -110,91 +81,7 @@ export function createMessageChannel(
         listeners.get(type)?.delete(listener);
       };
     },
-
-    request<TResult = unknown>(
-      method: string,
-      params?: unknown,
-      options?: { timeoutMs?: number },
-    ): Promise<TResult> {
-      const id = `r${(nextRequestId += 1)}`;
-      const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-
-      return new Promise<TResult>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          pending.delete(id);
-          reject(new Error(`"${method}" did not answer in ${timeoutMs}ms.`));
-        }, timeoutMs);
-
-        const settle =
-          <TArg>(finish: (value: TArg) => void) =>
-          (value: TArg) => {
-            clearTimeout(timer);
-            finish(value);
-          };
-
-        pending.set(id, {
-          resolve: settle(resolve as (value: never) => void),
-          reject: settle(reject),
-        });
-
-        channel.send(RPC, {
-          kind: "request",
-          id,
-          method,
-          params,
-        } satisfies RpcFrame);
-      });
-    },
-
-    handle(method: string, handler: (params: unknown) => unknown) {
-      handlers.set(method, handler);
-      return () => {
-        handlers.delete(method);
-      };
-    },
   };
-
-  channel.onMessage(RPC, (payload) => {
-    const frame = payload as RpcFrame;
-
-    if (frame?.kind === "request") {
-      const handler = handlers.get(frame.method);
-      const reply = (
-        body: Omit<Extract<RpcFrame, { kind: "response" }>, "kind" | "id">,
-      ) =>
-        channel.send(RPC, {
-          kind: "response",
-          id: frame.id,
-          ...body,
-        } satisfies RpcFrame);
-
-      if (!handler) {
-        reply({ error: `No handler for "${frame.method}".` });
-        return;
-      }
-
-      // A handler may be async, and either half of that can throw. Both come back as one response,
-      // so the caller's promise always settles instead of hanging on a mistake at the far end.
-      void (async () => {
-        try {
-          reply({ result: await handler(frame.params) });
-        } catch (error) {
-          reply({
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      })();
-      return;
-    }
-
-    if (frame?.kind === "response") {
-      const waiting = pending.get(frame.id);
-      if (!waiting) return;
-      pending.delete(frame.id);
-      if (frame.error) waiting.reject(new Error(frame.error));
-      else waiting.resolve(frame.result as never);
-    }
-  });
 
   return channel;
 }

@@ -15,7 +15,8 @@ import {
  * Plain DOM, no framework: React is already running, one engine over.
  */
 
-export type RemoteRoot = {
+/** The panel's end: the changes arrive here, and become elements. */
+export type RemoteReceiver = {
   apply: (ops: RemoteOp[]) => void;
 };
 
@@ -30,13 +31,20 @@ function describe(event: Event): unknown {
   const target = event.target as { value?: unknown; checked?: unknown } | null;
   const fields = { value: target?.value, checked: target?.checked };
 
-  return { type: event.type, target: fields, currentTarget: fields };
+  // `key` rather than the whole keyboard event, because it is the one field a shortcut handler
+  // reads and it is a string, so it survives the trip. It is undefined on everything else.
+  return {
+    type: event.type,
+    key: (event as KeyboardEvent).key,
+    target: fields,
+    currentTarget: fields,
+  };
 }
 
-export function createRemoteRoot(
+export function createRemoteReceiver(
   container: HTMLElement,
   send: (handler: string, payload: unknown) => void,
-): RemoteRoot {
+): RemoteReceiver {
   const nodes = new Map<number, Node>([[ROOT, container]]);
   /** Per node, so re-applying props can take the old listener off before putting a new one on. */
   const listeners = new Map<number, Map<string, EventListener>>();
@@ -80,8 +88,10 @@ export function createRemoteRoot(
 
       // `value` and `checked` are properties rather than attributes: setting the attribute moves the
       // default, not what is shown, so a controlled input would stop following what React says.
+      // Null means the prop went, and assigning it would put the string "null" in the box.
       if (key === "value" || key === "checked") {
-        (element as unknown as RemoteProps)[key] = value;
+        (element as unknown as RemoteProps)[key] =
+          value ?? (key === "checked" ? false : "");
         continue;
       }
 

@@ -9,38 +9,12 @@ import type {
   TabMutation,
   TabRegistration,
 } from "../core/constants/message.const";
+import type { MessageChannel } from "../core/services/message-channel.service";
+import { createPanelChannel } from "../core/services/panel-channel.service";
 import {
-  createMessageChannel,
-  type MessageChannel,
-} from "../core/services/message-channel.service";
-import {
-  createRemoteRoot,
-  type RemoteRoot,
-} from "./services/apply-remote-ops.service";
-
-/**
- * The panel's half, for the page shown in one tab.
- *
- * The page is an iframe inside a DevTools panel, so messages to the app go up to the host script,
- * which relays them over the debugger connection the frontend already has.
- */
-export function createPanelChannel(): MessageChannel {
-  const channel = createMessageChannel({
-    post: (envelope) => window.parent.postMessage(envelope, "*"),
-    subscribe: (deliver) => {
-      window.addEventListener("message", (event: MessageEvent) =>
-        deliver(event.data),
-      );
-    },
-  });
-
-  return {
-    send: channel.send,
-    onMessage: channel.onMessage,
-    request: channel.request,
-    handle: channel.handle,
-  };
-}
+  createRemoteReceiver,
+  type RemoteReceiver,
+} from "./services/remote-receiver.service";
 
 /**
  * Boots the page for one tab.
@@ -49,12 +23,12 @@ export function createPanelChannel(): MessageChannel {
  * Nothing here decides what the tab looks like: the app's React does, and this builds the elements
  * it asks for.
  */
-export function startPanel(
+export function startRenderer(
   tabId: string,
   root: HTMLElement = document.body,
 ): MessageChannel {
   const channel = createPanelChannel();
-  let remote: RemoteRoot | null = null;
+  let remote: RemoteReceiver | null = null;
 
   channel.onMessage(REGISTER, (payload) => {
     const registration = payload as TabRegistration;
@@ -62,7 +36,7 @@ export function startPanel(
 
     // Re-made on every registration, because one arriving twice means the app is starting over.
     root.replaceChildren();
-    remote = createRemoteRoot(root, (handler, value) => {
+    remote = createRemoteReceiver(root, (handler, value) => {
       channel.send(ACTION, {
         id: tabId,
         action: handler,
@@ -87,3 +61,5 @@ export type {
   MessageChannel,
   MessageListener,
 } from "../core/services/message-channel.service";
+
+export { createPanelChannel } from "../core/services/panel-channel.service";

@@ -118,7 +118,7 @@ class TabPanel extends UI.View.SimpleView {
     // frontend's own icon slots take an element, and every way of putting one there loses its
     // drawing: the suffix slot re-renders with a shallow cloneNode(), and the leading slot only
     // accepts a name from DevTools' own image set. Text has none of that.
-    super(tab.name + ' ' + (tab.icon || '🛝'), true, tab.id);
+    super(tab.name + ' ' + (tab.icon || '\u235A'), true, tab.id);
     // Keeps the iframe alive when another tab is selected, so a tab does not lose everything it has
     // been sent every time somebody looks at Console.
     this.setHideOnDetach();
@@ -347,11 +347,11 @@ export function withReactNativeDevtoolsPanel<
 
   // The built page shown in the tab, published with this package so it is found the same way from a
   // checkout or from `node_modules`.
-  const panel = path.join(
+  const renderer = path.join(
     path.dirname(
       require.resolve("@axonpack/react-native-devtools-tab/package.json"),
     ),
-    "dist/panel",
+    "dist/renderer",
   );
 
   pointDebuggerAt(roots);
@@ -371,7 +371,7 @@ export function withReactNativeDevtoolsPanel<
     // `/panel/...` is the page this package ships, everything else is the real DevTools frontend.
     const inPanel = rest.startsWith("/panel/");
     sendFile(
-      inPanel ? panel : frontend,
+      inPanel ? renderer : frontend,
       inPanel ? rest.slice("/panel".length) : rest,
       response,
       rest === "/rn_fusebox.html"

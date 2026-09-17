@@ -30,7 +30,8 @@ type Instance = {
   text?: string;
 };
 
-export type RemoteTree = {
+/** The app's end: React commits here, and the changes go out. */
+export type RemoteSender = {
   /** Draws `element`, or unmounts when given null. */
   render: (element: ReactNode) => void;
   /** Every op needed to build what is currently drawn, for a panel that just opened. */
@@ -39,7 +40,9 @@ export type RemoteTree = {
   dispatch: (handler: string, payload: unknown) => void;
 };
 
-export function createRemoteTree(emit: (ops: RemoteOp[]) => void): RemoteTree {
+export function createRemoteSender(
+  emit: (ops: RemoteOp[]) => void,
+): RemoteSender {
   const handlers = new Map<string, (payload: unknown) => void>();
   let pending: RemoteOp[] = [];
   let nextId = ROOT + 1;
@@ -54,7 +57,7 @@ export function createRemoteTree(emit: (ops: RemoteOp[]) => void): RemoteTree {
     const out: RemoteProps = {};
 
     for (const [key, value] of Object.entries(props)) {
-      if (key === "children" || key === "ref" || key === "key") continue;
+      if (LOCAL_ONLY.has(key)) continue;
 
       if (typeof value === "function") {
         const name = `${id}:${key}`;
@@ -72,7 +75,29 @@ export function createRemoteTree(emit: (ops: RemoteOp[]) => void): RemoteTree {
     return out;
   };
 
-  // One reconciler per tree, not one shared. React commits long after `render` returns, when an
+  /**
+   * What changed, including what went.
+   *
+   * A prop React dropped has to be named as gone rather than left out. The panel applies what it is
+   * handed and touches nothing else, so a key that merely stops appearing would leave the old value
+   * on the element for the rest of the session.
+   */
+  const changed = (
+    id: number,
+    prev: RemoteProps,
+    next: RemoteProps,
+  ): RemoteProps => {
+    const out = sendable(id, next);
+
+    for (const key of Object.keys(prev)) {
+      if (key in out || LOCAL_ONLY.has(key)) continue;
+      out[key] = null;
+    }
+
+    return out;
+  };
+
+  // One reconciler per sender, not one shared. React commits long after `render` returns, when an
   // effect or a `setState` fires, so a shared one would have to be told which tab it was working for
   // at a moment nothing is in a position to tell it.
   const append = (parent: Instance, child: Instance): void => {
@@ -141,15 +166,15 @@ export function createRemoteTree(emit: (ops: RemoteOp[]) => void): RemoteTree {
     commitUpdate(
       instance: Instance,
       _type: string,
-      _prev: RemoteProps,
+      prev: RemoteProps,
       next: RemoteProps,
     ): void {
-      instance.props = next;
       pending.push({
         op: "update",
         id: instance.id,
-        props: sendable(instance.id, next),
+        props: changed(instance.id, prev, next),
       });
+      instance.props = next;
     },
 
     commitTextUpdate(instance: Instance, _prev: string, next: string): void {
@@ -231,10 +256,21 @@ export function createRemoteTree(emit: (ops: RemoteOp[]) => void): RemoteTree {
   };
 }
 
+/** React's own bookkeeping, or a thing that cannot cross. Never sent, never named as gone. */
+const LOCAL_ONLY = new Set(["children", "ref", "key"]);
+
 /**
- * The panel sends a description of the event, not the event, so the two methods every other handler
- * reaches for are put back. They do nothing: the browser has long since finished with the event by
- * the time this runs, and there is nothing left to cancel.
+ * What a handler is handed in place of the event.
+ *
+ * The event itself cannot cross, so the panel sends a description of it and this puts back the two
+ * methods every other handler reaches for. They do nothing: the browser finished with the event
+ * before this runs, and there is nothing left to cancel.
+ *
+ * A handler gets `type`, `key`, and `value`/`checked` on both `target` and `currentTarget`. That is
+ * all of it. **Everything else is missing**, including `preventDefault` having any effect,
+ * `relatedTarget`, coordinates, modifier flags, `dataTransfer`, and the element itself. React's
+ * event types still describe the full event, so TypeScript will not stop you reading a field that
+ * arrives undefined.
  */
 function asEvent(payload: unknown): unknown {
   if (typeof payload !== "object" || payload === null) return payload;
