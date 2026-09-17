@@ -1,0 +1,73 @@
+{
+  "name": "@axonpack/react-native-devtools-tab",
+  "version": "0.0.0",
+  "description": "Put your own tab in React Native DevTools, with a two-way channel to the running app",
+  "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
+  "keywords": [
+    "react-native",
+    "devtools",
+    "metro",
+    "expo",
+    "debugging"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axonpack/axonpack.git",
+    "directory": "packages/@axonpack/react-native-devtools-tab"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "files": [
+    "src/index.ts",
+    "src/core/constants",
+    "src/core/services/message-channel.service.ts",
+    "src/core/services/panel-channel.service.ts",
+    "src/core/services/tab-channel.service.ts",
+    "src/device",
+    "src/renderer/start-renderer.ts",
+    "src/renderer/services",
+    "dist",
+    "LICENSE",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./renderer": "./src/renderer/start-renderer.ts",
+    "./metro": "./dist/metro/index.cjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "rsbuild build",
+    "prepare": "bun run build",
+    "example:expo": "bun run build && cd example && bun run expo",
+    "clean": "rm -rf dist",
+    "lint": "oxlint src",
+    "check-types": "tsc --noEmit",
+    "test": "bun run build && bun test src"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.2.7",
+    "@types/bun": "^1.3.14",
+    "@types/jsdom": "^21.1.7",
+    "@types/react": "~19.1.17",
+    "@types/react-dom": "~19.2.2",
+    "jsdom": "^20.0.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native-web": "^0.21.2",
+    "react-reconciler": "0.33.0",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
+  "dependencies": {
+    "react-reconciler": "^0.33.0"
+  }
+}

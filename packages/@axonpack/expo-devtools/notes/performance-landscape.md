@@ -1,6 +1,6 @@
 # Performance tooling landscape
 
-Read on 2026-08-12: every performance-related project checked out under `examples/`, against what
+Read on 2026-08-12: the performance-related projects in this ecosystem, against what
 `@axonpack/expo-devtools` did at 2.0.0 — what each one measures, how it measures it, whether that
 needs native code, and where the gaps between them and us actually are.
 
@@ -10,32 +10,32 @@ libraries built on top of it.
 
 ## What was read
 
-| Project                                                               | Version | Shape                                               | Native?                                   |
-| --------------------------------------------------------------------- | ------- | --------------------------------------------------- | ----------------------------------------- |
-| `examples/react-native-performance/packages/react-native-performance` | 6.0.0   | `Performance` API implementation + native marks     | Yes — ObjC++ (iOS), Java (Android)        |
-| `examples/react-native-performance/packages/isomorphic-performance`   | 6.0.0   | Types-only shim for Node/Browser/RN parity          | No                                        |
-| `examples/react-native-performance-stats`                             | 0.2.4   | Native sampling loop → JS event stream              | Yes — ObjC++ (iOS), Java (Android)        |
-| `examples/react-native-performance-limiter`                           | 0.3.0   | Imperative "make it slow / crash it" API            | Partly — main-thread half only            |
-| `examples/expo/packages/expo-observe`                                 | (repo)  | Production observability, dispatches to EAS Observe | Yes — Swift/Kotlin                        |
-| `examples/expo/packages/expo-insights`                                | (repo)  | Startup events to EAS, no JS API at all             | Yes — Swift + ObjC++ (`ReactMarker`)      |
-| `examples/expo/packages/expo-app-metrics`                             | (repo)  | Metric collection engine behind `expo-observe`      | Yes — but see the caveat below            |
-| **`@axonpack/expo-devtools`**                                         | 2.0.0   | **In-app devtools panel**                           | **Optional Expo module (both platforms)** |
+| Project                            | Version | Shape                                               | Native?                                   |
+| ---------------------------------- | ------- | --------------------------------------------------- | ----------------------------------------- |
+| `react-native-performance`         | 6.0.0   | `Performance` API implementation + native marks     | Yes — ObjC++ (iOS), Java (Android)        |
+| `isomorphic-performance`           | 6.0.0   | Types-only shim for Node/Browser/RN parity          | No                                        |
+| `react-native-performance-stats`   | 0.2.4   | Native sampling loop → JS event stream              | Yes — ObjC++ (iOS), Java (Android)        |
+| `react-native-performance-limiter` | 0.3.0   | Imperative "make it slow / crash it" API            | Partly — main-thread half only            |
+| `expo-observe`                     | (repo)  | Production observability, dispatches to EAS Observe | Yes — Swift/Kotlin                        |
+| `expo-insights`                    | (repo)  | Startup events to EAS, no JS API at all             | Yes — Swift + ObjC++ (`ReactMarker`)      |
+| `expo-app-metrics`                 | (repo)  | Metric collection engine behind `expo-observe`      | Yes — but see the caveat below            |
+| **`@axonpack/expo-devtools`**      | 2.0.0   | **In-app devtools panel**                           | **Optional Expo module (both platforms)** |
 
-Caveat on `expo-app-metrics`: only its directory layout is present in this checkout
+Caveat on `expo-app-metrics`: only its directory layout was available when this was read
 (`ios/AppStartup`, `ios/FrameRate`, `ios/Memory`, `ios/Network`, `ios/NetworkRequests`,
 `ios/Database`, `ios/Sessions`, `ios/CrashReporting`, `ios/Storage`, `ios/Updates`, `ios/LogEvents`)
 — every file is missing. Claims about it below are read off those names and off `expo-observe`'s
 TypeScript types, not off its source.
 
-`examples/react-native-network-logger`, `examples/react-native-logs` and `examples/drizzle-orm` are
-not performance projects and are out of scope here.
+`react-native-network-logger`, `react-native-logs` and `drizzle-orm` are not performance projects
+and are out of scope here.
 
 ## The one-line summary of each
 
 - **`react-native-performance`** — the standards-compliant timeline. It gives you
   `performance.mark`, `measure`, `metric`, a `PerformanceObserver`, and ~35 **native startup marks**
   covering the RN bootstrap phase by phase. It renders nothing; you read the entries yourself or
-  point Rozenite's performance plugin at them.
+  point a devtools plugin at them.
 - **`react-native-performance-stats`** — the Perf Monitor as a data stream. Deliberately a
   re-implementation of RN's own dev overlay: JS FPS, UI FPS, RAM, CPU, dropped frames, stutters,
   view counts, pushed to JS every 500ms–1s. Unmaintained and deprecated by its author.
@@ -215,8 +215,8 @@ sequence work after the freeze.
 
 This is the real axis these projects differ on, more than any metric.
 
-- `react-native-performance` → **you** read the timeline (`getEntriesByType`, an observer), or
-  Rozenite's plugin does over the dev connection.
+- `react-native-performance` → **you** read the timeline (`getEntriesByType`, an observer), or a
+  devtools plugin does over the dev connection.
 - `performance-stats` → an event stream; `addListener` and keep what you want.
 - `expo-observe` → collected natively, persisted locally (its `ios/Database`, `ios/Sessions`
   layout), sampled deterministically per install (`sampleRate`, stable across launches), gated by
@@ -231,7 +231,7 @@ This is the real axis these projects differ on, more than any metric.
   an unsupported metric says "needs a development build" instead of showing a dash that looks like
   "not measured yet".
 
-Nobody in `examples/` competes with us on the panel. Nobody but Expo competes on production
+Nobody in this landscape competes with us on the panel. Nobody but Expo competes on production
 telemetry, and we aren't trying to.
 
 ## What they have that we don't
@@ -312,5 +312,3 @@ much as a technical one:
 - [`react-native-performance-apis.md`](./react-native-performance-apis.md) — the RN 0.86 platform
   surface
 - [the feature list](./README.md)
-- [Rozenite performance monitor plugin](https://www.rozenite.dev/docs/official-plugins/performance-monitor)
-  — what `react-native-performance` pairs with now that Flipper is gone
