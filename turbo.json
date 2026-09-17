@@ -71,6 +71,17 @@
         "dist/**"
       ]
     },
+    "@axonpack/react-native-devtools-tab#prepare": {
+      "outputs": [
+        "build/**",
+        "dist/**"
+      ]
+    },
+    "@axonpack/expo-devtools#prepare": {
+      "outputs": [
+        "build/**"
+      ]
+    },
     "expo-devtools-panel#build": {
       "outputs": [
         "../dist/panel/**"
