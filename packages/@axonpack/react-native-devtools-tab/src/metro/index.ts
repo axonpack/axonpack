@@ -3,7 +3,11 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 
-import { DEVTOOLS_ID, DEVTOOLS_ROUTE } from "../core/constants/devtools.const";
+import {
+  DEVTOOLS_ID,
+  DEVTOOLS_ROUTE,
+  DEVTOOLS_TABS,
+} from "../core/constants/devtools.const";
 
 /**
  * Puts a tab of your own in React Native DevTools, by serving the DevTools frontend from a route of
@@ -37,11 +41,13 @@ const require = createRequire(__filename);
 function hostScript(): string {
   const ROUTE = DEVTOOLS_ROUTE;
   const id = DEVTOOLS_ID;
+  const tabs = DEVTOOLS_TABS;
   return `
 import * as UI from '${ROUTE}/ui/legacy/legacy.js';
 import * as SDK from '${ROUTE}/core/sdk/sdk.js';
 
 const DOMAIN = ${JSON.stringify(id)};
+const TABS = ${JSON.stringify(tabs)};
 const DISPATCHER = '__FUSEBOX_REACT_DEVTOOLS_DISPATCHER__';
 
 // The frontend builds itself after DOMContentLoaded, and the tab strip is the last thing to appear.
@@ -97,12 +103,23 @@ const connectToApp = async (onMessage) => {
           await runtime.agent.invoke_evaluate({
             expression: 'void ' + DISPATCHER + '.initializeDomain(' + JSON.stringify(DOMAIN) + ')',
           });
-          return (message) => {
-            const serialized = JSON.stringify(JSON.stringify(message));
-            void runtime.agent.invoke_evaluate({
-              expression:
-                DISPATCHER + '.sendMessage(' + JSON.stringify(DOMAIN) + ', ' + serialized + ')',
-            });
+          // Read rather than waited for. The app announces a tab when it registers one, but a
+          // frontend that reloads has missed every announcement and nothing re-sends them, so the
+          // tab strip came back empty. Asking is also what puts the tabs up without a round trip.
+          const listed = await runtime.agent.invoke_evaluate({
+            expression: 'JSON.stringify(globalThis[' + JSON.stringify(TABS) + '] || [])',
+            returnByValue: true,
+          });
+
+          return {
+            registered: JSON.parse(listed.result?.value || '[]'),
+            send: (message) => {
+              const serialized = JSON.stringify(JSON.stringify(message));
+              void runtime.agent.invoke_evaluate({
+                expression:
+                  DISPATCHER + '.sendMessage(' + JSON.stringify(DOMAIN) + ', ' + serialized + ')',
+              });
+            },
           };
         }
       }
@@ -137,7 +154,14 @@ const main = async () => {
   const inspector = UI.InspectorView.InspectorView.instance();
   const panels = new Map();
 
-  const send = await connectToApp((message) => {
+  const addPanel = (tab) => {
+    if (!tab?.id || panels.has(tab.id)) return;
+    const panel = new TabPanel(tab);
+    panels.set(tab.id, panel);
+    inspector.addPanel(panel);
+  };
+
+  const connected = await connectToApp((message) => {
     const body = message?.data;
 
     // Every message the app sends names the tab it is for, so this is a lookup rather than a
@@ -152,23 +176,19 @@ const main = async () => {
       }
     }
 
-    if (message?.type !== 'tab:register' || !body?.id) return;
-    if (panels.has(body.id)) return;
-
-    const panel = new TabPanel(body);
-    panels.set(body.id, panel);
-    inspector.addPanel(panel);
-
-    // The panel was not listening when this arrived, so replay it once the iframe is up.
-    panel.iframe.addEventListener('load', () => {
-      panel.iframe.contentWindow?.postMessage(message, '*');
-    });
+    // A tab registered after this frontend connected, so it was not in the list that was read.
+    if (message?.type === 'tab:register') addPanel(body);
   });
 
-  if (!send) {
+  if (!connected) {
     console.warn('[devtools] the app never installed its devtools dispatcher');
     return;
   }
+
+  // The tabs the app already had. Each page asks for its own registration once it loads, so nothing
+  // has to be replayed at them here.
+  for (const tab of connected.registered) addPanel(tab);
+  const send = connected.send;
 
   window.addEventListener('message', (event) => {
     for (const panel of panels.values()) {

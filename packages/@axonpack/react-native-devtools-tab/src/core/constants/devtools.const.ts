@@ -12,3 +12,13 @@
 export const DEVTOOLS_ID = "devtools";
 
 export const DEVTOOLS_ROUTE = `/${DEVTOOLS_ID}-tab`;
+
+/**
+ * Where the app keeps its tab list, for the frontend to read.
+ *
+ * A panel is built from what is on here, not from a message, so opening or reloading React Native
+ * DevTools finds the tabs that are already registered instead of having to be told about them again.
+ * The app has no way of knowing a frontend reloaded, and nothing re-announces, so a push alone left
+ * the tab strip empty until the app itself restarted.
+ */
+export const DEVTOOLS_TABS = `__${DEVTOOLS_ID}_tabs__`;

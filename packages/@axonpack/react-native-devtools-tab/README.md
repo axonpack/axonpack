@@ -72,8 +72,6 @@ function Session() {
 What does not reach a tab is **React context**: a tab is its own root, so the app's providers are in
 a different tree.
 
-For state that no hook can see, `registerTab` returns `{ redraw }`.
-
 ## What it cannot do
 
 Touch a real element. A `ref` gets a stand-in, so a canvas, a measurement or a DOM library has

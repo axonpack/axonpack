@@ -1,6 +1,6 @@
 import { createElement, type ComponentType } from "react";
 
-import { DEVTOOLS_ID } from "./core/constants/devtools.const";
+import { DEVTOOLS_ID, DEVTOOLS_TABS } from "./core/constants/devtools.const";
 import {
   ACTION,
   HELLO,
@@ -25,6 +25,10 @@ const channel = createMessageChannel();
 void connectFuseboxTransport(DEVTOOLS_ID).then((transport) => {
   if (transport) channel.attach(transport);
 });
+
+/** Read by the frontend on connect, so a panel is built without the app being asked. */
+const tabs: (TabRegistration & { id: string })[] = [];
+(globalThis as Record<string, unknown>)[DEVTOOLS_TABS] = tabs;
 
 const taken = new Set<string>();
 
@@ -78,31 +82,6 @@ export type TabOptions = {
   component: ComponentType;
 };
 
-export type Tab = {
-  /** Generated from `name`, and unique among this app's tabs. Nothing has to be done with it. */
-  readonly id: string;
-  /**
-   * Draws the tab again, for when something the component reads has changed underneath it.
-   *
-   * The only thing the app ever has to tell a tab. A press inside one needs nothing at all: the
-   * handler runs here, so it changes the app the way any other code would.
-   *
-   * ```ts
-   * const session = ReactNativeDevtoolsPanel.registerTab({ name: 'Session', component: Session });
-   *
-   * function signIn(user) {
-   *   current = user;
-   *   session.redraw();
-   * }
-   * ```
-   *
-   * React reconciles rather than starting over, so the component keeps its own state and the panel
-   * keeps the elements it already has. Cheap enough to call on every change, and free before anybody
-   * opens the tab.
-   */
-  redraw: () => void;
-};
-
 /**
  * The app's side of React Native DevTools.
  *
@@ -135,26 +114,23 @@ export type Tab = {
  */
 export type ReactNativeDevtoolsPanel = {
   /** Adds a tab to React Native DevTools. Call it once per tab, as many times as you have tabs. */
-  registerTab: (options: TabOptions) => Tab;
+  registerTab: (options: TabOptions) => void;
 };
 
-function registerTab(options: TabOptions): Tab {
+function registerTab(options: TabOptions): void {
   const id = idFor(options.name);
   const tab = createTabChannel(channel, id);
   let sender: RemoteSender | null = null;
 
-  const announce = (): void =>
-    tab.send(REGISTER, {
-      name: options.name,
-      icon: options.icon,
-    } satisfies TabRegistration);
-
-  const draw = (): void => {
-    sender ??= createRemoteSender((ops) =>
-      tab.send(MUTATE, { ops } satisfies TabMutation),
-    );
-    sender.render(createElement(options.component));
+  const registration: TabRegistration = {
+    name: options.name,
+    icon: options.icon,
   };
+  tabs.push({ id, ...registration });
+
+  // Still pushed, for a tab registered while somebody already has DevTools open. The frontend reads
+  // the list when it connects, so this is the only case it cannot cover.
+  const announce = (): void => tab.send(REGISTER, registration);
 
   announce();
 
@@ -167,12 +143,16 @@ function registerTab(options: TabOptions): Tab {
       // Already drawn once, for a panel that has since gone. Replaying what it holds is what keeps
       // the component's own state through a panel reload: it is never re-mounted.
       tab.send(MUTATE, { ops: sender.replay() } satisfies TabMutation);
-    } else {
-      // Nobody has ever looked at this tab, so nothing has been rendered for it. Mounting now is
-      // what keeps a release build free: there is no panel to ask, so a component never runs, its
-      // effects never start, and nothing it does costs anything.
-      draw();
+      return;
     }
+
+    // First look at this tab, so nothing has been rendered for it. Mounting only now is what keeps
+    // a release build free: there is no panel to ask, so a component never runs, its effects never
+    // start, and nothing it does costs anything.
+    sender = createRemoteSender((ops) =>
+      tab.send(MUTATE, { ops } satisfies TabMutation),
+    );
+    sender.render(createElement(options.component));
   });
 
   // A handler is named by where it sits in the tree rather than by a name somebody chose, so it
@@ -181,15 +161,6 @@ function registerTab(options: TabOptions): Tab {
     const event = payload as TabAction;
     sender?.dispatch(event.action, event.payload);
   });
-
-  return {
-    id,
-    // Nothing to draw again until somebody has opened DevTools, which is the whole of the production
-    // gate: no panel, no render, no effects.
-    redraw: () => {
-      if (sender) draw();
-    },
-  };
 }
 
 export const ReactNativeDevtoolsPanel: ReactNativeDevtoolsPanel = {
