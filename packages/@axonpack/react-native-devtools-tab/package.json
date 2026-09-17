@@ -2,7 +2,6 @@
   "name": "@axonpack/react-native-devtools-tab",
   "version": "0.1.0",
   "description": "Put your own tab in React Native DevTools, with a two-way channel to the running app",
-  "type": "module",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
     "react-native",
@@ -22,9 +21,13 @@
   },
   "files": [
     "src/index.ts",
-    "src/core",
+    "src/core/constants",
+    "src/core/services/message-channel.service.ts",
+    "src/core/services/panel-channel.service.ts",
+    "src/core/services/tab-channel.service.ts",
     "src/device",
-    "src/renderer/renderer.css",
+    "src/renderer/start-renderer.ts",
+    "src/renderer/services",
     "dist",
     "LICENSE",
     "CHANGELOG.md",
@@ -32,6 +35,7 @@
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./renderer": "./src/renderer/start-renderer.ts",
     "./metro": "./dist/metro/index.cjs",
     "./package.json": "./package.json"
   },
@@ -52,22 +56,17 @@
     "jsdom": "^20.0.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-native-web": "^0.21.2",
+    "react-reconciler": "0.33.0",
     "typescript": "~5.9.3"
   },
   "engines": {
     "node": ">=20"
   },
   "peerDependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.0.0",
-    "react-native-web": ">=0.19"
+    "react": "^19.2.0"
   },
-  "peerDependenciesMeta": {
-    "react-dom": {
-      "optional": true
-    },
-    "react-native-web": {
-      "optional": true
-    }
+  "dependencies": {
+    "react-reconciler": "^0.33.0"
   }
 }

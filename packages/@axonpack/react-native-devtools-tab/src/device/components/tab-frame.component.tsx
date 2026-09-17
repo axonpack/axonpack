@@ -125,13 +125,15 @@ export function TabFrame({
           aria-label="Render this tab again"
         />
       </header>
-      {isLoading ? (
-        <div className="axonpack-tab-loading">
-          <span className="axonpack-tab-loading-glyph" />
-        </div>
-      ) : (
-        createElement(component)
-      )}
+      <div className="axonpack-tab-body">
+        {isLoading ? (
+          <div className="axonpack-tab-loading">
+            <span className="axonpack-tab-loading-glyph" />
+          </div>
+        ) : (
+          createElement(component)
+        )}
+      </div>
     </>
   );
 }

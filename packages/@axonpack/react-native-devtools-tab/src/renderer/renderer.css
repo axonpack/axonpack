@@ -40,6 +40,24 @@ body,
   height: 100%;
 }
 
+/*
+  The tab fills the panel rather than its own content.
+  A devtools tab is a pane, not a document: a list that ends halfway leaves the rest of the panel as
+  a dead band, and `flex: 1` inside a tab measures against nothing unless every box above it has a
+  height. So the page is a column from `html` down, and the tab's body is what stretches.
+*/
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+.axonpack-tab-body {
+  flex: 1;
+  /* A flex child will not shrink below its content without this, which is what makes it scroll. */
+  min-height: 0;
+  overflow: auto;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -242,7 +260,7 @@ body {
   place-content: center;
   justify-items: center;
   gap: 12px;
-  height: calc(100vh - var(--bar-height));
+  height: 100%;
   color: var(--muted);
 }
 

@@ -355,72 +355,7 @@ export type ReactNativeDevtoolsTabOptions = {
    * monorepo that hoists oddly is the case that needs it.
    */
   frontendPath?: string;
-  /**
-   * The module that calls `registerTab`, which is also what a tab's page is built from.
-   *
-   * Defaults to `devtools.ts` (or `.tsx`/`.js`/`.jsx`) beside `metro.config.js`. Metro builds it
-   * twice: once into the app, where registering a tab tells DevTools the tab exists, and once for
-   * the web, where `react-native` is react-native-web and the same components draw themselves in
-   * the panel.
-   */
-  tabs?: string;
 };
-
-const ENTRY_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
-
-/** The consumer's own tab module, which is the entry Metro is asked to build for the web. */
-function findTabsEntry(projectRoot: string, named?: string): string | null {
-  const candidates = named
-    ? [path.resolve(projectRoot, named)]
-    : ENTRY_EXTENSIONS.map((extension) =>
-        path.join(projectRoot, `devtools${extension}`),
-      );
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-    for (const extension of ENTRY_EXTENSIONS) {
-      if (fs.existsSync(candidate + extension)) return candidate + extension;
-    }
-  }
-
-  return null;
-}
-
-/**
- * The page a tab shows: nothing but a container and the app's own code, built for the web.
- *
- * There is no bundle of this package's own here, and nothing translating anything. Metro resolves
- * `react-native` to react-native-web for a web build, exactly as it does for `expo start --web`, so
- * what loads is a React Native app running in a browser. The stylesheet is this package's, and it
- * only dresses the bar above the tab.
- */
-function panelPage(bundleUrl: string, base: string): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>DevTools tab</title>
-    <link rel="stylesheet" href="${base}/panel/renderer.css" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script>
-      // A tab that fails renders blank, and its errors go to the iframe's own console, which nobody
-      // thinks to open. Put them on the page instead.
-      window.addEventListener("error", function (event) {
-        var box = document.createElement("pre");
-        box.className = "axonpack-tab-error";
-        box.textContent = String(
-          (event.error && event.error.stack) || event.message,
-        );
-        document.body.appendChild(box);
-      });
-    </script>
-    <script src="${bundleUrl}"></script>
-  </body>
-</html>
-`;
-}
 
 export function withReactNativeDevtoolsTab<
   TConfig extends {
@@ -440,31 +375,14 @@ export function withReactNativeDevtoolsTab<
     return config;
   }
 
-  // This package's own files, for the one stylesheet a tab's page loads.
-  const own = path.dirname(
-    require.resolve("@axonpack/react-native-devtools-tab/package.json"),
+  // The built page shown in the tab, published with this package so it is found the same way from a
+  // checkout or from `node_modules`.
+  const renderer = path.join(
+    path.dirname(
+      require.resolve("@axonpack/react-native-devtools-tab/package.json"),
+    ),
+    "dist/renderer",
   );
-
-  const entry = findTabsEntry(projectRoot, options.tabs);
-
-  if (!entry) {
-    console.warn(
-      "[devtools] no tab module was found. Put one in `devtools.ts` beside metro.config.js, or name it with the `tabs` option.",
-    );
-  }
-
-  // Metro resolves a bundle URL against the root it serves, which in a monorepo is above the app.
-  const serverRoot =
-    (config.server as { unstable_serverRoot?: string } | undefined)
-      ?.unstable_serverRoot ?? projectRoot;
-
-  const bundleUrl = entry
-    ? `/${path
-        .relative(serverRoot, entry)
-        .replace(/\.[cm]?[jt]sx?$/, "")
-        .split(path.sep)
-        .join("/")}.bundle?platform=web&dev=true`
-    : "";
 
   pointDebuggerAt(roots);
 
@@ -480,25 +398,11 @@ export function withReactNativeDevtoolsTab<
       return true;
     }
 
-    if (rest === "/panel/index.html") {
-      serve(
-        response,
-        entry
-          ? panelPage(bundleUrl, base)
-          : "<!doctype html><p>No tab module was found. See the dev server's own log.",
-        "text/html",
-      );
-      return true;
-    }
-
-    if (rest === "/panel/renderer.css") {
-      sendFile(own, "src/renderer/renderer.css", response);
-      return true;
-    }
-
+    // `/panel/...` is the page this package ships, everything else is the real DevTools frontend.
+    const inPanel = rest.startsWith("/panel/");
     sendFile(
-      frontend,
-      rest,
+      inPanel ? renderer : frontend,
+      inPanel ? rest.slice("/panel".length) : rest,
       response,
       rest === "/rn_fusebox.html"
         ? (html) => injectHost(html, base)

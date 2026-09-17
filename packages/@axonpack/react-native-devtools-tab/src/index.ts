@@ -1,12 +1,25 @@
-import type { ComponentType } from "react";
+import { createElement, type ComponentType } from "react";
 
 import { DEVTOOLS_ID, DEVTOOLS_TABS } from "./core/constants/devtools.const";
-import { REGISTER } from "./core/constants/message.const";
-import type { TabRegistration } from "./core/constants/message.const";
+import {
+  ACTION,
+  HELLO,
+  MUTATE,
+  REGISTER,
+} from "./core/constants/message.const";
+import type {
+  TabAction,
+  TabMutation,
+  TabRegistration,
+} from "./core/constants/message.const";
 import { createMessageChannel } from "./core/services/message-channel.service";
 import { createTabChannel } from "./core/services/tab-channel.service";
+import { TabFrame } from "./device/components/tab-frame.component";
 import { connectFuseboxTransport } from "./device/services/fusebox-transport.service";
-import { IN_PANEL, mountTab } from "./device/services/mount-tab.service";
+import {
+  createRemoteSender,
+  type RemoteSender,
+} from "./device/services/remote-sender.service";
 
 const channel = createMessageChannel();
 
@@ -55,15 +68,20 @@ export type TabOptions = {
   /**
    * What the tab draws, under the bar this package puts above it.
    *
-   * Ordinary React Native. Metro builds the module this is registered in a second time, for the web,
-   * the same way `expo start --web` does, so `react-native` there is react-native-web and `View`,
-   * `Text`, `Pressable` and the rest are the real ones, running in a browser. Nothing is mapped or
-   * translated on the way. `div` and `button` work in the same tree, because it is a web page.
+   * Ordinary React: hooks, effects, context, any component it composes. It runs **in the app**, not
+   * in the panel, against a renderer that reports what it drew instead of touching a DOM, and the
+   * panel builds the real elements from that. So `useState` redraws the tab, and a handler runs
+   * here, where the app's own state already is.
    *
-   * **It runs in the panel, not in the app.** That bundle is its own JavaScript world with its own
-   * copy of every module, so a store imported here is a different instance from the app's and starts
-   * empty. Nothing a tab does reaches the running app except as a message over the debugger
-   * connection.
+   * The JSX can be `div` and `button`, because the elements are made at the other end, in a browser.
+   * It can equally be `View`, `Text` and `Pressable`: those reach the panel as the host elements
+   * React Native compiled them to, and the panel draws them with react-native-web. Layout, text and
+   * presses cross. What does not is behaviour that lives in native code rather than in the
+   * JavaScript, so `SafeAreaView` lays out with no insets and native `Animated` does not move.
+   *
+   * What it cannot do is touch a real element, because there isn't one on this side. A `ref` holds a
+   * stand-in, so a canvas, a measurement or a DOM library has nothing to work with, and an event
+   * arrives as a description of itself rather than the event.
    */
   component: ComponentType;
 };
@@ -105,14 +123,8 @@ export type ReactNativeDevtoolsPanel = {
 
 function registerTab(options: TabOptions): void {
   const id = idFor(options.name);
-
-  // The same module, built for the web and loaded by a tab's page. Ids come out the same because
-  // they are derived from the names in the order they are registered, and this is the same file
-  // registering them. So the tab the page asked for is the tab that mounts.
-  if (IN_PANEL) {
-    mountTab(id, options.name, options.component);
-    return;
-  }
+  const tab = createTabChannel(channel, id);
+  let sender: RemoteSender | null = null;
 
   const registration: TabRegistration = {
     name: options.name,
@@ -120,9 +132,42 @@ function registerTab(options: TabOptions): void {
   };
   tabs.push({ id, ...registration });
 
-  // Announced as well as listed, for a tab registered while somebody already has DevTools open. The
-  // frontend reads the list when it connects, so this is the only case that cannot cover.
-  createTabChannel(channel, id).send(REGISTER, registration);
+  // Still pushed, for a tab registered while somebody already has DevTools open. The frontend reads
+  // the list when it connects, so this is the only case it cannot cover. It is also how a page that
+  // is already open learns the app restarted, which is why nothing answers HELLO with it: a page
+  // asks again when one arrives, and the two would go round forever.
+  tab.send(REGISTER, registration);
+
+  // A panel opened after the app started has missed the registration, so it asks rather than
+  // waiting. Asking is also what makes reloading either side recover.
+  tab.onMessage(HELLO, () => {
+    if (sender) {
+      // Already drawn once, for a panel that has since gone. Replaying what it holds is what keeps
+      // the component's own state through a panel reload: it is never re-mounted.
+      tab.send(MUTATE, { ops: sender.replay() } satisfies TabMutation);
+      return;
+    }
+
+    // First look at this tab, so nothing has been rendered for it. Mounting only now is what keeps
+    // a release build free: there is no panel to ask, so a component never runs, its effects never
+    // start, and nothing it does costs anything.
+    sender = createRemoteSender((ops) =>
+      tab.send(MUTATE, { ops } satisfies TabMutation),
+    );
+    sender.render(
+      createElement(TabFrame, {
+        name: options.name,
+        component: options.component,
+      }),
+    );
+  });
+
+  // A handler is named by where it sits in the tree rather than by a name somebody chose, so it
+  // needs no registering and two tabs cannot collide.
+  tab.onMessage(ACTION, (payload) => {
+    const event = payload as TabAction;
+    sender?.dispatch(event.action, event.payload);
+  });
 }
 
 export const ReactNativeDevtoolsPanel: ReactNativeDevtoolsPanel = {
