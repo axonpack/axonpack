@@ -20,7 +20,7 @@ import {
  *
  * Each DevTools tab loads this page with its own id, and the channel is bound to it, so nothing here
  * has to check who a message was for. Nothing here decides what the tab looks like either: the app's
- * React does, and this builds the elements it asks for.
+ * React does, its bar included, and this builds the elements it asks for.
  */
 export function startRenderer(
   tabId: string,

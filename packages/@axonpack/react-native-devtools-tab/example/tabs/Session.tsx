@@ -11,8 +11,6 @@ export default function Session() {
 
   return (
     <div style={{ padding: 12 }}>
-      <h1 style={{ fontSize: 13 }}>Session</h1>
-
       <p>
         user <b>{user}</b>
       </p>

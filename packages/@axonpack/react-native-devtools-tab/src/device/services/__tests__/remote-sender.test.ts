@@ -4,6 +4,7 @@ import { expect, test } from "bun:test";
 import { JSDOM } from "jsdom";
 
 import { createRemoteReceiver } from "../../../renderer/services/remote-receiver.service";
+import { TabFrame } from "../../components/tab-frame.component";
 import { createRemoteSender } from "../remote-sender.service";
 
 /**
@@ -189,4 +190,28 @@ test("a prop React stops rendering is taken off the element", async () => {
 
   // React sends only what changed, so a prop that went has to be named as gone rather than left out.
   expect(container.querySelector("button")!.hasAttribute("title")).toBe(false);
+});
+
+test("every tab gets the library's bar, and its button renders the tab again", async () => {
+  const { container, sender, pressed, click } = mount();
+
+  let renders = 0;
+  function Body() {
+    renders++;
+    return createElement("p", null, "body");
+  }
+
+  sender.render(createElement(TabFrame, { name: "Session", component: Body }));
+  await settle();
+
+  expect(
+    container.querySelector("header.axonpack-tab-bar")?.textContent,
+  ).toContain("Session");
+  expect(renders).toBe(1);
+
+  click(container.querySelector("header button")!);
+  sender.dispatch(pressed[0].handler, pressed[0].payload);
+  await settle();
+
+  expect(renders).toBe(2);
 });

@@ -14,6 +14,7 @@ import type {
 } from "./core/constants/message.const";
 import { createMessageChannel } from "./core/services/message-channel.service";
 import { createTabChannel } from "./core/services/tab-channel.service";
+import { TabFrame } from "./device/components/tab-frame.component";
 import { connectFuseboxTransport } from "./device/services/fusebox-transport.service";
 import {
   createRemoteSender,
@@ -65,7 +66,7 @@ export type TabOptions = {
    */
   icon?: string;
   /**
-   * What the tab draws.
+   * What the tab draws, under the bar this package puts above it.
    *
    * Ordinary React: hooks, effects, context, any component it composes. It runs **in the app**, not
    * in the panel, against a renderer that reports what it drew instead of touching a DOM, and the
@@ -152,7 +153,12 @@ function registerTab(options: TabOptions): void {
     sender = createRemoteSender((ops) =>
       tab.send(MUTATE, { ops } satisfies TabMutation),
     );
-    sender.render(createElement(options.component));
+    sender.render(
+      createElement(TabFrame, {
+        name: options.name,
+        component: options.component,
+      }),
+    );
   });
 
   // A handler is named by where it sits in the tree rather than by a name somebody chose, so it

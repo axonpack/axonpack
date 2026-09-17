@@ -72,6 +72,14 @@ function Session() {
 What does not reach a tab is **React context**: a tab is its own root, so the app's providers are in
 a different tree.
 
+## The bar at the top
+
+Every tab gets one, drawn by this package: its `name`, and a button that renders the component
+again. Nothing to add and nothing to wire up, and your component starts under it.
+
+That button is for state a component reads but React is not watching. Everything else redraws on its
+own, because a tab is ordinary React.
+
 ## What it cannot do
 
 Touch a real element. A `ref` gets a stand-in, so a canvas, a measurement or a DOM library has

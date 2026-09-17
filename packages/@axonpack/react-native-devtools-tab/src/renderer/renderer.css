@@ -1,20 +1,35 @@
 /*
-  The page a tab is drawn into, and nothing more.
+  The page a tab is drawn into, plus the one bar the library draws on top of it.
 
-  What the tab looks like is the consumer's component, styled however they style it. All this does is
-  stop the iframe defaulting to a white page inside a dark DevTools, and give the root something to
+  Below that bar the tab is the consumer's component, styled however they style it. The rest of this
+  stops the iframe defaulting to a white page inside a dark DevTools, and gives the root something to
   fill.
 */
 :root {
   color-scheme: dark light;
   --bg: #1e1e1e;
   --fg: #dddddd;
+  --bar: #282828;
+  --line: #3c3c3c;
+  --hover: #ffffff1a;
+  --pop: #2f2f2f;
+  --muted: #9aa0a6;
+  --link: #6ba5ff;
+  --logo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cg fill='none' stroke-width='60' stroke-linecap='round'%3E%3Cpath d='M199 112 95 287' stroke='%230c63e9'/%3E%3Cpath d='M243 165 304 287' stroke='%23f4f6f8'/%3E%3C/g%3E%3Ccircle cx='201' cy='264' r='29' fill='%230c63e9'/%3E%3C/svg%3E");
+  --refresh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     --bg: #ffffff;
     --fg: #202020;
+    --bar: #ececec;
+    --line: #d0d0d0;
+    --hover: #0000000d;
+    --pop: #ffffff;
+    --muted: #5f6368;
+    --link: #0c63e9;
+    --logo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'%3E%3Cg fill='none' stroke-width='60' stroke-linecap='round'%3E%3Cpath d='M199 112 95 287' stroke='%230c63e9'/%3E%3Cpath d='M243 165 304 287' stroke='%23000000'/%3E%3C/g%3E%3Ccircle cx='201' cy='264' r='29' fill='%230c63e9'/%3E%3C/svg%3E");
   }
 }
 
@@ -32,4 +47,152 @@ body {
     SFMono-Regular,
     Menlo,
     monospace;
+}
+
+/*
+  The bar the app's side puts above every tab (`device/components/tab-frame.component.tsx`). The
+  element comes from there; how it looks belongs here, where the panel's own light and dark are.
+*/
+.axonpack-tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 26px;
+  padding: 0 4px 0 8px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+  font:
+    12px system-ui,
+    sans-serif;
+  font-weight: 500;
+}
+
+/*
+  Two colours, so it is a background rather than a mask, and one variant per scheme rather than
+  `currentColor`: a data URI is its own document and cannot read the page's.
+*/
+.axonpack-tab-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.axonpack-tab-brand {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  background: var(--logo) center / contain no-repeat;
+}
+
+/*
+  Flush under the mark on purpose: a gap would drop the hover on the way down, and the panel is
+  short enough that a few pixels of travel is all there is.
+
+  Hidden by `visibility` rather than `display`, which is what lets it fade: an element that is not
+  laid out has nothing to animate. Hidden it also takes no clicks, so it is out of the way.
+*/
+.axonpack-tab-about {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 5px);
+  left: -6px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  width: 264px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pop);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.55;
+  box-shadow: 0 10px 28px #00000059;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease,
+    visibility 0s 0.12s;
+}
+
+/*
+  The bridge across the 5px the card sits below the bar. Without it the pointer leaves the mark on
+  the way down and the card closes before it is reached.
+*/
+.axonpack-tab-about::before {
+  content: "";
+  position: absolute;
+  inset: -6px 0 100%;
+}
+
+/* The card is a child of the mark, so pointing at it still counts as hovering the mark. */
+.axonpack-tab-brand:hover .axonpack-tab-about,
+.axonpack-tab-brand:focus-within .axonpack-tab-about {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.axonpack-tab-about b {
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.axonpack-tab-links {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.axonpack-tab-about a {
+  color: var(--link);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.axonpack-tab-about a::after {
+  content: " \2197";
+}
+
+.axonpack-tab-about a:hover {
+  text-decoration: underline;
+}
+
+.axonpack-tab-bar button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.axonpack-tab-bar button:hover {
+  background: var(--hover);
+}
+
+/*
+  The glyph is a mask rather than an `svg` element or a character: the panel builds nodes with
+  `createElement`, which cannot make SVG, and a text arrow is whatever the platform's font decides.
+  Masked, it is one shape everywhere and it takes its colour from the bar.
+*/
+.axonpack-tab-bar button::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: var(--refresh) center / contain no-repeat;
+  mask: var(--refresh) center / contain no-repeat;
 }

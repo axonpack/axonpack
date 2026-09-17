@@ -5,6 +5,7 @@
     "target": "esnext",
     "moduleResolution": "bundler",
     "module": "esnext",
+    "jsx": "react-jsx",
     "moduleDetection": "force",
     "esModuleInterop": true,
     "declaration": true,
