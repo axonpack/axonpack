@@ -3,6 +3,7 @@ import { ReactNativeDevtoolsPanel } from "@axonpack/react-native-devtools-tab";
 import Session from "./tabs/Session";
 import Escaping from "./tabs/Escaping";
 import Shell from "./tabs/Shell";
+import App from "./App";
 
 /** A tab per thing worth checking. Each one is a component and nothing else. */
 
@@ -22,4 +23,10 @@ ReactNativeDevtoolsPanel.registerTab({
   name: "Escaping",
   icon: "⚑",
   component: Escaping,
+});
+
+ReactNativeDevtoolsPanel.registerTab({
+  name: "Fake App",
+  icon: "#",
+  component: App,
 });
