@@ -6,12 +6,11 @@ export default function Shell() {
   const [running, setRunning] = useState(false);
 
   const run = async () => {
-    if(1==1)return; //TODO: skip for now. will plan to implement later.
+    if (1 == 1) return; //TODO: skip for now. will plan to implement later.
     setRunning(true);
     setOutput("");
 
     try {
-
       //TODO: skip for now. will plan to implement later.
       // const response = await fetch(`${devServer}/exec-experiment/run`, {
       //   method: "POST",
