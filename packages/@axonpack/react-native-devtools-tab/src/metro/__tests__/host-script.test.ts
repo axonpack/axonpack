@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 
+import { DEVTOOLS_ROUTE } from "../../core/constants/devtools.const";
 import { withReactNativeDevtoolsTab } from "../index";
 
 /**
@@ -17,7 +18,7 @@ function hostScript(): string {
   const handler = config.server.enhanceMiddleware(() => undefined, null);
 
   handler(
-    { url: "/devtools-tab/host.js", method: "GET", on: () => undefined },
+    { url: `${DEVTOOLS_ROUTE}/host.js`, method: "GET", on: () => undefined },
     {
       setHeader: () => undefined,
       end: (body: string) => {
@@ -49,6 +50,6 @@ function iframeSrc(tab: Record<string, string>): string {
 test("a tab's iframe loads this package's page, named by the tab", () => {
   // Encoded rather than interpolated, because an id is whatever the app called it.
   expect(iframeSrc({ id: "a b" })).toBe(
-    "/devtools-tab/panel/index.html?tab=a%20b",
+    `${DEVTOOLS_ROUTE}/panel/index.html?tab=a%20b`,
   );
 });

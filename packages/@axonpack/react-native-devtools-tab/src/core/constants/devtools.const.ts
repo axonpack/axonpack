@@ -9,7 +9,7 @@
  * and each dev server has its own port, so two apps never share either. Only two independent
  * devtools instances *inside one app* would need to differ, and there is no such case.
  */
-export const DEVTOOLS_ID = "devtools";
+export const DEVTOOLS_ID = "axonpack-rn-devtools";
 
 export const DEVTOOLS_ROUTE = `/${DEVTOOLS_ID}-tab`;
 
