@@ -1,16 +1,20 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
-import "../devtools";
 import { seedDatabase } from "../database";
 import { seedStorage } from "../storage";
 
+// Pulled in for its side effect: it calls `registerTab`, and doing it here means that happens as the
+// app starts, before anything opens DevTools. Registering later works too, the frontend is told
+// either way, but a tab that exists from the start is one less thing to explain.
+//
+// A require rather than an import because Metro folds `__DEV__` away before it collects
+// dependencies, so this way a release bundle does not carry the tabs at all. Registering unguarded
+// is safe either way, since a release build has no debugger to connect to.
+if (__DEV__) require("../devtools");
+
 /**
- * The app's one layout, and where the tabs are registered.
- *
- * `../devtools` is imported for its side effect: it calls `registerTab`, and importing it here means
- * that happens as the app starts, before anything opens DevTools. Registering later works too, the
- * frontend is told either way, but a tab that exists from the start is one less thing to explain.
+ * The app's one layout.
  *
  * The seeds run at module scope rather than in an effect, so a tab opened before the first screen
  * paints already has rows and keys to show.
