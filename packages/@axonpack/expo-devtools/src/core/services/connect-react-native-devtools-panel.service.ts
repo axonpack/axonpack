@@ -19,7 +19,6 @@ export function connectReactNativeDevtoolsPanel(): void {
   // a url. It needs either that escape hatch back or the page rewritten as a component.
 
   ReactNativeDevtoolsPanel.registerTab({
-    id: 'overview',
     name: 'Axonpack',
     component: OverviewTab,
   });
