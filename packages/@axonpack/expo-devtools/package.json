@@ -25,6 +25,8 @@
   },
   "files": [
     "build",
+    "metro.d.ts",
+    "metro.js",
     "ios",
     "android",
     "expo-module.config.json",
@@ -42,6 +44,10 @@
       },
       "expo-source": "./src/index.ts",
       "default": "./build/index.js"
+    },
+    "./metro": {
+      "types": "./metro.d.ts",
+      "default": "./metro.js"
     },
     "./package.json": "./package.json"
   },
@@ -107,5 +113,6 @@
     "react-native": "*",
     "react-native-safe-area-context": "*",
     "react-native-webview": "*"
-  }
+  },
+  "peerDependenciesMeta": {}
 }

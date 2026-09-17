@@ -13,6 +13,7 @@ only disagree with these.
 | [performance.md](./performance.md)                                     | Frame rate, memory, startup, stalls                |
 | [crash.md](./crash.md)                                                 | The four capture tiers and the report sheets       |
 | [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose          |
+| [rn-devtools-plan.md](./rn-devtools-plan.md)                           | Plan: the same tabs inside React Native DevTools   |
 | [database.md](./database.md)                                           | Not built — and why it is not the Storage tab      |
 | [performance-landscape.md](./performance-landscape.md)                 | Research: what other performance tools measure     |
 | [react-native-performance-apis.md](./react-native-performance-apis.md) | Research: the platform surface underneath          |

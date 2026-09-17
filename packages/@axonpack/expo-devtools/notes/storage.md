@@ -42,7 +42,7 @@ order:
    `"${byteLength} bytes"`. The primitive itself already exists in `core/` — nothing in this tab has
    bytes to hand it.
 
-`examples/STORAGE-GAP.md` carries the paths behind each of these, on both sides.
+The working notes behind each of these, on both sides, are kept outside this repo.
 
 ## Why it cannot discover anything
 

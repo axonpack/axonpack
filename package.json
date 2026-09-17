@@ -37,6 +37,8 @@
   "workspaces": [
     "packages/*",
     "packages/@axonpack/*",
+    "packages/@axonpack/react-native-devtools-tab/example",
+    "packages/@axonpack/expo-devtools/panel",
     "packages/@axonpack/expo-devtools/example",
     "packages/@axonpack/react-pretty-print/example-web",
     "packages/@axonpack/react-pretty-print/example-native"

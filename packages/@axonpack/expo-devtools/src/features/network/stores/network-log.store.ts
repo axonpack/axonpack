@@ -188,7 +188,7 @@ export type ServerSentEvent = {
 
 /**
  * One captured WebSocket connection — a `WS` row in the Network tab. Its frames are held apart, and
- * read with `devtools.networkLogStore.getSocketMessages(id)`.
+ * read with `devtools.networkLogStore.getWebSocketMessages(id)`.
  */
 export type WebSocketLogEntry = {
   /** Discriminates a socket from a request in the one list the tab shows. */
@@ -349,6 +349,11 @@ export const networkLogStore = {
   },
   addWebSocketMessage(id: string, message: WebSocketMessage) {
     if (!enabled || paused) return;
+    // A socket opened before the patch was installed has no row, and frames kept against a row that
+    // does not exist are unreadable and still cost a remerge and a notify on every one. That is a
+    // store change per frame for a socket nobody can see, which is enough on its own to keep a
+    // subscriber redrawing for as long as the socket lives.
+    if (!socketEntries.some((entry) => entry.id === id)) return;
     const existing = socketMessages.get(id) ?? [];
     const next = [...existing, message];
     socketMessages = new Map(socketMessages).set(

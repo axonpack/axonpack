@@ -1,0 +1,481 @@
+/* Chrome's Network panel is the reference for layout; the palette follows the DevTools theme. */
+:root {
+  color-scheme: dark light;
+  --bg: #1e1e1e;
+  --surface: #252526;
+  --raised: rgba(127, 127, 127, 0.14);
+  --fg: #dcdcdc;
+  --muted: #8a8a8a;
+  --line: #3a3a3a;
+  --accent: #4a9eff;
+  --success: #6ac48a;
+  --warning: #e0b050;
+  --error: #f08a8a;
+  --pending: #d9a441;
+  --row-hover: rgba(127, 127, 127, 0.1);
+  --row-selected: rgba(74, 158, 255, 0.18);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #ffffff;
+    --surface: #f3f3f3;
+    --fg: #202020;
+    --muted: #6a6a6a;
+    --line: #dcdcdc;
+    --row-hover: rgba(0, 0, 0, 0.04);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    12px system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ── chrome ─────────────────────────────────────────────────────────────────── */
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 6px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.tabs button {
+  background: none;
+  border: 0;
+  padding: 7px 12px;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.tabs button.active {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.toolbar .spacer {
+  flex: 1;
+}
+.tool {
+  background: none;
+  border: 0;
+  padding: 4px 7px;
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tool:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+.tool.on {
+  color: var(--accent);
+}
+.tool.record.on {
+  color: var(--error);
+}
+.sep {
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+}
+
+.search {
+  flex: 0 1 240px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.search input {
+  flex: 1;
+  background: none;
+  border: 0;
+  outline: none;
+  min-width: 0;
+}
+.search .mode {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+.search .mode.on {
+  background: var(--raised);
+  color: var(--accent);
+}
+
+.checks {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+.checks label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+/* ── filter panel ───────────────────────────────────────────────────────────── */
+
+.filters {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  display: none;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.filters.open {
+  display: flex;
+}
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.filter-group > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.chip {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.filters input[type='text'] {
+  width: 110px;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+}
+
+/* ── overview strip ─────────────────────────────────────────────────────────── */
+
+.overview {
+  height: 42px;
+  border-bottom: 1px solid var(--line);
+  padding: 5px 8px;
+  position: relative;
+}
+.overview .bar {
+  position: absolute;
+  height: 5px;
+  border-radius: 2px;
+}
+.overview .axis {
+  position: absolute;
+  bottom: 3px;
+  left: 8px;
+  right: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── request list ───────────────────────────────────────────────────────────── */
+
+.split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.list {
+  flex: 1;
+  overflow: auto;
+  min-width: 0;
+}
+table.rows {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.rows th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  cursor: pointer;
+}
+table.rows td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.dense table.rows td {
+  padding: 1px 8px;
+}
+table.rows tbody tr {
+  cursor: pointer;
+}
+table.rows tbody tr:hover {
+  background: var(--row-hover);
+}
+table.rows tbody tr.selected {
+  background: var(--row-selected);
+}
+tr.group td {
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 500;
+  cursor: default;
+}
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+.status-ok {
+  color: var(--success);
+}
+.status-err {
+  color: var(--error);
+}
+.status-pending {
+  color: var(--pending);
+}
+.muted {
+  color: var(--muted);
+}
+.tag {
+  font-size: 10px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+}
+.empty {
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+mark {
+  background: rgba(224, 176, 80, 0.35);
+  color: inherit;
+  border-radius: 2px;
+}
+
+/* ── detail panel ───────────────────────────────────────────────────────────── */
+
+.detail {
+  width: 52%;
+  min-width: 320px;
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+.detail.hidden {
+  display: none;
+}
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.detail-head .url {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
+
+.kv {
+  width: 100%;
+  border-collapse: collapse;
+}
+.kv th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 2px 8px 2px 0;
+  vertical-align: top;
+  white-space: nowrap;
+  width: 1%;
+}
+.kv td {
+  padding: 2px 0;
+  word-break: break-all;
+}
+.section {
+  margin: 0 0 10px;
+}
+.section > h3 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+pre.body {
+  margin: 0;
+  padding: 8px;
+  background: var(--raised);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 380px;
+  overflow: auto;
+}
+
+/* ── waterfall ──────────────────────────────────────────────────────────────── */
+
+.waterfall {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.phase {
+  display: grid;
+  grid-template-columns: 90px 1fr 70px;
+  align-items: center;
+  gap: 8px;
+}
+.phase .track {
+  height: 10px;
+  background: var(--raised);
+  border-radius: 2px;
+  position: relative;
+}
+.phase .fill {
+  position: absolute;
+  height: 100%;
+  border-radius: 2px;
+}
+.phase .value {
+  text-align: right;
+  color: var(--muted);
+}
+
+/* ── sandbox ────────────────────────────────────────────────────────────────── */
+
+.sandbox {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.urlbar {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.urlbar select,
+.urlbar input {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 6px;
+  outline: none;
+}
+.urlbar input {
+  flex: 1;
+}
+.send {
+  background: var(--accent);
+  border: 0;
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 14px;
+  cursor: pointer;
+}
+.sandbox-body {
+  flex: 1;
+  overflow: auto;
+  padding: 10px;
+}
+.table-add {
+  background: none;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.kvrow {
+  display: grid;
+  grid-template-columns: 18px 1fr 1fr 22px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.kvrow input {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 6px;
+  outline: none;
+  min-width: 0;
+}
