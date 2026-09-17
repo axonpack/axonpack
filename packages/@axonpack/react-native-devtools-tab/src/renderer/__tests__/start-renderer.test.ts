@@ -6,6 +6,7 @@ import { expect, test } from "bun:test";
 import { JSDOM, VirtualConsole } from "jsdom";
 
 import { createRemoteSender } from "../../device/services/remote-sender.service";
+import { TabFrame } from "../../device/components/tab-frame.component";
 
 /**
  * Loads the built page the way a tab does, and drives it the way the app does.
@@ -139,4 +140,46 @@ test("asks again when the app restarts, so a drawn tab is redrawn", async () => 
 
   expect(dom.window.document.body.textContent).toContain("after");
   expect(dom.window.document.body.textContent).not.toContain("before");
+});
+
+test("the refresh button holds a loader up, then draws the tab again", async () => {
+  const { dom, sent, sender } = load();
+
+  // The bar asks GitHub for a star count on mount. Nothing here is about that, and a test should not
+  // be on the network.
+  globalThis.fetch = (() =>
+    Promise.reject(new Error("offline"))) as unknown as typeof fetch;
+
+  sender.render(
+    createElement(TabFrame, {
+      name: "Session",
+      component: () => createElement("p", null, "tab body"),
+    }),
+  );
+  await settle();
+
+  dom.window.document
+    .querySelector("button")!
+    .dispatchEvent(new dom.window.Event("click"));
+
+  const press = sent.filter((m) => m.type === "tab:action").at(-1)!;
+  const { action, payload } = press.data as {
+    action: string;
+    payload: unknown;
+  };
+  sender.dispatch(action, payload);
+  await settle();
+
+  // The point of the delay: a transition that awaits stays pending, so this is still up a frame
+  // later rather than gone before anybody saw it.
+  expect(dom.window.document.body.textContent).toContain("Rendering");
+  expect(dom.window.document.body.textContent).not.toContain("tab body");
+
+  for (let waited = 0; waited < 50; waited++) {
+    if (dom.window.document.body.textContent?.includes("tab body")) break;
+    await settle();
+  }
+
+  expect(dom.window.document.body.textContent).toContain("tab body");
+  expect(dom.window.document.body.textContent).not.toContain("Rendering");
 });

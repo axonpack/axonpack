@@ -7,6 +7,7 @@
 */
 :root {
   color-scheme: dark light;
+  --bar-height: 26px;
   --bg: #1e1e1e;
   --fg: #dddddd;
   --bar: #282828;
@@ -58,7 +59,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  height: 26px;
+  height: var(--bar-height);
   padding: 0 4px 0 8px;
   background: var(--bar);
   border-bottom: 1px solid var(--line);
@@ -228,4 +229,34 @@ body {
   background: currentColor;
   -webkit-mask: var(--refresh) center / contain no-repeat;
   mask: var(--refresh) center / contain no-repeat;
+}
+
+/*
+  The whole tab while it is being drawn again, not a line of text at the top of an empty one. The
+  component's own elements are gone for as long as this is up, so anything smaller reads as a panel
+  that half failed to load.
+*/
+.axonpack-tab-loading {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  height: calc(100vh - var(--bar-height));
+  color: var(--muted);
+}
+
+/* A border rather than a glyph: the same reason the refresh arrow is a mask, plus this one turns. */
+.axonpack-tab-loading-glyph {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--line);
+  border-top-color: var(--link);
+  border-radius: 50%;
+  animation: axonpack-tab-spin 0.7s linear infinite;
+}
+
+@keyframes axonpack-tab-spin {
+  to {
+    transform: rotate(1turn);
+  }
 }

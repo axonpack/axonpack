@@ -213,5 +213,10 @@ test("every tab gets the library's bar, and its button renders the tab again", a
   sender.dispatch(pressed[0].handler, pressed[0].payload);
   await settle();
 
+  // The bar holds a loader up for a moment first, so the tab is not drawn again on this tick.
+  expect(renders).toBe(1);
+
+  for (let waited = 0; waited < 50 && renders < 2; waited++) await settle();
+
   expect(renders).toBe(2);
 });

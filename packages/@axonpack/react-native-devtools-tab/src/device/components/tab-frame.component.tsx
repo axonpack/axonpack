@@ -3,6 +3,7 @@ import {
   useEffect,
   useReducer,
   useState,
+  useTransition,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -24,6 +25,15 @@ import {
 const DOCS = "https://axonpack.github.io/docs";
 const HOME = "https://axonpack.github.io";
 const REPO = "https://api.github.com/repos/axonpack/axonpack";
+
+/**
+ * How long a refresh waits before the tab is drawn again.
+ *
+ * Deliberate. Re-rendering takes a few milliseconds and the ops reach the panel in a few more, so
+ * the loader was up for less than a frame and the button read as doing nothing at all. This is long
+ * enough to see that it did.
+ */
+const RENDER_DELAY = 1600;
 
 /**
  * The star count, or null until it arrives and for good if it never does.
@@ -62,7 +72,15 @@ export function TabFrame({
   component: ComponentType;
 }): ReactNode {
   const [, refresh] = useReducer((n: number) => n + 1, 0);
+  const [isLoading, startTransition] = useTransition();
   const stars = useStars();
+
+  const handleRefresh = () => {
+    startTransition(async () => {
+      await new Promise((resolve) => setTimeout(resolve, RENDER_DELAY));
+      refresh();
+    });
+  };
 
   return (
     <>
@@ -102,12 +120,19 @@ export function TabFrame({
         </span>
         {/* Empty: the glyph is a mask in `renderer/renderer.css`, since SVG cannot cross. */}
         <button
-          onClick={refresh}
+          onClick={handleRefresh}
           title="Render this tab again"
           aria-label="Render this tab again"
         />
       </header>
-      {createElement(component)}
+      {isLoading ? (
+        <div className="axonpack-tab-loading">
+          <span className="axonpack-tab-loading-glyph" />
+          <span>Rendering...</span>
+        </div>
+      ) : (
+        createElement(component)
+      )}
     </>
   );
 }
