@@ -10,10 +10,7 @@ import {
   createTabChannel,
   type TabChannel,
 } from "../core/services/tab-channel.service";
-import {
-  createRemoteReceiver,
-  type RemoteReceiver,
-} from "./services/remote-receiver.service";
+import { createRemoteReceiver } from "./services/remote-receiver.service";
 
 /**
  * Boots the page for one tab.
@@ -27,21 +24,31 @@ export function startRenderer(
   root: HTMLElement = document.body,
 ): TabChannel {
   const channel = createTabChannel(createPanelChannel(), tabId);
-  let remote: RemoteReceiver | null = null;
 
-  // Re-made on every registration, because one arriving twice means the app is starting over.
-  channel.onMessage(REGISTER, () => {
+  const mount = () => {
     root.replaceChildren();
-    remote = createRemoteReceiver(root, (handler, value) =>
+    return createRemoteReceiver(root, (handler, value) =>
       channel.send(ACTION, {
         action: handler,
         payload: value,
       } satisfies TabAction),
     );
+  };
+
+  let remote = mount();
+
+  // A registration arriving now means the app is starting over, so what is drawn belongs to an
+  // engine that is gone, and the component that drew it went with it. Throwing the DOM away is only
+  // half of that: the app mounts a tab when it is asked to and nothing asks on its behalf, so asking
+  // again here is what gets it drawn a second time. Without it an app reload left every tab that had
+  // already been opened blank until its page was reloaded too.
+  channel.onMessage(REGISTER, () => {
+    remote = mount();
+    channel.send(HELLO);
   });
 
   channel.onMessage(MUTATE, (payload) => {
-    remote?.apply((payload as TabMutation).ops);
+    remote.apply((payload as TabMutation).ops);
   });
 
   // The app almost always started first, so its registration is already gone. Ask for it rather than

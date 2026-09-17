@@ -130,16 +130,14 @@ function registerTab(options: TabOptions): void {
   tabs.push({ id, ...registration });
 
   // Still pushed, for a tab registered while somebody already has DevTools open. The frontend reads
-  // the list when it connects, so this is the only case it cannot cover.
-  const announce = (): void => tab.send(REGISTER, registration);
-
-  announce();
+  // the list when it connects, so this is the only case it cannot cover. It is also how a page that
+  // is already open learns the app restarted, which is why nothing answers HELLO with it: a page
+  // asks again when one arrives, and the two would go round forever.
+  tab.send(REGISTER, registration);
 
   // A panel opened after the app started has missed the registration, so it asks rather than
-  // waiting. Answering is also what makes reloading the panel recover.
+  // waiting. Asking is also what makes reloading either side recover.
   tab.onMessage(HELLO, () => {
-    announce();
-
     if (sender) {
       // Already drawn once, for a panel that has since gone. Replaying what it holds is what keeps
       // the component's own state through a panel reload: it is never re-mounted.

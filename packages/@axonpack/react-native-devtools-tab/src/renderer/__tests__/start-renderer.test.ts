@@ -48,12 +48,14 @@ function load(tab = "session") {
       "*",
     );
 
-  // The app's half, with the debugger connection replaced by a direct hand-off.
-  const sender = createRemoteSender((ops) =>
-    dom.window.postMessage({ type: "tab:mutate", data: { id: tab, ops } }, "*"),
-  );
+  // The app's half, with the debugger connection replaced by a direct hand-off. One per restart: a
+  // sender holds the tree it drew, so an app starting over is a new one.
+  const senderFor = (id = tab) =>
+    createRemoteSender((ops) =>
+      dom.window.postMessage({ type: "tab:mutate", data: { id, ops } }, "*"),
+    );
 
-  return { dom, sent, errors, sender, register };
+  return { dom, sent, errors, sender: senderFor(), senderFor, register };
 }
 
 test("asks to be described, then draws what the app rendered", async () => {
@@ -110,12 +112,31 @@ test("a press reaches the app, and what it renders next comes back", async () =>
 });
 
 test("ignores messages addressed to another tab", async () => {
-  const { dom, sender, register } = load();
+  const { dom, senderFor } = load();
 
-  register("other");
-  sender.render(createElement("p", null, "wrong tab"));
+  senderFor("other").render(createElement("p", null, "wrong tab"));
   await settle();
 
-  // The registration was for another tab, so this page never made a root to draw into.
   expect(dom.window.document.body.textContent).not.toContain("wrong tab");
+});
+
+test("asks again when the app restarts, so a drawn tab is redrawn", async () => {
+  const { dom, sent, sender, register, senderFor } = load();
+
+  sender.render(createElement("p", null, "before"));
+  await settle();
+  expect(dom.window.document.body.textContent).toContain("before");
+
+  // The app starting over: a registration arrives out of nowhere and the sender that drew what is on
+  // screen is gone with the engine it ran in. Nothing will be sent unless this page asks for it.
+  const asked = sent.filter((m) => m.type === "tab:hello").length;
+  register();
+  await settle();
+  expect(sent.filter((m) => m.type === "tab:hello").length).toBe(asked + 1);
+
+  senderFor().render(createElement("p", null, "after"));
+  await settle();
+
+  expect(dom.window.document.body.textContent).toContain("after");
+  expect(dom.window.document.body.textContent).not.toContain("before");
 });
