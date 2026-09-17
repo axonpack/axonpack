@@ -1,6 +1,6 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const {
-  withReactNativeDevtoolsPanel,
+  withReactNativeDevtoolsTab,
 } = require("@axonpack/react-native-devtools-tab/metro");
 
-module.exports = withReactNativeDevtoolsPanel(getDefaultConfig(__dirname));
+module.exports = withReactNativeDevtoolsTab(getDefaultConfig(__dirname));

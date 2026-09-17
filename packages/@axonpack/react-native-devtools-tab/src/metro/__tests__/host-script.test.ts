@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { withReactNativeDevtoolsPanel } from "../index";
+import { withReactNativeDevtoolsTab } from "../index";
 
 /**
  * The host script is a string served to the DevTools page, so nothing typechecks it and nothing
@@ -8,7 +8,7 @@ import { withReactNativeDevtoolsPanel } from "../index";
  */
 function hostScript(): string {
   let served = "";
-  const config = withReactNativeDevtoolsPanel(
+  const config = withReactNativeDevtoolsTab(
     { server: {} },
     { frontendPath: "/tmp/none" },
   ) as { server: { enhanceMiddleware: (m: unknown, s: unknown) => Handler } };

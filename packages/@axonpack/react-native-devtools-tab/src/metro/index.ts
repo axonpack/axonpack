@@ -18,10 +18,10 @@ import {
  * // metro.config.js
  * const { getDefaultConfig } = require('expo/metro-config');
  * const {
- *   withReactNativeDevtoolsPanel,
+ *   withReactNativeDevtoolsTab,
  * } = require('@axonpack/react-native-devtools-tab/metro');
  *
- * module.exports = withReactNativeDevtoolsPanel(getDefaultConfig(__dirname));
+ * module.exports = withReactNativeDevtoolsTab(getDefaultConfig(__dirname));
  * ```
  */
 
@@ -349,7 +349,7 @@ function sendFile(
   });
 }
 
-export type ReactNativeDevtoolsPanelOptions = {
+export type ReactNativeDevtoolsTabOptions = {
   /**
    * Where React Native DevTools' own files are, for a layout this cannot work out for itself. A
    * monorepo that hoists oddly is the case that needs it.
@@ -357,12 +357,12 @@ export type ReactNativeDevtoolsPanelOptions = {
   frontendPath?: string;
 };
 
-export function withReactNativeDevtoolsPanel<
+export function withReactNativeDevtoolsTab<
   TConfig extends {
     projectRoot?: string;
     server?: { enhanceMiddleware?: unknown };
   },
->(config: TConfig, options: ReactNativeDevtoolsPanelOptions = {}): TConfig {
+>(config: TConfig, options: ReactNativeDevtoolsTabOptions = {}): TConfig {
   const base = DEVTOOLS_ROUTE;
   const projectRoot = config.projectRoot ?? process.cwd();
   const roots = projectRoots(projectRoot);

@@ -8,7 +8,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { withReactNativeDevtoolsPanel } = require('@axonpack/react-native-devtools-tab/metro');
+const { withReactNativeDevtoolsTab } = require('@axonpack/react-native-devtools-tab/metro');
 
 /** Where this package's own panel page is served from. */
 const ROUTE = '/axonpack-panel';
@@ -35,7 +35,7 @@ const TYPES = {
  */
 function withDevtools(config, options) {
   const panel = path.join(__dirname, 'dist/panel');
-  const wrapped = withReactNativeDevtoolsPanel(config, options);
+  const wrapped = withReactNativeDevtoolsTab(config, options);
   const previous = wrapped.server && wrapped.server.enhanceMiddleware;
 
   return {
