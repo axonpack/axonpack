@@ -1,6 +1,8 @@
 import {
   createElement,
+  useEffect,
   useReducer,
+  useState,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -21,6 +23,36 @@ import {
  */
 const DOCS = "https://axonpack.github.io/docs";
 const HOME = "https://axonpack.github.io";
+const REPO = "https://api.github.com/repos/axonpack/axonpack";
+
+/**
+ * The star count, or null until it arrives and for good if it never does.
+ *
+ * The request is kept at module level rather than per component: every tab's bar draws this card, so
+ * an app with four tabs would otherwise ask GitHub four times for the same number, against a limit
+ * of sixty an hour for an unauthenticated caller. It runs in the app, which is where a `fetch` is,
+ * and only once a panel has asked for the tab, so an app nobody is debugging never makes it.
+ */
+let counted: Promise<number | null> | undefined;
+
+function useStars(): number | null {
+  const [stars, setStars] = useState<number | null>(null);
+
+  useEffect(() => {
+    counted ??= fetch(REPO)
+      .then((response) => response.json())
+      .then((repo: { stargazers_count?: number }) =>
+        typeof repo.stargazers_count === "number"
+          ? repo.stargazers_count
+          : null,
+      )
+      .catch(() => null);
+
+    void counted.then(setStars);
+  }, []);
+
+  return stars;
+}
 
 export function TabFrame({
   name,
@@ -30,6 +62,7 @@ export function TabFrame({
   component: ComponentType;
 }): ReactNode {
   const [, refresh] = useReducer((n: number) => n + 1, 0);
+  const stars = useStars();
 
   return (
     <>
@@ -42,12 +75,25 @@ export function TabFrame({
               <span>
                 This tab is rendered via Axonpack React Native DevTools Tab.
               </span>
+              <a
+                className="axonpack-tab-card"
+                href={HOME}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="axonpack-tab-card-mark" />
+                <b>Axonpack</b>
+                <span className="axonpack-tab-card-stars">
+                  {stars === null ? "" : `\u2605 ${stars}`}
+                </span>
+                <span className="axonpack-tab-card-slogan">
+                  Free, open source foundation libraries for React Native and
+                  Expo.
+                </span>
+              </a>
               <span className="axonpack-tab-links">
                 <a href={DOCS} target="_blank" rel="noreferrer">
                   Learn more
-                </a>
-                <a href={HOME} target="_blank" rel="noreferrer">
-                  All Axonpack libraries
                 </a>
               </span>
             </span>
