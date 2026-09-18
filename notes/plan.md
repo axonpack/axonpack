@@ -26,7 +26,7 @@ db.execSync("PRAGMA busy_timeout = 5000;");
 
 ## @axonpack/expo-devtools
 
-_Shipped — the only implemented package._
+_Shipped._
 
 On-device, prod-safe debug tools with no desktop app: network, console, storage, performance and
 crash tabs behind a draggable dev button. Its notes, area by area:
