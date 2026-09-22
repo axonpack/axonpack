@@ -10,7 +10,7 @@
     "expo",
     "react-native"
   ],
-  "homepage": "https://axonpack.github.io/docs/expo-devtools",
+  "homepage": "https://axonpack.github.io/docs/expo-devtools/",
   "bugs": {
     "url": "https://github.com/axonpack/axonpack/issues"
   },
