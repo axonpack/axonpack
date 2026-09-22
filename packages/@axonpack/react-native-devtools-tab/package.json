@@ -11,6 +11,7 @@
     "debugging"
   ],
   "license": "MIT",
+  "homepage": "https://axonpack.github.io/docs/react-native-devtools-tab/",
   "repository": {
     "type": "git",
     "url": "https://github.com/axonpack/axonpack.git",
