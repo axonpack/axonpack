@@ -13,6 +13,7 @@ import type {
   NetworkEntry,
   NetworkLogEntry,
 } from '../../../../features/network/stores/network-log.store';
+import { EntryMenu } from '../entry-menu.component';
 
 type Tab =
   | 'headers'
@@ -68,6 +69,7 @@ function tabsFor(entry: NetworkEntry): Tab[] {
  */
 export function RequestDetail({ entry, onClose }: { entry: NetworkEntry; onClose: () => void }) {
   const [picked, setPicked] = useState<Tab>('headers');
+  const [menuOpen, setMenuOpen] = useState(false);
   const tabs = tabsFor(entry);
   const tab = tabs.includes(picked) ? picked : 'headers';
 
@@ -91,6 +93,22 @@ export function RequestDetail({ entry, onClose }: { entry: NetworkEntry; onClose
             {label}
           </button>
         ))}
+        {entry.kind === 'http' && (
+          // The app's ⋮ in its detail header, at the end of the bar as there.
+          <span className="axonpack-net-detail-more">
+            <button
+              className="axonpack-net-button"
+              title="More"
+              aria-label="More"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}>
+              <span className="axonpack-material" data-material="more-vert" />
+            </button>
+            {menuOpen && (
+              <EntryMenu entry={entry} align="right" onClose={() => setMenuOpen(false)} />
+            )}
+          </span>
+        )}
       </div>
       <div className="axonpack-net-detail-body">
         {tab === 'headers' && <HeadersTab entry={entry} />}

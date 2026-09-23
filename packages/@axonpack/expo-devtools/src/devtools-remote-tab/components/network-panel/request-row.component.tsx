@@ -1,6 +1,6 @@
 import { memo } from 'react';
 
-import { RowMenu } from './row-menu.component';
+import { EntryMenu } from './entry-menu.component';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { formatDuration } from '../../../core/utils/format-duration.util';
 import type { NetworkEntry } from '../../../features/network/stores/network-log.store';
@@ -144,7 +144,9 @@ function RequestRowBase({
         )}
       </div>
       {/* Beside the row, not in it: a click in the menu would open the request too. */}
-      {menuOpen && entry.kind === 'http' && <RowMenu entry={entry} onClose={() => onMenu(null)} />}
+      {menuOpen && entry.kind === 'http' && (
+        <EntryMenu entry={entry} onClose={() => onMenu(null)} />
+      )}
     </>
   );
 }

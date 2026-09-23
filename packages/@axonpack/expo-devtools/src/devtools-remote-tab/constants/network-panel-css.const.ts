@@ -787,4 +787,18 @@ ${splitDragRules}
   content: "▼";
   color: var(--net-success);
 }
+/* The ⋮ at the far end of the request pane's bar, with its menu opening down from its right edge. */
+.axonpack-net-detail-more {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+.axonpack-net-detail-more .axonpack-net-button[aria-expanded="true"] { color: var(--fg); }
+.axonpack-net-row-menu[data-align="right"] {
+  position: absolute;
+  top: 100%;
+  right: 0;
+}
+.axonpack-net-row-menu[data-align="right"] .axonpack-net-context { left: auto; right: 0; }
 `;
