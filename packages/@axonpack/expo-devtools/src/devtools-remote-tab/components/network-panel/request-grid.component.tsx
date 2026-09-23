@@ -18,7 +18,8 @@ import type { NetworkSortKey } from '../../../features/network/utils/sort-entrie
 /**
  * Chrome's default columns, with the client that sent a request in place of Type, which only ever
  * said fetch or xhr, and Method, which the app row shows too. Name has no width of its own: it takes
- * what the others leave, up to `NAME_MAX`, so a long URL cannot push them off the side.
+ * what the others leave. Its floor is a fixed width rather than its content, so a long URL cannot push
+ * the other columns off the side.
  */
 const COLUMNS: { label: string; width: number; sortKey?: NetworkSortKey }[] = [
   { label: 'Name', width: 0 },
@@ -31,7 +32,6 @@ const COLUMNS: { label: string; width: number; sortKey?: NetworkSortKey }[] = [
 
 const MIN_WIDTH = 40;
 const NAME_MIN = 120;
-const NAME_MAX = 600;
 
 /**
  * Chrome's rule: a line moves space between the two columns beside it, so the line follows the
@@ -48,14 +48,14 @@ function resizeColumns(widths: readonly number[], line: number, delta: number): 
 }
 
 /**
- * The grid's columns, plus an empty one for whatever Name is too capped to take. While a line is
- * dragged, the two columns beside it carry `--net-drag`, which the page sets from the slice under the
- * pointer, so they move before the app has heard anything. The drag is held to the same limits
- * `resizeColumns` keeps, so letting go does not jump.
+ * The grid's columns, with Name filling the row. While a line is dragged, the two columns beside it
+ * carry `--net-drag`, which the page sets from the slice under the pointer, so they move before the
+ * app has heard anything. The drag is held to the same limits `resizeColumns` keeps, so letting go
+ * does not jump.
  */
 function columnTemplate(widths: readonly number[], dragging: number | null): string {
   const tracks = widths.map((width) => `${width}px`);
-  tracks[0] = `minmax(${NAME_MIN}px, ${NAME_MAX}px)`;
+  tracks[0] = `minmax(${NAME_MIN}px, 1fr)`;
   if (dragging !== null) {
     const right = dragging + 1;
     const most = `${widths[right] - MIN_WIDTH}px`;
@@ -66,7 +66,7 @@ function columnTemplate(widths: readonly number[], dragging: number | null): str
     if (dragging > 0) tracks[dragging] = `calc(${widths[dragging]}px + ${drag})`;
     tracks[right] = `calc(${widths[right]}px - ${drag})`;
   }
-  return `${tracks.join(' ')} 1fr`;
+  return tracks.join(' ');
 }
 
 /** Live counts for the rows that have them. Read here so a new message redraws only its own row. */
