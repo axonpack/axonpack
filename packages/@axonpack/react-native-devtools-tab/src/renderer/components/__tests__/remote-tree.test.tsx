@@ -277,3 +277,35 @@ test("a callback given a plain value is given that value, not an event", async (
   const change = sent.find((message) => message.handler === "1:onChangeText");
   expect(change?.payload).toEqual(["ada"]);
 });
+
+test("a right-click a tab handles does not open the browser's own menu", async () => {
+  const { container, sent, apply } = draw();
+
+  await apply(
+    {
+      op: "create",
+      id: 1,
+      type: "div",
+      props: { onContextMenu: { handler: "1:onContextMenu" } },
+    },
+    { op: "create", id: 2, type: "span", props: {} },
+    { op: "append", parent: 0, child: 1 },
+    { op: "append", parent: 0, child: 2 },
+  );
+
+  const handled = new dom.window.MouseEvent("contextmenu", {
+    bubbles: true,
+    cancelable: true,
+  });
+  container.querySelector("div")!.dispatchEvent(handled);
+  expect(handled.defaultPrevented).toBe(true);
+  expect(sent.map((call) => call.handler)).toEqual(["1:onContextMenu"]);
+
+  // Anywhere the tab did not ask for right-clicks keeps the browser's menu.
+  const unhandled = new dom.window.MouseEvent("contextmenu", {
+    bubbles: true,
+    cancelable: true,
+  });
+  container.querySelector("span")!.dispatchEvent(unhandled);
+  expect(unhandled.defaultPrevented).toBe(false);
+});

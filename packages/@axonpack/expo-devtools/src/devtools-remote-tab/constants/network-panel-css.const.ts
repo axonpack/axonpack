@@ -59,10 +59,19 @@ export const NETWORK_PANEL_CSS = `
   padding: 0 2px;
   border-bottom: 1px solid var(--line);
 }
-.axonpack-net-body {
+.axonpack-net-main {
   flex: 1;
   min-height: 0;
+  display: flex;
+}
+.axonpack-net-body {
+  flex: 1;
+  min-width: 0;
   overflow: auto;
+}
+/* Chrome's split: the table narrows to its Name column and the request takes the rest. */
+.axonpack-net-body[data-split] {
+  flex: 0 0 clamp(160px, 28%, 360px);
 }
 .axonpack-net-button {
   display: inline-flex;
@@ -526,4 +535,104 @@ ${dragRules}
   color: var(--muted);
   white-space: nowrap;
 }
+/* Chrome's selected row: the tonal fill, over the stripes and the hover. */
+.axonpack-net-row[data-selected],
+.axonpack-net-row[data-selected]:hover {
+  background: var(--net-tonal);
+  color: var(--net-on-tonal);
+}
+.axonpack-net-row[data-selected] .axonpack-net-sub { color: inherit; opacity: 0.8; }
+.axonpack-net-detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line);
+}
+.axonpack-net-detail-bar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: 26px;
+  border-bottom: 1px solid var(--line);
+}
+.axonpack-net-detail-close { height: auto; }
+.axonpack-net-detail-close::before { width: 16px; height: 16px; }
+.axonpack-net-detail-tab {
+  position: relative;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  white-space: nowrap;
+}
+.axonpack-net-detail-tab:hover { background: var(--hover); color: var(--fg); }
+.axonpack-net-detail-tab[aria-selected="true"] { color: var(--fg); }
+.axonpack-net-detail-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--link);
+}
+.axonpack-net-detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  user-select: text;
+}
+.axonpack-net-section { border-bottom: 1px solid var(--line); }
+.axonpack-net-section > summary {
+  padding: 5px 6px;
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+}
+.axonpack-net-count { margin-left: 4px; color: var(--muted); font-weight: 400; }
+/* Key and value, the keys in a column of their own so the values line up, as in Chrome. */
+.axonpack-net-kv {
+  display: grid;
+  grid-template-columns: minmax(100px, max-content) 1fr;
+  gap: 2px 12px;
+  padding: 0 12px 8px 22px;
+}
+.axonpack-net-kv > div { display: contents; }
+.axonpack-net-kv span:first-child { color: var(--muted); font-weight: 500; }
+.axonpack-net-kv span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.axonpack-net-code {
+  margin: 0;
+  padding: 6px 12px 10px;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.axonpack-net-none { margin: 0; padding: 8px 12px; color: var(--muted); }
+/* Chrome's timing table: the phase, where it sat in the request, and how long it took. */
+.axonpack-net-timing { padding-bottom: 8px; }
+.axonpack-net-timing-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) 1fr 72px;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 12px;
+}
+.axonpack-net-timing-row > span:last-child { text-align: right; }
+.axonpack-net-timing-track { position: relative; height: 12px; }
+.axonpack-net-timing-track > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 1px;
+  background: var(--muted);
+}
+.axonpack-net-timing-track > [data-phase="dnsMs"] { background: #009688; }
+.axonpack-net-timing-track > [data-phase="tcpMs"] { background: #ff9800; }
+.axonpack-net-timing-track > [data-phase="tlsMs"] { background: #9c27b0; }
+.axonpack-net-timing-track > [data-phase="sendMs"],
+.axonpack-net-timing-track > [data-phase="waitMs"] { background: var(--net-ov-waiting); }
+.axonpack-net-timing-track > [data-phase="downloadMs"] { background: var(--net-ov-receiving); }
+.axonpack-net-timing-total { border-top: 1px solid var(--line); margin-top: 4px; font-weight: 600; }
 `;

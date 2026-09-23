@@ -87,15 +87,21 @@ function countFor(entry: NetworkEntry): number | undefined {
 export function RequestGrid({
   visible,
   total,
+  selectedId,
+  onSelect,
 }: {
   visible: readonly NetworkEntry[];
   total: number;
+  /** The row open in the detail pane. While there is one, the table is its Name column alone. */
+  selectedId: string | null;
+  onSelect: (id: string) => void;
 }) {
   const { sort, settings } = useNetworkViewStore();
   const paused = useNetworkLogStore(networkLogStore.isPaused);
   // The panel's own business, like which rows are open: the app has no columns to share them with.
   const [widths, setWidths] = useState(() => COLUMNS.map((column) => column.width));
   const [dragging, setDragging] = useState<number | null>(null);
+  const compact = selectedId !== null;
 
   const groups = settings.groupByFetchClient
     ? groupBySource(visible)
@@ -111,9 +117,9 @@ export function RequestGrid({
     <div
       className="axonpack-net-grid"
       data-big={settings.devtoolsBigRows || undefined}
-      style={{ gridTemplateColumns: columnTemplate(widths, dragging) }}>
+      style={{ gridTemplateColumns: compact ? '1fr' : columnTemplate(widths, dragging) }}>
       <div className="axonpack-net-row axonpack-net-head">
-        {COLUMNS.map(({ label, sortKey }) => (
+        {(compact ? COLUMNS.slice(0, 1) : COLUMNS).map(({ label, sortKey }) => (
           <span
             key={label}
             data-sortable={sortKey ? true : undefined}
@@ -126,19 +132,20 @@ export function RequestGrid({
         ))}
       </div>
       {/* A line between each pair of columns. The last column has no neighbour to trade with. */}
-      {COLUMNS.slice(0, -1).map(({ label }, line) => (
-        <ColumnResizer
-          key={label}
-          column={line + 1}
-          neighbourWidth={widths[line + 1]}
-          dragging={dragging === line}
-          onStart={() => setDragging(line)}
-          onEnd={(delta) => {
-            if (delta !== undefined) setWidths((current) => resizeColumns(current, line, delta));
-            setDragging(null);
-          }}
-        />
-      ))}
+      {!compact &&
+        COLUMNS.slice(0, -1).map(({ label }, line) => (
+          <ColumnResizer
+            key={label}
+            column={line + 1}
+            neighbourWidth={widths[line + 1]}
+            dragging={dragging === line}
+            onStart={() => setDragging(line)}
+            onEnd={(delta) => {
+              if (delta !== undefined) setWidths((current) => resizeColumns(current, line, delta));
+              setDragging(null);
+            }}
+          />
+        ))}
       {groups.map((group) => (
         <div key={group.title ?? ''}>
           {group.title !== null && (
@@ -152,6 +159,9 @@ export function RequestGrid({
               entry={entry}
               big={settings.devtoolsBigRows}
               count={countFor(entry)}
+              compact={compact}
+              selected={entry.id === selectedId}
+              onSelect={onSelect}
             />
           ))}
         </div>

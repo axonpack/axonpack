@@ -137,6 +137,8 @@ function isEvent(value: unknown): boolean {
   );
 }
 
+const CONTEXT_MENU = /^onContextMenu(Capture)?$/;
+
 /** One argument, as it can travel. Anything that cannot is dropped rather than taking the call. */
 function argument(value: unknown): unknown {
   if (isEvent(value)) return describe(value as Parameters<typeof describe>[0]);
@@ -158,11 +160,25 @@ function bind(
   for (const [key, value] of Object.entries(props)) {
     if (RESPONDER.test(key)) continue;
 
+    if (!isHandler(value)) {
+      out[key] = value;
+      continue;
+    }
+
     // Every argument, not just the first, and as itself unless it is an event. A callback that was
     // given a string used to be handed the description of an event that never happened.
-    out[key] = isHandler(value)
-      ? (...args: unknown[]) => send(value.handler, args.map(argument))
-      : value;
+    const call = (...args: unknown[]) =>
+      send(value.handler, args.map(argument));
+
+    // A tab that takes a right-click draws its own menu, and the browser's would open on top of it.
+    // The tab's handler runs in the app, long after the browser has decided, so its own
+    // `preventDefault` can never be in time. Asking for the event is taken as asking for this.
+    out[key] = CONTEXT_MENU.test(key)
+      ? (event: { preventDefault?: () => void }, ...rest: unknown[]) => {
+          event.preventDefault?.();
+          call(event, ...rest);
+        }
+      : call;
   }
 
   return out;

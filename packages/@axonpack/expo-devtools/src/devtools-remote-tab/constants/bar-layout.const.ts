@@ -1,4 +1,5 @@
 import { CHROME_ICONS } from './chrome-icons.const';
+import { PANEL_ICONS } from './panel-icons.const';
 import { PANELS } from './panels.const';
 
 const timeline = (id: string) => `--axonpack-tab-${id}`;
@@ -206,6 +207,23 @@ export const BAR_LAYOUT_CSS = `
 .axonpack-panel-tab:hover {
   background: var(--hover);
 }
+/* In the label's own colour, so it dims and lights with it, as the in-app tab's icon does. */
+.axonpack-panel-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  vertical-align: -3px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+${Object.entries(PANEL_ICONS)
+  .map(
+    ([id, svg]) =>
+      `.axonpack-panel-icon[data-id="${id}"] { --icon: url("data:image/svg+xml,${encodeURIComponent(svg)}"); }`
+  )
+  .join('\n')}
 .axonpack-panel-tab {
   position: relative;
 }

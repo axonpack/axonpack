@@ -1,6 +1,6 @@
 import type { Palette } from '../../../core/constants/theme.const';
 import { isNativeSource } from '../constants/sources.const';
-import type { NetworkLogStatus } from '../stores/network-log.store';
+import type { NetworkLogEntry, NetworkLogStatus } from '../stores/network-log.store';
 
 export function isErrorStatus(status: NetworkLogStatus, statusCode?: number): boolean {
   return status === 'error' || (statusCode !== undefined && statusCode >= 400);
@@ -133,4 +133,10 @@ export function getDisplayNameWithQuery(url: string): string {
   } catch {
     return url;
   }
+}
+
+export function formatStatus(entry: NetworkLogEntry): string {
+  if (entry.statusCode === undefined) return entry.error ?? '(pending)';
+  const statusText = getStatusText(entry.statusCode, entry.statusText);
+  return statusText ? `${entry.statusCode} ${statusText}` : `${entry.statusCode}`;
 }

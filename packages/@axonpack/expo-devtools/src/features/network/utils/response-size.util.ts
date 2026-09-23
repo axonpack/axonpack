@@ -1,3 +1,4 @@
+import { formatSize } from '../../../core/utils/format-bytes.util';
 import type { NetworkLogEntry } from '../stores/network-log.store';
 
 /**
@@ -93,4 +94,27 @@ export function resolveResponseSizes(entry: NetworkLogEntry): ResponseSizes {
       : undefined;
 
   return { wireBytes, decodedBytes, savedRatio, compressed };
+}
+
+/**
+ * One line for an unencoded response, both figures and the saving for a compressed one. Said in
+ * the Headers tab rather than on the row, which has one number's worth of space, and a saving is
+ * only worth reading beside the two sizes it came from.
+ */
+export function describeResponseSizes(entry: NetworkLogEntry): string {
+  const { wireBytes, decodedBytes, savedRatio, compressed } = resolveResponseSizes(entry);
+
+  if (!compressed) return decodedBytes === undefined ? '—' : formatSize(decodedBytes);
+
+  if (wireBytes === undefined || decodedBytes === undefined) {
+    // Encoded, but only one of the two numbers reached us — the normal case wherever the platform
+    // reports no byte counts and the server declared no length.
+    const known = wireBytes ?? decodedBytes;
+    return known === undefined
+      ? 'compressed, size unknown'
+      : `${formatSize(known)} ${wireBytes === undefined ? 'decoded' : 'transferred'}, compressed`;
+  }
+
+  const saved = savedRatio === undefined ? '' : ` · ${Math.round(savedRatio * 100)}% saved`;
+  return `${formatSize(wireBytes)} transferred · ${formatSize(decodedBytes)} decoded${saved}`;
 }

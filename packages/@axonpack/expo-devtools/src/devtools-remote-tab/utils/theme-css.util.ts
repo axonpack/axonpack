@@ -50,6 +50,11 @@ export function themeCss(palette: Palette): string {
   --hover: ${mix(palette.toolbarText, 14)};
   --logo: ${logo(palette.toolbarTextActive, palette.toolbarText)};
 }
+/* Set, not inherited: the name's colour comes down from \`body\`, already worked out from the panel's
+   text before the variables above apply here. */
+:root .axonpack-tab-name {
+  color: var(--fg);
+}
 :root .axonpack-panel-menu,
 :root .axonpack-theme-menu,
 :root .axonpack-tab-about {

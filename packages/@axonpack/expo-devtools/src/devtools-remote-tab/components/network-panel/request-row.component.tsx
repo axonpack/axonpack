@@ -81,11 +81,18 @@ function RequestRowBase({
   entry,
   big,
   count,
+  compact,
+  selected,
+  onSelect,
 }: {
   entry: NetworkEntry;
   big: boolean;
   /** Messages on a socket or events on a stream. Passed in, because it moves without the entry. */
   count?: number;
+  /** Name alone, while the detail pane has the rest of the width. */
+  compact: boolean;
+  selected: boolean;
+  onSelect: (id: string) => void;
 }) {
   const name = getDisplayNameWithQuery(entry.url);
   const { icon, tone } = fileIcon(entry);
@@ -95,7 +102,11 @@ function RequestRowBase({
       : isErrorStatus(entry.status, entry.statusCode);
 
   return (
-    <div className="axonpack-net-row" data-failed={failed || undefined}>
+    <div
+      className="axonpack-net-row"
+      data-failed={failed || undefined}
+      data-selected={selected || undefined}
+      onClick={() => onSelect(entry.id)}>
       <span className="axonpack-net-name" title={entry.url}>
         <span className="axonpack-net-file" data-icon={icon} data-tone={tone} />
         <span className="axonpack-net-name-text">
@@ -103,11 +114,15 @@ function RequestRowBase({
           {big && <span className="axonpack-net-sub">{entry.url}</span>}
         </span>
       </span>
-      <span>{entry.method}</span>
-      {cell(statusCell(entry), big)}
-      <span>{entry.source ? formatSource(entry.source) : ''}</span>
-      {cell(sizeCell(entry, count), big)}
-      {cell(timeCell(entry), big)}
+      {!compact && (
+        <>
+          <span>{entry.method}</span>
+          {cell(statusCell(entry), big)}
+          <span>{entry.source ? formatSource(entry.source) : ''}</span>
+          {cell(sizeCell(entry, count), big)}
+          {cell(timeCell(entry), big)}
+        </>
+      )}
     </div>
   );
 }
