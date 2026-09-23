@@ -541,9 +541,11 @@ ${dragRules}
   color: var(--muted);
   white-space: nowrap;
 }
-/* Chrome's selected row: the tonal fill, over the stripes and the hover. */
-.axonpack-net-row[data-selected],
-.axonpack-net-row[data-selected]:hover {
+/*
+  Chrome's selected row: the tonal fill, over the stripes and the hover. As heavy as the stripe rule,
+  whose \`of\` selector counts as a class of its own, and later, so it wins on the even rows too.
+*/
+.axonpack-net-grid .axonpack-net-row[data-selected] {
   background: var(--net-tonal);
   color: var(--net-on-tonal);
 }
