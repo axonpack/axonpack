@@ -252,8 +252,9 @@ export const BAR_LAYOUT_CSS = `
       padding: 0 10px;
       background: var(--bar);
       color: var(--fg);
-      border-radius: 4px;
-      box-shadow: 0 1px 4px #0005;
+      /* A flat edge down each side, top to bottom. No blur, which above and below would darken the
+         bar's own edges and at the sides would fade out before the top and bottom. */
+      box-shadow: -1px 0 0 var(--line), 1px 0 0 var(--line);
       white-space: nowrap;
       pointer-events: none;
       position-anchor: --axonpack-pointer;
