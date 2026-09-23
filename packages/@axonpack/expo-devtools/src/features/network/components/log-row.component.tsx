@@ -16,23 +16,13 @@ import { getResponseTypeVisual, RESOURCE_TYPE_ICONS } from '../constants/resourc
 import type { NetworkLogEntry } from '../stores/network-log.store';
 import { buildEntryCopyMenuItems } from '../utils/entry-menu-items.util';
 import {
+  formatInFlight,
   formatSource,
   getDisplayNameWithQuery,
   getMethodColor,
   getStatusColor,
 } from '../utils/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../utils/resource-type.util';
-
-/**
- * While a request is in flight its status cell has nothing to report, so it carries how far the body
- * has got instead — a percentage when a length was declared, bytes when it was not.
- */
-function formatInFlight(progress: NetworkLogEntry['progress']): string {
-  if (!progress) return 'PENDING';
-  const arrow = progress.direction === 'upload' ? '↑' : '↓';
-  if (progress.total === undefined) return `${arrow} ${formatSize(progress.loaded)}`;
-  return `${arrow} ${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%`;
-}
 
 function LogRowBase({
   entry,

@@ -5,6 +5,7 @@ import {
   responseCookies,
   type Cookie,
 } from '../../../../features/network/utils/cookies.util';
+import { DataTable } from '../data-table.component';
 
 function table(title: string, cookies: Cookie[]) {
   if (cookies.length === 0) return null;
@@ -14,38 +15,32 @@ function table(title: string, cookies: Cookie[]) {
         {title}
         <span className="axonpack-net-count">({cookies.length})</span>
       </summary>
-      <table className="axonpack-net-cookies">
-        <thead>
-          <tr>
-            {[
-              'Name',
-              'Value',
-              'Domain',
-              'Path',
-              'Expires / Max-Age',
-              'HttpOnly',
-              'Secure',
-              'SameSite',
-            ].map((label) => (
-              <th key={label}>{label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {cookies.map((cookie, index) => (
-            <tr key={`${index}-${cookie.name}`}>
-              <td>{cookie.name}</td>
-              <td>{cookie.value}</td>
-              <td>{cookie.domain}</td>
-              <td>{cookie.path}</td>
-              <td>{cookie.expires ?? cookie.maxAge}</td>
-              <td>{cookie.httpOnly ? '✓' : ''}</td>
-              <td>{cookie.secure ? '✓' : ''}</td>
-              <td>{cookie.sameSite}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        flex={1}
+        columns={[
+          { label: 'Name', width: 120 },
+          { label: 'Value', width: 0 },
+          { label: 'Domain', width: 120 },
+          { label: 'Path', width: 60 },
+          { label: 'Expires / Max-Age', width: 140 },
+          { label: 'HttpOnly', width: 70 },
+          { label: 'Secure', width: 60 },
+          { label: 'SameSite', width: 70 },
+        ]}
+        rows={cookies.map((cookie, index) => ({
+          key: `${index}-${cookie.name}`,
+          cells: [
+            cookie.name,
+            cookie.value,
+            cookie.domain ?? '',
+            cookie.path ?? '',
+            cookie.expires ?? cookie.maxAge ?? '',
+            cookie.httpOnly ? '✓' : '',
+            cookie.secure ? '✓' : '',
+            cookie.sameSite ?? '',
+          ],
+        }))}
+      />
     </details>
   );
 }

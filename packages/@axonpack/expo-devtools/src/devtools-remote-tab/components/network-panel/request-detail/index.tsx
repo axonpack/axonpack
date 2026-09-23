@@ -4,6 +4,7 @@ import { CookiesTab } from './cookies-tab.component';
 import { EventsTab } from './events-tab.component';
 import { HeadersTab } from './headers-tab.component';
 import { InitiatorTab } from './initiator-tab.component';
+import { MessagesTab } from './messages-tab.component';
 import { PayloadTab, hasPayload } from './payload-tab.component';
 import { PreviewTab } from './preview-tab.component';
 import { ResponseTab } from './response-tab.component';
@@ -11,11 +12,21 @@ import { TimingTab } from './timing-tab.component';
 import type { NetworkEntry } from '../../../../features/network/stores/network-log.store';
 
 type Tab =
-  'headers' | 'payload' | 'preview' | 'response' | 'events' | 'timing' | 'cookies' | 'initiator';
+  | 'headers'
+  | 'messages'
+  | 'payload'
+  | 'preview'
+  | 'response'
+  | 'events'
+  | 'timing'
+  | 'cookies'
+  | 'initiator';
 
 // The app's detail panel's tabs, in its order.
 const TABS: { key: Tab; label: string }[] = [
   { key: 'headers', label: 'Headers' },
+  // The app's socket sheet is a message list under the socket's summary, which is Headers here.
+  { key: 'messages', label: 'Messages' },
   { key: 'payload', label: 'Payload' },
   { key: 'preview', label: 'Preview' },
   { key: 'response', label: 'Response' },
@@ -27,10 +38,10 @@ const TABS: { key: Tab; label: string }[] = [
 
 /**
  * The tabs a row has something for, by the app's rules. A stream's events are its body, so EventStream
- * stands where Preview and Response would. A socket is only its handshake so far.
+ * stands where Preview and Response would. A socket is its handshake and the messages since.
  */
 function tabsFor(entry: NetworkEntry): Tab[] {
-  if (entry.kind === 'websocket') return ['headers'];
+  if (entry.kind === 'websocket') return ['headers', 'messages'];
   return TABS.map((tab) => tab.key).filter((key) => {
     if (key === 'payload') return hasPayload(entry);
     if (key === 'initiator') return Boolean(entry.initiator?.length);
@@ -72,6 +83,7 @@ export function RequestDetail({ entry, onClose }: { entry: NetworkEntry; onClose
       </div>
       <div className="axonpack-net-detail-body">
         {tab === 'headers' && <HeadersTab entry={entry} />}
+        {tab === 'messages' && entry.kind === 'websocket' && <MessagesTab entry={entry} />}
         {tab === 'payload' && entry.kind === 'http' && <PayloadTab entry={entry} />}
         {tab === 'preview' && entry.kind === 'http' && <PreviewTab entry={entry} />}
         {tab === 'response' && entry.kind === 'http' && <ResponseTab entry={entry} />}

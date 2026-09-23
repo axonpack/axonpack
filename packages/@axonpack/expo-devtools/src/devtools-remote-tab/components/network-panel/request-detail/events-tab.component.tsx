@@ -3,6 +3,7 @@ import {
   useNetworkLogStore,
   type NetworkLogEntry,
 } from '../../../../features/network/stores/network-log.store';
+import { DataTable } from '../data-table.component';
 
 /** Bounded for the same reason the app's is: every row crosses to the page, and a stream runs on. */
 const MAX_VISIBLE_EVENTS = 200;
@@ -30,26 +31,24 @@ export function EventsTab({ entry }: { entry: NetworkLogEntry }) {
           Showing the last {visible.length} of {events.length} events.
         </p>
       )}
-      <table className="axonpack-net-cookies">
-        <thead>
-          <tr>
-            <th>Id</th>
-            <th>Type</th>
-            <th>Data</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map((event) => (
-            <tr key={event.id}>
-              <td>{event.lastEventId}</td>
-              <td>{event.type}</td>
-              <td title={event.data}>{event.data}</td>
-              <td>{new Date(event.timestamp).toLocaleTimeString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        flex={2}
+        columns={[
+          { label: 'Id', width: 60 },
+          { label: 'Type', width: 90 },
+          { label: 'Data', width: 0 },
+          { label: 'Time', width: 90 },
+        ]}
+        rows={visible.map((event) => ({
+          key: event.id,
+          cells: [
+            event.lastEventId ?? '',
+            event.type,
+            event.data,
+            new Date(event.timestamp).toLocaleTimeString(),
+          ],
+        }))}
+      />
     </div>
   );
 }

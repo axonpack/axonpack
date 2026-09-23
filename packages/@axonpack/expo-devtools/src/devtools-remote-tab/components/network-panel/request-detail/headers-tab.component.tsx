@@ -1,9 +1,16 @@
-import type { NetworkEntry } from '../../../../features/network/stores/network-log.store';
+import {
+  networkLogStore,
+  type NetworkEntry,
+} from '../../../../features/network/stores/network-log.store';
 import {
   formatSource,
   formatStatus,
   isErrorStatus,
 } from '../../../../features/network/utils/formatters.util';
+import {
+  formatThrottleSummary,
+  formatUserAgentSummary,
+} from '../../../../features/network/utils/network-conditions.util';
 import { describeResponseSizes } from '../../../../features/network/utils/response-size.util';
 
 /** A row, and for Status Code the app's coloured dot (`data-tone` in the CSS). */
@@ -26,11 +33,18 @@ function general(entry: NetworkEntry): Row[] {
         ? ''
         : ` (${entry.closeCode}${entry.closeReason ? `, ${entry.closeReason}` : ''})`;
     rows.push(['Status', `${entry.status}${closed}`]);
+    rows.push(['Messages', String(networkLogStore.getWebSocketMessages(entry.id).length)]);
     if (entry.protocols?.length) rows.push(['Protocols', entry.protocols.join(', ')]);
     if (entry.error) rows.push(['Error', entry.error]);
   } else {
     rows.push(['Status Code', formatStatus(entry), statusTone(entry)]);
     rows.push(['Size', describeResponseSizes(entry)]);
+    if (entry.intercepted) {
+      rows.push([
+        'Intercepted',
+        entry.intercepted === 'blocked' ? 'Blocked here' : 'Overridden here',
+      ]);
+    }
   }
   if (entry.source) rows.push(['Source', formatSource(entry.source)]);
   return rows;
@@ -45,7 +59,9 @@ function section(title: string, rows: Row[] | undefined) {
     <details key={title} open className="axonpack-net-section">
       <summary>
         {title}
-        {rows && title !== 'General' && <span className="axonpack-net-count">({rows.length})</span>}
+        {rows && title.endsWith('Headers') && (
+          <span className="axonpack-net-count">({rows.length})</span>
+        )}
       </summary>
       {rows?.length ? (
         <div className="axonpack-net-kv">
@@ -72,6 +88,16 @@ export function HeadersTab({ entry }: { entry: NetworkEntry }) {
 
   return (
     <div>
+      {/* First, as in the app: a throttled request should say so before anything is read into it. */}
+      {entry.kind === 'http' &&
+        entry.conditions &&
+        section('Network Conditions', [
+          ['Throttling', formatThrottleSummary(entry.conditions)],
+          ['User Agent', formatUserAgentSummary(entry.conditions)],
+          ...(entry.conditions.userAgent
+            ? [['Agent String', entry.conditions.userAgent] as Row]
+            : []),
+        ])}
       {section('General', general(entry))}
       {entry.kind === 'http' && (
         <>

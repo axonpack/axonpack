@@ -9,20 +9,18 @@ import { RESIZE_REACH, RESIZE_SLICE } from '../../constants/network-panel-css.co
  * either side already include, so they follow the pointer with no round trip. The app hears only the
  * slice it was let go over, and keeps those widths.
  *
- * The slices hang from the right edge of the column on the line's right, not from the line. A drag
- * trades width between the two columns, so that edge holds still while the line moves, and slices
- * that moved with the line would put a different one under a pointer that stood still.
+ * The slices hang from `anchor`, an edge that holds still while the line moves (see `dragAnchor`).
+ * Slices that moved with the line would put a different one under a pointer that stood still.
  */
 export function ColumnResizer({
   column,
-  neighbourWidth,
+  anchor,
   dragging,
   onStart,
   onEnd,
 }: {
   column: number;
-  /** The width of the column on the line's right, which is how far left of its edge the line is. */
-  neighbourWidth: number;
+  anchor: { column: number; edge: 'left' | 'right'; offset: number };
   dragging: boolean;
   onStart: () => void;
   /** How far the line moved, or nothing when the drag was dropped. */
@@ -41,10 +39,10 @@ export function ColumnResizer({
       {dragging && (
         <span
           className="axonpack-net-resize-anchor"
-          style={{ gridColumn: `${column + 1} / span 1` }}>
+          style={{ gridColumn: `${anchor.column} / span 1`, [anchor.edge]: 0 }}>
           <span
             className="axonpack-net-resize-slices"
-            style={{ marginLeft: -neighbourWidth - RESIZE_REACH * RESIZE_SLICE }}
+            style={{ marginLeft: anchor.offset - RESIZE_REACH * RESIZE_SLICE }}
             onMouseLeave={() => onEnd()}>
             {Array.from({ length: 2 * RESIZE_REACH }, (_, slice) => (
               <span key={slice} onMouseUp={() => onEnd((slice - RESIZE_REACH) * RESIZE_SLICE)} />

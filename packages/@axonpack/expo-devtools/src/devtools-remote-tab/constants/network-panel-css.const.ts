@@ -484,13 +484,12 @@ ${iconRules}
   cursor: col-resize;
 }
 /*
-  The right edge of the column right of the dragged line, where the slices count from. Above every
-  grip, or those would take the pointer from the slices.
+  The edge a dragged line's slices count from, which \`dragAnchor\` picks and the element's own style
+  places. Above every grip, or those would take the pointer from the slices.
 */
 .axonpack-net-resize-anchor {
   position: absolute;
   top: 0;
-  right: 0;
   z-index: 3;
 }
 .axonpack-net-resize-slices span { flex: none; width: ${RESIZE_SLICE}px; }
@@ -706,22 +705,6 @@ ${dragRules}
 .axonpack-net-preview-image { padding: 12px; }
 .axonpack-net-preview-image img { max-width: 100%; }
 .axonpack-net-preview-page { width: 100%; height: 100%; border: 0; background: #fff; }
-/* Chrome's cookie and EventStream tables. */
-.axonpack-net-cookies {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-.axonpack-net-cookies th,
-.axonpack-net-cookies td {
-  padding: 3px 6px;
-  border: 1px solid var(--line);
-  overflow: hidden;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.axonpack-net-cookies th { font-weight: 500; background: var(--net-section); }
 .axonpack-net-codeframe {
   margin: 8px 12px;
   padding: 8px;
@@ -765,4 +748,15 @@ ${dragRules}
   z-index: 4;
 }
 ${splitDragRules}
+/* The row menu's anchor spans the row, in the grid the rows share, and takes no room. */
+.axonpack-net-row-menu { grid-column: 1 / -1; }
+/* The app's "Blocked here" / "Overridden here" marker, after the name. */
+.axonpack-net-intercepted { flex: none; margin-left: 6px; }
+/* A socket's messages: the app colours the direction, sent in the accent and received in green. */
+.axonpack-net-row[data-tone] > span:first-child::before { margin-right: 6px; font-size: 10px; }
+.axonpack-net-row[data-tone="sent"] > span:first-child::before { content: "▲"; color: var(--link); }
+.axonpack-net-row[data-tone="received"] > span:first-child::before {
+  content: "▼";
+  color: var(--net-success);
+}
 `;

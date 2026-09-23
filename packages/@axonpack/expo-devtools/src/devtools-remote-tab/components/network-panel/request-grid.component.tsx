@@ -14,6 +14,7 @@ import {
 import { formatSource } from '../../../features/network/utils/formatters.util';
 import { groupBySource } from '../../../features/network/utils/group-by-source.util';
 import type { NetworkSortKey } from '../../../features/network/utils/sort-entries.util';
+import { columnTemplate, dragAnchor, resizeColumns } from '../../utils/column-widths.util';
 
 /**
  * Chrome's default columns, with the client that sent a request in place of Type, which only ever
@@ -30,44 +31,7 @@ const COLUMNS: { label: string; width: number; sortKey?: NetworkSortKey }[] = [
   { label: 'Time', width: 72, sortKey: 'duration' },
 ];
 
-const MIN_WIDTH = 40;
 const NAME_MIN = 120;
-
-/**
- * Chrome's rule: a line moves space between the two columns beside it, so the line follows the
- * pointer and nothing else shifts. When the column on the left is Name, it takes its share on its own.
- */
-function resizeColumns(widths: readonly number[], line: number, delta: number): number[] {
-  const next = [...widths];
-  const right = line + 1;
-  let moved = Math.min(delta, next[right] - MIN_WIDTH);
-  if (line > 0) moved = Math.max(moved, MIN_WIDTH - next[line]);
-  if (line > 0) next[line] += moved;
-  next[right] -= moved;
-  return next;
-}
-
-/**
- * The grid's columns, with Name filling the row. While a line is dragged, the two columns beside it
- * carry `--net-drag`, which the page sets from the slice under the pointer, so they move before the
- * app has heard anything. The drag is held to the same limits `resizeColumns` keeps, so letting go
- * does not jump.
- */
-function columnTemplate(widths: readonly number[], dragging: number | null): string {
-  const tracks = widths.map((width) => `${width}px`);
-  tracks[0] = `minmax(${NAME_MIN}px, 1fr)`;
-  if (dragging !== null) {
-    const right = dragging + 1;
-    const most = `${widths[right] - MIN_WIDTH}px`;
-    const drag =
-      dragging === 0
-        ? `min(var(--net-drag, 0px), ${most})`
-        : `clamp(${MIN_WIDTH - widths[dragging]}px, var(--net-drag, 0px), ${most})`;
-    if (dragging > 0) tracks[dragging] = `calc(${widths[dragging]}px + ${drag})`;
-    tracks[right] = `calc(${widths[right]}px - ${drag})`;
-  }
-  return tracks.join(' ');
-}
 
 /** Live counts for the rows that have them. Read here so a new message redraws only its own row. */
 function countFor(entry: NetworkEntry): number | undefined {
@@ -101,6 +65,7 @@ export function RequestGrid({
   // The panel's own business, like which rows are open: the app has no columns to share them with.
   const [widths, setWidths] = useState(() => COLUMNS.map((column) => column.width));
   const [dragging, setDragging] = useState<number | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
   const compact = selectedId !== null;
 
   const groups = settings.groupByFetchClient
@@ -117,7 +82,9 @@ export function RequestGrid({
     <div
       className="axonpack-net-grid"
       data-big={settings.devtoolsBigRows || undefined}
-      style={{ gridTemplateColumns: compact ? '1fr' : columnTemplate(widths, dragging) }}>
+      style={{
+        gridTemplateColumns: compact ? '1fr' : columnTemplate(widths, dragging, 0, NAME_MIN),
+      }}>
       <div className="axonpack-net-row axonpack-net-head">
         {(compact ? COLUMNS.slice(0, 1) : COLUMNS).map(({ label, sortKey }) => (
           <span
@@ -137,11 +104,12 @@ export function RequestGrid({
           <ColumnResizer
             key={label}
             column={line + 1}
-            neighbourWidth={widths[line + 1]}
+            anchor={dragAnchor(widths, line, 0)}
             dragging={dragging === line}
             onStart={() => setDragging(line)}
             onEnd={(delta) => {
-              if (delta !== undefined) setWidths((current) => resizeColumns(current, line, delta));
+              if (delta !== undefined)
+                setWidths((current) => resizeColumns(current, line, delta, 0));
               setDragging(null);
             }}
           />
@@ -162,6 +130,8 @@ export function RequestGrid({
               compact={compact}
               selected={entry.id === selectedId}
               onSelect={onSelect}
+              menuOpen={entry.id === menuId}
+              onMenu={setMenuId}
             />
           ))}
         </div>
