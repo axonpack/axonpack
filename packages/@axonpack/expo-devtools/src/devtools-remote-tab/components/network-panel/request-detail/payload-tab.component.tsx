@@ -1,5 +1,9 @@
+import { useState } from 'react';
+
+import { JsonTree } from './json-tree.component';
 import { formatSize } from '../../../../core/utils/format-bytes.util';
 import { formatJson } from '../../../../core/utils/format-json.util';
+import type { JsonValue } from '../../../../core/utils/json-tree.util';
 import type {
   NetworkEntry,
   NetworkLogEntry,
@@ -10,6 +14,16 @@ function queryParams(url: string): [string, string][] {
     return [...new URL(url).searchParams.entries()];
   } catch {
     return [];
+  }
+}
+
+/** A body that is a JSON object or array, which is what the app draws as a tree. */
+function parseObject(body: string): JsonValue | undefined {
+  try {
+    const value = JSON.parse(body) as JsonValue;
+    return typeof value === 'object' && value !== null ? value : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -25,6 +39,9 @@ export function hasPayload(entry: NetworkEntry): boolean {
 /** Chrome's order: the query string, then what went in the body. */
 export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
   const query = queryParams(entry.url);
+  const [viewSource, setViewSource] = useState(false);
+  const parsed = entry.requestBody ? parseObject(entry.requestBody) : undefined;
+  const showSource = viewSource || parsed === undefined;
 
   return (
     <div>
@@ -70,7 +87,19 @@ export function PayloadTab({ entry }: { entry: NetworkLogEntry }) {
         entry.requestBody && (
           <details open className="axonpack-net-section">
             <summary>Request Payload</summary>
-            <pre className="axonpack-net-code">{formatJson(entry.requestBody)}</pre>
+            {parsed !== undefined && (
+              // Under the header rather than in it: a click anywhere in a summary also folds it.
+              <div className="axonpack-net-section-tools">
+                <button onClick={() => setViewSource((current) => !current)}>
+                  {showSource ? 'View parsed' : 'View source'}
+                </button>
+              </div>
+            )}
+            {showSource ? (
+              <pre className="axonpack-net-code">{formatJson(entry.requestBody)}</pre>
+            ) : (
+              <JsonTree value={parsed as JsonValue} />
+            )}
           </details>
         )
       )}

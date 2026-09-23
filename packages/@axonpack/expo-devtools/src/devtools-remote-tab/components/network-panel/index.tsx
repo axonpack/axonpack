@@ -5,6 +5,7 @@ import { NetworkOverview } from './overview.component';
 import { RequestDetail } from './request-detail';
 import { RequestGrid } from './request-grid.component';
 import { NetworkSettingsPane } from './settings-pane.component';
+import { SplitResizer } from './split-resizer.component';
 import { NetworkSummaryBar } from './summary-bar.component';
 import { NetworkToolbar } from './toolbar.component';
 import {
@@ -20,6 +21,10 @@ import { startedInRange } from '../../../features/network/utils/overview-layout.
 import { sortEntries } from '../../../features/network/utils/sort-entries.util';
 import { NETWORK_PANEL_CSS } from '../../constants/network-panel-css.const';
 
+/** The table's width beside an open request, as Chrome starts it, and the least a drag leaves it. */
+const LIST_WIDTH = 280;
+const LIST_MIN = 120;
+
 /**
  * Chrome's Network panel over the same stores the in-app Network tab reads, so every button here and
  * its twin in the app move together. Which rows are open is this surface's own business.
@@ -30,6 +35,8 @@ export function NetworkPanel() {
   // The id, not the entry: the store replaces an entry's object on every update, and a pane holding
   // the old one would keep showing a request as pending after it finished.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [listWidth, setListWidth] = useState(LIST_WIDTH);
+  const [resizing, setResizing] = useState(false);
   const logs = useNetworkLogStore(networkLogStore.getMergedSnapshot);
   const { filters, sort, settings } = useNetworkViewStore();
   const timeRange = useNetworkViewStore(activeTimeRange);
@@ -60,7 +67,16 @@ export function NetworkPanel() {
       {settingsOpen && <NetworkSettingsPane />}
       {settings.showOverview && <NetworkOverview />}
       <div className="axonpack-net-main">
-        <div className="axonpack-net-body" data-split={selected ? true : undefined}>
+        <div
+          className="axonpack-net-body"
+          style={
+            selected
+              ? {
+                  flex: 'none',
+                  width: `max(${LIST_MIN}px, calc(${listWidth}px + var(--net-split-drag, 0px)))`,
+                }
+              : undefined
+          }>
           <RequestGrid
             visible={visible}
             total={logs.length}
@@ -68,7 +84,20 @@ export function NetworkPanel() {
             onSelect={setSelectedId}
           />
         </div>
-        {selected && <RequestDetail entry={selected} onClose={() => setSelectedId(null)} />}
+        {selected && (
+          <>
+            <SplitResizer
+              width={listWidth}
+              dragging={resizing}
+              onStart={() => setResizing(true)}
+              onEnd={(delta) => {
+                if (delta !== undefined) setListWidth((width) => Math.max(LIST_MIN, width + delta));
+                setResizing(false);
+              }}
+            />
+            <RequestDetail entry={selected} onClose={() => setSelectedId(null)} />
+          </>
+        )}
       </div>
       <NetworkSummaryBar visible={visible} all={logs} />
     </div>

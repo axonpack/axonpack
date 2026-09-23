@@ -18,6 +18,13 @@ const dragRules = Array.from(
     `.axonpack-net-grid:has(> .axonpack-net-resize-anchor > .axonpack-net-resize-slices > span:nth-child(${slice + 1}):hover) { --net-drag: ${(slice - RESIZE_REACH) * RESIZE_SLICE}px; }`
 ).join('\n');
 
+/** The same, for the line between the table and the request pane. */
+const splitDragRules = Array.from(
+  { length: 2 * RESIZE_REACH },
+  (_, slice) =>
+    `.axonpack-net-main:has(> .axonpack-net-split-anchor > .axonpack-net-resize-slices > span:nth-child(${slice + 1}):hover) { --net-split-drag: ${(slice - RESIZE_REACH) * RESIZE_SLICE}px; }`
+).join('\n');
+
 /**
  * The Network panel's toolbar, filter bar and settings pane, sized and coloured after Chrome
  * DevTools' own `toolbar.css` and `filter.css` (the same frontend React Native DevTools is), so the
@@ -34,6 +41,9 @@ export const NETWORK_PANEL_CSS = `
   --net-ov-waiting: rgb(55 190 95);
   --net-ov-receiving: rgb(76 141 246);
   --net-ov-window: color-mix(in srgb, rgb(124 172 248) 32%, transparent);
+  --net-section: color-mix(in srgb, var(--fg) 6%, transparent);
+  --net-success: rgb(55 190 95);
+  --net-pending: #f9ab00;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -60,6 +70,7 @@ export const NETWORK_PANEL_CSS = `
   border-bottom: 1px solid var(--line);
 }
 .axonpack-net-main {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -68,10 +79,6 @@ export const NETWORK_PANEL_CSS = `
   flex: 1;
   min-width: 0;
   overflow: auto;
-}
-/* Chrome's split: the table narrows to its Name column and the request takes the rest. */
-.axonpack-net-body[data-split] {
-  flex: 0 0 clamp(160px, 28%, 360px);
 }
 .axonpack-net-button {
   display: inline-flex;
@@ -584,13 +591,46 @@ ${dragRules}
   overflow: auto;
   user-select: text;
 }
-.axonpack-net-section { border-bottom: 1px solid var(--line); }
+/*
+  The app's section header: its own tint, with a hairline above and below. A header sits a pixel up
+  over the one before it, so two closed sections share a line rather than drawing two.
+*/
 .axonpack-net-section > summary {
-  padding: 5px 6px;
-  font-weight: 600;
+  margin-top: -1px;
+  padding: 5px 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--net-section);
+  font-weight: 700;
   cursor: default;
   user-select: none;
 }
+.axonpack-net-section:first-child > summary { margin-top: 0; border-top: 0; }
+.axonpack-net-section[open] > summary { margin-bottom: 6px; }
+.axonpack-net-section-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 12px;
+}
+.axonpack-net-section-tools button {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: 600 12px system-ui, sans-serif;
+}
+/* The app's status dot, in the status's own colour. */
+.axonpack-net-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 0;
+}
+.axonpack-net-dot[data-tone="success"] { background: var(--net-success); }
+.axonpack-net-dot[data-tone="pending"] { background: var(--net-pending); }
+.axonpack-net-dot[data-tone="error"] { background: var(--net-red); }
 .axonpack-net-count { margin-left: 4px; color: var(--muted); font-weight: 400; }
 /* Key and value, the keys in a column of their own so the values line up, as in Chrome. */
 .axonpack-net-kv {
@@ -635,4 +675,94 @@ ${dragRules}
 .axonpack-net-timing-track > [data-phase="waitMs"] { background: var(--net-ov-waiting); }
 .axonpack-net-timing-track > [data-phase="downloadMs"] { background: var(--net-ov-receiving); }
 .axonpack-net-timing-total { border-top: 1px solid var(--line); margin-top: 4px; font-weight: 600; }
+/* The pretty printer draws its own rows. This is only the room around them. */
+.axonpack-json { padding: 4px 12px 10px; }
+/* A menu under the row it was asked on. The anchor takes no room, so opening it moves nothing. */
+.axonpack-net-context-anchor { position: relative; height: 0; }
+.axonpack-net-context {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px 0;
+  background: var(--pop);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px #0006;
+}
+.axonpack-net-context-item {
+  padding: 4px 12px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: 12px system-ui, sans-serif;
+  text-align: left;
+  white-space: nowrap;
+}
+.axonpack-net-context-item:hover { background: var(--hover); }
+.axonpack-net-preview-image { padding: 12px; }
+.axonpack-net-preview-image img { max-width: 100%; }
+.axonpack-net-preview-page { width: 100%; height: 100%; border: 0; background: #fff; }
+/* Chrome's cookie and EventStream tables. */
+.axonpack-net-cookies {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.axonpack-net-cookies th,
+.axonpack-net-cookies td {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.axonpack-net-cookies th { font-weight: 500; background: var(--net-section); }
+.axonpack-net-codeframe {
+  margin: 8px 12px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pop);
+  font: 11px/15px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  white-space: pre;
+  overflow: auto;
+}
+.axonpack-net-codeframe-file { margin-bottom: 4px; font-family: system-ui, sans-serif; }
+.axonpack-net-codeframe [data-marked] { color: var(--fg); font-weight: 600; }
+.axonpack-net-stack { padding: 0 12px 8px 22px; }
+.axonpack-net-stack > div { display: flex; gap: 12px; padding: 1px 0; }
+.axonpack-net-stack > div > span:last-child {
+  color: var(--link);
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+.axonpack-net-stack > [data-vendor] { opacity: 0.55; }
+/*
+  The line between the table and the request pane: a flex item with no width, so it sits exactly on
+  the boundary, holding a grab strip a few pixels either side of it.
+*/
+.axonpack-net-split { position: relative; flex: none; width: 0; }
+.axonpack-net-split > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  z-index: 3;
+  width: 7px;
+  cursor: col-resize;
+}
+/* The table's left edge, where the split's slices count from. Above every grip. */
+.axonpack-net-split-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+}
+${splitDragRules}
 `;

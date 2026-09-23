@@ -1,26 +1,22 @@
 /**
- * The in-app tab bar's icons (`devtools-tab-bar.component.tsx`), so each panel here carries the same
- * mark as its twin in the app. They are Material Icons, the font `@expo/vector-icons` ships, with
- * each glyph's outline taken from that font file as it is. A font cannot cross from the app, and
- * the page has no copy of its own, so the outlines come as SVG and are drawn as CSS masks.
+ * Material Icons, the font `@expo/vector-icons` ships and the in-app panel draws its icons from, so
+ * a mark here is the same mark as its twin in the app. Each outline is taken from that font file as
+ * it is. A font cannot cross from the app and the page has no copy of its own, so they come as SVG
+ * and are drawn as CSS masks in the text's colour.
  */
-export const PANEL_ICONS: Record<string, string> = {
-  // MaterialIcons `swap-vert`.
-  network:
+export const MATERIAL_ICONS = {
+  'swap-vert':
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M192 64 277 149H213V299H171V149H107ZM341 363H405L320 448L235 363H299V213H341Z'/></svg>",
-  // MaterialIcons `terminal`.
-  console:
+  terminal:
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M427 85H85Q68 85 55.5 97.5Q43 110 43 128V384Q43 402 55.5 414.5Q68 427 85 427H427Q444 427 456.5 414.5Q469 402 469 384V128Q469 110 456.5 97.5Q444 85 427 85ZM427 384H85V171H427ZM384 363H256V320H384ZM160 363 130 333 185 277 130 222 160 192 245 277Z'/></svg>",
-  // MaterialIcons `speed`.
-  performance:
+  speed:
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M256 341Q239 341 226 328.5Q213 316 213 299Q213 281 226 268L407 148L286 329Q274 341 256 341ZM435 183Q449 205 459 239Q469 273 469 299Q469 358 441 405Q428 427 404 427H108Q84 427 71 405Q43 358 43 299Q43 211 105.5 148.5Q168 86 257 86Q283 86 316.5 96Q350 106 372 120L332 146Q296 128 256 128Q186 128 135.5 178Q85 228 85 299Q85 345 108 384H404Q427 345 427 299Q427 258 409 222Z'/></svg>",
-  // MaterialIcons `storage`.
   storage:
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M85 235V277H128V235ZM43 299V213H469V299ZM128 149V107H85V149ZM43 85H469V171H43ZM85 363V405H128V363ZM43 427V341H469V427Z'/></svg>",
-  // MaterialIcons `bug-report`.
-  crashes:
+  'bug-report':
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M299 256V213H213V256ZM299 341V299H213V341ZM427 171V213H382Q384 227 384 235V256H427V299H384V320Q384 327 382 341H427V384H367Q350 413 320.5 430.5Q291 448 256 448Q221 448 191.5 430.5Q162 413 145 384H85V341H130Q128 327 128 320V299H85V256H128V235Q128 227 130 213H85V171H145Q160 146 184 129L149 94L179 64L226 110Q241 107 256 107Q271 107 286 110L333 64L363 94L328 129Q353 146 367 171Z'/></svg>",
-  // MaterialIcons `construction`.
-  debug:
+  construction:
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M294 324 339 278 467 406 422 452ZM373 213Q394 213 411 203Q428 193 438 176Q448 159 448 139Q448 129 445.5 120.5Q443 112 439 105L382 162L350 130L407 73Q400 69 391.5 66.5Q383 64 373 64Q353 64 336 74Q319 84 309 101Q299 118 299 139Q299 151 303 163L264 203L226 165L241 150L211 120L256 74Q244 62 227.5 58Q211 54 194.5 58Q178 62 166 74L90 150L120 180H60L45 195L120 271L135 256V195L166 225L181 210L219 248L61 406L106 451L349 209Q361 213 373 213Z'/></svg>",
-};
+} as const;
+
+export type MaterialIcon = keyof typeof MATERIAL_ICONS;

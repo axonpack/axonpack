@@ -49,7 +49,7 @@ export function PanelTabs({
               data-id={panel.id}
               className="axonpack-panel-measure-tab"
               style={position(panel.id)}>
-              <PanelIcon id={panel.id} />
+              <PanelIcon icon={panel.icon} />
               {panel.title}
             </button>
           ))}
@@ -57,7 +57,7 @@ export function PanelTabs({
         </div>
         {active && (
           <button tabIndex={-1} className="axonpack-panel-measure-tab">
-            <PanelIcon id={active.id} />
+            <PanelIcon icon={active.icon} />
             {active.title}
           </button>
         )}
@@ -79,7 +79,7 @@ export function PanelTabs({
             style={position(panel.id)}
             onClick={() => onSelect(panel.id)}
             {...tabProps(panel.id)}>
-            <PanelIcon id={panel.id} />
+            <PanelIcon icon={panel.icon} />
             {panel.title}
             {dragged && (
               <span className="axonpack-drag-spots">
@@ -106,7 +106,7 @@ export function PanelTabs({
           under the pointer. */}
       {dragged && (
         <div className="axonpack-drag-ghost" data-built-in={dragged.builtIn || undefined}>
-          <PanelIcon id={dragged.id} />
+          <PanelIcon icon={dragged.icon} />
           {dragged.title}
         </div>
       )}

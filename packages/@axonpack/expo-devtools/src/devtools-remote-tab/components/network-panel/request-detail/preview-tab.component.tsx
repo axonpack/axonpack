@@ -1,6 +1,11 @@
-import { JsonNode } from './json-node.component';
+import { CodeHighlight, XmlTree, detectLanguage } from '@axonpack/react-pretty-print';
+
+import { JsonTree } from './json-tree.component';
+import { TAB_PRIMITIVES } from './tab-primitives.component';
+import { themeStore, useThemeStore } from '../../../../core/stores/theme.store';
 import type { JsonValue } from '../../../../core/utils/json-tree.util';
 import type { NetworkLogEntry } from '../../../../features/network/stores/network-log.store';
+import { prettyPrintTheme } from '../../../utils/pretty-print-theme.util';
 
 function parseJson(body: string): JsonValue | undefined {
   try {
@@ -10,8 +15,9 @@ function parseJson(body: string): JsonValue | undefined {
   }
 }
 
-/** What Chrome would draw for the body: a tree, a picture, a page, or the text. */
+/** What the app's Preview draws for the body: a picture, a page, a JSON or XML tree, or the code. */
 export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
+  const theme = prettyPrintTheme(useThemeStore(themeStore.getPalette));
   const mime = entry.mimeType?.toLowerCase() ?? '';
 
   if (entry.responseBase64 && mime.startsWith('image/')) {
@@ -31,11 +37,23 @@ export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
 
   const json = parseJson(entry.responseBody);
   if (json !== undefined && typeof json === 'object' && json !== null) {
+    return <JsonTree value={json} />;
+  }
+  if (mime.includes('xml')) {
     return (
       <div className="axonpack-json">
-        <JsonNode value={json} open />
+        <XmlTree primitives={TAB_PRIMITIVES} source={entry.responseBody} theme={theme} />
       </div>
     );
   }
-  return <pre className="axonpack-net-code">{entry.responseBody}</pre>;
+  return (
+    <div className="axonpack-json">
+      <CodeHighlight
+        primitives={TAB_PRIMITIVES}
+        code={entry.responseBody}
+        language={detectLanguage(entry.mimeType, entry.responseBody)}
+        theme={theme}
+      />
+    </div>
+  );
 }

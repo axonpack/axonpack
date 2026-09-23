@@ -9,9 +9,7 @@ import { formatFrameLocation } from '../../../../core/utils/frame-location.util'
 import type { NetworkLogEntry } from '../../../../features/network/stores/network-log.store';
 
 type State =
-  | { phase: 'loading' }
-  | { phase: 'raw' }
-  | { phase: 'symbolicated'; result: SymbolicatedStack };
+  { phase: 'loading' } | { phase: 'raw' } | { phase: 'symbolicated'; result: SymbolicatedStack };
 
 /**
  * Chrome's request call stack. Symbolicated on opening, as in the app, through the same service, so

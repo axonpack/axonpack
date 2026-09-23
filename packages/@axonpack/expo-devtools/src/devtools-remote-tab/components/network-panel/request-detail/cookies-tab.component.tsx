@@ -17,11 +17,18 @@ function table(title: string, cookies: Cookie[]) {
       <table className="axonpack-net-cookies">
         <thead>
           <tr>
-            {['Name', 'Value', 'Domain', 'Path', 'Expires / Max-Age', 'HttpOnly', 'Secure', 'SameSite'].map(
-              (label) => (
-                <th key={label}>{label}</th>
-              )
-            )}
+            {[
+              'Name',
+              'Value',
+              'Domain',
+              'Path',
+              'Expires / Max-Age',
+              'HttpOnly',
+              'Secure',
+              'SameSite',
+            ].map((label) => (
+              <th key={label}>{label}</th>
+            ))}
           </tr>
         </thead>
         <tbody>

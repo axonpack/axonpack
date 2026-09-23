@@ -73,6 +73,9 @@ export function themeCss(palette: Palette): string {
   --net-ov-waiting: ${palette.success};
   --net-ov-receiving: ${palette.accent};
   --net-ov-window: ${mix(palette.accent, 30)};
+  --net-section: ${palette.sectionTint};
+  --net-success: ${palette.success};
+  --net-pending: ${palette.pending};
 }
 `;
 }
