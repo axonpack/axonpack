@@ -1,5 +1,6 @@
 import { createAxonStore } from '../../../core/stores/axon.store';
 import { DEFAULT_NETWORK_FILTERS, type NetworkFilters } from '../utils/filter-entries.util';
+import type { TimeRange } from '../utils/overview-layout.util';
 import { DEFAULT_NETWORK_SORT, type NetworkSort } from '../utils/sort-entries.util';
 
 export type NetworkViewSettings = {
@@ -12,6 +13,8 @@ export type NetworkViewState = {
   filters: NetworkFilters;
   sort: NetworkSort;
   settings: NetworkViewSettings;
+  /** The window picked on the overview. A filter too, so clearing the filters clears it. */
+  timeRange: TimeRange | null;
 };
 
 /**
@@ -22,15 +25,22 @@ const initial: NetworkViewState = {
   filters: DEFAULT_NETWORK_FILTERS,
   sort: DEFAULT_NETWORK_SORT,
   settings: { bigRows: true, groupByFetchClient: false, showOverview: false },
+  timeRange: null,
 };
 
 export const networkViewStore = createAxonStore(initial, (set, get) => ({
   patchFilters: (patch: Partial<NetworkFilters>) =>
     set({ filters: { ...get().filters, ...patch } }),
-  resetFilters: () => set({ filters: DEFAULT_NETWORK_FILTERS }),
+  resetFilters: () => set({ filters: DEFAULT_NETWORK_FILTERS, timeRange: null }),
+  setTimeRange: (timeRange: TimeRange | null) => set({ timeRange }),
   setSort: (sort: NetworkSort) => set({ sort }),
   patchSettings: (patch: Partial<NetworkViewSettings>) =>
     set({ settings: { ...get().settings, ...patch } }),
 }));
 
 export const useNetworkViewStore = networkViewStore.useStore;
+
+/** The overview's window, but only while the overview it was picked on is showing. */
+export function activeTimeRange(state: NetworkViewState): TimeRange | null {
+  return state.settings.showOverview ? state.timeRange : null;
+}

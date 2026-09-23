@@ -19,6 +19,10 @@ export const NETWORK_PANEL_CSS = `
   --net-tonal: #004a77;
   --net-on-tonal: #dff3ff;
   --net-outline: #757575;
+  --net-ov-total: #444746;
+  --net-ov-waiting: rgb(55 190 95);
+  --net-ov-receiving: rgb(76 141 246);
+  --net-ov-window: color-mix(in srgb, rgb(124 172 248) 32%, transparent);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -31,6 +35,8 @@ export const NETWORK_PANEL_CSS = `
     --net-tonal: #d3e3fd;
     --net-on-tonal: #041e49;
     --net-outline: #c7c7c7;
+    --net-ov-total: #e1e3e1;
+    --net-ov-window: color-mix(in srgb, rgb(76 141 246) 32%, transparent);
   }
 }
 .axonpack-net-bar {
@@ -261,4 +267,104 @@ ${iconRules}
   padding: 2px 4px;
   border-bottom: 1px solid var(--line);
 }
+/* Chrome's overview: 60px tall, bars in 3px bands, labelled dividers along the top. */
+.axonpack-net-overview {
+  position: relative;
+  flex: none;
+  height: 60px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  user-select: none;
+}
+.axonpack-net-ov-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+.axonpack-net-ov-tick span {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  color: var(--muted);
+  font-size: 80%;
+  white-space: nowrap;
+}
+.axonpack-net-ov-bar {
+  position: absolute;
+  height: 3px;
+  min-width: 2px;
+  box-sizing: border-box;
+  display: flex;
+  background: var(--net-ov-receiving);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 80%, transparent);
+}
+.axonpack-net-ov-bar[data-pending] { background: var(--net-ov-total); }
+.axonpack-net-ov-wait {
+  flex: none;
+  height: 100%;
+  background: var(--net-ov-waiting);
+}
+.axonpack-net-ov-curtain {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--net-ov-window);
+  pointer-events: none;
+}
+.axonpack-net-ov-columns {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  cursor: text;
+}
+.axonpack-net-ov-columns span { flex: 1; }
+.axonpack-net-ov-drag { display: none; }
+/*
+  The window while it is being dragged, drawn in the page from the held column to the one under the
+  pointer. \`min\` of the two insets on each side is whichever column is further out, so dragging
+  back past where it started works too. Hidden when the pointer is over no column.
+*/
+@supports (anchor-name: --a) {
+  .axonpack-net-ov-columns span[data-anchor] { anchor-name: --axonpack-ov-start; }
+  .axonpack-net-overview[data-dragging] .axonpack-net-ov-columns span:hover {
+    anchor-name: --axonpack-ov-pointer;
+  }
+  .axonpack-net-ov-drag {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: block;
+    left: min(anchor(--axonpack-ov-start left), anchor(--axonpack-ov-pointer left));
+    right: min(anchor(--axonpack-ov-start right), anchor(--axonpack-ov-pointer right));
+    background: var(--net-ov-window);
+    pointer-events: none;
+    position-visibility: anchors-valid;
+  }
+}
+.axonpack-net-ov-handle {
+  position: absolute;
+  top: 0;
+  box-sizing: border-box;
+  width: 10px;
+  height: 19px;
+  margin-left: -5px;
+  border: 1px solid var(--net-outline);
+  border-radius: 3px;
+  background: var(--net-tonal);
+  cursor: ew-resize;
+}
+.axonpack-net-ov-handle::before,
+.axonpack-net-ov-handle::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 2px;
+  width: 1px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--link);
+}
+.axonpack-net-ov-handle::after { left: 5px; }
 `;

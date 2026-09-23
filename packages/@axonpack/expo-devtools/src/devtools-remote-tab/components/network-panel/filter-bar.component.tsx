@@ -5,6 +5,7 @@ import { MoreFiltersMenu } from './more-filters-menu.component';
 import { SyncedInput } from './synced-input.component';
 import { buildMatcher, type SearchModes } from '../../../core/utils/text-search.util';
 import {
+  activeTimeRange,
   networkViewStore,
   useNetworkViewStore,
 } from '../../../features/network/stores/network-view.store';
@@ -50,7 +51,8 @@ export function NetworkFilterBar() {
   );
   const patch = networkViewStore.patchFilters;
   const count = moreFiltersCount(filters);
-  const active = hasActiveFilters(filters);
+  const timeRange = useNetworkViewStore(activeTimeRange);
+  const active = hasActiveFilters(filters) || timeRange !== null;
 
   return (
     <div className="axonpack-net-bar" role="toolbar" aria-label="Filter">

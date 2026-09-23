@@ -1,8 +1,10 @@
 import { useState } from 'react';
 
 import { NetworkFilterBar } from './filter-bar.component';
+import { NetworkOverview } from './overview.component';
 import { NetworkSettingsPane } from './settings-pane.component';
 import { NetworkToolbar } from './toolbar.component';
+import { useNetworkViewStore } from '../../../features/network/stores/network-view.store';
 import { NETWORK_PANEL_CSS } from '../../constants/network-panel-css.const';
 import { PlaceholderPanel } from '../placeholder-panel.component';
 
@@ -13,6 +15,7 @@ import { PlaceholderPanel } from '../placeholder-panel.component';
 export function NetworkPanel() {
   const [filterBarOpen, setFilterBarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const showOverview = useNetworkViewStore((state) => state.settings.showOverview);
 
   return (
     <div className="axonpack-net">
@@ -25,6 +28,7 @@ export function NetworkPanel() {
       />
       {filterBarOpen && <NetworkFilterBar />}
       {settingsOpen && <NetworkSettingsPane />}
+      {showOverview && <NetworkOverview />}
       <div className="axonpack-net-body">
         <PlaceholderPanel title="Network" />
       </div>

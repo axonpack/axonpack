@@ -1,12 +1,12 @@
 import { useState } from 'react';
 
 import { Checkbox } from './checkbox.component';
-import { setNetworkPaused } from '../../../features/network/services/set-network-recording.service';
 import {
   THROTTLE_PRESET_IDS,
   THROTTLE_PRESET_LABELS,
   type ThrottlePresetId,
 } from '../../../features/network/constants/throttle-presets.const';
+import { setNetworkPaused } from '../../../features/network/services/set-network-recording.service';
 import {
   networkConditionsStore,
   useNetworkConditionsStore,
@@ -16,6 +16,7 @@ import {
   useNetworkLogStore,
 } from '../../../features/network/stores/network-log.store';
 import {
+  activeTimeRange,
   networkViewStore,
   useNetworkViewStore,
 } from '../../../features/network/stores/network-view.store';
@@ -27,6 +28,7 @@ import {
   filterNetworkEntries,
   hasActiveFilters,
 } from '../../../features/network/utils/filter-entries.util';
+import { startedInRange } from '../../../features/network/utils/overview-layout.util';
 import { sortDirectionLabel, sortEntries } from '../../../features/network/utils/sort-entries.util';
 
 /** Chrome's main Network toolbar, in its order: record, clear | filter | preserve | throttling | export … settings. */
@@ -45,13 +47,16 @@ export function NetworkToolbar({
   const preserveLog = useNetworkLogStore(networkLogStore.isPreserveLogEnabled);
   const throttleId = useNetworkConditionsStore((state) => state.throttleId);
   const { filters, sort } = useNetworkViewStore();
+  const timeRange = useNetworkViewStore(activeTimeRange);
   const [exportFile, setExportFile] = useState<{ href: string; name: string } | null>(null);
 
   // A download has to be a link the page follows itself, since a click cannot wait on the app.
   // ponytail: built on hover, so a request landing between hover and click is left out of the file.
   function buildExport() {
     const entries = sortEntries(
-      filterNetworkEntries(networkLogStore.getMergedSnapshot(), filters),
+      filterNetworkEntries(networkLogStore.getMergedSnapshot(), filters).filter((entry) =>
+        startedInRange(entry, timeRange)
+      ),
       sort
     );
     setExportFile({
@@ -86,7 +91,7 @@ export function NetworkToolbar({
       />
       <button
         className="axonpack-net-button"
-        data-icon={hasActiveFilters(filters) ? 'filter-filled' : 'filter'}
+        data-icon={hasActiveFilters(filters) || timeRange ? 'filter-filled' : 'filter'}
         aria-pressed={filterBarOpen}
         title="Filter"
         onClick={onToggleFilterBar}

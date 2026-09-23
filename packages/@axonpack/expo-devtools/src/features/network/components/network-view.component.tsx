@@ -5,7 +5,7 @@ import { DetailPanel } from './detail-panel';
 import { FilterPanel } from './filter-panel.component';
 import { LogRow } from './log-row.component';
 import { OverrideEditor } from './override-editor.component';
-import { OverviewStrip, type TimeRange } from './overview-strip.component';
+import { OverviewStrip } from './overview-strip.component';
 import { SettingsPanel } from './settings-panel.component';
 import { SocketDetailPanel } from './socket-detail-panel.component';
 import { SocketRow } from './socket-row.component';
@@ -21,7 +21,11 @@ import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-sty
 import { setNetworkPaused } from '../services/set-network-recording.service';
 import { networkLogStore, useNetworkLogStore } from '../stores/network-log.store';
 import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
-import { networkViewStore, useNetworkViewStore } from '../stores/network-view.store';
+import {
+  activeTimeRange,
+  networkViewStore,
+  useNetworkViewStore,
+} from '../stores/network-view.store';
 import { exportNetworkLog } from '../utils/export-network-log.util';
 import {
   compileNetworkFilters,
@@ -32,6 +36,7 @@ import {
   statusClass,
 } from '../utils/filter-entries.util';
 import { formatSource } from '../utils/formatters.util';
+import { startedInRange } from '../utils/overview-layout.util';
 import { sortDirectionLabel, sortEntries } from '../utils/sort-entries.util';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
@@ -54,10 +59,8 @@ export function NetworkView() {
     sort,
     settings: { bigRows, groupByFetchClient, showOverview },
   } = useNetworkViewStore();
+  const timeRange = useNetworkViewStore(activeTimeRange);
   const [openPanel, setOpenPanel] = useState<'settings' | 'filters' | null>(null);
-  const [brushedRange, setActiveTimeRange] = useState<TimeRange | null>(null);
-  // Derived, not reset in a handler: the DevTools tab can turn the overview off too.
-  const activeTimeRange = showOverview ? brushedRange : null;
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
   const [overrideEntry, setOverrideEntry] = useState<NetworkLogEntry | null>(null);
@@ -115,14 +118,9 @@ export function NetworkView() {
   );
 
   const visibleLogs = useMemo(() => {
-    const inRange = activeTimeRange
-      ? overviewLogs.filter(
-          (entry) =>
-            entry.startedAt >= activeTimeRange.start && entry.startedAt <= activeTimeRange.end
-        )
-      : overviewLogs;
+    const inRange = overviewLogs.filter((entry) => startedInRange(entry, timeRange));
     return sortEntries(inRange, sort);
-  }, [overviewLogs, activeTimeRange, sort]);
+  }, [overviewLogs, timeRange, sort]);
 
   const sections = useMemo(() => {
     if (!groupByFetchClient) return [];
@@ -141,13 +139,7 @@ export function NetworkView() {
     setOpenPanel((current) => (current === panel ? null : panel));
   }
 
-  function clearFilters() {
-    networkViewStore.resetFilters();
-    // The overview's brushed range is a filter too, even though it is set from a different surface.
-    setActiveTimeRange(null);
-  }
-
-  const filtersActive = hasActiveFilters(filters) || activeTimeRange !== null;
+  const filtersActive = hasActiveFilters(filters) || timeRange !== null;
 
   /**
    * The panels and the overview scroll with the rows rather than sitting above them. Pinned, an open
@@ -182,7 +174,7 @@ export function NetworkView() {
           filters={filters}
           compiled={compiled}
           onChange={networkViewStore.patchFilters}
-          onClear={clearFilters}
+          onClear={networkViewStore.resetFilters}
           visibleCount={visibleLogs.length}
           totalCount={logs.length}
           statuses={statuses}
@@ -196,8 +188,8 @@ export function NetworkView() {
       {showOverview && (
         <OverviewStrip
           entries={overviewRequests}
-          activeRange={activeTimeRange}
-          onSelectRange={setActiveTimeRange}
+          activeRange={timeRange}
+          onSelectRange={networkViewStore.setTimeRange}
         />
       )}
     </>
