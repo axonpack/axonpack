@@ -9,7 +9,10 @@ import { PayloadTab, hasPayload } from './payload-tab.component';
 import { PreviewTab } from './preview-tab.component';
 import { ResponseTab } from './response-tab.component';
 import { TimingTab } from './timing-tab.component';
-import type { NetworkEntry } from '../../../../features/network/stores/network-log.store';
+import type {
+  NetworkEntry,
+  NetworkLogEntry,
+} from '../../../../features/network/stores/network-log.store';
 
 type Tab =
   | 'headers'
@@ -37,18 +40,26 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 /**
- * The tabs a row has something for, by the app's rules. A stream's events are its body, so EventStream
- * stands where Preview and Response would. A socket is its handshake and the messages since.
+ * When a request has something for each tab, by the app's rules. A stream's events are its body, so
+ * EventStream stands where Preview and Response would. Keyed by every tab, so a tab added without a
+ * rule does not compile, rather than showing on every request.
  */
+const SHOWS: Record<Tab, (entry: NetworkLogEntry) => boolean> = {
+  headers: () => true,
+  messages: () => false,
+  payload: hasPayload,
+  preview: (entry) => !entry.eventStream,
+  response: (entry) => !entry.eventStream,
+  events: (entry) => Boolean(entry.eventStream),
+  timing: () => true,
+  cookies: () => true,
+  initiator: (entry) => Boolean(entry.initiator?.length),
+};
+
+/** A socket is its handshake and the messages since. */
 function tabsFor(entry: NetworkEntry): Tab[] {
   if (entry.kind === 'websocket') return ['headers', 'messages'];
-  return TABS.map((tab) => tab.key).filter((key) => {
-    if (key === 'payload') return hasPayload(entry);
-    if (key === 'initiator') return Boolean(entry.initiator?.length);
-    if (key === 'events') return Boolean(entry.eventStream);
-    if (key === 'preview' || key === 'response') return !entry.eventStream;
-    return true;
-  });
+  return TABS.map((tab) => tab.key).filter((key) => SHOWS[key](entry));
 }
 
 /**
