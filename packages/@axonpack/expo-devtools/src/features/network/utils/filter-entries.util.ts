@@ -2,12 +2,13 @@ import { parseByteSize, parseDurationMs } from './parse-threshold.util';
 import { classifyResourceType, type ResourceType } from './resource-type.util';
 import { matchesStatusQuery, parseStatusQuery, type ParsedStatusQuery } from './status-query.util';
 import {
+  buildMatcher,
   DEFAULT_SEARCH_MODES,
   testMatch,
   type Matcher,
   type SearchModes,
 } from '../../../core/utils/text-search.util';
-import type { NetworkLogEntry, WebSocketLogEntry } from '../stores/network-log.store';
+import type { NetworkEntry, NetworkLogEntry, WebSocketLogEntry } from '../stores/network-log.store';
 
 /** A `2xx`-style band, or the two states that have no code of their own. */
 export type StatusClass = string;
@@ -206,6 +207,20 @@ export function matchesSocketFilters(
     testMatch(`${entry.method} ${entry.url} ${entry.status} ${entry.source ?? ''}`, matcher);
 
   return filters.invert ? !matches : matches;
+}
+
+/** Every entry the filters keep, requests and sockets alike. Compiles the filters once for the list. */
+export function filterNetworkEntries(
+  entries: readonly NetworkEntry[],
+  filters: NetworkFilters
+): NetworkEntry[] {
+  const matcher = buildMatcher({ text: filters.search, ...filters.modes });
+  const compiled = compileNetworkFilters(filters);
+  return entries.filter((entry) =>
+    entry.kind === 'websocket'
+      ? matchesSocketFilters(entry, filters, matcher, compiled)
+      : matchesFilters(entry, filters, matcher, compiled)
+  );
 }
 
 export function hasActiveFilters(filters: NetworkFilters): boolean {

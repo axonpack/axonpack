@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 
+import { NetworkPanel } from '../components/network-panel';
 import { PlaceholderPanel } from '../components/placeholder-panel.component';
 
 export type AxonpackPanel = {
@@ -12,7 +13,7 @@ export type AxonpackPanel = {
 
 // Same tabs, same order as the in-app panel's `devtools-tab-bar.component.tsx`.
 const BUILT_IN: AxonpackPanel[] = [
-  { id: 'network', title: 'Network', component: () => <PlaceholderPanel title="Network" /> },
+  { id: 'network', title: 'Network', component: NetworkPanel },
   { id: 'console', title: 'Console', component: () => <PlaceholderPanel title="Console" /> },
   {
     id: 'performance',
