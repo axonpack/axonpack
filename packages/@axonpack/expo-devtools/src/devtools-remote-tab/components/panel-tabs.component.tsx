@@ -18,6 +18,10 @@ const DRAG_SPOTS = 24;
  * tabs in order, then the active tab's label, so its width is reserved before anything else. The
  * seen row shows the active tab always, and each other tab only while its copy fits. So the active
  * tab keeps its place when everything before it fits, and sits last in view when it does not.
+ *
+ * Both rows keep their buttons in `PANELS` order and take the chosen order from CSS `order`, so a
+ * drag never moves a node. The tab package's page adds a node React moves to the end without taking
+ * it out of where it was, which put a dragged tab on screen twice and left the dragged copy behind.
  */
 export function PanelTabs({
   activeId,
@@ -31,17 +35,19 @@ export function PanelTabs({
   const active = ordered.find((panel) => panel.id === activeId);
   const others = ordered.filter((panel) => panel !== active);
   const dragged = ordered.find((panel) => panel.id === draggingId);
+  const position = (id: string) => ({ order: ordered.findIndex((panel) => panel.id === id) });
 
   return (
     <div className="axonpack-panel-tabs">
       <div className="axonpack-panel-measure" aria-hidden>
         <div className="axonpack-panel-measure-row">
-          {others.map((panel) => (
+          {PANELS.filter((panel) => panel.id !== activeId).map((panel) => (
             <button
               key={panel.id}
               tabIndex={-1}
               data-id={panel.id}
-              className="axonpack-panel-measure-tab">
+              className="axonpack-panel-measure-tab"
+              style={position(panel.id)}>
               {panel.title}
             </button>
           ))}
@@ -58,7 +64,7 @@ export function PanelTabs({
         className="axonpack-panel-tab-row"
         data-dragging={dragged ? true : undefined}
         onMouseLeave={endDrag}>
-        {ordered.map((panel) => (
+        {PANELS.map((panel) => (
           <button
             key={panel.id}
             role="tab"
@@ -66,6 +72,7 @@ export function PanelTabs({
             data-dragging={panel.id === draggingId || undefined}
             aria-selected={panel.id === activeId}
             className="axonpack-panel-tab"
+            style={position(panel.id)}
             onClick={() => onSelect(panel.id)}
             {...tabProps(panel.id)}>
             {panel.title}
@@ -78,21 +85,21 @@ export function PanelTabs({
             )}
           </button>
         ))}
+        {/* Keyed by the tab it follows, so a change of that tab is a new button with a new animation.
+            Picking the last tab changes it, and a running animation handed a different timeline was
+            left showing the old answer, so » stayed hidden while a tab was missing. */}
+        <button
+          key={others.at(-1)?.id}
+          className="axonpack-panel-more"
+          data-last={others.at(-1)?.id}
+          aria-label="More tabs"
+          onClick={() => setMenuOpen((open) => !open)}
+        />
       </div>
       {/* Follows the pointer in the page, not through the app: the app is never told where the
           pointer is, only which element it entered. `BAR_LAYOUT_CSS` anchors this to the strip
           under the pointer. */}
       {dragged && <div className="axonpack-drag-ghost">{dragged.title}</div>}
-      {/* Keyed by the tab it follows, so a change of that tab is a new button with a new animation.
-          Picking the last tab changes it, and a running animation handed a different timeline was
-          left showing the old answer, so » stayed hidden while a tab was missing. */}
-      <button
-        key={others.at(-1)?.id}
-        className="axonpack-panel-more"
-        data-last={others.at(-1)?.id}
-        aria-label="More tabs"
-        onClick={() => setMenuOpen((open) => !open)}
-      />
       {menuOpen && (
         <PanelTabMenu
           panels={others}

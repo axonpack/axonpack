@@ -48,14 +48,13 @@ export const BAR_LAYOUT_CSS = `
   position: relative;
   display: flex;
   min-width: 0;
-  /* Room for » after the last tab shown, so it never has to cover one. */
-  padding-right: 16px;
   font: 500 12px system-ui, sans-serif;
   timeline-scope: ${PANELS.map((panel) => timeline(panel.id)).join(', ')};
 }
 /*
   Where fitting is worked out: the other tabs in order, then a copy of the active tab's label at the
-  end, all laid out but never seen. The copy reserves the active tab's width first, so a tab only
+  end, all laid out but never seen. It stops short of the bar by the width of », which is what
+  leaves » room after the last tab shown. The copy reserves the active tab's width first, so a tab only
   fits here if everything before it and the active tab fit too. The row that is seen then shows the
   active tab always, and every other tab only while its copy here fits.
 */
@@ -81,6 +80,8 @@ export const BAR_LAYOUT_CSS = `
 .axonpack-panel-tab-spacer {
   flex: none;
   width: 100%;
+  /* Last however the tabs are ordered, since each copy carries an \`order\` of its own. */
+  order: 9999;
 }
 .axonpack-panel-tab,
 .axonpack-panel-measure-tab {
@@ -93,12 +94,6 @@ export const BAR_LAYOUT_CSS = `
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-}
-/* Every tab shown takes the name » is placed against. When several share one, the last in the
-   document wins, which is the last tab shown, so » sits right after it. The others get it from the
-   animation below, only while they are shown. */
-.axonpack-panel-tab[aria-selected="true"] {
-  anchor-name: --axonpack-last-shown;
 }
 .axonpack-panel-tab:hover {
   background: var(--hover);
@@ -158,11 +153,10 @@ export const BAR_LAYOUT_CSS = `
 .axonpack-drag-ghost {
   display: none;
 }
+/* The last thing in the tab row, so it sits right after the last tab shown. */
 .axonpack-panel-more {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
+  order: 9999;
+  flex: none;
   anchor-name: --axonpack-more;
   display: grid;
   place-items: center;
@@ -231,7 +225,7 @@ export const BAR_LAYOUT_CSS = `
 */
 @supports (animation-timeline: view()) {
   @keyframes axonpack-show-while-whole {
-    from, to { max-width: none; padding: 0 10px; overflow: visible; visibility: visible; anchor-name: --axonpack-last-shown; }
+    from, to { max-width: none; padding: 0 10px; overflow: visible; visibility: visible; }
   }
   @keyframes axonpack-hide-while-whole {
     from, to { display: none; }
@@ -273,11 +267,6 @@ export const BAR_LAYOUT_CSS = `
       left: anchor(center);
       translate: -50% 0;
       position-visibility: anchors-valid;
-    }
-    .axonpack-panel-more {
-      right: auto;
-      position-anchor: --axonpack-last-shown;
-      left: anchor(right);
     }
     /* Fixed, so the flip is judged against the screen. Absolute, it was judged against the tab strip,
        which the menu overflows anyway, so it never flipped and ran off the right edge. */
