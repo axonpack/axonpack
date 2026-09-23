@@ -139,6 +139,19 @@ export const BAR_LAYOUT_CSS = `
 .axonpack-drag-spot {
   flex: 1;
 }
+/* Tall enough that the pointer stays over one wherever it goes up or down, so a drag carries on
+   below the bar. The row stops clipping for as long as that lasts, and the page clips instead, at the
+   window, so the strips cannot give it something to scroll. */
+.axonpack-panel-tab-row[data-dragging] {
+  overflow: visible;
+}
+.axonpack-panel-tab-row[data-dragging] .axonpack-drag-spots {
+  top: -100vh;
+  bottom: -100vh;
+}
+#root:has(.axonpack-panel-tab-row[data-dragging]) {
+  overflow: clip;
+}
 .axonpack-drag-spot:hover {
   anchor-name: --axonpack-pointer;
 }
@@ -218,13 +231,14 @@ export const BAR_LAYOUT_CSS = `
 */
 @supports (animation-timeline: view()) {
   @keyframes axonpack-show-while-whole {
-    from, to { max-width: none; padding: 0 10px; visibility: visible; anchor-name: --axonpack-last-shown; }
+    from, to { max-width: none; padding: 0 10px; overflow: visible; visibility: visible; anchor-name: --axonpack-last-shown; }
   }
   @keyframes axonpack-hide-while-whole {
     from, to { display: none; }
   }
   /* Collapsed rather than \`display: none\`. An element with no box runs no animation, so one hidden
-     that way could never be shown again by its own. */
+     that way could never be shown again by its own. The animation undoes all of it, \`overflow\`
+     included: left clipping, a shown tab cut its drag strips off at the bar. */
   .axonpack-panel-tab:not([aria-selected="true"]) {
     max-width: 0;
     padding: 0;
