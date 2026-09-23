@@ -39,6 +39,8 @@ export function themeCss(palette: Palette): string {
   --pop: ${palette.surface};
   --muted: ${palette.textSecondary};
   --link: ${palette.accent};
+  /* Inherited, so this one rule themes every scroller in the tab. */
+  scrollbar-color: ${mix(palette.textSecondary, 45)} transparent;
 }
 :root .axonpack-tab-name,
 :root .axonpack-panel-tabs,

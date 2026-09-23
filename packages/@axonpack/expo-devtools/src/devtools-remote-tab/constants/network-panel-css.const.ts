@@ -121,12 +121,38 @@ ${iconRules}
   white-space: nowrap;
   user-select: none;
 }
+/*
+  Drawn here rather than by the browser, whose box keeps its own light or dark grey whatever the
+  theme: an outline in the theme's muted text, which a hairline colour is too faint for on a dark
+  theme, filled with its accent when checked, and Chrome's checkmark cut out of the fill.
+*/
 .axonpack-net-checkbox input {
-  width: 12px;
-  height: 12px;
+  appearance: none;
+  display: grid;
+  place-content: center;
+  flex: none;
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
   margin: 0 0 0 4px;
-  accent-color: var(--link);
+  border: 1px solid var(--muted);
+  border-radius: 2px;
+  background: none;
 }
+.axonpack-net-checkbox input:checked {
+  border-color: var(--link);
+  background: var(--link);
+}
+.axonpack-net-checkbox input:checked::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  background: var(--bg);
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+  --icon: url("data:image/svg+xml,${encodeURIComponent(CHROME_ICONS.checkmark)}");
+}
+.axonpack-net-checkbox input:focus-visible { outline: 2px solid var(--link); outline-offset: 1px; }
 .axonpack-net-select {
   position: relative;
   display: inline-flex;
