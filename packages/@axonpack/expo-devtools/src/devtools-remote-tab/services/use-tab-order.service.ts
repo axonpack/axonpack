@@ -2,8 +2,11 @@ import { useRef, useState } from 'react';
 
 import type { AxonpackPanel } from '../constants/panels.const';
 
-/** How long a press has to last before it picks the tab up, so a plain click still just selects. */
-const HOLD_MS = 250;
+/**
+ * How long a press has to be held on one tab before it picks the tab up, so a plain click, or a press
+ * that slides off, still just selects.
+ */
+const HOLD_MS = 200;
 
 /**
  * The tab order, and press-and-hold to change it.
@@ -38,6 +41,12 @@ export function useTabOrder(panels: AxonpackPanel[]) {
       }, HOLD_MS);
     },
     onMouseUp: endDrag,
+    // Leaving the tab before the hold is up means it was not a long press, so it never becomes a drag.
+    onMouseLeave: () => {
+      if (!hold.current) return;
+      clearTimeout(hold.current);
+      hold.current = null;
+    },
     onMouseEnter: () => {
       const from = dragging.current;
       if (!from) return;
