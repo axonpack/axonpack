@@ -103,8 +103,10 @@ export const BAR_LAYOUT_CSS = `
 .axonpack-panel-tab:hover {
   background: var(--hover);
 }
-.axonpack-panel-tab[aria-selected="true"] {
+.axonpack-panel-tab {
   position: relative;
+}
+.axonpack-panel-tab[aria-selected="true"] {
   color: var(--fg);
 }
 /* A bar of its own rather than a bottom border, which cannot round its top corners. */
@@ -120,8 +122,28 @@ export const BAR_LAYOUT_CSS = `
 }
 .axonpack-panel-tab[data-dragging] {
   background: var(--hover);
-  opacity: 0.6;
+  opacity: 0.3;
+}
+.axonpack-panel-tab-row[data-dragging],
+.axonpack-panel-tab-row[data-dragging] * {
   cursor: grabbing;
+}
+/* Invisible strips over each tab while dragging. The one under the pointer is the anchor the dragged
+   copy follows, since \`:hover\` is the one thing that tracks the pointer without leaving the page.
+   Inside the tab, so entering a tab still reaches it and the reorder still hears about it. */
+.axonpack-drag-spots {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+.axonpack-drag-spot {
+  flex: 1;
+}
+.axonpack-drag-spot:hover {
+  anchor-name: --axonpack-pointer;
+}
+.axonpack-drag-ghost {
+  display: none;
 }
 .axonpack-panel-more {
   position: absolute;
@@ -218,6 +240,26 @@ export const BAR_LAYOUT_CSS = `
     animation-range: contain 0% contain calc(100% + 1px);
   }
   @supports (anchor-name: --a) {
+    /* Hidden when the pointer is over no strip, rather than dropped wherever it lands unanchored. */
+    .axonpack-drag-ghost {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      background: var(--bar);
+      color: var(--fg);
+      border-radius: 4px;
+      box-shadow: 0 1px 4px #0005;
+      white-space: nowrap;
+      pointer-events: none;
+      position-anchor: --axonpack-pointer;
+      left: anchor(center);
+      translate: -50% 0;
+      position-visibility: anchors-valid;
+    }
     .axonpack-panel-more {
       right: auto;
       position-anchor: --axonpack-last-shown;

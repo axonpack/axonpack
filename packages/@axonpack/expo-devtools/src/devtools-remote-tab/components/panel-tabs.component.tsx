@@ -5,6 +5,12 @@ import { PANELS } from '../constants/panels.const';
 import { useTabOrder } from '../services/use-tab-order.service';
 
 /**
+ * How many strips a tab is cut into while a drag is on. The strip under the pointer is what the
+ * dragged copy follows, so this is how finely it tracks the hand: a few pixels a strip.
+ */
+const DRAG_SPOTS = 24;
+
+/**
  * One button per panel, then `»` for the ones that do not fit. `BAR_LAYOUT_CSS` is what lifts this
  * row into the package's bar, and what decides which tabs fit.
  *
@@ -24,6 +30,7 @@ export function PanelTabs({
   const { ordered, draggingId, endDrag, tabProps } = useTabOrder(PANELS);
   const active = ordered.find((panel) => panel.id === activeId);
   const others = ordered.filter((panel) => panel !== active);
+  const dragged = ordered.find((panel) => panel.id === draggingId);
 
   return (
     <div className="axonpack-panel-tabs">
@@ -46,7 +53,11 @@ export function PanelTabs({
           </button>
         )}
       </div>
-      <div role="tablist" className="axonpack-panel-tab-row" onMouseLeave={endDrag}>
+      <div
+        role="tablist"
+        className="axonpack-panel-tab-row"
+        data-dragging={dragged ? true : undefined}
+        onMouseLeave={endDrag}>
         {ordered.map((panel) => (
           <button
             key={panel.id}
@@ -58,9 +69,20 @@ export function PanelTabs({
             onClick={() => onSelect(panel.id)}
             {...tabProps(panel.id)}>
             {panel.title}
+            {dragged && (
+              <span className="axonpack-drag-spots">
+                {Array.from({ length: DRAG_SPOTS }, (_, index) => (
+                  <span key={index} className="axonpack-drag-spot" />
+                ))}
+              </span>
+            )}
           </button>
         ))}
       </div>
+      {/* Follows the pointer in the page, not through the app: the app is never told where the
+          pointer is, only which element it entered. `BAR_LAYOUT_CSS` anchors this to the strip
+          under the pointer. */}
+      {dragged && <div className="axonpack-drag-ghost">{dragged.title}</div>}
       {/* Keyed by the tab it follows, so a change of that tab is a new button with a new animation.
           Picking the last tab changes it, and a running animation handed a different timeline was
           left showing the old answer, so » stayed hidden while a tab was missing. */}
