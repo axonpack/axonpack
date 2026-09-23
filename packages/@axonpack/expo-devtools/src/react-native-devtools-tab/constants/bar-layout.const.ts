@@ -1,3 +1,7 @@
+import { PANELS } from './panels.const';
+
+const timeline = (id: string) => `--axonpack-tab-${id}`;
+
 /**
  * Puts our panel buttons inside the bar `@axonpack/react-native-devtools-tab` draws above the tab.
  *
@@ -39,13 +43,48 @@ export const BAR_LAYOUT_CSS = `
   margin-right: 4px;
 }
 .axonpack-panel-tabs {
+  --axonpack-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 3l5 5-5 5M8 3l5 5-5 5'/%3E%3C/svg%3E");
   grid-area: 1 / 2;
+  position: relative;
   display: flex;
   min-width: 0;
-  overflow-x: auto;
+  /* Room for » after the last tab shown, so it never has to cover one. */
+  padding-right: 16px;
   font: 500 12px system-ui, sans-serif;
+  timeline-scope: ${PANELS.map((panel) => timeline(panel.id)).join(', ')};
 }
-.axonpack-panel-tabs button {
+/*
+  Where fitting is worked out: the other tabs in order, then a copy of the active tab's label at the
+  end, all laid out but never seen. The copy reserves the active tab's width first, so a tab only
+  fits here if everything before it and the active tab fit too. The row that is seen then shows the
+  active tab always, and every other tab only while its copy here fits.
+*/
+.axonpack-panel-measure {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 16px;
+  display: flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+.axonpack-panel-measure-row,
+.axonpack-panel-tab-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+/* Keeps the measuring row overflowing even when every tab fits. A view timeline in a scroller with
+   nothing to scroll can go inactive, and an inactive one would read every tab as not fitting. */
+.axonpack-panel-tab-spacer {
+  flex: none;
+  width: 100%;
+}
+.axonpack-panel-tab,
+.axonpack-panel-measure-tab {
+  flex: none;
   padding: 0 10px;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -54,13 +93,148 @@ export const BAR_LAYOUT_CSS = `
   font: inherit;
   white-space: nowrap;
   cursor: pointer;
+  user-select: none;
 }
-.axonpack-panel-tabs button:hover {
+/* Every tab shown takes the name » is placed against. When several share one, the last in the
+   document wins, which is the last tab shown, so » sits right after it. The others get it from the
+   animation below, only while they are shown. */
+.axonpack-panel-tab[aria-selected="true"] {
+  anchor-name: --axonpack-last-shown;
+}
+.axonpack-panel-tab:hover {
   background: var(--hover);
 }
-.axonpack-panel-tabs button[aria-selected="true"] {
+.axonpack-panel-tab[aria-selected="true"] {
   border-bottom-color: var(--link);
   color: var(--fg);
+}
+.axonpack-panel-tab[data-dragging] {
+  background: var(--hover);
+  opacity: 0.6;
+  cursor: grabbing;
+}
+.axonpack-panel-more {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  anchor-name: --axonpack-more;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.axonpack-panel-more:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+/* A mask rather than a character or an \`svg\`: an \`svg\` cannot cross from the app, and a glyph's
+   weight is whatever the font makes it. This one is two thin chevrons in the bar's own colour. */
+.axonpack-panel-more::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: var(--axonpack-chevrons) center / contain no-repeat;
+  mask: var(--axonpack-chevrons) center / contain no-repeat;
+}
+.axonpack-panel-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+.axonpack-panel-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 4px 0;
+  background: var(--pop);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px #0006;
+}
+.axonpack-panel-menu-item {
+  padding: 4px 12px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.axonpack-panel-menu-item:hover {
+  background: var(--hover);
+}
+/*
+  Each copy in the measuring row is the subject of its own view timeline, and the \`contain\` range
+  is exactly "fully in view". It is stretched by a pixel at the end: the range is end-exclusive, and
+  at scroll 0 the first tab sits exactly on that end, so plain \`contain\` counted it as cut off. An
+  animation with no fill has no effect outside its range, so:
+  - a tab is shown only while its copy fits, and collapses to nothing otherwise,
+  - its menu entry is hidden while its copy fits, so the menu lists only what did not,
+  - » and the menu follow the last tab's copy the same way, so they only show when something is missing.
+  Without scroll-driven animations every tab shows, clipped, and the menu lists them all.
+*/
+@supports (animation-timeline: view()) {
+  @keyframes axonpack-show-while-whole {
+    from, to { max-width: none; padding: 0 10px; visibility: visible; anchor-name: --axonpack-last-shown; }
+  }
+  @keyframes axonpack-hide-while-whole {
+    from, to { display: none; }
+  }
+  /* Collapsed rather than \`display: none\`. An element with no box runs no animation, so one hidden
+     that way could never be shown again by its own. */
+  .axonpack-panel-tab:not([aria-selected="true"]) {
+    max-width: 0;
+    padding: 0;
+    overflow: hidden;
+    visibility: hidden;
+    animation: axonpack-show-while-whole linear;
+    animation-range: contain 0% contain calc(100% + 1px);
+  }
+  .axonpack-panel-menu-item,
+  .axonpack-panel-more,
+  .axonpack-panel-menu {
+    animation: axonpack-hide-while-whole linear;
+    animation-range: contain 0% contain calc(100% + 1px);
+  }
+  @supports (anchor-name: --a) {
+    .axonpack-panel-more {
+      right: auto;
+      position-anchor: --axonpack-last-shown;
+      left: anchor(right);
+    }
+    /* Fixed, so the flip is judged against the screen. Absolute, it was judged against the tab strip,
+       which the menu overflows anyway, so it never flipped and ran off the right edge. */
+    .axonpack-panel-menu {
+      position: fixed;
+      position-anchor: --axonpack-more;
+      top: anchor(bottom);
+      left: anchor(left);
+      right: auto;
+      position-try-fallbacks: flip-inline;
+    }
+  }
+${PANELS.map(
+  (panel) => `  .axonpack-panel-measure-tab[data-id="${panel.id}"] {
+    view-timeline: ${timeline(panel.id)} inline;
+  }
+  .axonpack-panel-tab[data-id="${panel.id}"],
+  .axonpack-panel-menu-item[data-id="${panel.id}"],
+  .axonpack-panel-more[data-last="${panel.id}"],
+  .axonpack-panel-menu[data-last="${panel.id}"] {
+    animation-timeline: ${timeline(panel.id)};
+  }`
+).join('\n')}
 }
 .axonpack-panel-body {
   grid-area: 2 / 1 / 3 / -1;
