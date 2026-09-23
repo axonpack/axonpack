@@ -21,9 +21,7 @@ export function useRemoteSafeInput(value: string, onChangeText: (next: string) =
 
   return {
     /** Spread onto the `TextInput`, beside a `key={resetKey}`. */
-    textProps: remote
-      ? { defaultValue: '', onChangeText }
-      : { value, onChangeText },
+    textProps: remote ? { defaultValue: '', onChangeText } : { value, onChangeText },
     /** Changes only when the field is cleared, and only off the device. */
     resetKey: remote ? clears : 0,
     clear: () => {
