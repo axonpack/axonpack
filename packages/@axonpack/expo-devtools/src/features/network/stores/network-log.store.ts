@@ -1,5 +1,6 @@
 import { EventEmitter } from 'expo';
 
+import { createStoreHook } from '../../../core/stores/axon.store';
 import { coalesceNotify } from '../../../core/utils/coalesce-notify.util';
 import type { ResolvedNetworkConditions } from './network-conditions.store';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
@@ -399,3 +400,5 @@ export const networkLogStore = {
     notify();
   },
 };
+
+export const useNetworkLogStore = createStoreHook(networkLogStore.subscribe);

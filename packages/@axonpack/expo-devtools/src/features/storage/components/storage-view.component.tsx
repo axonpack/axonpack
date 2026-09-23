@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, SectionList, Text, View } from 'react-native';
 
 import { AdapterSelector } from './adapter-selector.component';
@@ -19,7 +19,7 @@ import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { readAdapterById, readAllAdapters } from '../services/read-storage.service';
-import { storageStore, type StorageEntry } from '../stores/storage.store';
+import { storageStore, type StorageEntry, useStorageStore } from '../stores/storage.store';
 import type { StoredValueKind } from '../utils/classify-value.util';
 import { exportStorageSnapshot } from '../utils/export-storage-snapshot.util';
 import {
@@ -39,7 +39,7 @@ export function StorageView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
 
-  const { adapters } = useSyncExternalStore(storageStore.subscribe, storageStore.getSnapshot);
+  const { adapters } = useStorageStore(storageStore.getSnapshot);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filters, setFilters] = useState<StorageFilters>(DEFAULT_STORAGE_FILTERS);

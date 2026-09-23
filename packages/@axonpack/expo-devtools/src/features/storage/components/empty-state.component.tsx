@@ -1,11 +1,10 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useSyncExternalStore } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ReadOnlyTextInput } from '../../../core/components/ui/read-only-text-input.ui';
 import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { storageStore } from '../stores/storage.store';
+import { storageStore, useStorageStore } from '../stores/storage.store';
 
 const SNIPPET = `import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MMKV } from 'react-native-mmkv';
@@ -36,7 +35,7 @@ const mmkv = new MMKV();
 export function EmptyState() {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const enabled = useSyncExternalStore(storageStore.subscribe, storageStore.isEnabled);
+  const enabled = useStorageStore(storageStore.isEnabled);
 
   // Two different reasons for an empty tab, and they need different fixes. Naming the second one is
   // worth the branch: registering the adapters with the devtools off looks identical otherwise.

@@ -1,5 +1,4 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
@@ -8,21 +7,17 @@ import {
   USER_AGENT_PRESET_LABELS,
   USER_AGENT_PRESET_VALUES,
 } from '../constants/user-agent-presets.const';
-import { networkConditionsStore } from '../stores/network-conditions.store';
+import {
+  networkConditionsStore,
+  useNetworkConditionsStore,
+} from '../stores/network-conditions.store';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { Chip } from '../../../core/components/ui/chip.ui';
 
 export function UserAgentSelector() {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const userAgentId = useSyncExternalStore(
-    networkConditionsStore.subscribe,
-    networkConditionsStore.getUserAgentId
-  );
-  const customUserAgent = useSyncExternalStore(
-    networkConditionsStore.subscribe,
-    networkConditionsStore.getCustomUserAgent
-  );
+  const { userAgentId, customUserAgent } = useNetworkConditionsStore();
 
   const presetValue = USER_AGENT_PRESET_VALUES[userAgentId];
 

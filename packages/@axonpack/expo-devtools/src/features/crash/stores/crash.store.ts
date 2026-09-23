@@ -1,4 +1,5 @@
 import { EventEmitter } from 'expo';
+import { createStoreHook } from '../../../core/stores/axon.store';
 
 /**
  * What produced the record. The distinction that matters is whether the process survived. A
@@ -167,3 +168,5 @@ export const crashStore = {
     emitter.emit('change');
   },
 };
+
+export const useCrashStore = createStoreHook(crashStore.subscribe);

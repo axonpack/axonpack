@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, SectionList, Text, useWindowDimensions, View } from 'react-native';
 
 import { DetailPanel } from './detail-panel';
@@ -18,27 +18,21 @@ import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { replayNitroEntries } from '../services/nitro-fetch.service';
-import { networkLogStore } from '../stores/network-log.store';
+import { setNetworkPaused } from '../services/set-network-recording.service';
+import { networkLogStore, useNetworkLogStore } from '../stores/network-log.store';
 import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
+import { networkViewStore, useNetworkViewStore } from '../stores/network-view.store';
 import { exportNetworkLog } from '../utils/export-network-log.util';
 import {
   compileNetworkFilters,
-  DEFAULT_NETWORK_FILTERS,
   hasActiveFilters,
   matchesFilters,
   matchesSocketFilters,
   sortStatusClasses,
   statusClass,
-  type NetworkFilters,
 } from '../utils/filter-entries.util';
 import { formatSource } from '../utils/formatters.util';
-import {
-  DEFAULT_NETWORK_SORT,
-  sortDirectionLabel,
-  sortEntries,
-  type NetworkSort,
-} from '../utils/sort-entries.util';
+import { sortDirectionLabel, sortEntries } from '../utils/sort-entries.util';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
 
@@ -50,20 +44,20 @@ export function NetworkView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
   const { width } = useWindowDimensions();
-  const logs = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.getMergedSnapshot);
-  const paused = useSyncExternalStore(networkLogStore.subscribe, networkLogStore.isPaused);
-  const preserveLog = useSyncExternalStore(
-    networkLogStore.subscribe,
-    networkLogStore.isPreserveLogEnabled
-  );
+  const logs = useNetworkLogStore(networkLogStore.getMergedSnapshot);
+  const paused = useNetworkLogStore(networkLogStore.isPaused);
+  const preserveLog = useNetworkLogStore(networkLogStore.isPreserveLogEnabled);
 
-  const [filters, setFilters] = useState<NetworkFilters>(DEFAULT_NETWORK_FILTERS);
-  const [sort, setSort] = useState<NetworkSort>(DEFAULT_NETWORK_SORT);
+  // Shared with the React Native DevTools tab's toolbar, so a change on either side shows on both.
+  const {
+    filters,
+    sort,
+    settings: { bigRows, groupByFetchClient, showOverview },
+  } = useNetworkViewStore();
   const [openPanel, setOpenPanel] = useState<'settings' | 'filters' | null>(null);
-  const [bigRows, setBigRows] = useState(true);
-  const [groupByFetchClient, setGroupByFetchClient] = useState(false);
-  const [showOverview, setShowOverview] = useState(false);
-  const [activeTimeRange, setActiveTimeRange] = useState<TimeRange | null>(null);
+  const [brushedRange, setActiveTimeRange] = useState<TimeRange | null>(null);
+  // Derived, not reset in a handler: the DevTools tab can turn the overview off too.
+  const activeTimeRange = showOverview ? brushedRange : null;
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
   const [overrideEntry, setOverrideEntry] = useState<NetworkLogEntry | null>(null);
@@ -147,12 +141,8 @@ export function NetworkView() {
     setOpenPanel((current) => (current === panel ? null : panel));
   }
 
-  function patchFilters(patch: Partial<NetworkFilters>) {
-    setFilters((current) => ({ ...current, ...patch }));
-  }
-
   function clearFilters() {
-    setFilters(DEFAULT_NETWORK_FILTERS);
+    networkViewStore.resetFilters();
     // The overview's brushed range is a filter too, even though it is set from a different surface.
     setActiveTimeRange(null);
   }
@@ -173,18 +163,17 @@ export function NetworkView() {
       {openPanel === 'settings' && (
         <SettingsPanel
           bigRows={bigRows}
-          onChangeBigRows={setBigRows}
+          onChangeBigRows={(value) => networkViewStore.patchSettings({ bigRows: value })}
           groupByFetchClient={groupByFetchClient}
-          onChangeGroupByFetchClient={setGroupByFetchClient}
+          onChangeGroupByFetchClient={(value) =>
+            networkViewStore.patchSettings({ groupByFetchClient: value })
+          }
           showOverview={showOverview}
-          onChangeShowOverview={(value) => {
-            setShowOverview(value);
-            if (!value) setActiveTimeRange(null);
-          }}
+          onChangeShowOverview={(value) => networkViewStore.patchSettings({ showOverview: value })}
           stackedHeaders={stackedHeaders}
           onChangeStackedHeaders={setStackedHeaders}
           sort={sort}
-          onChangeSort={setSort}
+          onChangeSort={networkViewStore.setSort}
         />
       )}
 
@@ -192,7 +181,7 @@ export function NetworkView() {
         <FilterPanel
           filters={filters}
           compiled={compiled}
-          onChange={patchFilters}
+          onChange={networkViewStore.patchFilters}
           onClear={clearFilters}
           visibleCount={visibleLogs.length}
           totalCount={logs.length}
@@ -242,14 +231,7 @@ export function NetworkView() {
     <View style={styles.container}>
       <DevtoolsToolbar
         paused={paused}
-        onTogglePaused={() => {
-          const nextPaused = !paused;
-          networkLogStore.setPaused(nextPaused);
-          // A JSI client kept recording while this was paused, and nothing here was listening. Reading
-          // its buffer on resume is what makes the record button mean the same thing for that traffic
-          // as it does for everything else.
-          if (!nextPaused) replayNitroEntries();
-        }}
+        onTogglePaused={() => setNetworkPaused(!paused)}
         onClear={networkLogStore.clear}
         clearLabel="Clear log">
         <ToolbarDivider />
@@ -257,7 +239,7 @@ export function NetworkView() {
         <IconButton
           name={sort.descending ? 'arrow-downward' : 'arrow-upward'}
           color={COLORS.textSecondary}
-          onPress={() => setSort((current) => ({ ...current, descending: !current.descending }))}
+          onPress={() => networkViewStore.setSort({ ...sort, descending: !sort.descending })}
           // What flipping it would give you, in the vocabulary of whatever it is sorting on.
           label={sortDirectionLabel({ ...sort, descending: !sort.descending })}
         />

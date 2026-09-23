@@ -1,17 +1,13 @@
-import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { performanceStore } from '../stores/performance.store';
+import { performanceStore, usePerformanceStore } from '../stores/performance.store';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { UsageMeter } from '../../../core/components/ui/usage-meter.ui';
 
 export function StorageCard() {
   const styles = useStyles();
-  const { storage, support } = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getSnapshot
-  );
+  const { storage, support } = usePerformanceStore(performanceStore.getSnapshot);
 
   const usedBytes =
     storage?.totalBytes !== undefined && storage.freeBytes !== undefined

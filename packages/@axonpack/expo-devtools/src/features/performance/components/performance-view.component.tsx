@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { EntryList } from './entry-list.component';
@@ -7,7 +7,7 @@ import { ResourcesSection } from './resources-section.component';
 import { SectionChips, type PerformanceSection } from './section-chips.component';
 import { StartupTimingSection } from './startup-timing.component';
 import { startFpsMonitor } from '../services/fps-monitor.service';
-import { performanceStore } from '../stores/performance.store';
+import { performanceStore, usePerformanceStore } from '../stores/performance.store';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import {
   DevtoolsToolbar,
@@ -17,11 +17,10 @@ import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 
 export function PerformanceView() {
   const styles = useStyles();
-  const { longTasks, userTiming, interactions, startup } = useSyncExternalStore(
-    performanceStore.subscribe,
+  const { longTasks, userTiming, interactions, startup } = usePerformanceStore(
     performanceStore.getSnapshot
   );
-  const paused = useSyncExternalStore(performanceStore.subscribe, performanceStore.isPaused);
+  const paused = usePerformanceStore(performanceStore.isPaused);
   const [section, setSection] = useState<PerformanceSection>('statistics');
 
   useEffect(() => {

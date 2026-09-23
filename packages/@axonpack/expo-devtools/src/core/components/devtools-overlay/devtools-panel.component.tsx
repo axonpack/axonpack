@@ -1,14 +1,17 @@
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
 import { ThemePicker } from './theme-picker.component';
 import { ConsoleView } from '../../../features/console/components/console-view.component';
-import { consoleLogStore } from '../../../features/console/stores/console-log.store';
+import {
+  consoleLogStore,
+  useConsoleLogStore,
+} from '../../../features/console/stores/console-log.store';
 import { CrashInspectionSheet } from '../../../features/crash/components/crash-inspection-sheet.component';
 import { CrashView } from '../../../features/crash/components/crash-view.component';
-import { crashStore } from '../../../features/crash/stores/crash.store';
+import { crashStore, useCrashStore } from '../../../features/crash/stores/crash.store';
 import { DebugView } from '../../../features/debug/components/debug-view.component';
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
@@ -33,11 +36,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
   // stopped the badge reporting the very rows most worth walking over to. Counted by the store so
   // this subscribes to the number, not to the log — every tab stays mounted, so re-rendering here
   // on every line the app logs re-renders all of them.
-  const consoleErrorCount = useSyncExternalStore(
-    consoleLogStore.subscribe,
-    consoleLogStore.getErrorCount
-  );
-  const crashRecords = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
+  const consoleErrorCount = useConsoleLogStore(consoleLogStore.getErrorCount);
+  const crashRecords = useCrashStore(crashStore.getSnapshot);
 
   const unseenCrashCount = useMemo(
     () => crashRecords.filter((record) => !record.seen).length,

@@ -1,8 +1,10 @@
-import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { THROTTLE_PRESET_IDS, THROTTLE_PRESET_LABELS } from '../constants/throttle-presets.const';
-import { networkConditionsStore } from '../stores/network-conditions.store';
+import {
+  networkConditionsStore,
+  useNetworkConditionsStore,
+} from '../stores/network-conditions.store';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { Chip } from '../../../core/components/ui/chip.ui';
 
@@ -14,14 +16,7 @@ function parsePositiveInt(text: string): number {
 export function ThrottleSelector() {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const throttleId = useSyncExternalStore(
-    networkConditionsStore.subscribe,
-    networkConditionsStore.getThrottleId
-  );
-  const custom = useSyncExternalStore(
-    networkConditionsStore.subscribe,
-    networkConditionsStore.getCustomThrottle
-  );
+  const { throttleId, customThrottle: custom } = useNetworkConditionsStore();
 
   return (
     <View style={styles.section}>

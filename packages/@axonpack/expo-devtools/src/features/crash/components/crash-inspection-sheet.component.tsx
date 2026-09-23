@@ -1,8 +1,11 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
 
 import { CrashDetailSheet } from './crash-detail';
-import { crashInspectionStore } from '../../../core/stores/crash-inspection.store';
-import { crashStore } from '../stores/crash.store';
+import {
+  crashInspectionStore,
+  useCrashInspectionStore,
+} from '../../../core/stores/crash-inspection.store';
+import { crashStore, useCrashStore } from '../stores/crash.store';
 
 /**
  * The crash report as opened from outside the Crashes tab — today, a console error row linked to the
@@ -10,11 +13,8 @@ import { crashStore } from '../stores/crash.store';
  * store, which is what keeps the console side free of any crash import.
  */
 export function CrashInspectionSheet() {
-  const inspectedId = useSyncExternalStore(
-    crashInspectionStore.subscribe,
-    crashInspectionStore.getSnapshot
-  );
-  const records = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
+  const inspectedId = useCrashInspectionStore((state) => state.inspectedId);
+  const records = useCrashStore(crashStore.getSnapshot);
 
   const record =
     inspectedId === null ? null : (records.find((current) => current.id === inspectedId) ?? null);

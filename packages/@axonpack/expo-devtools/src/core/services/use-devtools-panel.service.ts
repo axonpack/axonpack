@@ -1,7 +1,5 @@
-import { useSyncExternalStore } from 'react';
-
-import { devtoolsReadyStore } from '../stores/devtools-ready.store';
-import { panelVisibilityStore } from '../stores/panel-visibility.store';
+import { useDevtoolsReadyStore } from '../stores/devtools-ready.store';
+import { panelVisibilityStore, usePanelVisibilityStore } from '../stores/panel-visibility.store';
 
 export type DevtoolsPanelControls = {
   /** Whether the panel is open right now. */
@@ -32,8 +30,8 @@ export type DevtoolsPanelControls = {
  * so the two stay in step.
  */
 export function useDevtoolsPanel(): DevtoolsPanelControls {
-  const visible = useSyncExternalStore(panelVisibilityStore.subscribe, panelVisibilityStore.isOpen);
-  const enabled = useSyncExternalStore(devtoolsReadyStore.subscribe, devtoolsReadyStore.isReady);
+  const visible = usePanelVisibilityStore((state) => state.open);
+  const enabled = useDevtoolsReadyStore((state) => state.ready);
 
   return {
     visible,

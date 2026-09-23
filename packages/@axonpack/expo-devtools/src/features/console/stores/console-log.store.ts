@@ -4,6 +4,7 @@ import { coalesceNotify } from '../../../core/utils/coalesce-notify.util';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
 import type { CrashKind } from '../../crash/stores/crash.store';
 import type { ConsoleArg } from '../utils/format-console-args.util';
+import { createStoreHook } from '../../../core/stores/axon.store';
 
 /**
  * A console row's severity. The first five mirror the `console` method that produced the row;
@@ -162,3 +163,5 @@ export const consoleLogStore = {
     notify();
   },
 };
+
+export const useConsoleLogStore = createStoreHook(consoleLogStore.subscribe);

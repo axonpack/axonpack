@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
 import { CrashDetailSheet } from './crash-detail';
@@ -20,7 +20,7 @@ import {
   type SearchModes,
 } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { crashStore, type CrashKind, type CrashRecord } from '../stores/crash.store';
+import { crashStore, type CrashKind, type CrashRecord, useCrashStore } from '../stores/crash.store';
 import { CRASH_KIND_LABELS } from '../utils/format-crash-report.util';
 
 const KIND_ORDER: CrashKind[] = [
@@ -39,7 +39,7 @@ export function CrashView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
 
-  const records = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
+  const records = useCrashStore(crashStore.getSnapshot);
 
   const [search, setSearch] = useState('');
   const [searchModes, setSearchModes] = useState<SearchModes>(DEFAULT_SEARCH_MODES);

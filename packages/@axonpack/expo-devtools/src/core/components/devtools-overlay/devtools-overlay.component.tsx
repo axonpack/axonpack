@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState, useEffect, useSyncExternalStore, type ComponentType } from 'react';
+import { useState, useEffect, type ComponentType } from 'react';
 import { Animated, Dimensions, Modal, PanResponder, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,8 +8,8 @@ import { CrashReportOverlay } from '../../../features/crash/components/crash-rep
 import { markFirstRender } from '../../../features/performance/services/read-startup-timing.service';
 import { HIT_SLOP } from '../../constants/metrics.const';
 import type { StatusBarStyle } from '../../constants/theme.const';
-import { devtoolsReadyStore } from '../../stores/devtools-ready.store';
-import { panelVisibilityStore } from '../../stores/panel-visibility.store';
+import { useDevtoolsReadyStore } from '../../stores/devtools-ready.store';
+import { panelVisibilityStore, usePanelVisibilityStore } from '../../stores/panel-visibility.store';
 import {
   makeThemedStyles,
   useStatusBarStyle,
@@ -102,12 +102,12 @@ export function DevtoolsOverlay({
    * this, but a provider mounted later in a session is not, and the button has to appear when the
    * start lands.
    */
-  const ready = useSyncExternalStore(devtoolsReadyStore.subscribe, devtoolsReadyStore.isReady);
+  const ready = useDevtoolsReadyStore((state) => state.ready);
 
   const fill = color ?? COLORS.accent;
   useEffect(markFirstRender, []);
 
-  const open = useSyncExternalStore(panelVisibilityStore.subscribe, panelVisibilityStore.isOpen);
+  const open = usePanelVisibilityStore((state) => state.open);
   const [pan] = useState(() => new Animated.ValueXY(getInitialPosition(size)));
 
   const [panResponder] = useState(() =>

@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   StyleSheet,
@@ -37,7 +37,7 @@ import {
   CONSOLE_LEVELS,
 } from '../constants/console-levels.const';
 import { isReplEnabled } from '../services/evaluate-expression.service';
-import { consoleLogStore } from '../stores/console-log.store';
+import { consoleLogStore, useConsoleLogStore } from '../stores/console-log.store';
 import type { ConsoleLogEntry, ConsoleLogLevel } from '../stores/console-log.store';
 import { formatConsoleSource } from '../utils/formatters.util';
 
@@ -50,8 +50,8 @@ function keyExtractor(entry: ConsoleLogEntry): string {
 export function ConsoleView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const entries = useSyncExternalStore(consoleLogStore.subscribe, consoleLogStore.getSnapshot);
-  const paused = useSyncExternalStore(consoleLogStore.subscribe, consoleLogStore.isPaused);
+  const entries = useConsoleLogStore(consoleLogStore.getSnapshot);
+  const paused = useConsoleLogStore(consoleLogStore.isPaused);
 
   const [searchText, setSearchText] = useState('');
   const [searchModes, setSearchModes] = useState<SearchModes>(DEFAULT_SEARCH_MODES);

@@ -1,4 +1,4 @@
-import { memo, useSyncExternalStore } from 'react';
+import { memo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { SocketMessageRow } from './socket-message-row.component';
@@ -11,6 +11,7 @@ import {
   networkLogStore,
   type WebSocketLogEntry,
   type WebSocketMessage,
+  useNetworkLogStore,
 } from '../stores/network-log.store';
 
 function keyExtractor(message: WebSocketMessage): string {
@@ -27,7 +28,7 @@ function SocketDetailPanelBase({
   const styles = useStyles();
   // Subscribed rather than passed in: a socket stays open, so its messages arrive while this is on
   // screen. Reading the id off the entry keeps the list pointed at the same socket across updates.
-  const messages = useSyncExternalStore(networkLogStore.subscribe, () =>
+  const messages = useNetworkLogStore(() =>
     entry ? networkLogStore.getWebSocketMessages(entry.id) : EMPTY
   );
 
