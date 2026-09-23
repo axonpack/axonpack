@@ -1,3 +1,4 @@
+import { CHROME_ICONS } from './chrome-icons.const';
 import { PANELS } from './panels.const';
 
 const timeline = (id: string) => `--axonpack-tab-${id}`;
@@ -7,7 +8,8 @@ const timeline = (id: string) => `--axonpack-tab-${id}`;
  *
  * That bar is the package's, and it takes nothing of ours, so this rearranges the page instead:
  * `display: contents` on the bar and on the body lets their children join one grid on `#root`, and
- * the buttons take the row the bar was in, between its name and refresh. Nothing is moved in the
+ * the buttons take the row the bar was in, between its name and refresh, with the theme switcher
+ * just before refresh. Nothing is moved in the
  * DOM, because the page's own React owns those nodes and would fail on the next update if it were.
  *
  * It leans on the package's class names, which are not public API. If the bar ever renders on its
@@ -19,7 +21,7 @@ const timeline = (id: string) => `--axonpack-tab-${id}`;
 export const BAR_LAYOUT_CSS = `
 #root {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   grid-template-rows: var(--bar-height) minmax(0, 1fr);
 }
 #root::before {
@@ -43,7 +45,7 @@ export const BAR_LAYOUT_CSS = `
   because the button's markup is the package's, and its accessible name stays the package's too.
 */
 .axonpack-tab-bar > button {
-  grid-area: 1 / 3;
+  grid-area: 1 / 4;
   align-self: center;
   /* The bar's rule takes the row's last pixel, so the bar that shows is a pixel short of the row.
      This centres the chip on what shows. The right edge matches the name's 8px on the left. */
@@ -74,6 +76,79 @@ export const BAR_LAYOUT_CSS = `
 }
 .axonpack-tab-bar > button::after {
   content: "Reload";
+}
+.axonpack-theme {
+  grid-area: 1 / 3;
+  position: relative;
+  align-self: center;
+  margin-right: 4px;
+}
+.axonpack-theme-button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+}
+.axonpack-theme-button:hover,
+.axonpack-theme-button[aria-expanded="true"] {
+  background: var(--hover);
+  color: var(--fg);
+}
+.axonpack-theme-button::before,
+.axonpack-theme-item::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+.axonpack-theme-button::before {
+  --icon: url("data:image/svg+xml,${encodeURIComponent(CHROME_ICONS.palette)}");
+}
+.axonpack-theme-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px 0;
+  background: var(--pop);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px #0006;
+  font: 12px system-ui, sans-serif;
+}
+.axonpack-theme-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 6px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+.axonpack-theme-item:hover {
+  background: var(--hover);
+}
+/* The tick holds its place on every row, so the names line up whichever is picked. Hidden rather than
+   left without an icon, since a mask with no image paints the whole box. */
+.axonpack-theme-item::before {
+  visibility: hidden;
+}
+.axonpack-theme-item[aria-checked="true"]::before {
+  visibility: visible;
+  --icon: url("data:image/svg+xml,${encodeURIComponent(CHROME_ICONS.checkmark)}");
 }
 .axonpack-panel-tabs {
   --axonpack-scatter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='13' fill='black'%3E%3Ccircle cx='3' cy='3' r='.7'/%3E%3Ccircle cx='11' cy='8.5' r='.6'/%3E%3Ccircle cx='17' cy='2.5' r='.9'/%3E%3Ccircle cx='26' cy='9' r='.6'/%3E%3Ccircle cx='6.5' cy='11' r='.5'/%3E%3Ccircle cx='20.5' cy='11.5' r='.5'/%3E%3Ccircle cx='28.5' cy='3.5' r='.5'/%3E%3Cpath d='M23 1.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z'/%3E%3Cpath d='M8 3.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z'/%3E%3Cpath d='M15 7.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z'/%3E%3C/svg%3E");

@@ -2,16 +2,10 @@ import { useState } from 'react';
 import { type GestureResponderEvent } from 'react-native';
 
 import { themeStore, useThemeStore } from '../../stores/theme.store';
+import { themeLabel } from '../../utils/theme-label.util';
 import { useThemeColors } from '../../utils/themed-styles.util';
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu.ui';
 import { IconButton } from '../ui/icon-button.ui';
-
-function themeLabel(id: string): string {
-  return id
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
 
 export function ThemePicker() {
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);

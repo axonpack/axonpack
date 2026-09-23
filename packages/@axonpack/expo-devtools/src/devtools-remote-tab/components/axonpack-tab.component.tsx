@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { DevSettings } from 'react-native';
 
 import { PanelTabs } from './panel-tabs.component';
+import { ThemeSwitcher } from './theme-switcher.component';
+import { themeStore, useThemeStore } from '../../core/stores/theme.store';
 import { BAR_LAYOUT_CSS } from '../constants/bar-layout.const';
 import { PANELS } from '../constants/panels.const';
+import { themeCss } from '../utils/theme-css.util';
 
 /**
  * Whether this JS session has mounted the tab before.
@@ -27,6 +30,7 @@ let mountedBefore = false;
 export function AxonpackTab() {
   const [activeId, setActiveId] = useState(PANELS[0]?.id);
   const active = PANELS.find((panel) => panel.id === activeId);
+  const palette = useThemeStore(themeStore.getPalette);
 
   useEffect(() => {
     if (mountedBefore) DevSettings.reload('Axonpack tab refresh');
@@ -36,7 +40,9 @@ export function AxonpackTab() {
   return (
     <>
       <style>{BAR_LAYOUT_CSS}</style>
+      <style>{themeCss(palette)}</style>
       <PanelTabs activeId={activeId} onSelect={setActiveId} />
+      <ThemeSwitcher />
       <div className="axonpack-panel-body">{active && <active.component />}</div>
     </>
   );
