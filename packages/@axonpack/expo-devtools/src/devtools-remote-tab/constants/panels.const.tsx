@@ -6,10 +6,12 @@ export type AxonpackPanel = {
   id: string;
   title: string;
   component: ComponentType;
+  /** Ours rather than a plugin's. Drawn with a tint on its top half, so the two can be told apart. */
+  builtIn?: boolean;
 };
 
 // Same tabs, same order as the in-app panel's `devtools-tab-bar.component.tsx`.
-export const PANELS: AxonpackPanel[] = [
+const BUILT_IN: AxonpackPanel[] = [
   { id: 'network', title: 'Network', component: () => <PlaceholderPanel title="Network" /> },
   { id: 'console', title: 'Console', component: () => <PlaceholderPanel title="Console" /> },
   {
@@ -21,3 +23,5 @@ export const PANELS: AxonpackPanel[] = [
   { id: 'crashes', title: 'Crashes', component: () => <PlaceholderPanel title="Crashes" /> },
   { id: 'debug', title: 'Debug', component: () => <PlaceholderPanel title="Debug" /> },
 ];
+
+export const PANELS: AxonpackPanel[] = BUILT_IN.map((panel) => ({ ...panel, builtIn: true }));

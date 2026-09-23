@@ -72,6 +72,7 @@ export function PanelTabs({
             data-dragging={panel.id === draggingId || undefined}
             aria-selected={panel.id === activeId}
             className="axonpack-panel-tab"
+            data-built-in={panel.builtIn || undefined}
             style={position(panel.id)}
             onClick={() => onSelect(panel.id)}
             {...tabProps(panel.id)}>
@@ -99,7 +100,11 @@ export function PanelTabs({
       {/* Follows the pointer in the page, not through the app: the app is never told where the
           pointer is, only which element it entered. `BAR_LAYOUT_CSS` anchors this to the strip
           under the pointer. */}
-      {dragged && <div className="axonpack-drag-ghost">{dragged.title}</div>}
+      {dragged && (
+        <div className="axonpack-drag-ghost" data-built-in={dragged.builtIn || undefined}>
+          {dragged.title}
+        </div>
+      )}
       {menuOpen && (
         <PanelTabMenu
           panels={others}

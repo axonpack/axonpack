@@ -43,6 +43,7 @@ export const BAR_LAYOUT_CSS = `
   margin-right: 4px;
 }
 .axonpack-panel-tabs {
+  --axonpack-scatter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='13' fill='black'%3E%3Ccircle cx='3' cy='3' r='.7'/%3E%3Ccircle cx='11' cy='8.5' r='.6'/%3E%3Ccircle cx='17' cy='2.5' r='.9'/%3E%3Ccircle cx='26' cy='9' r='.6'/%3E%3Ccircle cx='6.5' cy='11' r='.5'/%3E%3Ccircle cx='20.5' cy='11.5' r='.5'/%3E%3Ccircle cx='28.5' cy='3.5' r='.5'/%3E%3Cpath d='M23 1.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z'/%3E%3Cpath d='M8 3.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z'/%3E%3Cpath d='M15 7.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z'/%3E%3C/svg%3E");
   --axonpack-chevrons: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 3l5 5-5 5M8 3l5 5-5 5'/%3E%3C/svg%3E");
   grid-area: 1 / 2;
   position: relative;
@@ -102,6 +103,34 @@ export const BAR_LAYOUT_CSS = `
 }
 .axonpack-panel-tab[aria-selected="true"] {
   color: var(--fg);
+}
+/*
+  A scatter of dots and small sparkles over the top half of a built-in tab, and of its copy while it is dragged, so
+  ours read apart from a plugin's. Inset from both sides, so two built-in tabs side by side keep a gap
+  between their patterns instead of running together into one band. A mask over the link colour, the
+  same way the chevron is drawn, so it follows light and dark. Laid over the tab rather than behind
+  it, since a tab is no stacking context to go behind, and faint enough that the title keeps its colour.
+*/
+[data-built-in]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 4px;
+  right: 4px;
+  height: 50%;
+  background: color-mix(in srgb, var(--link) 55%, transparent);
+  -webkit-mask: var(--axonpack-scatter) 0 0 / 30px 13px repeat-x;
+  mask: var(--axonpack-scatter) 0 0 / 30px 13px repeat-x;
+  pointer-events: none;
+}
+/* Shifted per tab, so neighbours do not all start the scatter at the same spot and look stamped. */
+.axonpack-panel-tab:nth-child(3n + 2)[data-built-in]::before {
+  -webkit-mask-position: -11px 0;
+  mask-position: -11px 0;
+}
+.axonpack-panel-tab:nth-child(3n)[data-built-in]::before {
+  -webkit-mask-position: -19px 0;
+  mask-position: -19px 0;
 }
 /* A bar of its own rather than a bottom border, which cannot round its top corners. */
 .axonpack-panel-tab[aria-selected="true"]::after {
