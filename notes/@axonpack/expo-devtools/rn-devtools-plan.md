@@ -1,1 +1,0 @@
-../../../packages/@axonpack/expo-devtools/notes/rn-devtools-plan.md

@@ -72,6 +72,7 @@
     "release:tag": "changeset tag"
   },
   "dependencies": {
+    "@axonpack/react-native-devtools-tab": "^0.1.0",
     "@changesets/changelog-git": "^0.2.1",
     "@expo/vector-icons": "^15.1.1"
   },
@@ -104,7 +105,10 @@
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!.*(react-native|expo))"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@babel/runtime/(.*)$": "<rootDir>/node_modules/@babel/runtime/$1"
+    }
   },
   "peerDependencies": {
     "expo": "*",

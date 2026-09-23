@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
+import { useRemoteSafeInput } from '../../services/use-remote-safe-input.service';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 /**
@@ -27,15 +28,16 @@ export function TextField({
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
+  const { textProps, resetKey, clear } = useRemoteSafeInput(value, onChangeText);
 
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <View style={[styles.row, invalid && styles.rowInvalid]}>
         <TextInput
+          key={resetKey}
           style={styles.input}
-          value={value}
-          onChangeText={onChangeText}
+          {...textProps}
           placeholder={placeholder}
           placeholderTextColor={COLORS.textSecondary}
           // `decimal-pad` rather than `number-pad`: a size takes `1.5mb` and a duration `1.5s`, and
@@ -47,7 +49,7 @@ export function TextField({
         />
         {value.length > 0 && (
           <TouchableOpacity
-            onPress={() => onChangeText('')}
+            onPress={clear}
             hitSlop={HIT_SLOP.dense}
             accessibilityLabel={`Clear ${label}`}
             style={styles.clear}>

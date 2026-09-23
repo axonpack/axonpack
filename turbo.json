@@ -81,11 +81,6 @@
       "outputs": [
         "build/**"
       ]
-    },
-    "expo-devtools-panel#build": {
-      "outputs": [
-        "../dist/panel/**"
-      ]
     }
   }
 }
