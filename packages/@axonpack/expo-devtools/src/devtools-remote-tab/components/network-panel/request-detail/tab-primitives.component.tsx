@@ -9,7 +9,22 @@ export const MenuSlot = createContext<{
 }>({ openId: null, open: () => {}, menu: null });
 
 /**
- * The pretty printer's DOM primitives, with a `Pressable` that knows which row was right-clicked.
+ * A tree row's style at a mouse's density. The package sizes a row as a finger's target (a 28px
+ * floor and 4px above and below), and on a `div` the padding adds to that floor rather than sitting
+ * inside it, so a row came out 36px tall around 12px of text.
+ */
+function dense(style?: { minHeight?: number }) {
+  if (style?.minHeight === undefined) return style;
+  return { ...style, minHeight: undefined, paddingTop: 1, paddingBottom: 1 };
+}
+
+function TabView({ style, children }: { style?: object; children?: ReactNode }) {
+  return <div style={dense(style)}>{children}</div>;
+}
+
+/**
+ * The pretty printer's DOM primitives, rows at a mouse's density, with a `Pressable` that knows
+ * which row was right-clicked.
  *
  * The package hands the menu's items back with the event and leaves placing it to the caller, but an
  * event reaching the app from the tab carries no pointer position. So each row says it was the one,
@@ -36,7 +51,7 @@ function TabPressable({
   return (
     <>
       <div
-        style={style}
+        style={dense(style)}
         onClick={onPress}
         onContextMenu={
           onLongPress &&
@@ -52,4 +67,8 @@ function TabPressable({
   );
 }
 
-export const TAB_PRIMITIVES: Primitives = { ...domPrimitives, Pressable: TabPressable };
+export const TAB_PRIMITIVES: Primitives = {
+  ...domPrimitives,
+  View: TabView,
+  Pressable: TabPressable,
+};
