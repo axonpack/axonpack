@@ -10,7 +10,7 @@ import {
   type NetworkSortKey,
 } from '../../../features/network/utils/sort-entries.util';
 
-/** Chrome's settings pane under the gear, plus sort, which has no column headers to live on here. */
+/** Chrome's settings pane under the gear, plus sort, which also offers start time, the one key no column header sorts by. */
 export function NetworkSettingsPane() {
   const { settings, sort } = useNetworkViewStore();
   const patch = networkViewStore.patchSettings;
@@ -20,8 +20,8 @@ export function NetworkSettingsPane() {
       <Checkbox
         label="Big request rows"
         title="Show more information in request rows"
-        checked={settings.bigRows}
-        onChange={(bigRows) => patch({ bigRows })}
+        checked={settings.devtoolsBigRows}
+        onChange={(devtoolsBigRows) => patch({ devtoolsBigRows })}
       />
       <Checkbox
         label="Group by fetch client"

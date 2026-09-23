@@ -36,6 +36,7 @@ import {
   statusClass,
 } from '../utils/filter-entries.util';
 import { formatSource } from '../utils/formatters.util';
+import { groupBySource } from '../utils/group-by-source.util';
 import { startedInRange } from '../utils/overview-layout.util';
 import { sortDirectionLabel, sortEntries } from '../utils/sort-entries.util';
 
@@ -122,17 +123,10 @@ export function NetworkView() {
     return sortEntries(inRange, sort);
   }, [overviewLogs, timeRange, sort]);
 
-  const sections = useMemo(() => {
-    if (!groupByFetchClient) return [];
-    const bySource = new Map<string, NetworkEntry[]>();
-    for (const entry of visibleLogs) {
-      const key = entry.source ?? 'unknown';
-      const list = bySource.get(key) ?? [];
-      list.push(entry);
-      bySource.set(key, list);
-    }
-    return Array.from(bySource.entries()).map(([title, data]) => ({ title, data }));
-  }, [visibleLogs, groupByFetchClient]);
+  const sections = useMemo(
+    () => (groupByFetchClient ? groupBySource(visibleLogs) : []),
+    [visibleLogs, groupByFetchClient]
+  );
 
   function togglePanel(panel: 'settings' | 'filters') {
     animateNextLayout();

@@ -7,6 +7,17 @@ const iconRules = Object.entries(CHROME_ICONS)
   )
   .join('\n');
 
+/** A column drag's slices: this many pixels each, and this many either side of the line. */
+export const RESIZE_SLICE = 4;
+export const RESIZE_REACH = 100;
+
+/** The slice under the pointer, as the distance the dragged line has moved. */
+const dragRules = Array.from(
+  { length: 2 * RESIZE_REACH },
+  (_, slice) =>
+    `.axonpack-net-grid:has(> .axonpack-net-resize-anchor > .axonpack-net-resize-slices > span:nth-child(${slice + 1}):hover) { --net-drag: ${(slice - RESIZE_REACH) * RESIZE_SLICE}px; }`
+).join('\n');
+
 /**
  * The Network panel's toolbar, filter bar and settings pane, sized and coloured after Chrome
  * DevTools' own `toolbar.css` and `filter.css` (the same frontend React Native DevTools is), so the
@@ -367,4 +378,152 @@ ${iconRules}
   background: var(--link);
 }
 .axonpack-net-ov-handle::after { left: 5px; }
+/*
+  Chrome's request table: 21px rows, 41px with big rows, hairlines between columns, every other row
+  a shade off.
+
+  One grid with every row a subgrid, so the widths the app sets on the grid hold for every row.
+*/
+.axonpack-net-grid {
+  --net-row: 21px;
+  position: relative;
+  display: grid;
+}
+.axonpack-net-grid > div,
+.axonpack-net-grid > p {
+  grid-column: 1 / -1;
+}
+.axonpack-net-grid > div:not(.axonpack-net-row) {
+  display: grid;
+  grid-template-columns: subgrid;
+}
+.axonpack-net-grid[data-big] { --net-row: 41px; }
+.axonpack-net-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  height: var(--net-row);
+}
+.axonpack-net-row > span {
+  display: block;
+  align-content: center;
+  min-width: 0;
+  padding: 0 4px;
+  border-left: 1px solid var(--line);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.axonpack-net-row > span:first-child { border-left: 0; }
+.axonpack-net-row:nth-child(even of .axonpack-net-row) {
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+.axonpack-net-row:not(.axonpack-net-head):hover { background: var(--hover); }
+.axonpack-net-row[data-failed] { color: var(--net-red); }
+.axonpack-net-sub {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+.axonpack-net-row[data-failed] .axonpack-net-sub { color: inherit; opacity: 0.8; }
+.axonpack-net-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 21px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  user-select: none;
+}
+.axonpack-net-head > span {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+/*
+  A grab strip over a column's right hairline, a few pixels either side of it. A positioned grid
+  child with no row placement takes the whole grid's height inside its column, so the line can be
+  grabbed on any row.
+*/
+.axonpack-net-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  z-index: 2;
+  width: 7px;
+  cursor: col-resize;
+}
+/*
+  Fixed, so the strip reaches the bottom of the panel without growing the scroll area, and left at
+  its static position, which is the anchor. Each slice lights its left edge under the pointer, and
+  that edge is the guide line.
+*/
+.axonpack-net-resize-slices {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  cursor: col-resize;
+}
+/*
+  The right edge of the column right of the dragged line, where the slices count from. Above every
+  grip, or those would take the pointer from the slices.
+*/
+.axonpack-net-resize-anchor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+}
+.axonpack-net-resize-slices span { flex: none; width: ${RESIZE_SLICE}px; }
+${dragRules}
+.axonpack-net-resize-slices span:hover { box-shadow: inset 1px 0 var(--link); }
+.axonpack-net-head > span[data-sortable]:hover { background: var(--hover); }
+.axonpack-net-head [data-icon] { display: inline-flex; margin-left: auto; color: var(--net-icon); }
+.axonpack-net-head [data-icon]::before { width: 14px; height: 14px; }
+.axonpack-net-group {
+  grid-column: 1 / -1;
+  height: 21px;
+  padding: 0 6px;
+  line-height: 21px;
+  background: var(--net-tonal);
+  color: var(--net-on-tonal);
+  font-weight: 500;
+}
+.axonpack-net-row > .axonpack-net-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.axonpack-net-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Chrome's icon grows with the row, 16px in a small one and 28px in a big one. */
+.axonpack-net-file { display: inline-flex; flex: none; color: var(--net-icon); }
+.axonpack-net-file::before { width: 16px; height: 16px; }
+.axonpack-net-grid[data-big] .axonpack-net-file::before { width: 28px; height: 28px; }
+.axonpack-net-file[data-tone="blue"] { color: var(--link); }
+.axonpack-net-file[data-tone="green"] { color: rgb(55 190 95); }
+.axonpack-net-file[data-tone="yellow"] { color: #e5a50a; }
+.axonpack-net-file[data-tone="orange"] { color: #e8710a; }
+.axonpack-net-file[data-tone="purple"] { color: #a142f4; }
+.axonpack-net-file[data-tone="teal"] { color: #12b5cb; }
+.axonpack-net-empty {
+  margin: 0;
+  padding: 24px 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.axonpack-net-summary {
+  gap: 4px;
+  padding: 0 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+  color: var(--muted);
+  white-space: nowrap;
+}
 `;

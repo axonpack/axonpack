@@ -5,6 +5,11 @@ import { DEFAULT_NETWORK_SORT, type NetworkSort } from '../utils/sort-entries.ut
 
 export type NetworkViewSettings = {
   bigRows: boolean;
+  /**
+   * Big rows in the React Native DevTools tab, kept apart from the app's. A phone has room for one
+   * request per row and wants the detail; a wide table of 21px rows is what Chrome shows by default.
+   */
+  devtoolsBigRows: boolean;
   groupByFetchClient: boolean;
   showOverview: boolean;
 };
@@ -24,7 +29,12 @@ export type NetworkViewState = {
 const initial: NetworkViewState = {
   filters: DEFAULT_NETWORK_FILTERS,
   sort: DEFAULT_NETWORK_SORT,
-  settings: { bigRows: true, groupByFetchClient: false, showOverview: false },
+  settings: {
+    bigRows: true,
+    devtoolsBigRows: false,
+    groupByFetchClient: false,
+    showOverview: false,
+  },
   timeRange: null,
 };
 
