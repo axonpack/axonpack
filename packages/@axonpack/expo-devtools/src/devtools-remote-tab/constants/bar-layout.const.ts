@@ -37,10 +37,43 @@ export const BAR_LAYOUT_CSS = `
   align-self: center;
   padding: 0 12px 0 8px;
 }
+/*
+  The package's refresh button, as a chip that says what it does. Pressing it reloads the app (see
+  \`axonpack-tab.component.tsx\`), so "Reload" is the honest word for it. The label is a pseudo-element
+  because the button's markup is the package's, and its accessible name stays the package's too.
+*/
 .axonpack-tab-bar > button {
   grid-area: 1 / 3;
   align-self: center;
-  margin-right: 4px;
+  /* The bar's rule takes the row's last pixel, so the bar that shows is a pixel short of the row.
+     This centres the chip on what shows. The right edge matches the name's 8px on the left. */
+  margin: 0 8px 1px 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  height: 18px;
+  padding: 0 8px 0 6px;
+  border: 1px solid color-mix(in srgb, var(--link) 25%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--link) 8%, transparent);
+  color: var(--muted);
+  font: 500 11px system-ui, sans-serif;
+  /* The font's own line height made the label's box taller than its letters, off centre against the icon. */
+  line-height: 1;
+  cursor: default;
+}
+.axonpack-tab-bar > button:hover {
+  background: color-mix(in srgb, var(--link) 14%, transparent);
+  color: var(--fg);
+}
+.axonpack-tab-bar > button::before {
+  width: 12px;
+  height: 12px;
+}
+.axonpack-tab-bar > button::after {
+  content: "Reload";
 }
 .axonpack-panel-tabs {
   --axonpack-scatter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='13' fill='black'%3E%3Ccircle cx='3' cy='3' r='.7'/%3E%3Ccircle cx='11' cy='8.5' r='.6'/%3E%3Ccircle cx='17' cy='2.5' r='.9'/%3E%3Ccircle cx='26' cy='9' r='.6'/%3E%3Ccircle cx='6.5' cy='11' r='.5'/%3E%3Ccircle cx='20.5' cy='11.5' r='.5'/%3E%3Ccircle cx='28.5' cy='3.5' r='.5'/%3E%3Cpath d='M23 1.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z'/%3E%3Cpath d='M8 3.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z'/%3E%3Cpath d='M15 7.5l.4 1.2 1.2.4-1.2.4-.4 1.2-.4-1.2-1.2-.4 1.2-.4z'/%3E%3C/svg%3E");
