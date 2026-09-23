@@ -92,7 +92,6 @@ export const BAR_LAYOUT_CSS = `
   color: var(--muted);
   font: inherit;
   white-space: nowrap;
-  cursor: pointer;
   user-select: none;
 }
 .axonpack-panel-tab:hover {
@@ -118,10 +117,6 @@ export const BAR_LAYOUT_CSS = `
 .axonpack-panel-tab[data-dragging] {
   background: var(--hover);
   opacity: 0.3;
-}
-.axonpack-panel-tab-row[data-dragging],
-.axonpack-panel-tab-row[data-dragging] * {
-  cursor: grabbing;
 }
 /* Invisible strips over each tab while dragging. The one under the pointer is the anchor the dragged
    copy follows, since \`:hover\` is the one thing that tracks the pointer without leaving the page.
@@ -165,7 +160,6 @@ export const BAR_LAYOUT_CSS = `
   border: 0;
   background: none;
   color: var(--muted);
-  cursor: pointer;
 }
 .axonpack-panel-more:hover {
   background: var(--hover);
@@ -208,7 +202,6 @@ export const BAR_LAYOUT_CSS = `
   font: inherit;
   text-align: left;
   white-space: nowrap;
-  cursor: pointer;
 }
 .axonpack-panel-menu-item:hover {
   background: var(--hover);
