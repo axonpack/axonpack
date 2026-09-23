@@ -87,7 +87,6 @@ export const BAR_LAYOUT_CSS = `
   flex: none;
   padding: 0 10px;
   border: 0;
-  border-bottom: 2px solid transparent;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -105,8 +104,19 @@ export const BAR_LAYOUT_CSS = `
   background: var(--hover);
 }
 .axonpack-panel-tab[aria-selected="true"] {
-  border-bottom-color: var(--link);
+  position: relative;
   color: var(--fg);
+}
+/* A bar of its own rather than a bottom border, which cannot round its top corners. */
+.axonpack-panel-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--link);
 }
 .axonpack-panel-tab[data-dragging] {
   background: var(--hover);
