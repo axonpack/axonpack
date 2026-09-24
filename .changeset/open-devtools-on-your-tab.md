@@ -1,5 +1,5 @@
 ---
-"@axonpack/react-native-devtools-tab": minor
+"@axonpack/react-native-devtools-tab": patch
 ---
 
 - **Open DevTools on your tab**: `registerTab` returns `focus()`, and the next DevTools window lands on that tab
