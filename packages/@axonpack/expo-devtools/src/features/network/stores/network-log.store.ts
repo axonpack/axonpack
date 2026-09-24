@@ -1,9 +1,10 @@
 import { EventEmitter } from 'expo';
 
+import type { ResolvedNetworkConditions } from './network-conditions.store';
 import { createStoreHook } from '../../../core/stores/axon.store';
 import { coalesceNotify } from '../../../core/utils/coalesce-notify.util';
-import type { ResolvedNetworkConditions } from './network-conditions.store';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
+import { redactNetworkEntry } from '../services/redact-network.service';
 import type { RequestField } from '../utils/request-body.util';
 
 /**
@@ -317,7 +318,9 @@ export const networkLogStore = {
   },
   add(entry: Omit<NetworkLogEntry, 'kind'>) {
     if (!enabled || paused) return;
-    entries = [{ ...entry, kind: 'http' as const }, ...entries].slice(0, MAX_ENTRIES);
+    const redacted = redactNetworkEntry({ ...entry, kind: 'http' as const });
+    if (!redacted) return;
+    entries = [redacted, ...entries].slice(0, MAX_ENTRIES);
     remerge();
     notify();
   },
@@ -392,7 +395,16 @@ export const networkLogStore = {
   },
   update(id: string, patch: Partial<NetworkLogEntry>) {
     if (!enabled) return;
-    entries = entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
+    // Headers and bodies mostly arrive here rather than in `add`, so the patch is redacted too.
+    const next: NetworkLogEntry[] = [];
+    for (const entry of entries) {
+      if (entry.id !== id) next.push(entry);
+      else {
+        const redacted = redactNetworkEntry({ ...entry, ...patch });
+        if (redacted) next.push(redacted);
+      }
+    }
+    entries = next;
     remerge();
     notify();
   },

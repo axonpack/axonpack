@@ -1,21 +1,38 @@
 # Publishing
 
 This repo publishes to npm with [Changesets](https://github.com/changesets/changesets). Normally
-that happens by running the "Release" GitHub Action manually (see
+that happens in the "Release" GitHub Action (see
 [`.github/workflows/release.yml`](./.github/workflows/release.yml)). This doc is the same process,
 run by hand from your own machine, for when you don't want to go through GitHub.
+
+## How CI authenticates
+
+The workflow uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers). There is no
+npm token in the repo or in GitHub secrets: npm trusts `release.yml` in `axonpack/axonpack` and
+hands it a short-lived token per run. Every version it publishes carries a provenance attestation,
+which users can check with `npm audit signatures`.
+
+Each published package needs a trusted publisher set on npmjs.com, under the package's
+**Settings** → **Trusted publishing** → **GitHub Actions**:
+
+- Organization or user: `axonpack`
+- Repository: `axonpack`
+- Workflow filename: `release.yml`
+- Environment: leave empty
+
+Do this once for each of `@axonpack/expo-devtools`, `@axonpack/react-pretty-print` and
+`@axonpack/react-native-devtools-tab`, and for any new package after its first publish. npm only
+offers the setting on a package that already exists, so a brand-new package has to go out once by
+hand.
+
+A version published by hand from your machine has **no provenance**. Prefer the workflow.
 
 ## Prerequisites
 
 - You're logged in to npm with publish access to the `@axonpack` scope: `npm whoami` should print
   your username. If not, `npm login` first.
-- An npm token with publish rights, exported in your shell:
-  ```sh
-  export NPM_TOKEN=npm_xxxxxxxxxxxx
-  ```
-  This is required even if you're already logged in via `npm login` — the repo's `.npmrc` points
-  the registry auth at `$NPM_TOKEN` specifically, so without it set, publishing will fail auth
-  regardless of your local npm login.
+- The package still allows token publishing. If its **Publishing access** on npmjs.com is set to
+  disallow tokens, only the workflow can publish it.
 - You're on `main`, up to date, with no uncommitted changes.
 
 ## Steps
