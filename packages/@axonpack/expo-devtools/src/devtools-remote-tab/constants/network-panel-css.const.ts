@@ -44,6 +44,7 @@ export const NETWORK_PANEL_CSS = `
   --net-section: color-mix(in srgb, var(--fg) 6%, transparent);
   --net-success: rgb(55 190 95);
   --net-pending: #f9ab00;
+  --net-warning: #fdd663;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -320,6 +321,20 @@ ${iconRules}
   padding: 2px 4px;
   border-bottom: 1px solid var(--line);
 }
+/* A labelled line of controls, across the whole pane rather than in one of its columns. */
+.axonpack-net-setting {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 3px 8px;
+}
+.axonpack-net-setting .axonpack-net-field { margin: 0; }
+.axonpack-net-setting .axonpack-net-field input { width: 64px; }
+.axonpack-net-setting .axonpack-net-field[data-wide] { flex: 1; min-width: 240px; }
+.axonpack-net-setting .axonpack-net-field[data-wide] input { width: auto; }
+.axonpack-net-setting-value { color: var(--muted); overflow-wrap: anywhere; }
 /* Chrome's overview: 60px tall, bars in 3px bands, labelled dividers along the top. */
 .axonpack-net-overview {
   position: relative;
@@ -603,6 +618,316 @@ ${dragRules}
 }
 .axonpack-net-detail-tab:hover { background: var(--hover); color: var(--fg); }
 .axonpack-net-detail-tab[aria-selected="true"] { color: var(--fg); }
+.axonpack-net-detail-title { align-self: center; padding: 0 6px; color: var(--fg); font-weight: 500; }
+/* The override editor and the sandbox: a form in the request pane, in the app's order. */
+.axonpack-net-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+.axonpack-net-editor .axonpack-net-field { margin: 0; }
+.axonpack-net-editor .axonpack-net-none { margin: 0; padding: 0; }
+.axonpack-net-editor-url {
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.axonpack-net-editor-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.axonpack-net-editor-row .axonpack-net-field { flex: 0 1 120px; }
+.axonpack-net-editor-row .axonpack-net-field[data-wide] { flex: 1 1 200px; }
+.axonpack-net-editor textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 160px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: 0;
+  background: none;
+  color: var(--fg);
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  resize: vertical;
+}
+.axonpack-net-editor textarea:focus { border-color: var(--link); }
+/*
+  The sandbox, laid out like an API client on the web: an address bar, then the request and the
+  response side by side, each scrolling on its own. A container query rather than a media query,
+  because what decides the layout is the pane's width, which the split beside the table changes.
+*/
+.axonpack-sbx {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.axonpack-sbx-address {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: 30px;
+  margin: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 3%, transparent);
+  overflow: hidden;
+}
+.axonpack-sbx-address:focus-within { border-color: var(--link); }
+.axonpack-sbx-method {
+  position: relative;
+  display: flex;
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+  font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+/* The app's colour for each method, from its getMethodColor. */
+.axonpack-sbx-method[data-method="GET"] { color: var(--link); }
+.axonpack-sbx-method[data-method="POST"] { color: var(--net-success); }
+.axonpack-sbx-method[data-method="PUT"],
+.axonpack-sbx-method[data-method="PATCH"] { color: var(--net-warning); }
+.axonpack-sbx-method[data-method="DELETE"] { color: var(--net-red); }
+.axonpack-sbx-method select {
+  appearance: none;
+  padding: 0 22px 0 10px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.axonpack-sbx-method option { background: var(--pop); color: var(--fg); }
+.axonpack-sbx-method::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+  --icon: url("data:image/svg+xml,${encodeURIComponent(CHROME_ICONS['arrow-drop-down'])}");
+  pointer-events: none;
+}
+.axonpack-sbx-url { flex: 1; min-width: 0; display: flex; }
+.axonpack-sbx-url input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 10px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--fg);
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.axonpack-sbx-send {
+  padding: 0 18px;
+  border: 0;
+  background: var(--link);
+  color: var(--bg);
+  font: 600 12px system-ui, sans-serif;
+}
+.axonpack-sbx-send:hover { filter: brightness(1.1); }
+.axonpack-sbx-send:disabled { opacity: 0.5; filter: none; }
+.axonpack-sbx-split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-top: 1px solid var(--line);
+}
+.axonpack-sbx-pane {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.axonpack-sbx-pane + .axonpack-sbx-pane { border-left: 1px solid var(--line); }
+@container (width < 620px) {
+  .axonpack-sbx-split { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; overflow: auto; }
+  .axonpack-sbx-pane + .axonpack-sbx-pane { border-left: 0; border-top: 1px solid var(--line); }
+  .axonpack-sbx-pane-body { overflow: visible; }
+}
+.axonpack-sbx-pane-head {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 28px;
+  padding: 0 6px 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+.axonpack-sbx-pane-title {
+  align-self: center;
+  margin-right: 6px;
+  color: var(--fg);
+  font-weight: 600;
+}
+.axonpack-sbx-tabs { display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.axonpack-sbx-tabs button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  white-space: nowrap;
+}
+.axonpack-sbx-tabs button:hover { color: var(--fg); }
+.axonpack-sbx-tabs button[aria-selected="true"] { color: var(--fg); }
+.axonpack-sbx-tabs button[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--link);
+}
+.axonpack-sbx-count {
+  min-width: 14px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+}
+.axonpack-sbx-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.axonpack-sbx-status {
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--net-success);
+  background: color-mix(in srgb, var(--net-success) 14%, transparent);
+}
+.axonpack-sbx-status[data-tone="error"] {
+  color: var(--net-red);
+  background: color-mix(in srgb, var(--net-red) 14%, transparent);
+}
+.axonpack-sbx-pane-body { flex: 1; min-height: 0; overflow: auto; }
+.axonpack-sbx-empty {
+  margin: 0;
+  padding: 32px 24px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+}
+.axonpack-sbx-hint { grid-column: 1 / -1; margin: 0; color: var(--muted); }
+/* Key and value cells, ruled like a spreadsheet, the way API clients draw them. */
+.axonpack-sbx-table { display: grid; grid-template-columns: 28px minmax(0, 2fr) minmax(0, 3fr) 28px; }
+.axonpack-sbx-table-head,
+.axonpack-sbx-table-row { display: contents; }
+.axonpack-sbx-table-head > span {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+}
+.axonpack-sbx-table-row > * {
+  min-width: 0;
+  height: 26px;
+  border-bottom: 1px solid var(--line);
+}
+.axonpack-sbx-table-row > span { display: grid; place-items: center; }
+.axonpack-sbx-table-row > input {
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  outline: 0;
+  background: none;
+  color: var(--fg);
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.axonpack-sbx-table-row > input:focus { box-shadow: inset 0 0 0 1px var(--link); }
+.axonpack-sbx-table-row > span:last-child { border-left: 1px solid var(--line); }
+.axonpack-sbx-table-row[data-off] > input { color: var(--muted); text-decoration: line-through; }
+.axonpack-sbx-table-row:hover > * { background: var(--hover); }
+.axonpack-sbx-table-row .axonpack-net-button { visibility: hidden; }
+.axonpack-sbx-table-row:hover .axonpack-net-button { visibility: visible; }
+.axonpack-sbx-form {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 12px;
+}
+.axonpack-sbx-form > span:not(.axonpack-net-select):not(.axonpack-sbx-header) { color: var(--muted); }
+.axonpack-sbx-form > .axonpack-net-select { justify-self: start; margin: 0; }
+.axonpack-sbx-form > input {
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  outline: 0;
+  background: none;
+  color: var(--fg);
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.axonpack-sbx-form > input:focus { border-color: var(--link); }
+.axonpack-sbx-header { display: contents; }
+.axonpack-sbx-header > span:first-child { color: var(--muted); font-weight: 500; }
+.axonpack-sbx-header > span:last-child { overflow-wrap: anywhere; }
+.axonpack-sbx-body { display: flex; flex-direction: column; height: 100%; }
+.axonpack-sbx-body textarea {
+  flex: 1;
+  min-height: 180px;
+  padding: 10px 12px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--fg);
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  resize: none;
+}
+.axonpack-sbx-actions {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--line);
+}
+.axonpack-sbx-code { flex: 1; margin: 0; padding: 10px 12px; line-height: 1.5; }
+.axonpack-sbx-code[data-tone="error"] { color: var(--net-red); }
+.axonpack-sbx-footnote {
+  flex: none;
+  margin: 0;
+  padding: 5px 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+.axonpack-net-editor-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.axonpack-net-action {
+  padding: 3px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-weight: 500;
+}
+.axonpack-net-action:hover { background: var(--hover); }
+.axonpack-net-action:disabled { opacity: 0.5; }
+.axonpack-net-action[data-tone="accent"] { border-color: var(--link); color: var(--link); }
+.axonpack-net-action[data-tone="error"] { color: var(--net-red); }
 .axonpack-net-detail-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
@@ -669,6 +994,9 @@ ${dragRules}
 .axonpack-net-kv > div { display: contents; }
 .axonpack-net-kv span:first-child { color: var(--muted); font-weight: 500; }
 .axonpack-net-kv span:last-child { min-width: 0; overflow-wrap: anywhere; }
+/* Stacked: each value on its own line under its name, for values too long to read beside it. */
+.axonpack-net-kv[data-stacked] { grid-template-columns: 1fr; gap: 0; }
+.axonpack-net-kv[data-stacked] span:last-child { margin-bottom: 6px; }
 .axonpack-net-code {
   margin: 0;
   padding: 6px 12px 10px;
@@ -676,6 +1004,8 @@ ${dragRules}
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* Columns line up only if nothing wraps, so a dump scrolls sideways instead. */
+.axonpack-net-hex { white-space: pre; overflow-x: auto; overflow-wrap: normal; }
 .axonpack-net-none { margin: 0; padding: 8px 12px; color: var(--muted); }
 /* Chrome's timing table: the phase, where it sat in the request, and how long it took. */
 .axonpack-net-timing { padding-bottom: 8px; }
@@ -730,6 +1060,21 @@ ${dragRules}
   white-space: nowrap;
 }
 .axonpack-net-context-item:hover { background: var(--hover); }
+.axonpack-net-context-item:has(.axonpack-sparkle) { display: flex; align-items: center; gap: 6px; }
+/* The app's sparkle on "Try in sandbox": the same glyph, colour and pulse. */
+.axonpack-sparkle {
+  width: 14px;
+  height: 14px;
+  color: var(--net-warning);
+  animation: axonpack-sparkle 0.7s ease-in-out infinite alternate;
+}
+@keyframes axonpack-sparkle {
+  from { transform: scale(0.85); opacity: 0.6; }
+  to { transform: scale(1.15); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .axonpack-sparkle { animation: none; }
+}
 .axonpack-net-preview-image { padding: 12px; }
 .axonpack-net-preview-image img { max-width: 100%; }
 .axonpack-net-preview-page { width: 100%; height: 100%; border: 0; background: #fff; }

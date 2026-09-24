@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { ColumnResizer } from './column-resizer.component';
+import type { RequestPane } from './request-detail';
 import { RequestRow } from './request-row.component';
 import {
   networkLogStore,
@@ -58,7 +59,8 @@ export function RequestGrid({
   total: number;
   /** The row open in the detail pane. While there is one, the table is its Name column alone. */
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  /** With a pane when a row's menu opens one of its editors. */
+  onSelect: (id: string, pane?: RequestPane) => void;
 }) {
   const { sort, settings } = useNetworkViewStore();
   const paused = useNetworkLogStore(networkLogStore.isPaused);

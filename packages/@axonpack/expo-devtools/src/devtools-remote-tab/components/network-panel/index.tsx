@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { NetworkFilterBar } from './filter-bar.component';
 import { NetworkOverview } from './overview.component';
-import { RequestDetail } from './request-detail';
+import { RequestDetail, type RequestPane } from './request-detail';
 import { RequestGrid } from './request-grid.component';
 import { NetworkSettingsPane } from './settings-pane.component';
 import { SplitResizer } from './split-resizer.component';
@@ -35,6 +35,12 @@ export function NetworkPanel() {
   // The id, not the entry: the store replaces an entry's object on every update, and a pane holding
   // the old one would keep showing a request as pending after it finished.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pane, setPane] = useState<RequestPane>('detail');
+  // Stable, because every row is memoised on its props and this is one of them.
+  const open = useCallback((id: string, next: RequestPane = 'detail') => {
+    setSelectedId(id);
+    setPane(next);
+  }, []);
   const [listWidth, setListWidth] = useState(LIST_WIDTH);
   const [resizing, setResizing] = useState(false);
   const logs = useNetworkLogStore(networkLogStore.getMergedSnapshot);
@@ -81,7 +87,7 @@ export function NetworkPanel() {
             visible={visible}
             total={logs.length}
             selectedId={selected ? selected.id : null}
-            onSelect={setSelectedId}
+            onSelect={open}
           />
         </div>
         {selected && (
@@ -95,7 +101,12 @@ export function NetworkPanel() {
                 setResizing(false);
               }}
             />
-            <RequestDetail entry={selected} onClose={() => setSelectedId(null)} />
+            <RequestDetail
+              entry={selected}
+              pane={pane}
+              onPane={setPane}
+              onClose={() => setSelectedId(null)}
+            />
           </>
         )}
       </div>

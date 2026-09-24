@@ -10,6 +10,11 @@ export type NetworkViewSettings = {
    * request per row and wants the detail; a wide table of 21px rows is what Chrome shows by default.
    */
   devtoolsBigRows: boolean;
+  /**
+   * The DevTools tab's own, for the same reason. The app decides its default from the screen width
+   * and keeps it in the view; a desktop has the width to put a value beside its name.
+   */
+  devtoolsStackedHeaders: boolean;
   groupByFetchClient: boolean;
   showOverview: boolean;
 };
@@ -32,6 +37,7 @@ const initial: NetworkViewState = {
   settings: {
     bigRows: true,
     devtoolsBigRows: false,
+    devtoolsStackedHeaders: false,
     groupByFetchClient: false,
     showOverview: false,
   },

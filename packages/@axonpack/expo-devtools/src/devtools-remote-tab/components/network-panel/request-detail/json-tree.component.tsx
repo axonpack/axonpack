@@ -1,5 +1,5 @@
+import { COPY_ATTRIBUTE } from '@axonpack/react-native-devtools-tab';
 import { JsonTree as PrettyJsonTree, type MenuItem } from '@axonpack/react-pretty-print';
-import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 
 import { MenuSlot, TAB_PRIMITIVES } from './tab-primitives.component';
@@ -11,8 +11,8 @@ import { prettyPrintTheme } from '../../../utils/pretty-print-theme.util';
  * `@axonpack/react-pretty-print`'s tree in the app's colours, with the menu the app opens on a long
  * press opened on a right-click instead.
  *
- * Copy goes through the app, as it does in the app, so it lands on the device's clipboard. A
- * simulator shares that with the computer; a phone does not.
+ * A copy item carries its text, and the browser copies it, so it lands on this computer's clipboard
+ * rather than the device's. Its `onSelect` still runs, and copies nothing here.
  */
 export function JsonTree({ value }: { value: JsonValue }) {
   const palette = useThemeStore(themeStore.getPalette);
@@ -29,6 +29,7 @@ export function JsonTree({ value }: { value: JsonValue }) {
             key={item.label}
             role="menuitem"
             className="axonpack-net-context-item"
+            {...(item.copyText !== undefined && { [COPY_ATTRIBUTE]: item.copyText })}
             onClick={() => {
               item.onSelect();
               close();
@@ -47,7 +48,8 @@ export function JsonTree({ value }: { value: JsonValue }) {
           primitives={TAB_PRIMITIVES}
           value={value}
           theme={prettyPrintTheme(palette)}
-          onCopy={Clipboard.setStringAsync}
+          // Offered so the tree lists its copy items; the copying itself is the browser's.
+          onCopy={() => {}}
           onRequestMenu={setItems}
         />
       </div>

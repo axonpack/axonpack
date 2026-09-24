@@ -81,6 +81,7 @@ export function themeCss(palette: Palette): string {
   --net-section: ${palette.sectionTint};
   --net-success: ${palette.success};
   --net-pending: ${palette.pending};
+  --net-warning: ${palette.warning};
 }
 `;
 }

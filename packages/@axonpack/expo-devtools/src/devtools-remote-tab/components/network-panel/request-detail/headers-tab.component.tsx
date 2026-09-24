@@ -2,6 +2,7 @@ import {
   networkLogStore,
   type NetworkEntry,
 } from '../../../../features/network/stores/network-log.store';
+import { useNetworkViewStore } from '../../../../features/network/stores/network-view.store';
 import {
   formatSource,
   formatStatus,
@@ -54,7 +55,7 @@ function general(entry: NetworkEntry): Row[] {
  * Chrome's sections, open to start with. Native `details`, so the page folds them itself and a
  * section stays as it was left while the request updates.
  */
-function section(title: string, rows: Row[] | undefined) {
+function section(title: string, rows: Row[] | undefined, stacked: boolean) {
   return (
     <details key={title} open className="axonpack-net-section">
       <summary>
@@ -64,7 +65,7 @@ function section(title: string, rows: Row[] | undefined) {
         )}
       </summary>
       {rows?.length ? (
-        <div className="axonpack-net-kv">
+        <div className="axonpack-net-kv" data-stacked={stacked || undefined}>
           {rows.map(([key, value, tone], index) => (
             <div key={`${index}-${key}`}>
               <span>{key}</span>
@@ -83,6 +84,7 @@ function section(title: string, rows: Row[] | undefined) {
 }
 
 export function HeadersTab({ entry }: { entry: NetworkEntry }) {
+  const stacked = useNetworkViewStore((state) => state.settings.devtoolsStackedHeaders);
   const headers = (record: Record<string, string> | undefined) =>
     record ? Object.entries(record) : [];
 
@@ -91,18 +93,22 @@ export function HeadersTab({ entry }: { entry: NetworkEntry }) {
       {/* First, as in the app: a throttled request should say so before anything is read into it. */}
       {entry.kind === 'http' &&
         entry.conditions &&
-        section('Network Conditions', [
-          ['Throttling', formatThrottleSummary(entry.conditions)],
-          ['User Agent', formatUserAgentSummary(entry.conditions)],
-          ...(entry.conditions.userAgent
-            ? [['Agent String', entry.conditions.userAgent] as Row]
-            : []),
-        ])}
-      {section('General', general(entry))}
+        section(
+          'Network Conditions',
+          [
+            ['Throttling', formatThrottleSummary(entry.conditions)],
+            ['User Agent', formatUserAgentSummary(entry.conditions)],
+            ...(entry.conditions.userAgent
+              ? [['Agent String', entry.conditions.userAgent] as Row]
+              : []),
+          ],
+          stacked
+        )}
+      {section('General', general(entry), stacked)}
       {entry.kind === 'http' && (
         <>
-          {section('Response Headers', headers(entry.responseHeaders))}
-          {section('Request Headers', headers(entry.requestHeaders))}
+          {section('Response Headers', headers(entry.responseHeaders), stacked)}
+          {section('Request Headers', headers(entry.requestHeaders), stacked)}
         </>
       )}
     </div>

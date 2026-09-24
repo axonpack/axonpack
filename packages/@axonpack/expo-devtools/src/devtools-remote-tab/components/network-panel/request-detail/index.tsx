@@ -5,15 +5,20 @@ import { EventsTab } from './events-tab.component';
 import { HeadersTab } from './headers-tab.component';
 import { InitiatorTab } from './initiator-tab.component';
 import { MessagesTab } from './messages-tab.component';
+import { OverridePane } from './override-pane.component';
 import { PayloadTab, hasPayload } from './payload-tab.component';
 import { PreviewTab } from './preview-tab.component';
 import { ResponseTab } from './response-tab.component';
+import { SandboxPane } from './sandbox';
 import { TimingTab } from './timing-tab.component';
 import type {
   NetworkEntry,
   NetworkLogEntry,
 } from '../../../../features/network/stores/network-log.store';
 import { EntryMenu } from '../entry-menu.component';
+
+/** What the request pane shows: its tabs, or one of the editors the ⋮ menu opens. */
+export type RequestPane = 'detail' | 'override' | 'sandbox';
 
 type Tab =
   | 'headers'
@@ -67,11 +72,48 @@ function tabsFor(entry: NetworkEntry): Tab[] {
  * Chrome's request pane, beside the table while a row is open. The picked tab stays picked from one
  * request to the next, as Chrome's does, and falls back to Headers on a request without it.
  */
-export function RequestDetail({ entry, onClose }: { entry: NetworkEntry; onClose: () => void }) {
+export function RequestDetail({
+  entry,
+  pane,
+  onPane,
+  onClose,
+}: {
+  entry: NetworkEntry;
+  pane: RequestPane;
+  onPane: (pane: RequestPane) => void;
+  onClose: () => void;
+}) {
   const [picked, setPicked] = useState<Tab>('headers');
   const [menuOpen, setMenuOpen] = useState(false);
   const tabs = tabsFor(entry);
   const tab = tabs.includes(picked) ? picked : 'headers';
+
+  if (entry.kind === 'http' && pane !== 'detail') {
+    return (
+      <div className="axonpack-net-detail">
+        <div className="axonpack-net-detail-bar">
+          <button
+            className="axonpack-net-button axonpack-net-detail-close"
+            data-icon="cross"
+            title="Back to the request"
+            aria-label="Back to the request"
+            onClick={() => onPane('detail')}
+          />
+          <span className="axonpack-net-detail-title">
+            {pane === 'override' ? 'Override response' : 'Sandbox'}
+          </span>
+        </div>
+        <div className="axonpack-net-detail-body">
+          {/* Keyed, so another request starts from its own draft rather than this one's. */}
+          {pane === 'override' ? (
+            <OverridePane key={entry.id} entry={entry} onDone={() => onPane('detail')} />
+          ) : (
+            <SandboxPane key={entry.id} entry={entry} />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="axonpack-net-detail">
@@ -105,7 +147,12 @@ export function RequestDetail({ entry, onClose }: { entry: NetworkEntry; onClose
               <span className="axonpack-material" data-material="more-vert" />
             </button>
             {menuOpen && (
-              <EntryMenu entry={entry} align="right" onClose={() => setMenuOpen(false)} />
+              <EntryMenu
+                entry={entry}
+                align="right"
+                onClose={() => setMenuOpen(false)}
+                onOpen={onPane}
+              />
             )}
           </span>
         )}

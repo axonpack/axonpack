@@ -1,17 +1,13 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Chip } from '../../../core/components/ui/chip.ui';
+import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { THROTTLE_PRESET_IDS, THROTTLE_PRESET_LABELS } from '../constants/throttle-presets.const';
 import {
   networkConditionsStore,
   useNetworkConditionsStore,
 } from '../stores/network-conditions.store';
-import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { Chip } from '../../../core/components/ui/chip.ui';
-
-function parsePositiveInt(text: string): number {
-  const parsed = Number.parseInt(text.replace(/[^0-9]/g, ''), 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
+import { parsePositiveInt } from '../utils/parse-positive-int.util';
 
 export function ThrottleSelector() {
   const styles = useStyles();

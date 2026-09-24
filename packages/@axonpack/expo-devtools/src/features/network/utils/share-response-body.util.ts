@@ -26,6 +26,13 @@ export function responseFileName(entry: NetworkLogEntry): string {
   return extension ? `${base}.${extension}` : base;
 }
 
+/** A body as a `data:` URL, bytes as they came and text encoded, or nothing when there is none. */
+export function responseBodyDataUrl(entry: NetworkLogEntry): string | undefined {
+  const mimeType = entry.mimeType ?? 'application/octet-stream';
+  const base64 = entry.responseBase64 ?? (entry.responseBody && encodeBase64(entry.responseBody));
+  return base64 ? `data:${mimeType};base64,${base64}` : undefined;
+}
+
 /**
  * Hands one response body to the OS share sheet, which is this package's only route out to a file —
  * the log export works the same way, and for the same reason: no filesystem dependency.
@@ -34,15 +41,14 @@ export function responseFileName(entry: NetworkLogEntry): string {
  * so a `data:` URL is what the sheet receives either way.
  */
 export async function shareResponseBody(entry: NetworkLogEntry) {
-  const mimeType = entry.mimeType ?? 'application/octet-stream';
-  const base64 = entry.responseBase64 ?? (entry.responseBody && encodeBase64(entry.responseBody));
-  if (!base64) return;
+  const url = responseBodyDataUrl(entry);
+  if (!url) return;
 
   try {
     if (Platform.OS === 'ios') {
       await Share.share({
         title: responseFileName(entry),
-        url: `data:${mimeType};base64,${base64}`,
+        url,
       });
       return;
     }

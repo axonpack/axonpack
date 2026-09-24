@@ -1,6 +1,7 @@
 import { memo } from 'react';
 
 import { EntryMenu } from './entry-menu.component';
+import type { RequestPane } from './request-detail';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { formatDuration } from '../../../core/utils/format-duration.util';
 import type { NetworkEntry } from '../../../features/network/stores/network-log.store';
@@ -100,7 +101,7 @@ function RequestRowBase({
   /** Name alone, while the detail pane has the rest of the width. */
   compact: boolean;
   selected: boolean;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, pane?: RequestPane) => void;
   /** Whether the app row's menu is open on this row, and how it is opened and closed. */
   menuOpen: boolean;
   onMenu: (id: string | null) => void;
@@ -145,7 +146,11 @@ function RequestRowBase({
       </div>
       {/* Beside the row, not in it: a click in the menu would open the request too. */}
       {menuOpen && entry.kind === 'http' && (
-        <EntryMenu entry={entry} onClose={() => onMenu(null)} />
+        <EntryMenu
+          entry={entry}
+          onClose={() => onMenu(null)}
+          onOpen={(pane) => onSelect(entry.id, pane)}
+        />
       )}
     </>
   );

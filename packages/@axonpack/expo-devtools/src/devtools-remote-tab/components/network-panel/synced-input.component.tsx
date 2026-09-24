@@ -9,10 +9,16 @@ export function SyncedInput({
   value,
   onChange,
   placeholder,
+  label = placeholder,
+  multiline = false,
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
+  /** For a field whose placeholder is not its name, or that has none. */
+  label?: string;
+  /** A `textarea`, for a body. Uncontrolled the same way, which matters more at that size. */
+  multiline?: boolean;
 }) {
   const [sent, setSent] = useState(value);
   const [generation, setGeneration] = useState(0);
@@ -21,12 +27,14 @@ export function SyncedInput({
     setGeneration((current) => current + 1);
   }
 
+  const Field = multiline ? 'textarea' : 'input';
+
   return (
-    <input
+    <Field
       key={generation}
       defaultValue={value}
       placeholder={placeholder}
-      aria-label={placeholder}
+      aria-label={label}
       spellCheck={false}
       onChange={(event) => {
         const next = String(event.target.value ?? '');
