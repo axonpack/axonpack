@@ -1,6 +1,6 @@
 {
   "name": "@axonpack/expo-devtools",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Development Debugging tool for React Native",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
@@ -72,7 +72,7 @@
     "release:tag": "changeset tag"
   },
   "dependencies": {
-    "@axonpack/react-native-devtools-tab": "^0.1.1",
+    "@axonpack/react-native-devtools-tab": "^0.1.2",
     "@axonpack/react-pretty-print": "^0.1.1",
     "@changesets/changelog-git": "^0.2.1",
     "@expo/vector-icons": "^15.1.1"

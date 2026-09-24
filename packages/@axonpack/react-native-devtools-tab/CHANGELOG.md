@@ -1,5 +1,11 @@
 # @axonpack/react-native-devtools-tab
 
+## 0.1.2
+
+### Patch Changes
+
+- 8bf976d: - **Accents and emoji in a tab's fields**: text typed into a field that holds an é or an emoji is no longer lost
+
 ## 0.1.1
 
 ### Patch Changes

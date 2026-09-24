@@ -1,5 +1,36 @@
 # @axonpack/expo-devtools
 
+## 3.2.0
+
+### Minor Changes
+
+- 8bf976d: - **Console in DevTools**: every log as the app writes it, with the app's levels, filters and search
+  - **Run code from DevTools**: the Console prompt runs in the app, with suggestions as you type
+  - **Crashes in DevTools**: every recorded crash with its stack, source, breadcrumbs and device details
+  - **Crash reports on your computer**: copy one as Markdown or JSON, or download it as a file
+  - **Open a crash from a log**: a crash in the Console panel opens its report in Crashes
+  - **Storage in DevTools**: every key in every registered store, with search, type filters, sorting and grouping
+  - **Edit storage like a table**: double-click a value, add keys in the empty row, and Sync writes them together
+  - **Storage snapshots from the desktop**: export the keys on screen, or import a snapshot into a store
+  - **Performance in DevTools**: frame rate, memory, startup, long tasks, interactions and user timing
+  - **Debug in DevTools**: block or crash the JS or the main thread from the desktop
+  - **Counts on the tabs**: errors on Console and unread reports on Crashes
+  - **Settings shared with the app**: filters and choices made in the app or in DevTools show on both
+- 81587e2: - **`network.redactHeaders`**: header names whose values are stored as `[redacted]`, matched without regard to case. The panel, copy, export, the DevTools tab and crash breadcrumbs never hold the real value, and a request replayed from the panel sends the placeholder. Listing `cookie` also redacts a page's `document.cookie`. Empty by default
+  - **`network.redact(entry)`**: strip tokens from URLs, query strings or bodies before a request is stored, or return `null` to drop it. A hook that throws drops the request
+
+### Patch Changes
+
+- d08b361: - **Share on iOS**: a menu's Share response body opens the share sheet and it stays open
+  - **Try in sandbox from a request row**: the row's menu opens the sandbox on that request
+  - **Slimmer request rows**, in both sizes
+  - **Bottom sheets** slide in once and stay put while you type, and can be dragged down to close
+  - **The keyboard** no longer covers a sheet's content: the sheet grows to make room
+  - **Taller sheets** use the panel's height when their content needs it
+  - **Longer network history**: the Network tab keeps the 1,000 most recent requests
+- Updated dependencies [8bf976d]
+  - @axonpack/react-native-devtools-tab@0.1.2
+
 ## 3.1.0
 
 ### Minor Changes
