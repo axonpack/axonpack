@@ -1,5 +1,3 @@
-import { useSyncExternalStore } from 'react';
-
 import {
   getWebViewConsoleInjectedJavaScript,
   handleWebViewConsoleMessage,
@@ -13,8 +11,8 @@ import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../../features/network/services/webview-network-logger.service';
-import { networkConditionsStore } from '../../features/network/stores/network-conditions.store';
-import { devtoolsReadyStore } from '../stores/devtools-ready.store';
+import { useNetworkConditionsStore } from '../../features/network/stores/network-conditions.store';
+import { useDevtoolsReadyStore } from '../stores/devtools-ready.store';
 
 type WebViewMessageEventLike = {
   nativeEvent: {
@@ -82,8 +80,8 @@ export function useDevtoolsWebView(source: string = 'webview'): DevtoolsWebViewP
    * The scripts below are built from what is recording *now*, and a WebView already on screen when
    * the client starts would otherwise keep the empty one it was handed.
    */
-  useSyncExternalStore(devtoolsReadyStore.subscribe, devtoolsReadyStore.isReady);
-  const userAgent = useSyncExternalStore(networkConditionsStore.subscribe, getWebViewUserAgent);
+  useDevtoolsReadyStore((state) => state.ready);
+  const userAgent = useNetworkConditionsStore(getWebViewUserAgent);
 
   return {
     ref: getWebViewConditionsRef(source),

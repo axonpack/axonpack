@@ -2,6 +2,7 @@ import { EventEmitter } from 'expo';
 
 import type { StorageAdapter, StorageValueType } from '../services/define-adapter.service';
 import type { StoredValueKind } from '../utils/classify-value.util';
+import { createStoreHook } from '../../../core/stores/axon.store';
 
 /**
  * One key and value read from a registered store — a row in the Storage tab. Read them from
@@ -179,3 +180,5 @@ export const storageStore = {
     emitter.emit('change');
   },
 };
+
+export const useStorageStore = createStoreHook(storageStore.subscribe);

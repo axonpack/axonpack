@@ -1,6 +1,7 @@
 import type { Palette } from '../../../core/constants/theme.const';
+import { formatSize } from '../../../core/utils/format-bytes.util';
 import { isNativeSource } from '../constants/sources.const';
-import type { NetworkLogStatus } from '../stores/network-log.store';
+import type { NetworkLogEntry, NetworkLogStatus } from '../stores/network-log.store';
 
 export function isErrorStatus(status: NetworkLogStatus, statusCode?: number): boolean {
   return status === 'error' || (statusCode !== undefined && statusCode >= 400);
@@ -133,4 +134,21 @@ export function getDisplayNameWithQuery(url: string): string {
   } catch {
     return url;
   }
+}
+
+export function formatStatus(entry: NetworkLogEntry): string {
+  if (entry.statusCode === undefined) return entry.error ?? '(pending)';
+  const statusText = getStatusText(entry.statusCode, entry.statusText);
+  return statusText ? `${entry.statusCode} ${statusText}` : `${entry.statusCode}`;
+}
+
+/**
+ * While a request is in flight its status cell has nothing to report, so it carries how far the body
+ * has got instead — a percentage when a length was declared, bytes when it was not.
+ */
+export function formatInFlight(progress: NetworkLogEntry['progress']): string {
+  if (!progress) return 'PENDING';
+  const arrow = progress.direction === 'upload' ? '↑' : '↓';
+  if (progress.total === undefined) return `${arrow} ${formatSize(progress.loaded)}`;
+  return `${arrow} ${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%`;
 }

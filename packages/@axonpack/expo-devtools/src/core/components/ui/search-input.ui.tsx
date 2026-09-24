@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { HIT_SLOP, TOUCH_TARGET } from '../../constants/metrics.const';
+import { useRemoteSafeInput } from '../../services/use-remote-safe-input.service';
 import type { SearchModes } from '../../utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
@@ -37,14 +38,15 @@ export function SearchInput({
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
+  const { textProps, resetKey, clear } = useRemoteSafeInput(value, onChangeText);
 
   return (
     <View style={[styles.searchRow, invalid && styles.searchRowInvalid]}>
       <MaterialIcons name="search" size={16} color={COLORS.textSecondary} />
       <TextInput
+        key={resetKey}
         style={styles.searchInput}
-        value={value}
-        onChangeText={onChangeText}
+        {...textProps}
         placeholder={placeholder}
         placeholderTextColor={COLORS.textSecondary}
         autoCapitalize="none"
@@ -52,7 +54,7 @@ export function SearchInput({
       />
       {value.length > 0 && (
         <TouchableOpacity
-          onPress={() => onChangeText('')}
+          onPress={clear}
           hitSlop={HIT_SLOP.dense}
           accessibilityLabel="Clear search"
           style={styles.searchClear}>

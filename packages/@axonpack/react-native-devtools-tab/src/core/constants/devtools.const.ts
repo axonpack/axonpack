@@ -22,3 +22,24 @@ export const DEVTOOLS_ROUTE = `/${DEVTOOLS_ID}-tab`;
  * the tab strip empty until the app itself restarted.
  */
 export const DEVTOOLS_TABS = `__${DEVTOOLS_ID}_tabs__`;
+
+/**
+ * The tab the next DevTools window should open on, left here by `focus()`.
+ *
+ * A note rather than a message, because the window it is for does not exist yet. `openDebugger` asks
+ * Metro for a window and cannot say which panel to show on iOS, and the frontend's own `panel`
+ * parameter is read at startup, before any tab of ours has been added. So the window reads this when
+ * it connects, the same way it reads the tab list, and clears it so only one window acts on it.
+ */
+export const DEVTOOLS_FOCUS = `__${DEVTOOLS_ID}_focus__`;
+
+/**
+ * The one attribute the panel acts on itself: a click on an element that has it copies its value to
+ * the clipboard of the computer DevTools runs on.
+ *
+ * A handler runs in the app, so a copy written the ordinary way lands on the device's clipboard,
+ * and a phone does not share that with the computer. The clipboard that matters is the browser's,
+ * and so is the click it needs, so the text comes as a prop and the panel does the copying. Any
+ * `onClick` on the element still runs, after the copy.
+ */
+export const COPY_ATTRIBUTE = "data-devtools-copy";

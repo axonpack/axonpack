@@ -5,6 +5,7 @@ import path from "node:path";
 
 import {
   DEVTOOLS_ID,
+  DEVTOOLS_FOCUS,
   DEVTOOLS_ROUTE,
   DEVTOOLS_TABS,
 } from "../core/constants/devtools.const";
@@ -42,12 +43,14 @@ function hostScript(): string {
   const ROUTE = DEVTOOLS_ROUTE;
   const id = DEVTOOLS_ID;
   const tabs = DEVTOOLS_TABS;
+  const focus = DEVTOOLS_FOCUS;
   return `
 import * as UI from '${ROUTE}/ui/legacy/legacy.js';
 import * as SDK from '${ROUTE}/core/sdk/sdk.js';
 
 const DOMAIN = ${JSON.stringify(id)};
 const TABS = ${JSON.stringify(tabs)};
+const FOCUS = ${JSON.stringify(focus)};
 const DISPATCHER = '__FUSEBOX_REACT_DEVTOOLS_DISPATCHER__';
 
 // The frontend builds itself after DOMContentLoaded, and the tab strip is the last thing to appear.
@@ -64,6 +67,14 @@ const waitForFrontend = () =>
     });
     observer.observe(document.body, { childList: true, subtree: true });
   });
+
+/**
+ * Every character past ASCII as a \\u escape, which a string literal reads back as the same text.
+ * A message goes to the app as source for Runtime.evaluate, and source holding an é or an emoji did
+ * not arrive: a keystroke in a field that held one was lost, and so was every event after it.
+ */
+const asciiOnly = (source) =>
+  source.replace(/[\\u007f-\\uffff]/g, (char) => '\\\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
 
 const getRuntime = () => {
   const targets = SDK.TargetManager.TargetManager.instance();
@@ -111,10 +122,19 @@ const connectToApp = async (onMessage) => {
             returnByValue: true,
           });
 
+          // Taken rather than read, so a second window opening later starts where it always does.
+          const focused = await runtime.agent.invoke_evaluate({
+            expression:
+              '(() => { const id = globalThis[' + JSON.stringify(FOCUS) + ']; delete globalThis[' +
+              JSON.stringify(FOCUS) + ']; return id ?? null; })()',
+            returnByValue: true,
+          });
+
           return {
             registered: JSON.parse(listed.result?.value || '[]'),
+            focus: focused.result?.value ?? null,
             send: (message) => {
-              const serialized = JSON.stringify(JSON.stringify(message));
+              const serialized = asciiOnly(JSON.stringify(JSON.stringify(message)));
               void runtime.agent.invoke_evaluate({
                 expression:
                   DISPATCHER + '.sendMessage(' + JSON.stringify(DOMAIN) + ', ' + serialized + ')',
@@ -143,6 +163,8 @@ class TabPanel extends UI.View.SimpleView {
     const iframe = document.createElement('iframe');
     iframe.src = '${ROUTE}/panel/index.html?tab=' + encodeURIComponent(tab.id);
     iframe.style.cssText = 'width:100%;height:100%;border:0';
+    // So a tab can copy to this computer's clipboard. See COPY_ATTRIBUTE in the renderer.
+    iframe.allow = 'clipboard-write';
     this.contentElement.appendChild(iframe);
     this.iframe = iframe;
   }
@@ -153,12 +175,23 @@ const main = async () => {
 
   const inspector = UI.InspectorView.InspectorView.instance();
   const panels = new Map();
+  // Held until the tab exists, since the app may ask for one it registers after this connects.
+  let wanted = null;
+
+  // The tab strip itself, not \`showPanel\`: that looks the id up among DevTools' own registered
+  // views, and ours are added at run time, so it only logs that it found nothing.
+  const select = (id) => {
+    if (!panels.has(id)) return false;
+    inspector.tabbedPane.selectTab(id, true);
+    return true;
+  };
 
   const addPanel = (tab) => {
     if (!tab?.id || panels.has(tab.id)) return;
     const panel = new TabPanel(tab);
     panels.set(tab.id, panel);
     inspector.addPanel(panel);
+    if (wanted === tab.id && select(tab.id)) wanted = null;
   };
 
   const connected = await connectToApp((message) => {
@@ -178,6 +211,7 @@ const main = async () => {
 
     // A tab registered after this frontend connected, so it was not in the list that was read.
     if (message?.type === 'tab:register') addPanel(body);
+    if (message?.type === 'tab:focus' && !select(body?.id)) wanted = body?.id ?? null;
   });
 
   if (!connected) {
@@ -187,6 +221,7 @@ const main = async () => {
 
   // The tabs the app already had. Each page asks for its own registration once it loads, so nothing
   // has to be replayed at them here.
+  if (connected.focus) wanted = connected.focus;
   for (const tab of connected.registered) addPanel(tab);
   const send = connected.send;
 

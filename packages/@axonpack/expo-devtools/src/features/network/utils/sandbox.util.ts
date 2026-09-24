@@ -189,3 +189,58 @@ export async function sendSandboxRequest({
     };
   }
 }
+
+/** A request in the sandbox while it is being edited. */
+export type SandboxDraft = {
+  method: string;
+  /** Without its query, which is `paramRows`. */
+  url: string;
+  auth: AuthConfig;
+  paramRows: KeyValueRow[];
+  headerRows: KeyValueRow[];
+  cookieRows: KeyValueRow[];
+  bodyText: string;
+};
+
+/**
+ * A captured request taken apart for editing: the query into rows, the cookie header into rows, a
+ * bearer token into the auth section, and the rest of the headers as they were.
+ */
+export function sandboxDraftFor(entry: {
+  method: string;
+  url: string;
+  requestHeaders?: Record<string, string>;
+  requestBody?: string;
+}): SandboxDraft {
+  const { base, params } = splitUrl(entry.url);
+  const { cookieValue, rest: withoutCookie } = extractCookieHeader(entry.requestHeaders);
+  const { auth, rest } = extractAuthConfig(withoutCookie);
+  return {
+    method: entry.method,
+    url: base,
+    auth,
+    paramRows: params,
+    headerRows: rowsFromRecord(rest),
+    cookieRows: parseCookieHeader(cookieValue),
+    bodyText: entry.requestBody ?? '',
+  };
+}
+
+/** The request a draft describes, put back together: what is sent, and what the snippet shows. */
+export function buildSandboxRequest(draft: SandboxDraft): {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  body: string;
+} {
+  const headers = rowsToRecord(draft.headerRows);
+  const cookieHeader = rowsToCookieHeader(draft.cookieRows);
+  if (cookieHeader) headers.Cookie = cookieHeader;
+  Object.assign(headers, buildAuthHeaders(draft.auth));
+  return {
+    method: draft.method,
+    url: buildFinalUrl(draft.url, draft.paramRows),
+    headers,
+    body: draft.bodyText,
+  };
+}

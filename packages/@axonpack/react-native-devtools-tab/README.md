@@ -247,6 +247,41 @@ event itself, with `preventDefault` and `stopPropagation` there but doing nothin
 Everything else a devtools tab usually wants needs none of that: reading the app's state, calling
 into it, drawing a table, filtering a list.
 
+Copying is the one thing a handler cannot do for you, since it runs in the app and lands on the
+device's clipboard. Give the element `COPY_ATTRIBUTE` with the text instead, and the panel copies it
+to the computer's clipboard on the click:
+
+```tsx
+import { COPY_ATTRIBUTE } from "@axonpack/react-native-devtools-tab";
+
+<button {...{ [COPY_ATTRIBUTE]: curl }}>Copy as cURL</button>;
+```
+
+A download needs nothing special: an `<a href="data:…" download="name">` is a real link in the
+panel, and the browser saves it.
+
+## Opening DevTools on your tab
+
+`registerTab` returns the tab, with one method. `focus()` shows the tab in a DevTools window that
+is already open, and in the next one that connects, so calling it just before the app opens
+DevTools lands the window on it:
+
+```tsx
+import { TurboModuleRegistry } from "react-native";
+
+const tab = ReactNativeDevtoolsPanel.registerTab({
+  name: "Session",
+  component: Session,
+});
+
+// Later, from a button in the app, in a debug build:
+tab.focus();
+// React Native's own DevSettings: openDebugger is what the dev menu's Open DevTools calls.
+TurboModuleRegistry.get<{ openDebugger?: () => void }>(
+  "DevSettings",
+)?.openDebugger?.();
+```
+
 ## Several tabs
 
 Call `registerTab` once per tab. Each gets its own React root, so one tab re-rendering does not

@@ -1,4 +1,5 @@
 import { EventEmitter } from 'expo';
+import { createStoreHook } from '../../../core/stores/axon.store';
 
 /**
  * One reading of the JS heap, taken every `performance.sampleIntervalMs`. This is the JS engine's
@@ -542,3 +543,5 @@ export const performanceStore = {
     publish(true);
   },
 };
+
+export const usePerformanceStore = createStoreHook(performanceStore.subscribe);

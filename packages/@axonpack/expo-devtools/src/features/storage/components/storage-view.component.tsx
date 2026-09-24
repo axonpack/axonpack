@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, SectionList, Text, View } from 'react-native';
 
 import { AdapterSelector } from './adapter-selector.component';
 import { AddKeySheet } from './add-key-sheet.component';
-import { ImportSheet } from './import-sheet.component';
 import { DetailPanel } from './detail-panel';
 import { EmptyState } from './empty-state.component';
 import { EntryRow } from './entry-row.component';
 import { FiltersPanel } from './filters-panel.component';
+import { ImportSheet } from './import-sheet.component';
 import { StorageSummary } from './storage-summary.component';
 import {
   DevtoolsToolbar,
@@ -19,17 +19,16 @@ import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { readAdapterById, readAllAdapters } from '../services/read-storage.service';
-import { storageStore, type StorageEntry } from '../stores/storage.store';
-import type { StoredValueKind } from '../utils/classify-value.util';
+import { storageViewStore, useStorageViewStore } from '../stores/storage-view.store';
+import { storageStore, type StorageEntry, useStorageStore } from '../stores/storage.store';
 import { exportStorageSnapshot } from '../utils/export-storage-snapshot.util';
 import {
-  DEFAULT_STORAGE_FILTERS,
+  countByKind,
+  groupByNamespace as groupEntriesByNamespace,
   matchesFilters,
   sortEntries,
-  type StorageFilters,
-  type StorageSortField,
 } from '../utils/filter-entries.util';
-import { namespaceOf } from '../utils/formatters.util';
+import { emptyListLabel } from '../utils/summary.util';
 
 function keyExtractor(entry: StorageEntry): string {
   return `${entry.adapterId}:${entry.key}`;
@@ -39,15 +38,11 @@ export function StorageView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
 
-  const { adapters } = useSyncExternalStore(storageStore.subscribe, storageStore.getSnapshot);
+  const { adapters } = useStorageStore(storageStore.getSnapshot);
 
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [filters, setFilters] = useState<StorageFilters>(DEFAULT_STORAGE_FILTERS);
+  const { activeId, filters, sort, descending, groupByNamespace } = useStorageViewStore();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [sort, setSort] = useState<StorageSortField>('key');
-  const [descending, setDescending] = useState(false);
-  const [groupByNamespace, setGroupByNamespace] = useState(false);
   /**
    * The key, not the entry: an edit replaces the entry object in the store, and a sheet holding the
    * old one would keep showing the value you just changed. A deleted key resolves to `null`, which
@@ -56,6 +51,16 @@ export function StorageView() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [shownId, setShownId] = useState(activeId);
+
+  // The store can be switched from the DevTools tab too, and a key or a sheet left open here would
+  // belong to the store that is no longer on screen.
+  if (activeId !== shownId) {
+    setShownId(activeId);
+    setSelectedKey(null);
+    setAddOpen(false);
+    setImportOpen(false);
+  }
 
   const flatListRef = useRef<FlatList<StorageEntry>>(null);
   const sectionListRef = useRef<SectionList<StorageEntry>>(null);
@@ -75,11 +80,7 @@ export function StorageView() {
     [filters.search, filters.modes]
   );
 
-  const countsByKind = useMemo(() => {
-    const counts: Partial<Record<StoredValueKind, number>> = {};
-    for (const entry of entries) counts[entry.kind] = (counts[entry.kind] ?? 0) + 1;
-    return counts;
-  }, [entries]);
+  const countsByKind = useMemo(() => countByKind(entries), [entries]);
 
   const visibleEntries = useMemo(
     () =>
@@ -91,19 +92,10 @@ export function StorageView() {
     [entries, filters, matcher, sort, descending]
   );
 
-  const sections = useMemo(() => {
-    if (!groupByNamespace) return [];
-    const byNamespace = new Map<string, StorageEntry[]>();
-    for (const entry of visibleEntries) {
-      const title = namespaceOf(entry.key);
-      const group = byNamespace.get(title) ?? [];
-      group.push(entry);
-      byNamespace.set(title, group);
-    }
-    return Array.from(byNamespace.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([title, data]) => ({ title, data }));
-  }, [visibleEntries, groupByNamespace]);
+  const sections = useMemo(
+    () => (groupByNamespace ? groupEntriesByNamespace(visibleEntries) : []),
+    [visibleEntries, groupByNamespace]
+  );
 
   /** Only one of the two lists is mounted at a time, so the other ref is always null. */
   function scrollToTop() {
@@ -134,16 +126,7 @@ export function StorageView() {
 
   if (adapters.length === 0) return <EmptyState />;
 
-  function patchFilters(patch: Partial<StorageFilters>) {
-    setFilters((current) => ({ ...current, ...patch }));
-  }
-
-  const emptyLabel =
-    state === undefined || state.status === 'reading'
-      ? 'Reading…'
-      : entries.length === 0
-        ? 'This store holds no keys'
-        : 'No keys match your filter';
+  const emptyLabel = emptyListLabel(state);
 
   /**
    * The summary and the filters scroll with the rows rather than sitting above them. Pinned, the open
@@ -160,18 +143,18 @@ export function StorageView() {
       {filtersOpen && (
         <FiltersPanel
           filters={filters}
-          onChange={patchFilters}
-          onClear={() => setFilters(DEFAULT_STORAGE_FILTERS)}
+          onChange={storageViewStore.patchFilters}
+          onClear={storageViewStore.resetFilters}
           matcher={matcher}
           visibleCount={visibleEntries.length}
           totalCount={entries.length}
           countsByKind={countsByKind}
           sort={sort}
-          onChangeSort={setSort}
+          onChangeSort={storageViewStore.setSort}
           descending={descending}
-          onToggleDescending={() => setDescending((current) => !current)}
+          onToggleDescending={storageViewStore.toggleDescending}
           groupByNamespace={groupByNamespace}
-          onChangeGroupByNamespace={setGroupByNamespace}
+          onChangeGroupByNamespace={storageViewStore.setGroupByNamespace}
           moreOpen={moreOpen}
           onToggleMore={() => {
             animateNextLayout();
@@ -190,12 +173,7 @@ export function StorageView() {
         leading=<AdapterSelector
           adapters={adapters}
           activeId={state?.adapter.id ?? null}
-          onChange={(adapterId) => {
-            setActiveId(adapterId);
-            setSelectedKey(null);
-            setAddOpen(false);
-            setImportOpen(false);
-          }}
+          onChange={storageViewStore.setActiveId}
         />>
         {adapters.length > 1 && <ToolbarDivider />}
         <IconButton

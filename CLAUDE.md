@@ -30,7 +30,7 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*`, the free OSS
 
 - **bun only**, pinned via `devEngines.packageManager` in the root `package.json` (bun 1.3.14, Node >=24).
 - Root `workspaces` glob is non-standard because of the `@axonpack` npm scope directory and a nested example app:
-  `packages/*`, `packages/@axonpack/*`, `packages/@axonpack/react-native-devtools-tab/example`, `packages/@axonpack/expo-devtools/panel`, `packages/@axonpack/expo-devtools/example`, `packages/@axonpack/react-pretty-print/example-web`, `packages/@axonpack/react-pretty-print/example-native`. There is deliberately **no `apps/*`** and no `docs` entry, because `docs/` is a submodule with its own install, and listing it would make bun hoist its dependencies to this root, which breaks its Turbopack root and stops it building on its own.
+  `packages/*`, `packages/@axonpack/*`, `packages/@axonpack/react-native-devtools-tab/example`, `packages/@axonpack/expo-devtools/example`, `packages/@axonpack/react-pretty-print/example-web`, `packages/@axonpack/react-pretty-print/example-native`. There is deliberately **no `apps/*`** and no `docs` entry, because `docs/` is a submodule with its own install, and listing it would make bun hoist its dependencies to this root, which breaks its Turbopack root and stops it building on its own.
   A plain `packages/*` glob does **not** match `packages/@axonpack/expo-devtools` (two levels deep), so new scoped packages are covered by the `packages/@axonpack/*` entry, but each package's own `example/` app needs its own explicit workspace entry to get linked via bun (otherwise its `@axonpack/expo-devtools` dependency won't resolve to the local package).
 - Run `bun install` from the **repo root**, not from inside a package or example, because bun's workspace linking depends on the root lockfile.
 
@@ -118,7 +118,7 @@ The provider calls `startDevtools(config)` **during render**, not in an effect: 
 
 ### Network logging (`src/features/network/services/`, `src/features/network/stores/`)
 
-Three independent interception paths feed one shared store (`features/network/stores/network-log.store.ts`, an in-memory ring buffer capped at 200 entries, pub/sub via `expo`'s `EventEmitter`, read via `useSyncExternalStore` in `network-view.component.tsx`):
+Three independent interception paths feed one shared store (`features/network/stores/network-log.store.ts`, an in-memory ring buffer capped at 1,000 entries, pub/sub via `expo`'s `EventEmitter`, read via `useSyncExternalStore` in `network-view.component.tsx`):
 
 - `features/network/services/patch-fetch.service.ts`: wraps `globalThis.fetch`. Required because **Expo installs its own native fetch by default** (`expo/winter/fetch`), which does not route through `XMLHttpRequest` the way the old whatwg-fetch polyfill did, so patching XHR alone cannot see it.
 - `features/network/services/patch-xhr.service.ts`: patches `XMLHttpRequest.prototype.open`/`.send`. This is what actually catches third-party HTTP client libraries whose RN adapter is built on XHR rather than fetch (a common pattern) and any raw `XMLHttpRequest` usage.

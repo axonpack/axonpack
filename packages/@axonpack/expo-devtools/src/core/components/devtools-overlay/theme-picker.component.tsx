@@ -1,21 +1,15 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { type GestureResponderEvent } from 'react-native';
 
-import { themeStore } from '../../stores/theme.store';
+import { themeStore, useThemeStore } from '../../stores/theme.store';
+import { themeLabel } from '../../utils/theme-label.util';
+import { useThemeColors } from '../../utils/themed-styles.util';
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu.ui';
 import { IconButton } from '../ui/icon-button.ui';
-import { useThemeColors } from '../../utils/themed-styles.util';
-
-function themeLabel(id: string): string {
-  return id
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
 
 export function ThemePicker() {
   const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
-  const activeId = useSyncExternalStore(themeStore.subscribe, themeStore.getActiveId);
+  const activeId = useThemeStore((state) => state.activeId);
   const COLORS = useThemeColors();
 
   const items: ContextMenuItem[] = themeStore.getIds().map((id) => ({

@@ -9,18 +9,11 @@ import { SendButton } from './send-button.component';
 import { UrlBar } from './url-bar.component';
 import type { NetworkLogEntry } from '../../stores/network-log.store';
 import {
-  buildAuthHeaders,
-  buildFinalUrl,
+  buildSandboxRequest,
   ensureTrailingBlankRow,
-  extractAuthConfig,
-  extractCookieHeader,
   newAuthConfig,
-  parseCookieHeader,
-  rowsFromRecord,
-  rowsToCookieHeader,
-  rowsToRecord,
+  sandboxDraftFor,
   sendSandboxRequest,
-  splitUrl,
   type AuthConfig,
   type KeyValueRow,
   type SandboxResult,
@@ -56,16 +49,14 @@ export function SandboxSheet({
   if (visible !== prevVisible) {
     setPrevVisible(visible);
     if (visible && entry) {
-      const { base, params } = splitUrl(entry.url);
-      const { cookieValue, rest: withoutCookie } = extractCookieHeader(entry.requestHeaders);
-      const { auth: seededAuth, rest } = extractAuthConfig(withoutCookie);
-      setMethod(entry.method);
-      setUrl(base);
-      setAuth(seededAuth);
-      setParamRows(params);
-      setHeaderRows(rowsFromRecord(rest));
-      setCookieRows(parseCookieHeader(cookieValue));
-      setBodyText(entry.requestBody ?? '');
+      const draft = sandboxDraftFor(entry);
+      setMethod(draft.method);
+      setUrl(draft.url);
+      setAuth(draft.auth);
+      setParamRows(draft.paramRows);
+      setHeaderRows(draft.headerRows);
+      setCookieRows(draft.cookieRows);
+      setBodyText(draft.bodyText);
       setTab('request');
       setResult(null);
     }
@@ -73,16 +64,9 @@ export function SandboxSheet({
 
   async function handleSend() {
     setSending(true);
-    const headers = rowsToRecord(headerRows);
-    const cookieHeader = rowsToCookieHeader(cookieRows);
-    if (cookieHeader) headers.Cookie = cookieHeader;
-    Object.assign(headers, buildAuthHeaders(auth));
-    const response = await sendSandboxRequest({
-      method,
-      url: buildFinalUrl(url, paramRows),
-      headers,
-      body: bodyText,
-    });
+    const response = await sendSandboxRequest(
+      buildSandboxRequest({ method, url, auth, paramRows, headerRows, cookieRows, bodyText })
+    );
     setSending(false);
     setResult(response);
     setTab('response');

@@ -1,4 +1,5 @@
 import { EventEmitter } from 'expo';
+import { createStoreHook } from '../../../core/stores/axon.store';
 
 /**
  * What produced the record. The distinction that matters is whether the process survived. A
@@ -131,6 +132,12 @@ export const crashStore = {
   isEnabled(): boolean {
     return enabled;
   },
+  /** A number rather than the records, so a badge re-renders when the count changes and no more. */
+  getUnseenCount(): number {
+    let count = 0;
+    for (const record of records) if (!record.seen) count++;
+    return count;
+  },
   subscribe(listener: () => void) {
     const subscription = emitter.addListener('change', listener);
     return () => subscription.remove();
@@ -167,3 +174,5 @@ export const crashStore = {
     emitter.emit('change');
   },
 };
+
+export const useCrashStore = createStoreHook(crashStore.subscribe);

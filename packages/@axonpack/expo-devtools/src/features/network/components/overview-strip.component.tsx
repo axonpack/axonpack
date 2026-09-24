@@ -5,12 +5,11 @@ import { formatDuration } from '../../../core/utils/format-duration.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import type { NetworkLogEntry } from '../stores/network-log.store';
 import { isErrorStatus } from '../utils/formatters.util';
+import type { TimeRange } from '../utils/overview-layout.util';
 
 const BUCKET_COUNT = 36;
 const MAX_BAR_HEIGHT = 20;
 const MIN_BAR_HEIGHT = 2;
-
-export type TimeRange = { start: number; end: number };
 
 type Bucket = TimeRange & { count: number; hasError: boolean };
 
@@ -67,7 +66,13 @@ export function OverviewStrip({
     <View style={styles.container}>
       <View style={styles.strip}>
         {buckets.map((bucket, index) => {
-          const isActive = activeRange !== null && activeRange.start === bucket.start;
+          // Overlap, not an exact match: a window dragged in React Native DevTools has its own edges.
+          const isActive =
+            activeRange !== null &&
+            activeRange.start < bucket.end &&
+            activeRange.end > bucket.start;
+          const isExact =
+            isActive && activeRange.start === bucket.start && activeRange.end === bucket.end;
           const height =
             bucket.count === 0
               ? 0
@@ -79,7 +84,7 @@ export function OverviewStrip({
               style={[styles.barColumn, isActive && styles.barColumnActive]}
               disabled={bucket.count === 0}
               onPress={() =>
-                onSelectRange(isActive ? null : { start: bucket.start, end: bucket.end })
+                onSelectRange(isExact ? null : { start: bucket.start, end: bucket.end })
               }>
               <View
                 style={[

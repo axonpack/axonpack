@@ -2,6 +2,7 @@ import {
   buildStorageExport,
   parseStorageExport,
   planStorageImport,
+  readStorageImport,
   STORAGE_EXPORT_SCHEMA_VERSION,
 } from '../build-storage-export.util';
 import {
@@ -146,5 +147,31 @@ describe('planStorageImport', () => {
 
     expect(planStorageImport(file, other, []).differentStore).toBe(true);
     expect(planStorageImport(file, other, []).fromStore).toBe('Memory');
+  });
+});
+
+describe('readStorageImport', () => {
+  it('reads blank text as nothing pasted yet', () => {
+    expect(readStorageImport('  ', adapterFor(), [])).toEqual({ state: 'empty' });
+  });
+
+  it('says when the text is not JSON', () => {
+    const reading = readStorageImport('{', adapterFor(), []);
+    expect(reading.state).toBe('unreadable');
+  });
+
+  it('names the path of what is wrong in a snapshot', () => {
+    expect(readStorageImport('{"schemaVersion": 1}', adapterFor(), [])).toEqual({
+      state: 'unreadable',
+      message: 'store — Expected an object, got a undefined.',
+    });
+  });
+
+  it('plans a readable snapshot against the keys on screen', () => {
+    const adapter = adapterFor();
+    const text = JSON.stringify(buildStorageExport(adapter, [entry('a', '1')], ''));
+    const reading = readStorageImport(text, adapter, []);
+
+    expect(reading.state === 'read' && reading.plan.create.map((row) => row.key)).toEqual(['a']);
   });
 });

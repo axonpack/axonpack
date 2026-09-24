@@ -240,8 +240,9 @@ const [menu, setMenu] = useState<{ items: MenuItem[]; x: number; y: number } | n
 />;
 ```
 
-`MenuItem` is `{ label: string; onSelect: () => void }` — render the labels, call `onSelect` on
-press. The items offered depend on the node: _Copy value_ or _Copy object_ when `onCopy` is set,
+`MenuItem` is `{ label: string; onSelect: () => void; copyText?: string }`. Render the labels and
+call `onSelect` on press. A copy item also carries `copyText`, the text it copies, for a host that has to
+do the copying somewhere `onSelect` does not run. The items offered depend on the node: _Copy value_ or _Copy object_ when `onCopy` is set,
 plus _Expand_ / _Collapse_, _Expand recursively_ and _Collapse recursively_ on a container that has
 children.
 

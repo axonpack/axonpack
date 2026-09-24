@@ -1,5 +1,13 @@
-import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { makeThemedStyles } from '../../utils/themed-styles.util';
@@ -39,18 +47,42 @@ export function ContextMenu({
   // being placed with the last menu's height.
   const [measured, setMeasured] = useState<{ count: number; height: number } | null>(null);
 
-  if (!anchor) return null;
+  // Kept while the menu fades out, so it closes where it was rather than jumping or vanishing.
+  const [placed, setPlaced] = useState(anchor);
+  if (anchor && anchor !== placed) setPlaced(anchor);
+
+  /**
+   * An item that presents something of its own, like Share, has to wait for this Modal to be gone
+   * on iOS. The share sheet is presented from the topmost view controller, which is this Modal, and
+   * dismissing a view controller takes whatever it presented down with it: the sheet opened and
+   * closed in the same tap. So on iOS the item runs from `onDismiss`, which is why the Modal stays
+   * mounted and is hidden rather than unmounted: an unmounted Modal never calls it.
+   */
+  const pending = useRef<(() => void) | null>(null);
+  const runPending = () => {
+    const run = pending.current;
+    pending.current = null;
+    run?.();
+  };
+
+  const position = anchor ?? placed;
+  if (!position) return null;
 
   const menuHeight =
     measured?.count === items.length
       ? measured.height
       : items.length * TOUCH_TARGET.row + MENU_VERTICAL_PADDING;
 
-  const left = clamp(anchor.x, EDGE_MARGIN, width - MENU_WIDTH - EDGE_MARGIN);
-  const top = clamp(anchor.y, EDGE_MARGIN, height - menuHeight - EDGE_MARGIN);
+  const left = clamp(position.x, EDGE_MARGIN, width - MENU_WIDTH - EDGE_MARGIN);
+  const top = clamp(position.y, EDGE_MARGIN, height - menuHeight - EDGE_MARGIN);
 
   return (
-    <Modal transparent visible animationType="fade" onRequestClose={onClose}>
+    <Modal
+      transparent
+      visible={anchor !== null}
+      animationType="fade"
+      onRequestClose={onClose}
+      onDismiss={runPending}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
         <View
           style={[styles.menu, { left, top }]}
@@ -63,8 +95,13 @@ export function ContextMenu({
               key={item.label}
               style={styles.item}
               onPress={() => {
-                item.onPress();
-                onClose();
+                if (Platform.OS === 'ios') {
+                  pending.current = item.onPress;
+                  onClose();
+                } else {
+                  item.onPress();
+                  onClose();
+                }
               }}>
               <View style={styles.itemRow}>
                 {item.icon}

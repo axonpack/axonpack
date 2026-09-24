@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Chip } from '../../../core/components/ui/chip.ui';
@@ -8,17 +8,14 @@ import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { getCompletions } from '../services/complete-expression.service';
 import { runReplCommand } from '../services/run-repl-command.service';
-import { consolePromptStore } from '../stores/console-prompt.store';
+import { consolePromptStore, useConsolePromptStore } from '../stores/console-prompt.store';
 import { normalizeExpressionInput } from '../utils/normalize-expression.util';
 
 export function ConsolePrompt({ onSubmit }: { onSubmit?: () => void }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const source = useSyncExternalStore(consolePromptStore.subscribe, consolePromptStore.getDraft);
-  const focusRequest = useSyncExternalStore(
-    consolePromptStore.subscribe,
-    consolePromptStore.getFocusRequest
-  );
+  const source = useConsolePromptStore((state) => state.draft);
+  const focusRequest = useConsolePromptStore((state) => state.focusRequest);
   const inputRef = useRef<TextInput>(null);
 
   const lastFocusRequest = useRef(focusRequest);

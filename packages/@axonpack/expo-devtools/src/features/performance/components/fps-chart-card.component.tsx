@@ -1,8 +1,7 @@
-import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { isUiFpsAvailable } from '../services/fps-monitor.service';
-import { performanceStore } from '../stores/performance.store';
+import { performanceStore, usePerformanceStore } from '../stores/performance.store';
 import { ageAxisLabels } from '../utils/age-labels.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { LineChart, type LineSeries } from '../../../core/components/ui/line-chart.ui';
@@ -14,16 +13,13 @@ const HEADROOM = 5;
 export function FpsChartCard() {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const fps = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFps);
-  const uiFps = useSyncExternalStore(performanceStore.subscribe, performanceStore.getUiFps);
+  const fps = usePerformanceStore(performanceStore.getFps);
+  const uiFps = usePerformanceStore(performanceStore.getUiFps);
 
-  const jsSeries = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFpsSeries);
-  const uiSeries = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getUiFpsSeries
-  );
+  const jsSeries = usePerformanceStore(performanceStore.getFpsSeries);
+  const uiSeries = usePerformanceStore(performanceStore.getUiFpsSeries);
 
-  const peak = useSyncExternalStore(performanceStore.subscribe, performanceStore.getFpsPeak);
+  const peak = usePerformanceStore(performanceStore.getFpsPeak);
   const nativeAvailable = isUiFpsAvailable();
 
   const domainMax = Math.max(MIN_DOMAIN_MAX, peak) + HEADROOM;

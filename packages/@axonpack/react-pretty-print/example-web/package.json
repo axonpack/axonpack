@@ -2,7 +2,7 @@
   "name": "pretty-print-example-web",
   "version": "1.0.0",
   "private": true,
-  "description": "Plain React consumer of @axonpack/react-pretty-print \u2014 no react-native, no bundler config",
+  "description": "Plain React consumer of @axonpack/react-pretty-print — no react-native, no bundler config",
   "scripts": {
     "dev": "bun index.html",
     "build": "bun build ./index.html --outdir dist",

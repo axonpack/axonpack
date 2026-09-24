@@ -1,4 +1,4 @@
-import { EventEmitter } from 'expo';
+import { createAxonStore } from '../../../core/stores/axon.store';
 
 /**
  * What to do with a request instead of letting it through. Keyed by the whole URL rather than a
@@ -14,35 +14,24 @@ export type NetworkOverride = {
   contentType?: string;
 };
 
-type OverrideEvents = {
-  change: () => void;
-};
+export const networkOverridesStore = createAxonStore(
+  { overrides: [] as NetworkOverride[] },
+  (setState, get) => ({
+    getSnapshot: (): NetworkOverride[] => get().overrides,
+    /** The one question the patches ask, on every request, so it stays a plain lookup. */
+    find: (url: string): NetworkOverride | undefined =>
+      get().overrides.find((override) => override.url === url),
+    set: (override: NetworkOverride) =>
+      setState({
+        overrides: [
+          override,
+          ...get().overrides.filter((existing) => existing.url !== override.url),
+        ],
+      }),
+    remove: (url: string) =>
+      setState({ overrides: get().overrides.filter((override) => override.url !== url) }),
+    clear: () => setState({ overrides: [] }),
+  })
+);
 
-let overrides: NetworkOverride[] = [];
-const emitter = new EventEmitter<OverrideEvents>();
-
-export const networkOverridesStore = {
-  getSnapshot(): NetworkOverride[] {
-    return overrides;
-  },
-  subscribe(listener: () => void) {
-    const subscription = emitter.addListener('change', listener);
-    return () => subscription.remove();
-  },
-  /** The one question the patches ask, on every request, so it stays a plain lookup. */
-  find(url: string): NetworkOverride | undefined {
-    return overrides.find((override) => override.url === url);
-  },
-  set(override: NetworkOverride) {
-    overrides = [override, ...overrides.filter((existing) => existing.url !== override.url)];
-    emitter.emit('change');
-  },
-  remove(url: string) {
-    overrides = overrides.filter((override) => override.url !== url);
-    emitter.emit('change');
-  },
-  clear() {
-    overrides = [];
-    emitter.emit('change');
-  },
-};
+export const useNetworkOverridesStore = networkOverridesStore.useStore;

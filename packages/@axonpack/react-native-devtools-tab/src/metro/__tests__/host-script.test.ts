@@ -53,3 +53,19 @@ test("a tab's iframe loads this package's page, named by the tab", () => {
     `${DEVTOOLS_ROUTE}/panel/index.html?tab=a%20b`,
   );
 });
+
+test("a message reaches the app as ASCII source that reads back as the same text", () => {
+  const body = script.match(/const asciiOnly = ([\s\S]*?);\n/)?.[1];
+  if (!body) throw new Error("asciiOnly has moved");
+  const asciiOnly = new Function(`return ${body}`)() as (
+    source: string,
+  ) => string;
+
+  const message = { type: "change", value: "Hello, café 🚀" };
+  const source = asciiOnly(JSON.stringify(JSON.stringify(message)));
+
+  expect(/^[\x00-\x7e]*$/.test(source)).toBe(true);
+  expect(JSON.parse(new Function(`return ${source}`)() as string)).toEqual(
+    message,
+  );
+});
