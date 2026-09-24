@@ -11,6 +11,7 @@ This file ships inside the package. The same reference, split into pages and sea
 - [Console tab](#console-tab)
 - [Performance tab](#performance-tab)
 - [Storage tab](#storage-tab)
+- [React Native DevTools tab](#react-native-devtools-tab)
 - [API](#api)
 - [What needs a development build](#what-needs-a-development-build)
 
@@ -35,10 +36,18 @@ full-screen modal; the button itself never appears inside the modal. With
 | Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                       |
 | Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                               |
 
+In a debug build whose bundle came from Metro, a strip under the header says **Metro server
+detected**. Its **Open DevTools** button opens React Native DevTools on the Axonpack tab, the same
+window the dev menu opens. A release build, or a bundle built into the app, has no strip.
+
 The tab you last had open is remembered for the life of the app process, so reopening the panel
 returns you to it. Only the active tab is mounted, so switching tabs and back resets that tab's
 filters, its open detail sheet and its scroll position. Captured data is untouched: it lives in the
 stores, not the views.
+
+A detail sheet slides up from the bottom and closes with its ✕, a tap outside it, or a drag of its
+handle or header down. With the keyboard up the sheet grows to make room, up to just short of the top
+of the panel, and its content scrolls in what is left.
 
 ### Toolbar row
 
@@ -71,38 +80,37 @@ The one thing it keeps rendering is the crash report sheet, which is meant to wo
 ## Network tab
 
 Three capture paths feed one list: `fetch`, `XMLHttpRequest` (which is what catches axios and most
-HTTP client libraries), and any `<WebView>` you wired up. The list holds the **200** most recent
+HTTP client libraries), and any `<WebView>` you wired up. The list holds the **1,000** most recent
 requests; older ones fall off the end. Request and response bodies are kept in full, never truncated.
 
 ### Toolbar
 
-| Control           | What it does                                                                                                           |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Record / Clear    | As above.                                                                                                              |
-| Sort (↑ / ↓)      | Flips the direction of whatever **Sort by** is set to. Its label says what pressing it would give you.                 |
-| Filter (⌕ list)   | Opens the filters panel below.                                                                                         |
-| Preserve log (🔖) | On by default. Keeps captured rows when a wired-up **WebView page navigates**; off means the log clears with the page. |
-| Export (⤓)        | Opens the OS share sheet with the **currently filtered** list as JSON, named `network-log-<timestamp>.json`.           |
-| Settings (⚙)      | Opens the settings panel below.                                                                                        |
+| Control         | What it does                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| Record / Clear  | As above.                                                                                                    |
+| Sort (↑ / ↓)    | Flips the direction of whatever **Sort by** is set to. Its label says what pressing it would give you.       |
+| Filter (⌕ list) | Opens the filters panel below.                                                                               |
+| Export (⤓)      | Opens the OS share sheet with the **currently filtered** list as JSON, named `network-log-<timestamp>.json`. |
+| Settings (⚙)    | Opens the settings panel below.                                                                              |
 
 ### Filters panel
 
-| Field                        | What it does                                                                                                     |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Search box                   | Matches method, URL, status code and source, not header or body text. Clear it with the ✕ inside the box.        |
-| **Invert** chip              | Shows everything that does _not_ match the search text.                                                          |
-| **Type** chips               | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`, classified from the response MIME type.                       |
-| **Status** chips             | `All` plus one per band captured (`2xx`, `4xx`, `Failed`, `Pending`). Each one writes the field below.           |
-| Status expression            | `404`, `4xx`, `>= 400`, `200-299`, `failed`, `pending`. Unreadable text turns the field red and filters nothing. |
-| **Method** chips             | One per method actually captured (`GET`, `POST`, …), and more than one can be on at once. `All` clears them.     |
-| **Source** chips             | One per source seen — your app, or `WebView::[name]` per declared browser view — and again multi-select.         |
-| More filters ▸               | Reveals the rest, below.                                                                                         |
-| Size: at least / at most     | Bytes, or with a unit: `500`, `20kb`, `1.5mb`.                                                                   |
-| Duration: at least / at most | Milliseconds, or with a unit: `250`, `800ms`, `1.5s`, `2min`.                                                    |
-| Only requests in flight      | Keeps just the ones that have not finished.                                                                      |
-| Only overridden or blocked   | Keeps just the ones a rule of yours answered.                                                                    |
-| Hide data URLs               | Drops requests whose URL starts with `data:`.                                                                    |
-| Hide failed requests         | Drops requests that errored (network failures, not 4xx/5xx responses).                                           |
+| Field                        | What it does                                                                                                                                                                           |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Search box                   | Matches method, URL, status code and source, not header or body text. Clear it with the ✕ inside the box.                                                                              |
+| **Invert** chip              | Shows everything that does _not_ match the search text.                                                                                                                                |
+| **Type** chips               | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`. Fetch/XHR is every request sent through `fetch` or `XMLHttpRequest`, whatever came back; the others go by the response's MIME type. |
+| **Status** chips             | `All` plus one per band captured (`2xx`, `4xx`, `Failed`, `Pending`). Each one writes the field below.                                                                                 |
+| Status expression            | `404`, `4xx`, `>= 400`, `200-299`, `failed`, `pending`. Unreadable text turns the field red and filters nothing.                                                                       |
+| **Method** chips             | One per method actually captured (`GET`, `POST`, …), and more than one can be on at once. `All` clears them.                                                                           |
+| **Source** chips             | One per source seen — your app, or `WebView::[name]` per declared browser view — and again multi-select.                                                                               |
+| More filters ▸               | Reveals the rest, below.                                                                                                                                                               |
+| Size: at least / at most     | Bytes, or with a unit: `500`, `20kb`, `1.5mb`.                                                                                                                                         |
+| Duration: at least / at most | Milliseconds, or with a unit: `250`, `800ms`, `1.5s`, `2min`.                                                                                                                          |
+| Only requests in flight      | Keeps just the ones that have not finished.                                                                                                                                            |
+| Only overridden or blocked   | Keeps just the ones a rule of yours answered.                                                                                                                                          |
+| Hide data URLs               | Drops requests whose URL starts with `data:`.                                                                                                                                          |
+| Hide failed requests         | Drops requests that errored (network failures, not 4xx/5xx responses).                                                                                                                 |
 
 Every filter combines with the search. **Invert** negates all of them together except the two `Hide`
 switches, which stay absolute — inverting those would bring back the exact noise they suppress. A
@@ -156,8 +164,9 @@ Shown when **Show overview** is on, and only once at least one request is captur
 | Badges          | Resource type · source (only when it came from a WebView) · response size (large rows only). |
 | ⋮               | The copy menu, also on long-press anywhere in the row.                                       |
 
-The copy menu: **Copy URL**, **Copy as cURL**, **Copy as fetch**, **Copy as fetch (Node.js)**, plus
-**Copy request payload** and **Copy response** when those exist.
+The row menu: **Try in sandbox**, then **Copy URL**, **Copy as cURL**, **Copy as fetch**, **Copy as
+fetch (Node.js)**, then **Copy request payload** and **Copy response** when those exist, **Share
+response body** when there is a body at all, then **Block this URL** and **Override response…**.
 
 ### Detail sheet
 
@@ -184,7 +193,7 @@ responses, HTML as HTML. Falls back to `No preview available`.
 DNS/TCP/TLS/TTFB breakdown isn't observable from JS, since those phases happen in the native
 networking stack.
 
-The sheet's ⋮ menu adds **Try in sandbox** above the same copy items as the row menu.
+The sheet's ⋮ menu is the same list without **Override response…**.
 
 ### Sandbox
 
@@ -525,6 +534,183 @@ before you let go of the button; a main-thread crash ends the process and is rea
 next launch.
 
 ---
+
+## React Native DevTools tab
+
+The tab reads the same stores as the panel on the device, so a filter, a sort, a setting or a rule
+changed here is changed there too, and the other way round. Setting it up is on [React Native
+DevTools](https://axonpack.github.io/docs/expo-devtools/react-native-devtools).
+
+### The bar
+
+| Item              | What it does                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| **Axonpack** mark | Hover it for what the tab is, with links to the docs, the changelog, the other libraries and GitHub. |
+| Tabs              | Press and hold a tab to pick it up, then drag it to a new place.                                     |
+| »                 | Appears when the tabs do not fit, and lists the ones that were left out.                             |
+| Palette           | The app's themes. A theme picked here is the app's theme too.                                        |
+| **Reload**        | Reloads the app, as `r` in Metro does.                                                               |
+| Refresh           | Draws the tab again without touching the app. It does not pick up code saved since; **Reload** does. |
+
+A tab with a dotted pattern across its top is one of this package's own. The order you drag them
+into lasts until the app reloads.
+
+### Toolbar
+
+| Control         | What it does                                                                                              |
+| --------------- | --------------------------------------------------------------------------------------------------------- |
+| Record          | Pauses and resumes capture. Red while recording.                                                          |
+| Clear           | Throws away the log.                                                                                      |
+| Sort arrow      | Flips the direction of the current sort. Its tooltip says what pressing it would give you.                |
+| Filter          | Shows or hides the filter bar. Filled while any filter is on.                                             |
+| Throttling      | `No throttling`, `Slow 3G`, `Fast 3G`, `Fast 4G`, `Offline`, `Custom`. The same profiles as the device's. |
+| Export          | Downloads the rows the filters keep as JSON, the same file the device's Export shares.                    |
+| Settings (gear) | Shows or hides the settings pane.                                                                         |
+
+### Filter bar
+
+| Control           | What it does                                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Filter            | Matches method, URL, status code and source. Match case, match whole word and regular expression sit inside the box, with a clear ✕.                               |
+| **Invert**        | Shows everything the search does not match.                                                                                                                        |
+| Clear all filters | Resets every filter, and the window picked on the overview.                                                                                                        |
+| **More filters**  | Opens the menu below. A count on it says how many of those are on.                                                                                                 |
+| Types             | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`. Fetch/XHR is every request sent through `fetch` or `XMLHttpRequest`; the others go by the response's MIME type. |
+
+#### More filters
+
+| Item                           | What it does                                                           |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| Hide data URLs                 | Drops requests whose URL starts with `data:`.                          |
+| Hide failed requests           | Drops requests that errored.                                           |
+| Only requests in flight        | Keeps the ones that have not finished.                                 |
+| Blocked or overridden requests | Keeps the ones a rule of yours answered.                               |
+| Status                         | An expression: `404`, `4xx`, `>= 400`, `200-299`, `failed`, `pending`. |
+| Larger than, Smaller than      | A size, with a unit or without: `20kb`, `2mb`.                         |
+| Slower than, Faster than       | A duration: `500ms`, `2s`.                                             |
+| Methods                        | One per method captured. More than one can be on.                      |
+| Sources                        | One per source seen. More than one can be on.                          |
+
+A field that cannot be read turns red and filters nothing.
+
+### Settings
+
+| Setting               | What it does                                                                                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Big request rows      | Taller rows, each cell with its second line: the status text, what the app was handed, and the time to the first byte. The tab's own setting, apart from the device's. |
+| Group by fetch client | Groups the rows under a header per source, with a count.                                                                                                               |
+| Overview              | Shows the overview strip above the table.                                                                                                                              |
+| Stack header values   | In Headers, puts each value under its name. The tab's own setting, apart from the device's.                                                                            |
+| Sort by               | Time, size, duration or status, and the direction.                                                                                                                     |
+| User agent            | `Default`, `iPhone Safari`, `Android Chrome`, `Chrome (macOS)`, `Chrome (Windows)`, `Googlebot`, `Custom`.                                                             |
+| Custom throttling     | Download (kbps), Upload (kbps) and Latency (ms): what the `Custom` throttle means.                                                                                     |
+
+### Overview
+
+Each request is a bar across time, green while it waits for the first byte and blue while the body
+comes in. Drag across it to keep only the requests that started in that window, drag a handle to move
+one edge, and double-click to let go. The window is the same one the device's overview picks.
+
+### The table
+
+| Column | What it shows                                                                          |
+| ------ | -------------------------------------------------------------------------------------- |
+| Name   | The last part of the path and the query, with an icon for the kind of response.        |
+| Method | The HTTP method.                                                                       |
+| Status | The code, with big rows its text under it, or `(pending)`, `(canceled)` or `(failed)`. |
+| Source | The client that sent it: `fetch`, `xhr`, `expo/fetch`, a WebView and so on.            |
+| Size   | What crossed the wire, and with big rows, what the app was handed under it.            |
+| Time   | How long it took, and with big rows, the time to the first byte under it.              |
+
+Click **Status**, **Size** or **Time** to sort by it, and again to flip the direction. Drag the line
+between two headers to resize a column. A failed request is drawn in red. Hovering a cell shows both
+of its lines, whatever the row size.
+
+Under the table, the status line counts the requests, what was transferred and when the last one
+finished. While a filter is on, each figure reads _shown / all_.
+
+Click a row to open it in the request pane. Right-click a row for its menu.
+
+### Request pane
+
+It opens beside the table, and the table narrows to its Name column. Drag the line between them to
+change the split. ✕ closes it.
+
+| Tab         | What it shows                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------- |
+| Headers     | Network conditions when any were on, then General, Response Headers and Request Headers. |
+| Payload     | The request body as fields, or as a JSON tree. Uploaded files by name and size.          |
+| Preview     | An image, a page, an SVG, JSON or XML as a tree, or the code, highlighted.               |
+| Response    | The body as it came. A binary body as a hex dump.                                        |
+| EventStream | A server-sent event stream's events, in place of Preview and Response.                   |
+| Timing      | The phases the platform measured, or the wait and the download.                          |
+| Cookies     | The cookies the request sent and the ones the response set.                              |
+| Initiator   | The code that made the request, with the source around the line.                         |
+| Messages    | For a socket, every message in both directions, in place of the others.                  |
+
+The ⋮ at the end of the tab bar opens the request's menu.
+
+### The request menu
+
+Right-click on a row, or ⋮ in the request pane.
+
+| Item                         | What it does                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| **Try in sandbox**           | Opens the request in the sandbox, below.                                                |
+| Copy URL                     | To your computer's clipboard.                                                           |
+| Copy as cURL, fetch, Node.js | The request as a command, to your computer's clipboard.                                 |
+| Copy request payload         | When the request had a body.                                                            |
+| Copy response                | When the response has a text body.                                                      |
+| **Save response body**       | Downloads the body as a file, named after the request.                                  |
+| **Block this URL**           | Makes the app's requests to it fail. Once blocked, it reads **Stop blocking this URL**. |
+| **Override response…**       | Opens the override editor, below.                                                       |
+
+A copy shows **Copied**, or why it could not copy, at the foot of the tab.
+
+### Override editor
+
+Opens in the request pane, with ✕ to go back to the request.
+
+| Field        | What it is                                                                     |
+| ------------ | ------------------------------------------------------------------------------ |
+| Status       | The code to answer with. Anything that is not a status from 100 to 599 is 200. |
+| Content type | Sent as the response's `Content-Type`. Empty means `application/json`.         |
+| Body         | What the app gets back.                                                        |
+
+It starts from the rule the URL already has, or from what the server really answered. **Save**
+applies it to every request to that exact URL, **Remove** drops it, **Cancel** goes back. While a rule
+is on the request is not sent at all, so the endpoint does not have to exist.
+
+### Sandbox
+
+Opens in the request pane, with ✕ to go back to the request. The request is on the left and its
+response on the right; in a narrow pane they stack.
+
+| Part               | What it holds                                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Address bar        | The method, coloured by verb, the URL without its query, a copy button, and **Send**.                                                                                           |
+| Authentication     | `none`, `bearer` (a token) or `api key` (a header name and a value). A secret is hidden until the eye shows it.                                                                 |
+| Network Conditions | Throttling, custom speeds and the user agent. The whole app's, not this request's.                                                                                              |
+| Cookies            | Key and value rows, sent together as one `Cookie` header.                                                                                                                       |
+| Headers            | Key and value rows.                                                                                                                                                             |
+| Query Parameters   | Key and value rows, added to the URL.                                                                                                                                           |
+| Body               | The request body, with **Format JSON** when it is JSON that is not laid out yet. A GET or HEAD is sent without one.                                                             |
+| Code Snippet       | The request as cURL, HTTPie, JavaScript fetch, axios, Node.js fetch, Python requests, Swift URLSession, Kotlin OkHttp or Go net/http, with a copy button. Folded to start with. |
+
+A table always ends with a blank row that becomes the next one as you type. A row's checkbox leaves it
+out of the request without deleting it.
+
+**Send** sends the request from the device, through the app's own `fetch`. The response then shows:
+
+| Part             | What it holds                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| Head             | The time, the size and the status.                                                                          |
+| Cookies          | The cookies the response set.                                                                               |
+| Request Headers  | The headers the request actually went with, auth and cookies included.                                      |
+| Response Headers | Every header that came back.                                                                                |
+| Body             | Its content type, **Preview** as a JSON tree or **Raw** with line numbers, a copy button, and **Download**. |
+
+The sent request is also a row in the log, on both surfaces.
 
 ## API
 

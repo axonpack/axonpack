@@ -18,19 +18,19 @@ that runs in the app.
       sizes.
 - [x] Initiator symbolicates against the dev server and shows the source around the line.
 - [x] Block a URL from the row menu.
-- [x] The row menu's copies, which land on the device's clipboard.
-- [ ] Answer a request yourself with an override.
-- [ ] Edit any request in the sandbox and send it again for real.
-- [ ] A custom throttle speed, and the user agent.
-- [ ] Stacked header values.
-- [ ] A hex dump of a binary body.
+- [x] Copies land on the computer's clipboard, and a response body downloads as a file.
+- [x] Answer a request yourself with an override.
+- [x] Edit any request in the sandbox and send it again for real, laid out like a web API client.
+- [x] The request as code in nine languages.
+- [x] A custom throttle speed, and the user agent.
+- [x] Stacked header values.
+- [x] A hex dump of a binary body.
+- [x] Open DevTools on the Axonpack tab from the app's own panel.
 - [x] The whole log as the export file, and every count as the device counts it.
 - [x] Reading on the desktop changes nothing on the device: the on-device panel still opens, still
       records, and still works with the dev server gone.
 - [x] An app that does not opt in sees no tab and no change at all.
-- [ ] Saving a body to a file from the browser: it needs a real element to click, and a `ref` in a
-      tab holds a stand-in.
-- [ ] Dragging a range across the overview strip, for the same reason: nothing to measure against.
+- [x] Dragging a range across the overview strip, from strips the page draws, with no measurement.
 - [ ] The rest of the panel: console, storage, performance and crashes.
 - [ ] A prompt box in the tab answers questions about the project on the developer's machine.
 - [ ] A captured request, log or crash can be handed to that prompt in one click.

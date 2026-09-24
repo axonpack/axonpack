@@ -1,3 +1,8 @@
+> Written and archived on 2026-09-24, the day it was built. Every step is in
+> `@axonpack/expo-devtools` 3.1.1, the first release since 3.0.0. The tab's other panels stay
+> unbuilt, listed in `react-native-devtools.md`. Dragging a range on the overview was already built;
+> the plan's line saying otherwise was wrong.
+
 # DevTools tab network parity plan
 
 The Network panel in React Native DevTools is meant to match the on-device Network tab feature for
@@ -119,7 +124,7 @@ rows. In the tab those rows would also cross the bridge as ops, so the cap matte
        and removable from either surface.
 6. [x] **Sandbox.** Ends with: a captured request edited in DevTools, sent from the device, with its
        response shown and its row in the log on both surfaces.
-7. [ ] **Shipped.** The lines move to `react-native-devtools.md` as done, this plan moves to
+7. [x] **Shipped.** The lines move to `react-native-devtools.md` as done, this plan moves to
        `logs/`, and a changeset for `@axonpack/expo-devtools`.
 
 ## Not in this plan
