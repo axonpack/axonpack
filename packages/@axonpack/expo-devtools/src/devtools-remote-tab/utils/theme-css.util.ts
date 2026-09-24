@@ -64,6 +64,8 @@ export function themeCss(palette: Palette): string {
   --fg: ${palette.textPrimary};
   --muted: ${palette.textSecondary};
   --hover: ${mix(palette.textPrimary, 10)};
+  /* The bar sets its own link colour for its text, and the about card's link is not bar text. */
+  --link: ${palette.accent};
   --logo: ${logo(palette.accent, palette.textPrimary)};
 }
 :root .axonpack-net {
