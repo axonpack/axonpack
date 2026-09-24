@@ -1,14 +1,9 @@
-import { useSyncExternalStore } from 'react';
-
-import { performanceStore } from '../stores/performance.store';
+import { performanceStore, usePerformanceStore } from '../stores/performance.store';
 import { formatMs } from '../utils/format-metrics.util';
 import { MetricCard } from './metric-card.component';
 
 export function InteractionCard() {
-  const { interactions } = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getSnapshot
-  );
+  const { interactions } = usePerformanceStore(performanceStore.getSnapshot);
 
   const worst = interactions.reduce<number | undefined>(
     (highest, entry) =>

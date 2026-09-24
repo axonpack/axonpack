@@ -1,7 +1,6 @@
-import { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { performanceStore } from '../stores/performance.store';
+import { performanceStore, usePerformanceStore } from '../stores/performance.store';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { ageAxisLabels } from '../utils/age-labels.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
@@ -14,23 +13,11 @@ const HEADROOM_FRACTION = 1.1;
 
 export function MemoryChartCard() {
   const styles = useStyles();
-  const { memory, systemMemory, support } = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getSnapshot
-  );
-  const heapPeak = useSyncExternalStore(performanceStore.subscribe, performanceStore.getHeapPeak);
-  const appPeak = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getAppMemoryPeak
-  );
-  const intervalMs = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getSampleIntervalMs
-  );
-  const capacity = useSyncExternalStore(
-    performanceStore.subscribe,
-    performanceStore.getHistorySize
-  );
+  const { memory, systemMemory, support } = usePerformanceStore(performanceStore.getSnapshot);
+  const heapPeak = usePerformanceStore(performanceStore.getHeapPeak);
+  const appPeak = usePerformanceStore(performanceStore.getAppMemoryPeak);
+  const intervalMs = usePerformanceStore(performanceStore.getSampleIntervalMs);
+  const capacity = usePerformanceStore(performanceStore.getHistorySize);
 
   const heapSeries = memory
     .map((sample) => sample.usedJSHeapSize)

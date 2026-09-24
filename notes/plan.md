@@ -26,7 +26,7 @@ db.execSync("PRAGMA busy_timeout = 5000;");
 
 ## @axonpack/expo-devtools
 
-_Shipped — the only implemented package._
+_Shipped._
 
 On-device, prod-safe debug tools with no desktop app: network, console, storage, performance and
 crash tabs behind a draggable dev button. Its notes, area by area:
@@ -39,6 +39,15 @@ _Shipped._
 JSON tree, XML tree and syntax highlighter for React and React Native from one implementation — the
 caller passes the container, text and pressable components in. Its notes, area by area:
 [packages/@axonpack/react-pretty-print/notes](../packages/@axonpack/react-pretty-print/notes/README.md).
+
+## @axonpack/react-native-devtools-tab
+
+_Shipped._
+
+A tab of your own in React Native DevTools, beside Console and Sources. The tab is a React component
+that runs **in the app**, against a renderer that reports what it drew, so it reads the app's own
+state with no bridge and no copy; the panel builds the real elements from the changes that arrive.
+Its notes: [packages/@axonpack/react-native-devtools-tab/notes](../packages/@axonpack/react-native-devtools-tab/notes/README.md).
 
 ## @axonpack/api-kit
 

@@ -15,6 +15,7 @@ export function IconButton({
   hitSlop = HIT_SLOP.default,
   active = false,
   label,
+  dense = false,
 }: {
   name: MaterialIconName;
   color: string;
@@ -23,6 +24,11 @@ export function IconButton({
   active?: boolean;
 
   label?: string;
+  /**
+   * The dense target, for a trailing control inside a row that is itself tall enough to tap. The
+   * 44pt floor on a control of its own would set the height of the line it sits on.
+   */
+  dense?: boolean;
 }) {
   const styles = useStyles();
   const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number } | null>(null);
@@ -48,7 +54,7 @@ export function IconButton({
         onLongPress={label ? handleLongPress : undefined}
         onPressOut={label ? () => setTooltipAnchor(null) : undefined}
         hitSlop={hitSlop}
-        style={styles.touchTarget}>
+        style={[styles.touchTarget, dense && styles.touchTargetDense]}>
         {}
         <View style={[styles.glyph, active && styles.glyphActive]}>
           <MaterialIcons name={name} size={19} color={color} />
@@ -67,6 +73,10 @@ const useStyles = makeThemedStyles((COLORS) => ({
     minHeight: TOUCH_TARGET.min,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  touchTargetDense: {
+    minWidth: TOUCH_TARGET.dense,
+    minHeight: TOUCH_TARGET.dense,
   },
   glyph: {
     padding: 4,

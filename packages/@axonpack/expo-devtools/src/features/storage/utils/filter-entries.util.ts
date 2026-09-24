@@ -1,11 +1,12 @@
 import type { StoredValueKind } from './classify-value.util';
-import type { StorageEntry } from '../stores/storage.store';
+import { namespaceOf } from './formatters.util';
 import {
   DEFAULT_SEARCH_MODES,
   testMatch,
   type Matcher,
   type SearchModes,
 } from '../../../core/utils/text-search.util';
+import type { StorageEntry } from '../stores/storage.store';
 
 /** A key and its value are different haystacks — searching both at once is often the wrong one. */
 export type StorageSearchScope = 'both' | 'keys' | 'values';
@@ -99,4 +100,28 @@ export function sortEntries(
     }
     return a.key.localeCompare(b.key) * direction;
   });
+}
+
+export function countByKind(
+  entries: readonly StorageEntry[]
+): Partial<Record<StoredValueKind, number>> {
+  const counts: Partial<Record<StoredValueKind, number>> = {};
+  for (const entry of entries) counts[entry.kind] = (counts[entry.kind] ?? 0) + 1;
+  return counts;
+}
+
+/** Namespaces in name order, each keeping the order the entries came in. */
+export function groupByNamespace(
+  entries: readonly StorageEntry[]
+): { title: string; data: StorageEntry[] }[] {
+  const byNamespace = new Map<string, StorageEntry[]>();
+  for (const entry of entries) {
+    const title = namespaceOf(entry.key);
+    const group = byNamespace.get(title) ?? [];
+    group.push(entry);
+    byNamespace.set(title, group);
+  }
+  return Array.from(byNamespace.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([title, data]) => ({ title, data }));
 }

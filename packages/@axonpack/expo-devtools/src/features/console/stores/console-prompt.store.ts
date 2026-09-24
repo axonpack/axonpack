@@ -1,32 +1,10 @@
-import { EventEmitter } from 'expo';
+import { createAxonStore } from '../../../core/stores/axon.store';
 
-type ConsolePromptEvents = {
-  change: () => void;
-};
+export const consolePromptStore = createAxonStore({ draft: '', focusRequest: 0 }, (set, get) => ({
+  getDraft: (): string => get().draft,
+  getFocusRequest: (): number => get().focusRequest,
+  setDraft: (draft: string) => set({ draft }),
+  recall: (source: string) => set({ draft: source, focusRequest: get().focusRequest + 1 }),
+}));
 
-let draft = '';
-
-let focusRequest = 0;
-const emitter = new EventEmitter<ConsolePromptEvents>();
-
-export const consolePromptStore = {
-  getDraft(): string {
-    return draft;
-  },
-  getFocusRequest(): number {
-    return focusRequest;
-  },
-  subscribe(listener: () => void) {
-    const subscription = emitter.addListener('change', listener);
-    return () => subscription.remove();
-  },
-  setDraft(next: string) {
-    draft = next;
-    emitter.emit('change');
-  },
-  recall(source: string) {
-    draft = source;
-    focusRequest += 1;
-    emitter.emit('change');
-  },
-};
+export const useConsolePromptStore = consolePromptStore.useStore;

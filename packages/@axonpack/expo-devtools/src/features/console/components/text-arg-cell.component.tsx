@@ -13,6 +13,11 @@ const CLAMP_LINES = 6;
 
 const CLAMP_MIN_LENGTH = 300;
 
+/** Exported so the DevTools tab cuts a long string at the same place the app does. */
+export function isClampable(text: string): boolean {
+  return text.length > CLAMP_MIN_LENGTH || text.split('\n').length > CLAMP_LINES;
+}
+
 function toneColor(tone: ConsoleArgTone, COLORS: Palette): string {
   if (tone === 'number' || tone === 'boolean') return COLORS.jsonNumber;
   if (tone === 'muted') return COLORS.textSecondary;
@@ -37,7 +42,7 @@ export function TextArgCell({
   const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState(false);
   const color = tone === 'plain' ? (plainColor ?? COLORS.textPrimary) : toneColor(tone, COLORS);
-  const clampable = text.length > CLAMP_MIN_LENGTH || text.split('\n').length > CLAMP_LINES;
+  const clampable = isClampable(text);
   const ranges = findMatches(text, matcher);
 
   if (!clampable) {

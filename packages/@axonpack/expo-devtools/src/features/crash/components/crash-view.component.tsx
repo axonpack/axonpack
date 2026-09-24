@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 
 import { CrashDetailSheet } from './crash-detail';
@@ -13,23 +13,12 @@ import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
-import {
-  buildMatcher,
-  DEFAULT_SEARCH_MODES,
-  testMatch,
-  type SearchModes,
-} from '../../../core/utils/text-search.util';
+import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { crashStore, type CrashKind, type CrashRecord } from '../stores/crash.store';
+import { crashViewStore, useCrashViewStore } from '../stores/crash-view.store';
+import { crashStore, type CrashRecord, useCrashStore } from '../stores/crash.store';
+import { countByKind, filterCrashRecords, KIND_ORDER } from '../utils/filter-crash-records.util';
 import { CRASH_KIND_LABELS } from '../utils/format-crash-report.util';
-
-const KIND_ORDER: CrashKind[] = [
-  'js-fatal',
-  'native-exception',
-  'react-render',
-  'unhandled-rejection',
-  'js-error',
-];
 
 function keyExtractor(record: CrashRecord): string {
   return record.id;
@@ -39,32 +28,21 @@ export function CrashView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
 
-  const records = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
+  const records = useCrashStore(crashStore.getSnapshot);
 
-  const [search, setSearch] = useState('');
-  const [searchModes, setSearchModes] = useState<SearchModes>(DEFAULT_SEARCH_MODES);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [kinds, setKinds] = useState<CrashKind[]>([]);
+  const { filters, filtersOpen } = useCrashViewStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const matcher = useMemo(
-    () => buildMatcher({ text: search, ...searchModes }),
-    [search, searchModes]
+    () => buildMatcher({ text: filters.search, ...filters.modes }),
+    [filters.search, filters.modes]
   );
 
-  const countsByKind = useMemo(() => {
-    const counts: Partial<Record<CrashKind, number>> = {};
-    for (const record of records) counts[record.kind] = (counts[record.kind] ?? 0) + 1;
-    return counts;
-  }, [records]);
+  const countsByKind = useMemo(() => countByKind(records), [records]);
 
   const visible = useMemo(
-    () =>
-      records.filter((record) => {
-        if (kinds.length > 0 && !kinds.includes(record.kind)) return false;
-        return testMatch(`${record.name} ${record.message} ${record.stack ?? ''}`, matcher);
-      }),
-    [records, kinds, matcher]
+    () => filterCrashRecords(records, filters, matcher),
+    [records, filters, matcher]
   );
 
   const selectRecord = useCallback((record: CrashRecord) => {
@@ -79,19 +57,13 @@ export function CrashView() {
 
   const selected = selectedId === null ? null : (records.find((r) => r.id === selectedId) ?? null);
 
-  function toggleKind(kind: CrashKind) {
-    setKinds((current) =>
-      current.includes(kind) ? current.filter((k) => k !== kind) : [...current, kind]
-    );
-  }
-
   const listHeader = filtersOpen ? (
     <View style={styles.filters}>
       <SearchInput
-        value={search}
-        onChangeText={setSearch}
-        modes={searchModes}
-        onModesChange={setSearchModes}
+        value={filters.search}
+        onChangeText={(search) => crashViewStore.patchFilters({ search })}
+        modes={filters.modes}
+        onModesChange={(modes) => crashViewStore.patchFilters({ modes })}
         placeholder="Filter crashes"
         invalid={matcher?.invalid ?? false}
       />
@@ -100,8 +72,8 @@ export function CrashView() {
           <Chip
             key={kind}
             label={`${CRASH_KIND_LABELS[kind]} (${countsByKind[kind]})`}
-            active={kinds.includes(kind)}
-            onPress={() => toggleKind(kind)}
+            active={filters.kinds.includes(kind)}
+            onPress={() => crashViewStore.toggleKind(kind)}
           />
         ))}
       </View>
@@ -141,7 +113,7 @@ export function CrashView() {
           active={filtersOpen}
           onPress={() => {
             animateNextLayout();
-            setFiltersOpen((current) => !current);
+            crashViewStore.setFiltersOpen(!filtersOpen);
           }}
           label="Filter"
         />

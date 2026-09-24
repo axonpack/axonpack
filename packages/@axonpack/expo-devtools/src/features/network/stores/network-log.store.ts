@@ -1,5 +1,6 @@
 import { EventEmitter } from 'expo';
 
+import { createStoreHook } from '../../../core/stores/axon.store';
 import { coalesceNotify } from '../../../core/utils/coalesce-notify.util';
 import type { ResolvedNetworkConditions } from './network-conditions.store';
 import type { StackFrame } from '../../../core/utils/parse-stack.util';
@@ -49,7 +50,7 @@ export type NetworkPhases = {
 
 /**
  * One captured request — an HTTP row in the Network tab. Read them with
- * `devtools.networkLogStore.getSnapshot()`; the store keeps the most recent 200, and bodies are
+ * `devtools.networkLogStore.getSnapshot()`; the store keeps the most recent 1,000, and bodies are
  * kept whole rather than truncated.
  */
 export type NetworkLogEntry = {
@@ -229,7 +230,12 @@ type NetworkLogEvents = {
   change: () => void;
 };
 
-const MAX_ENTRIES = 200;
+/**
+ * Enough history to scroll back through a busy session. Not unlimited: every body is kept whole,
+ * and the DevTools tab draws every row, so the cap is what keeps both the app's memory and that
+ * table in check until the table draws only the rows in view.
+ */
+const MAX_ENTRIES = 1000;
 /**
  * Per socket, not for the log as a whole. A request has one body and stops; a socket can carry
  * messages for as long as the app is open, so this is the one place in this tab where something is
@@ -399,3 +405,5 @@ export const networkLogStore = {
     notify();
   },
 };
+
+export const useNetworkLogStore = createStoreHook(networkLogStore.subscribe);

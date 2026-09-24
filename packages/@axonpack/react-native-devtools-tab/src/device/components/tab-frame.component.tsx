@@ -1,8 +1,6 @@
 import {
   createElement,
-  useEffect,
   useReducer,
-  useState,
   useTransition,
   type ComponentType,
   type ReactNode,
@@ -22,9 +20,15 @@ import {
  * Styled by class, with the rules in `renderer/renderer.css`, so the bar follows the panel's light
  * and dark instead of carrying colours picked in the app.
  */
-const DOCS = "https://axonpack.github.io/docs";
 const HOME = "https://axonpack.github.io";
-const REPO = "https://api.github.com/repos/axonpack/axonpack";
+const GUIDE = "https://axonpack.github.io/docs/react-native-devtools-tab";
+
+const LINKS = [
+  { label: "Read the docs", href: GUIDE },
+  { label: "Changelog", href: `${GUIDE}/changelog` },
+  { label: "Other libraries", href: "https://axonpack.github.io/docs" },
+  { label: "GitHub", href: "https://github.com/axonpack/axonpack" },
+];
 
 /**
  * How long a refresh waits before the tab is drawn again.
@@ -35,35 +39,6 @@ const REPO = "https://api.github.com/repos/axonpack/axonpack";
  */
 const RENDER_DELAY = 600;
 
-/**
- * The star count, or null until it arrives and for good if it never does.
- *
- * The request is kept at module level rather than per component: every tab's bar draws this card, so
- * an app with four tabs would otherwise ask GitHub four times for the same number, against a limit
- * of sixty an hour for an unauthenticated caller. It runs in the app, which is where a `fetch` is,
- * and only once a panel has asked for the tab, so an app nobody is debugging never makes it.
- */
-let counted: Promise<number | null> | undefined;
-
-function useStars(): number | null {
-  const [stars, setStars] = useState<number | null>(null);
-
-  useEffect(() => {
-    counted ??= fetch(REPO)
-      .then((response) => response.json())
-      .then((repo: { stargazers_count?: number }) =>
-        typeof repo.stargazers_count === "number"
-          ? repo.stargazers_count
-          : null,
-      )
-      .catch(() => null);
-
-    void counted.then(setStars);
-  }, []);
-
-  return stars;
-}
-
 export function TabFrame({
   name,
   component,
@@ -73,7 +48,6 @@ export function TabFrame({
 }): ReactNode {
   const [, refresh] = useReducer((n: number) => n + 1, 0);
   const [isLoading, startTransition] = useTransition();
-  const stars = useStars();
 
   const handleRefresh = () => {
     startTransition(async () => {
@@ -91,7 +65,8 @@ export function TabFrame({
             <span className="axonpack-tab-about">
               <b>{name}</b>
               <span>
-                This tab is rendered via Axonpack React Native DevTools Tab.
+                Drawn by your app, not by DevTools. It runs inside the app, so
+                what it shows is the app&apos;s live state.
               </span>
               <a
                 className="axonpack-tab-card"
@@ -101,18 +76,21 @@ export function TabFrame({
               >
                 <span className="axonpack-tab-card-mark" />
                 <b>Axonpack</b>
-                <span className="axonpack-tab-card-stars">
-                  {stars === null ? "" : `\u2605 ${stars}`}
-                </span>
                 <span className="axonpack-tab-card-slogan">
-                  Free, open source foundation libraries for React Native and
-                  Expo.
+                  Free, open source libraries for React Native and Expo.
                 </span>
               </a>
               <span className="axonpack-tab-links">
-                <a href={DOCS} target="_blank" rel="noreferrer">
-                  Learn more
-                </a>
+                {LINKS.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {link.label}
+                  </a>
+                ))}
               </span>
             </span>
           </span>

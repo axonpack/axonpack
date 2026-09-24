@@ -18,7 +18,7 @@ const WINDOW_MS = 500;
 
 const MIN_WINDOW_MS = WINDOW_MS / 2;
 
-export function startFpsMonitor() {
+function runFpsMonitor() {
   let frames = 0;
   let windowStart = Date.now();
   let handle: ReturnType<typeof requestAnimationFrame> | undefined;
@@ -61,5 +61,28 @@ export function startFpsMonitor() {
     } catch {}
     performanceStore.setFps(undefined);
     performanceStore.setUiFps(undefined);
+  };
+}
+
+let users = 0;
+let stopRunning: (() => void) | undefined;
+
+/**
+ * Joins the one frame counter the app has, starting it for the first user. The in-app panel and the
+ * DevTools tab can both be open, and two counters would each write a reading, doubling the chart's
+ * speed, and the first to stop would kill the native counter under the other.
+ */
+export function startFpsMonitor() {
+  users += 1;
+  if (users === 1) stopRunning = runFpsMonitor();
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    users -= 1;
+    if (users > 0) return;
+    stopRunning?.();
+    stopRunning = undefined;
   };
 }

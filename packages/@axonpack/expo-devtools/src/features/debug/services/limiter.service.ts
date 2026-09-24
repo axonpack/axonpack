@@ -1,5 +1,7 @@
 import { requireOptionalNativeModule } from 'expo';
 
+import { LIMITER_CRASH_MESSAGE, type LimiterTarget } from '../constants/limiter.const';
+
 type LimiterNativeModule = {
   blockMainThread: (durationMs: number) => void;
   crashMainThread: (message: string) => void;
@@ -26,4 +28,14 @@ export function crashJsThread(message: string) {
 
 export function crashMainThread(message: string) {
   native?.crashMainThread(message);
+}
+
+export function blockThread(target: LimiterTarget, durationMs: number) {
+  if (target === 'main') blockMainThread(durationMs);
+  else blockJsThread(durationMs);
+}
+
+export function crashThread(target: LimiterTarget) {
+  if (target === 'main') crashMainThread(`${LIMITER_CRASH_MESSAGE} (main thread)`);
+  else crashJsThread(`${LIMITER_CRASH_MESSAGE} (JS thread)`);
 }

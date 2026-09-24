@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from 'react';
 import { FlatList, Text, View, type ListRenderItemInfo } from 'react-native';
 
 import { IdleState } from './idle-state.component';
@@ -11,6 +10,7 @@ import {
   type InteractionEntry,
   type LongTaskEntry,
   type UserTimingEntry,
+  usePerformanceStore,
 } from '../stores/performance.store';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
@@ -49,11 +49,10 @@ function renderRow({ item }: ListRenderItemInfo<ListRow>) {
 
 export function EntryList({ list }: { list: PerformanceListKey }) {
   const styles = useStyles();
-  const { longTasks, userTiming, interactions, support, dropped } = useSyncExternalStore(
-    performanceStore.subscribe,
+  const { longTasks, userTiming, interactions, support, dropped } = usePerformanceStore(
     performanceStore.getSnapshot
   );
-  const paused = useSyncExternalStore(performanceStore.subscribe, performanceStore.isPaused);
+  const paused = usePerformanceStore(performanceStore.isPaused);
 
   const supported =
     list === 'longTasks'

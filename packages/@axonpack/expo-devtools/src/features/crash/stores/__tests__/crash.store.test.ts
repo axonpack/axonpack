@@ -57,6 +57,16 @@ describe('crashStore seen flags', () => {
     expect(byId).toEqual({ a: true, b: false });
   });
 
+  it('counts what is still unread', () => {
+    crashStore.add(record('a'));
+    crashStore.add(record('b'));
+    crashStore.add(record('c', { seen: true }));
+    expect(crashStore.getUnseenCount()).toBe(2);
+
+    crashStore.markSeen('a');
+    expect(crashStore.getUnseenCount()).toBe(1);
+  });
+
   it('marks every record seen at once', () => {
     crashStore.add(record('a'));
     crashStore.add(record('b'));

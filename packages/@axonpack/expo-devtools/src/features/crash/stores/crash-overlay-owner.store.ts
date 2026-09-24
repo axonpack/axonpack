@@ -1,8 +1,4 @@
-import { EventEmitter } from 'expo';
-
-type CrashOverlayOwnerEvents = {
-  change: () => void;
-};
+import { createAxonStore } from '../../../core/stores/axon.store';
 
 /**
  * Which mounted `CrashReportOverlay` owns the report sheet.
@@ -22,31 +18,18 @@ type CrashOverlayOwnerEvents = {
  * `DevtoolsOverlay` does the moment the start lands and it swaps branches — left nobody drawing the
  * sheet at all.
  */
-let mounted: object[] = [];
-
-const emitter = new EventEmitter<CrashOverlayOwnerEvents>();
-
-export const crashOverlayOwnerStore = {
-  getOwner(): object | null {
-    return mounted[0] ?? null;
-  },
-  subscribe(listener: () => void) {
-    const subscription = emitter.addListener('change', listener);
-    return () => subscription.remove();
-  },
+export const crashOverlayOwnerStore = createAxonStore({ mounted: [] as object[] }, (set, get) => ({
+  getOwner: (): object | null => get().mounted[0] ?? null,
   claim(token: object) {
-    if (mounted.includes(token)) return;
-    mounted = [...mounted, token];
-    emitter.emit('change');
+    if (!get().mounted.includes(token)) set({ mounted: [...get().mounted, token] });
   },
   release(token: object) {
-    if (!mounted.includes(token)) return;
-    mounted = mounted.filter((entry) => entry !== token);
-    emitter.emit('change');
+    if (get().mounted.includes(token)) {
+      set({ mounted: get().mounted.filter((entry) => entry !== token) });
+    }
   },
   /** Test-only; ownership is otherwise driven entirely by mount and unmount. */
-  reset() {
-    mounted = [];
-    emitter.emit('change');
-  },
-};
+  reset: () => set({ mounted: [] }),
+}));
+
+export const useCrashOverlayOwnerStore = crashOverlayOwnerStore.useStore;

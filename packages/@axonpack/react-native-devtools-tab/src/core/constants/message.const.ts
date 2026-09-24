@@ -14,6 +14,9 @@ export const REGISTER = "tab:register";
 /** App to panel, on every render: what React just changed. */
 export const MUTATE = "tab:mutate";
 
+/** App to panel: show this tab, for a DevTools window that is already open. */
+export const FOCUS = "tab:focus";
+
 /** Panel to app: something in the tab was clicked, typed in, or otherwise acted on. */
 export const ACTION = "tab:action";
 

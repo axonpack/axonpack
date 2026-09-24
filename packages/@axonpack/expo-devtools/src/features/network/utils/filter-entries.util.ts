@@ -2,12 +2,14 @@ import { parseByteSize, parseDurationMs } from './parse-threshold.util';
 import { classifyResourceType, type ResourceType } from './resource-type.util';
 import { matchesStatusQuery, parseStatusQuery, type ParsedStatusQuery } from './status-query.util';
 import {
+  buildMatcher,
   DEFAULT_SEARCH_MODES,
   testMatch,
   type Matcher,
   type SearchModes,
 } from '../../../core/utils/text-search.util';
-import type { NetworkLogEntry, WebSocketLogEntry } from '../stores/network-log.store';
+import { isFetchXhrSource } from '../constants/sources.const';
+import type { NetworkEntry, NetworkLogEntry, WebSocketLogEntry } from '../stores/network-log.store';
 
 /** A `2xx`-style band, or the two states that have no code of their own. */
 export type StatusClass = string;
@@ -147,6 +149,16 @@ function matchesSelection(selected: readonly string[], value: string | undefined
 }
 
 /**
+ * Fetch/XHR is the API that sent a request, as it is in Chrome, not what came back: a fetch that
+ * returned an image is still one. The other types have no API of their own, so they go by MIME type.
+ */
+function matchesType(entry: NetworkLogEntry, type: ResourceType | null): boolean {
+  if (type === null) return true;
+  if (type === 'fetch-xhr') return isFetchXhrSource(entry.source);
+  return classifyResourceType(entry.mimeType) === type;
+}
+
+/**
  * `invert` negates what you asked *for* — search, type, methods, sources, status, the thresholds and
  * the two "only" toggles. The two hide toggles stay absolute: inverting them would resurrect the exact
  * noise they were flipped on to suppress.
@@ -163,7 +175,7 @@ export function matchesFilters(
   const matches =
     matchesSelection(filters.sources, entry.source) &&
     matchesSelection(filters.methods, entry.method) &&
-    (filters.type === null || classifyResourceType(entry.mimeType) === filters.type) &&
+    matchesType(entry, filters.type) &&
     (compiled.status === null ||
       matchesStatusQuery(
         {
@@ -206,6 +218,20 @@ export function matchesSocketFilters(
     testMatch(`${entry.method} ${entry.url} ${entry.status} ${entry.source ?? ''}`, matcher);
 
   return filters.invert ? !matches : matches;
+}
+
+/** Every entry the filters keep, requests and sockets alike. Compiles the filters once for the list. */
+export function filterNetworkEntries(
+  entries: readonly NetworkEntry[],
+  filters: NetworkFilters
+): NetworkEntry[] {
+  const matcher = buildMatcher({ text: filters.search, ...filters.modes });
+  const compiled = compileNetworkFilters(filters);
+  return entries.filter((entry) =>
+    entry.kind === 'websocket'
+      ? matchesSocketFilters(entry, filters, matcher, compiled)
+      : matchesFilters(entry, filters, matcher, compiled)
+  );
 }
 
 export function hasActiveFilters(filters: NetworkFilters): boolean {

@@ -1,5 +1,4 @@
-import { EventEmitter } from 'expo';
-
+import { createAxonStore } from './axon.store';
 import {
   BUILT_IN_THEMES,
   resolveTheme,
@@ -10,56 +9,37 @@ import {
   type ThemeId,
 } from '../constants/theme.const';
 
-type ThemeEvents = {
-  change: () => void;
+type ThemeState = {
+  /** Replaced, never mutated, when a theme is registered, so a subscriber sees the change. */
+  themes: ReadonlyMap<ThemeId, Theme>;
+  activeId: ThemeId;
 };
 
-const emitter = new EventEmitter<ThemeEvents>();
-
-const themes = new Map<ThemeId, Theme>(Object.entries(BUILT_IN_THEMES));
-
-let activeId: ThemeId = 'light';
-
-function notify() {
-  emitter.emit('change');
-}
-
-function active(): Theme {
-  return themes.get(activeId) ?? BUILT_IN_THEMES.light;
-}
-
-export const themeStore = {
-  getPalette(): Palette {
-    return active().palette;
-  },
-  /** What the status bar should be while this theme is showing — see `ThemeConfig.statusBarStyle`. */
-  getStatusBarStyle(): StatusBarStyle {
-    return active().statusBarStyle;
-  },
-  getActiveId(): ThemeId {
-    return activeId;
-  },
-  getIds(): ThemeId[] {
-    return [...themes.keys()];
-  },
-  subscribe(listener: () => void) {
-    const subscription = emitter.addListener('change', listener);
-    return () => subscription.remove();
-  },
-  setActiveId(next: ThemeId) {
-    if (next === activeId || !themes.has(next)) return;
-    activeId = next;
-    notify();
-  },
-  register(configs: Record<ThemeId, ThemeConfig>) {
-    for (const [id, config] of Object.entries(configs)) {
-      themes.set(id, resolveTheme(config));
-    }
-    notify();
-  },
-  setDefaultId(next: ThemeId) {
-    if (!themes.has(next)) return;
-    activeId = next;
-    notify();
-  },
+const initial: ThemeState = {
+  themes: new Map(Object.entries(BUILT_IN_THEMES)),
+  activeId: 'light',
 };
+
+export const themeStore = createAxonStore(initial, (set, get) => {
+  const active = (): Theme => get().themes.get(get().activeId) ?? BUILT_IN_THEMES.light;
+  return {
+    getPalette: (): Palette => active().palette,
+    /** What the status bar should be while this theme is showing — see `ThemeConfig.statusBarStyle`. */
+    getStatusBarStyle: (): StatusBarStyle => active().statusBarStyle,
+    getActiveId: (): ThemeId => get().activeId,
+    getIds: (): ThemeId[] => [...get().themes.keys()],
+    setActiveId(next: ThemeId) {
+      if (next !== get().activeId && get().themes.has(next)) set({ activeId: next });
+    },
+    register(configs: Record<ThemeId, ThemeConfig>) {
+      const themes = new Map(get().themes);
+      for (const [id, config] of Object.entries(configs)) themes.set(id, resolveTheme(config));
+      set({ themes });
+    },
+    setDefaultId(next: ThemeId) {
+      if (get().themes.has(next)) set({ activeId: next });
+    },
+  };
+});
+
+export const useThemeStore = themeStore.useStore;

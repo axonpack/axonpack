@@ -1,3 +1,6 @@
+// Side-effect import: registers this package's tabs in React Native DevTools as early as possible.
+if (__DEV__) require('./devtools-remote-tab/services/register-tab.service');
+
 export { devtools } from './client/start-devtools.client';
 export type {
   BuiltInThemeId,

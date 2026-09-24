@@ -119,6 +119,18 @@ describe('matchesFilters', () => {
     ).toBe(true);
   });
 
+  it('reads Fetch/XHR as the fetch and xhr sources, whatever came back', () => {
+    const fetchXhr = filtersWith({ type: 'fetch-xhr' });
+    expect(matches(entryWith({ source: 'fetch', mimeType: 'image/png' }), fetchXhr)).toBe(true);
+    expect(matches(entryWith({ source: 'xhr' }), fetchXhr)).toBe(true);
+    expect(
+      matches(entryWith({ source: 'expo/fetch', mimeType: 'application/json' }), fetchXhr)
+    ).toBe(false);
+    expect(
+      matches(entryWith({ source: 'fetch', mimeType: 'image/png' }), filtersWith({ type: 'img' }))
+    ).toBe(true);
+  });
+
   it('takes more than one method or source at a time', () => {
     const post = entryWith({ method: 'POST' });
     expect(matches(post, filtersWith({ methods: ['GET', 'POST'] }))).toBe(true);

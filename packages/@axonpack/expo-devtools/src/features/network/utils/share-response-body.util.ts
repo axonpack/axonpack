@@ -18,12 +18,19 @@ const EXTENSIONS: Record<string, string> = {
 };
 
 /** Named after the request, so a saved body is recognisable once it is out of the app. */
-export function responseFileName(entry: NetworkLogEntry): string {
+export function responseFileName(entry: Pick<NetworkLogEntry, 'url' | 'mimeType'>): string {
   const fromUrl = entry.url.split('?')[0].split('/').filter(Boolean).pop() ?? 'response';
   const base = fromUrl.replace(/[^\w.-]/g, '_').slice(0, 60) || 'response';
   if (base.includes('.')) return base;
   const extension = entry.mimeType ? EXTENSIONS[entry.mimeType] : undefined;
   return extension ? `${base}.${extension}` : base;
+}
+
+/** A body as a `data:` URL, bytes as they came and text encoded, or nothing when there is none. */
+export function responseBodyDataUrl(entry: NetworkLogEntry): string | undefined {
+  const mimeType = entry.mimeType ?? 'application/octet-stream';
+  const base64 = entry.responseBase64 ?? (entry.responseBody && encodeBase64(entry.responseBody));
+  return base64 ? `data:${mimeType};base64,${base64}` : undefined;
 }
 
 /**
@@ -34,15 +41,14 @@ export function responseFileName(entry: NetworkLogEntry): string {
  * so a `data:` URL is what the sheet receives either way.
  */
 export async function shareResponseBody(entry: NetworkLogEntry) {
-  const mimeType = entry.mimeType ?? 'application/octet-stream';
-  const base64 = entry.responseBase64 ?? (entry.responseBody && encodeBase64(entry.responseBody));
-  if (!base64) return;
+  const url = responseBodyDataUrl(entry);
+  if (!url) return;
 
   try {
     if (Platform.OS === 'ios') {
       await Share.share({
         title: responseFileName(entry),
-        url: `data:${mimeType};base64,${base64}`,
+        url,
       });
       return;
     }

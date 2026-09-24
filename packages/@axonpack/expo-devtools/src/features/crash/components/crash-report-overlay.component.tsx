@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -6,8 +6,11 @@ import { CompactCrashSheet } from './compact-crash-sheet.component';
 import { CrashDetailSheet } from './crash-detail';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { getCrashPopupDetail } from '../services/crash-popup.service';
-import { crashOverlayOwnerStore } from '../stores/crash-overlay-owner.store';
-import { crashStore } from '../stores/crash.store';
+import {
+  crashOverlayOwnerStore,
+  useCrashOverlayOwnerStore,
+} from '../stores/crash-overlay-owner.store';
+import { crashStore, useCrashStore } from '../stores/crash.store';
 
 /**
  * Mounting this twice is harmless rather than something to get right: `<DevtoolsProvider />` mounts
@@ -16,14 +19,11 @@ import { crashStore } from '../stores/crash.store';
  */
 export function CrashReportOverlay() {
   const styles = useStyles();
-  const records = useSyncExternalStore(crashStore.subscribe, crashStore.getSnapshot);
+  const records = useCrashStore(crashStore.getSnapshot);
 
   /** Identity, not data — this instance's claim on the sheet. */
   const [token] = useState(() => ({}));
-  const owner = useSyncExternalStore(
-    crashOverlayOwnerStore.subscribe,
-    crashOverlayOwnerStore.getOwner
-  );
+  const owner = useCrashOverlayOwnerStore(crashOverlayOwnerStore.getOwner);
   /**
    * Every record this popup has already offered, which is **not** the same thing as `seen`. `seen`
    * means read: the Crashes tab sets it when a row is opened, and the tab badge counts what is left.

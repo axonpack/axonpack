@@ -37,3 +37,18 @@
   **Everything else earns `core/` by being needed twice.** Don't promote a file preemptively: it stays
   inside its feature until a second feature actually imports it. `client/create-devtools-client.client.ts`
   is outside both — one factory for the whole package, and the only thing at the root beside `index.ts`.
+
+- **Stores are built on `createAxonStore`** (`src/core/stores/axon.store.ts`), which matches
+  zustand's semantics without the dependency. Hand it the initial state and an actions factory
+  `(set, get) => ({ ... })`; it supplies `getState`, `setState`, `getInitialState`, `subscribe` and
+  `useStore`. Export the hook beside the store as `use<Name>Store`
+  (`export const useNetworkViewStore = networkViewStore.useStore`). Components call that hook and
+  never `useSyncExternalStore` themselves. A selector must return a value already in the state,
+  never a fresh object. A store's own no-argument getter works as a selector too
+  (`useThemeStore(themeStore.getPalette)`).
+- **The stream stores are the one exception.** `network-log`, `console-log`, `performance`, `crash`
+  and `storage` keep their own internals (ring buffers, a batched notify) and export their hook from
+  `createStoreHook(store.subscribe)`, read with one of their getters:
+  `useConsoleLogStore(consoleLogStore.isPaused)`.
+- State that more than one surface shows (the in-app panel and the React Native DevTools tab) lives in
+  a store, never in a view's `useState`, so a change on either side shows on both.

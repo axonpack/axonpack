@@ -22,3 +22,8 @@ const NATIVE_SOURCES: readonly string[] = Object.values(NETWORK_SOURCES);
 export function isNativeSource(source: string): boolean {
   return NATIVE_SOURCES.includes(source);
 }
+
+/** What the Fetch/XHR type means, so it is not offered again as a source of its own. */
+export function isFetchXhrSource(source: string | undefined): boolean {
+  return source === NETWORK_SOURCES.fetch || source === NETWORK_SOURCES.xhr;
+}

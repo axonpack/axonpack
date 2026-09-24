@@ -1,10 +1,13 @@
-import { useSyncExternalStore } from 'react';
 import { Text, View } from 'react-native';
 
 import { useRowStyles } from './shared.styles';
 import { StreamEventRow } from './stream-event-row.component';
 import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
-import { networkLogStore, type NetworkLogEntry } from '../../stores/network-log.store';
+import {
+  networkLogStore,
+  type NetworkLogEntry,
+  useNetworkLogStore,
+} from '../../stores/network-log.store';
 
 /**
  * This tab lives inside the sheet's own ScrollView rather than a list of its own, so what it renders
@@ -18,9 +21,7 @@ export function EventsTab({ entry }: { entry: NetworkLogEntry }) {
   const styles = useStyles();
   // Subscribed rather than passed in: a stream is open while this is on screen, which is the whole
   // reason it is a stream.
-  const events = useSyncExternalStore(networkLogStore.subscribe, () =>
-    networkLogStore.getStreamEvents(entry.id)
-  );
+  const events = useNetworkLogStore(() => networkLogStore.getStreamEvents(entry.id));
 
   if (events.length === 0) {
     return (

@@ -1,6 +1,7 @@
 import { StyleSheet, TextInput, View, type TextStyle } from 'react-native';
 
 import { MONOSPACE } from '../../constants/typography.const';
+import { useRemoteSafeInput } from '../../services/use-remote-safe-input.service';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 
 /**
@@ -25,13 +26,14 @@ export function TextArea({
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
+  const { textProps, resetKey } = useRemoteSafeInput(value, onChangeText);
 
   return (
     <View style={[bordered && styles.box, { minHeight }]}>
       <TextInput
+        key={resetKey}
         style={[styles.input, style]}
-        value={value}
-        onChangeText={onChangeText}
+        {...textProps}
         placeholder={placeholder}
         placeholderTextColor={COLORS.textSecondary}
         multiline

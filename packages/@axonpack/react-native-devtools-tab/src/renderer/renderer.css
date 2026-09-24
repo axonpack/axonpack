@@ -111,10 +111,13 @@ body {
 
   Hidden by `visibility` rather than `display`, which is what lets it fade: an element that is not
   laid out has nothing to animate. Hidden it also takes no clicks, so it is out of the way.
+
+  Far above anything a tab might stack, because the card opens over the tab's own content and a
+  tab's sticky headers and menus carry z-indexes of their own.
 */
 .axonpack-tab-about {
   position: absolute;
-  z-index: 1;
+  z-index: 1000;
   top: calc(100% + 5px);
   left: -6px;
   display: grid;
@@ -123,13 +126,14 @@ body {
   width: 264px;
   padding: 12px 13px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  /* DevTools' own menus: square-ish corners and a tight shadow, so the card reads as part of it. */
+  border-radius: 4px;
   background: var(--pop);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
-  line-height: 1.55;
-  box-shadow: 0 10px 28px #00000059;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px #0006;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-3px);
@@ -167,13 +171,13 @@ body {
 .axonpack-tab-card {
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 22px 1fr auto;
+  grid-template-columns: 22px 1fr;
   align-items: center;
   gap: 1px 9px;
   width: 100%;
   padding: 9px 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   text-decoration: none;
 }
 
@@ -188,18 +192,16 @@ body {
   background: var(--logo) center / contain no-repeat;
 }
 
-.axonpack-tab-card-stars {
-  color: var(--muted);
-}
-
 .axonpack-tab-card-slogan {
-  grid-column: 2 / span 2;
+  grid-column: 2;
   color: var(--muted);
 }
 
 .axonpack-tab-links {
   display: flex;
-  gap: 14px;
+  /* Four links do not fit the card's width on one line, so they wrap in pairs. */
+  flex-wrap: wrap;
+  gap: 4px 14px;
   width: 100%;
   padding-top: 9px;
   border-top: 1px solid var(--line);
@@ -278,4 +280,28 @@ body {
   to {
     transform: rotate(1turn);
   }
+}
+
+/* What a copy did. Fixed to the bottom of the tab, over whatever the tab drew there. */
+.axonpack-tab-toast {
+  position: fixed;
+  z-index: 1001;
+  bottom: 12px;
+  left: 50%;
+  translate: -50% 0;
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pop);
+  color: var(--fg);
+  box-shadow: 0 2px 8px #0006;
+  font:
+    12px system-ui,
+    sans-serif;
+  pointer-events: none;
+}
+
+.axonpack-tab-toast[data-failed] {
+  color: #f28b82;
 }

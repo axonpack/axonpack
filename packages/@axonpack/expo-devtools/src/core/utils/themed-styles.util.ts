@@ -1,16 +1,15 @@
-import { useSyncExternalStore } from 'react';
 import { StyleSheet } from 'react-native';
 
 import type { Palette, StatusBarStyle } from '../constants/theme.const';
-import { themeStore } from '../stores/theme.store';
+import { themeStore, useThemeStore } from '../stores/theme.store';
 
 export function useThemeColors(): Palette {
-  return useSyncExternalStore(themeStore.subscribe, themeStore.getPalette);
+  return useThemeStore(themeStore.getPalette);
 }
 
 /** The active theme's own status bar style, re-read when the theme changes. */
 export function useStatusBarStyle(): StatusBarStyle {
-  return useSyncExternalStore(themeStore.subscribe, themeStore.getStatusBarStyle);
+  return useThemeStore(themeStore.getStatusBarStyle);
 }
 
 export function makeThemedStyles<T extends StyleSheet.NamedStyles<T>>(

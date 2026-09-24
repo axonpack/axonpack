@@ -129,3 +129,12 @@ export function collectMatchingPaths(
 export function formatCopyValue(value: JsonValue): string {
   return JSON.stringify(value, null, 2);
 }
+
+/** A body read as JSON, or nothing when it is not JSON. */
+export function parseJsonValue(text: string): JsonValue | undefined {
+  try {
+    return JSON.parse(text) as JsonValue;
+  } catch {
+    return undefined;
+  }
+}

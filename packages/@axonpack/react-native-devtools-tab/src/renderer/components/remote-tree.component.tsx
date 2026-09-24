@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native-web";
 
+import { COPY_ATTRIBUTE } from "../../core/constants/devtools.const";
 import {
   isHandler,
   type RemoteProps,
@@ -137,6 +138,8 @@ function isEvent(value: unknown): boolean {
   );
 }
 
+const CONTEXT_MENU = /^onContextMenu(Capture)?$/;
+
 /** One argument, as it can travel. Anything that cannot is dropped rather than taking the call. */
 function argument(value: unknown): unknown {
   if (isEvent(value)) return describe(value as Parameters<typeof describe>[0]);
@@ -158,14 +161,58 @@ function bind(
   for (const [key, value] of Object.entries(props)) {
     if (RESPONDER.test(key)) continue;
 
+    if (!isHandler(value)) {
+      out[key] = value;
+      continue;
+    }
+
     // Every argument, not just the first, and as itself unless it is an event. A callback that was
     // given a string used to be handed the description of an event that never happened.
-    out[key] = isHandler(value)
-      ? (...args: unknown[]) => send(value.handler, args.map(argument))
-      : value;
+    const call = (...args: unknown[]) =>
+      send(value.handler, args.map(argument));
+
+    // A tab that takes a right-click draws its own menu, and the browser's would open on top of it.
+    // The tab's handler runs in the app, long after the browser has decided, so its own
+    // `preventDefault` can never be in time. Asking for the event is taken as asking for this.
+    out[key] = CONTEXT_MENU.test(key)
+      ? (event: { preventDefault?: () => void }, ...rest: unknown[]) => {
+          event.preventDefault?.();
+          call(event, ...rest);
+        }
+      : call;
   }
 
   return out;
+}
+
+/**
+ * The Clipboard API, called inside the click so it has the user activation it asks for. It also
+ * needs a secure context, which localhost is, and an iframe needs its embedder's
+ * `allow="clipboard-write"`, which the host script gives the tab's frame.
+ */
+function copyToClipboard(text: string): void {
+  navigator.clipboard.writeText(text).then(
+    () => toast("Copied"),
+    (error: unknown) =>
+      toast(
+        `Couldn't copy: ${error instanceof Error ? error.message : String(error)}`,
+        true,
+      ),
+  );
+}
+
+/**
+ * Said on the page, because nothing else would say it: a copy has no visible result, and a refused
+ * one only reaches the console of this frame, which nobody has open.
+ */
+function toast(message: string, failed = false): void {
+  document.querySelector(".axonpack-tab-toast")?.remove();
+  const note = document.createElement("div");
+  note.className = "axonpack-tab-toast";
+  if (failed) note.dataset.failed = "";
+  note.textContent = message;
+  document.body.appendChild(note);
+  setTimeout(() => note.remove(), failed ? 5000 : 1500);
 }
 
 function element(
@@ -175,12 +222,21 @@ function element(
   if (node.type === "#text") return node.text;
 
   const children = node.children.map((child) => element(child, send));
+  const props: Record<string, unknown> = {
+    ...bind(node.props, send),
+    key: node.id,
+  };
 
-  return createElement(
-    componentFor(node.type),
-    { ...bind(node.props, send), key: node.id },
-    ...children,
-  );
+  const copied = node.props[COPY_ATTRIBUTE];
+  if (typeof copied === "string") {
+    const onClick = props.onClick as ((...args: unknown[]) => void) | undefined;
+    props.onClick = (...args: unknown[]) => {
+      copyToClipboard(copied);
+      onClick?.(...args);
+    };
+  }
+
+  return createElement(componentFor(node.type), props, ...children);
 }
 
 export function RemoteTree({

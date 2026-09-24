@@ -10,41 +10,7 @@ import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import type { StorageAdapter } from '../services/define-adapter.service';
 import { applyStorageImport, type StorageImportResult } from '../services/import-storage.service';
 import type { StorageEntry } from '../stores/storage.store';
-import {
-  parseStorageExport,
-  planStorageImport,
-  type StorageImportPlan,
-} from '../utils/build-storage-export.util';
-
-type Reading =
-  | { state: 'empty' }
-  | { state: 'unreadable'; message: string }
-  | { state: 'read'; plan: StorageImportPlan };
-
-const SKIP_REASONS = {
-  hidden: 'hidden by the blacklist',
-  unsupported: 'a type this store does not hold',
-  empty: 'no value to write',
-} as const;
-
-function read(text: string, adapter: StorageAdapter, entries: readonly StorageEntry[]): Reading {
-  if (text.trim().length === 0) return { state: 'empty' };
-
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch (error) {
-    return {
-      state: 'unreadable',
-      message: `Not JSON — ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
-
-  const parsed = parseStorageExport(raw);
-  if (!parsed.ok) return { state: 'unreadable', message: `${parsed.path} — ${parsed.message}` };
-
-  return { state: 'read', plan: planStorageImport(parsed.file, adapter, entries) };
-}
+import { readStorageImport, STORAGE_IMPORT_SKIP_REASONS } from '../utils/build-storage-export.util';
 
 export function ImportSheet({
   adapter,
@@ -74,7 +40,10 @@ export function ImportSheet({
 
   // Parsing on every keystroke is fine for a paste and pointless to debounce: the text arrives in one
   // go, and a file large enough to feel it is a file nobody typed by hand.
-  const reading = useMemo(() => read(text, adapter, entries), [text, adapter, entries]);
+  const reading = useMemo(
+    () => readStorageImport(text, adapter, entries),
+    [text, adapter, entries]
+  );
   const plan = reading.state === 'read' ? reading.plan : null;
   const writeCount = plan === null ? 0 : plan.create.length + plan.overwrite.length;
 
@@ -144,7 +113,9 @@ export function ImportSheet({
             {plan.skipped.length > 0 && (
               <Text style={styles.note}>
                 {plan.skipped.length} skipped —{' '}
-                {[...new Set(plan.skipped.map((skip) => SKIP_REASONS[skip.reason]))].join(', ')}
+                {[
+                  ...new Set(plan.skipped.map((skip) => STORAGE_IMPORT_SKIP_REASONS[skip.reason])),
+                ].join(', ')}
               </Text>
             )}
           </View>

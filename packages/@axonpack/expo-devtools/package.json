@@ -1,6 +1,6 @@
 {
   "name": "@axonpack/expo-devtools",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Development Debugging tool for React Native",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
@@ -10,7 +10,7 @@
     "expo",
     "react-native"
   ],
-  "homepage": "https://axonpack.github.io/docs/expo-devtools",
+  "homepage": "https://axonpack.github.io/docs/expo-devtools/",
   "bugs": {
     "url": "https://github.com/axonpack/axonpack/issues"
   },
@@ -72,10 +72,12 @@
     "release:tag": "changeset tag"
   },
   "dependencies": {
+    "@axonpack/react-native-devtools-tab": "^0.1.1",
     "@changesets/changelog-git": "^0.2.1",
     "@expo/vector-icons": "^15.1.1"
   },
   "devDependencies": {
+    "@axonpack/react-pretty-print": "^0.1.1",
     "@babel/core": "^7.26.0",
     "@babel/runtime": "^7.28.4",
     "@types/jest": "^29.2.1",
@@ -104,7 +106,10 @@
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!.*(react-native|expo))"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@babel/runtime/(.*)$": "<rootDir>/node_modules/@babel/runtime/$1"
+    }
   },
   "peerDependencies": {
     "expo": "*",

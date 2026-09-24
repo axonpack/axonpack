@@ -1,8 +1,4 @@
-import { EventEmitter } from 'expo';
-
-type PanelVisibilityEvents = {
-  change: () => void;
-};
+import { createAxonStore } from './axon.store';
 
 /**
  * Whether the panel is open.
@@ -11,31 +7,16 @@ type PanelVisibilityEvents = {
  * hides it opens the panel from its own UI through `useDevtoolsPanel`, and that call site is
  * nowhere near the component holding the modal.
  */
-let open = false;
+export const panelVisibilityStore = createAxonStore({ open: false }, (set, get) => {
+  const setOpen = (open: boolean) => {
+    if (get().open !== open) set({ open });
+  };
+  return {
+    isOpen: (): boolean => get().open,
+    show: () => setOpen(true),
+    hide: () => setOpen(false),
+    toggle: () => setOpen(!get().open),
+  };
+});
 
-const emitter = new EventEmitter<PanelVisibilityEvents>();
-
-function set(next: boolean) {
-  if (open === next) return;
-  open = next;
-  emitter.emit('change');
-}
-
-export const panelVisibilityStore = {
-  isOpen(): boolean {
-    return open;
-  },
-  subscribe(listener: () => void) {
-    const subscription = emitter.addListener('change', listener);
-    return () => subscription.remove();
-  },
-  show() {
-    set(true);
-  },
-  hide() {
-    set(false);
-  },
-  toggle() {
-    set(!open);
-  },
-};
+export const usePanelVisibilityStore = panelVisibilityStore.useStore;

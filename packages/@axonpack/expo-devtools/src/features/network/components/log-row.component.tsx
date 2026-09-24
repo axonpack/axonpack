@@ -14,25 +14,16 @@ import { findMatches, type Matcher } from '../../../core/utils/text-search.util'
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { getResponseTypeVisual, RESOURCE_TYPE_ICONS } from '../constants/resource-type-icons.const';
 import type { NetworkLogEntry } from '../stores/network-log.store';
+import { SparkleIcon } from '../../../core/components/ui/sparkle-icon.ui';
 import { buildEntryCopyMenuItems } from '../utils/entry-menu-items.util';
 import {
+  formatInFlight,
   formatSource,
   getDisplayNameWithQuery,
   getMethodColor,
   getStatusColor,
 } from '../utils/formatters.util';
 import { classifyResourceType, RESOURCE_TYPE_LABELS } from '../utils/resource-type.util';
-
-/**
- * While a request is in flight its status cell has nothing to report, so it carries how far the body
- * has got instead — a percentage when a length was declared, bytes when it was not.
- */
-function formatInFlight(progress: NetworkLogEntry['progress']): string {
-  if (!progress) return 'PENDING';
-  const arrow = progress.direction === 'upload' ? '↑' : '↓';
-  if (progress.total === undefined) return `${arrow} ${formatSize(progress.loaded)}`;
-  return `${arrow} ${Math.min(100, Math.round((progress.loaded / progress.total) * 100))}%`;
-}
 
 function LogRowBase({
   entry,
@@ -41,6 +32,7 @@ function LogRowBase({
   eventCount,
   onPress,
   onOverride,
+  onSandbox,
 }: {
   entry: NetworkLogEntry;
   bigRows: boolean;
@@ -50,6 +42,8 @@ function LogRowBase({
 
   onPress: (entry: NetworkLogEntry) => void;
   onOverride?: (entry: NetworkLogEntry) => void;
+  /** Opens the sandbox on this entry, as the detail sheet's menu does. */
+  onSandbox?: (entry: NetworkLogEntry) => void;
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
@@ -85,51 +79,52 @@ function LogRowBase({
           {formatDuration(entry.duration)} · {new Date(entry.startedAt).toLocaleTimeString()}
         </Text>
       </View>
-      <View style={styles.urlRow}>
-        {typeVisual.kind === 'json' ? (
-          <JsonIcon size={14} color={typeVisual.color} />
-        ) : (
-          <MaterialIcons
-            name={typeVisual.icon}
-            size={14}
-            color={typeVisual.color}
-            style={styles.typeIcon}
-          />
-        )}
-        <View style={styles.urlTextGroup}>
-          {entry.intercepted !== undefined && (
-            // Said on the row itself: a rule that answered instead of the server must never read as one
-            // of the server's own answers.
-            <View style={styles.badges}>
-              <InfoBadge
-                icon={entry.intercepted === 'blocked' ? 'block' : 'edit'}
-                label={entry.intercepted === 'blocked' ? 'Blocked here' : 'Overridden here'}
+      {/* The menu button beside the URL and the chips together, centred on them, so it sets the
+          height of neither line. The top line keeps the whole width for the time. */}
+      <View style={styles.body}>
+        <View style={styles.bodyMain}>
+          <View style={styles.urlRow}>
+            {typeVisual.kind === 'json' ? (
+              <JsonIcon size={14} color={typeVisual.color} />
+            ) : (
+              <MaterialIcons
+                name={typeVisual.icon}
+                size={14}
+                color={typeVisual.color}
+                style={styles.typeIcon}
+              />
+            )}
+            <View style={styles.urlTextGroup}>
+              {entry.intercepted !== undefined && (
+                // Said on the row itself: a rule that answered instead of the server must never
+                // read as one of the server's own answers.
+                <View style={styles.badges}>
+                  <InfoBadge
+                    icon={entry.intercepted === 'blocked' ? 'block' : 'edit'}
+                    label={entry.intercepted === 'blocked' ? 'Blocked here' : 'Overridden here'}
+                  />
+                </View>
+              )}
+              {bigRows && (
+                <HighlightedText
+                  text={displayName}
+                  ranges={findMatches(displayName, matcher)}
+                  style={styles.name}
+                  numberOfLines={1}
+                  selectable={false}
+                />
+              )}
+              <HighlightedText
+                text={entry.url}
+                ranges={findMatches(entry.url, matcher)}
+                style={[styles.url, !bigRows && styles.urlPrimary]}
+                numberOfLines={bigRows ? 1 : 2}
+                selectable={false}
               />
             </View>
-          )}
+          </View>
           {bigRows && (
-            <HighlightedText
-              text={displayName}
-              ranges={findMatches(displayName, matcher)}
-              style={styles.name}
-              numberOfLines={1}
-              selectable={false}
-            />
-          )}
-          <HighlightedText
-            text={entry.url}
-            ranges={findMatches(entry.url, matcher)}
-            style={[styles.url, !bigRows && styles.urlPrimary]}
-            numberOfLines={bigRows ? 1 : 2}
-            selectable={false}
-          />
-        </View>
-      </View>
-
-      <View style={styles.bottomRow}>
-        <View style={styles.badges}>
-          {bigRows && (
-            <>
+            <View style={styles.badges}>
               <InfoBadge
                 icon={RESOURCE_TYPE_ICONS[resourceType]}
                 label={RESOURCE_TYPE_LABELS[resourceType]}
@@ -142,20 +137,27 @@ function LogRowBase({
               ) : (
                 <InfoBadge icon="data-usage" label={formatSize(entry.size)} />
               )}
-            </>
+            </View>
           )}
         </View>
         <IconButton
           name="more-vert"
           color={COLORS.textSecondary}
-          hitSlop={HIT_SLOP.default}
+          hitSlop={HIT_SLOP.dense}
           onPress={openMenu}
+          dense
         />
       </View>
 
       <ContextMenu
         anchor={menuAnchor}
-        items={buildEntryCopyMenuItems(entry, onOverride)}
+        items={[
+          // First, where the detail sheet's menu has it, with the same sparkle.
+          ...(onSandbox
+            ? [{ label: 'Try in sandbox', icon: <SparkleIcon />, onPress: () => onSandbox(entry) }]
+            : []),
+          ...buildEntryCopyMenuItems(entry, onOverride),
+        ]}
         onClose={() => setMenuAnchor(null)}
       />
     </TouchableOpacity>
@@ -166,19 +168,23 @@ const useStyles = makeThemedStyles((COLORS) => ({
   row: {
     gap: 2,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     backgroundColor: COLORS.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
   rowBig: {
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
 
-  bottomRow: {
+  body: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  bodyMain: {
+    flex: 1,
+    gap: 2,
   },
   topRow: {
     flexDirection: 'row',
@@ -240,6 +246,7 @@ export const LogRow = memo(
     prev.matcher === next.matcher &&
     prev.onPress === next.onPress &&
     prev.onOverride === next.onOverride &&
+    prev.onSandbox === next.onSandbox &&
     prev.entry.id === next.entry.id &&
     prev.entry.method === next.entry.method &&
     prev.entry.url === next.entry.url &&
