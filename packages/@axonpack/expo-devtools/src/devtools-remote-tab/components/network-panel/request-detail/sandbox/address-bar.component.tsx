@@ -1,3 +1,5 @@
+import { COPY_ATTRIBUTE } from '@axonpack/react-native-devtools-tab';
+
 import { SyncedInput } from '../../synced-input.component';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
@@ -37,7 +39,15 @@ export function AddressBar({
       <span className="axonpack-sbx-url">
         <SyncedInput value={url} onChange={onUrl} placeholder="Enter a URL" label="URL" />
       </span>
+      <button
+        className="axonpack-net-button axonpack-sbx-copy-url"
+        data-icon="copy"
+        title="Copy URL"
+        aria-label="Copy URL"
+        {...{ [COPY_ATTRIBUTE]: url }}
+      />
       <button className="axonpack-sbx-send" disabled={sending || !url.trim()} onClick={onSend}>
+        <span className="axonpack-sbx-play" data-icon="triangle-right" />
         {sending ? 'Sending…' : 'Send'}
       </button>
     </div>

@@ -24,11 +24,15 @@ export function SandboxPane({ entry }: { entry: NetworkLogEntry }) {
   const [draft, setDraft] = useState<SandboxDraft>(() => sandboxDraftFor(entry));
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<SandboxResult | null>(null);
+  // What the last send went with, for the response's Request Headers, not what the draft says now.
+  const [sentHeaders, setSentHeaders] = useState<Record<string, string>>({});
   const edit = (patch: Partial<SandboxDraft>) => setDraft((current) => ({ ...current, ...patch }));
 
   async function send() {
     setSending(true);
-    const response = await sendSandboxRequest(buildSandboxRequest(draft));
+    const request = buildSandboxRequest(draft);
+    setSentHeaders(request.headers);
+    const response = await sendSandboxRequest(request);
     setSending(false);
     setResult(response);
   }
@@ -45,12 +49,8 @@ export function SandboxPane({ entry }: { entry: NetworkLogEntry }) {
       />
       <div className="axonpack-sbx-split">
         <RequestSection draft={draft} onEdit={edit} />
-        <ResponseSection sending={sending} result={result} />
+        <ResponseSection sending={sending} result={result} sentHeaders={sentHeaders} />
       </div>
-      <p className="axonpack-sbx-footnote">
-        Throttling and the user agent apply here too. They are in Network settings, under the gear,
-        and shared with the whole app.
-      </p>
     </div>
   );
 }

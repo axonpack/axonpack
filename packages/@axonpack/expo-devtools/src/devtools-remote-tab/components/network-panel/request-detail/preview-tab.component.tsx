@@ -3,17 +3,9 @@ import { CodeHighlight, XmlTree, detectLanguage } from '@axonpack/react-pretty-p
 import { JsonTree } from './json-tree.component';
 import { TAB_PRIMITIVES } from './tab-primitives.component';
 import { themeStore, useThemeStore } from '../../../../core/stores/theme.store';
-import type { JsonValue } from '../../../../core/utils/json-tree.util';
+import { parseJsonValue } from '../../../../core/utils/json-tree.util';
 import type { NetworkLogEntry } from '../../../../features/network/stores/network-log.store';
 import { prettyPrintTheme } from '../../../utils/pretty-print-theme.util';
-
-function parseJson(body: string): JsonValue | undefined {
-  try {
-    return JSON.parse(body) as JsonValue;
-  } catch {
-    return undefined;
-  }
-}
 
 /** What the app's Preview draws for the body: a picture, a page, a JSON or XML tree, or the code. */
 export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
@@ -35,7 +27,7 @@ export function PreviewTab({ entry }: { entry: NetworkLogEntry }) {
     return <iframe className="axonpack-net-preview-page" sandbox="" srcDoc={entry.responseBody} />;
   }
 
-  const json = parseJson(entry.responseBody);
+  const json = parseJsonValue(entry.responseBody);
   if (json !== undefined && typeof json === 'object' && json !== null) {
     return <JsonTree value={json} />;
   }

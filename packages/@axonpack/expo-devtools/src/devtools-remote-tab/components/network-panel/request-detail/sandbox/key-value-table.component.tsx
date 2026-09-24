@@ -4,7 +4,10 @@ import {
 } from '../../../../../features/network/utils/sandbox.util';
 import { SyncedInput } from '../../synced-input.component';
 
-/** A grid of key and value cells, with the blank row at the end that becomes the next one. */
+/**
+ * Key and value cells with no header row, as Scalar draws them: the blank row at the end says what
+ * goes where with its placeholders, and becomes the next row when it is typed in.
+ */
 export function KeyValueTable({
   rows,
   onChange,
@@ -19,12 +22,6 @@ export function KeyValueTable({
 
   return (
     <div className="axonpack-sbx-table" role="table">
-      <div className="axonpack-sbx-table-head" role="row">
-        <span />
-        <span>Key</span>
-        <span>Value</span>
-        <span />
-      </div>
       {rows.map((row) => {
         const blank = !row.key && !row.value;
         return (

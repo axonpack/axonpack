@@ -764,30 +764,131 @@ ${dragRules}
   color: var(--fg);
   font-weight: 600;
 }
-.axonpack-sbx-tabs { display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.axonpack-sbx-tabs button {
-  position: relative;
+/* Scalar's folding sections: a tinted band with a chevron, the content ruled under it. */
+.axonpack-sbx-section { border-bottom: 1px solid var(--line); }
+.axonpack-sbx-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  color: var(--fg);
+  font-weight: 500;
+  list-style: none;
+  cursor: default;
+  user-select: none;
+}
+.axonpack-sbx-section > summary::-webkit-details-marker { display: none; }
+.axonpack-sbx-section > summary::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  background: var(--muted);
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+  --icon: url("data:image/svg+xml,${encodeURIComponent(CHROME_ICONS['triangle-right'])}");
+  transition: rotate 0.1s;
+}
+.axonpack-sbx-section[open] > summary::before { rotate: 90deg; }
+.axonpack-sbx-section[open] > summary { border-bottom: 1px solid var(--line); }
+.axonpack-sbx-summary-end {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 8px;
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 400;
+}
+/* Docked at the foot of the request, as Scalar's is, so it stays in view while the rest scrolls. */
+.axonpack-sbx-snippet {
+  flex: none;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+}
+.axonpack-sbx-snippet[open] { max-height: 45%; }
+.axonpack-sbx-lines {
+  margin: 0;
+  padding: 6px 12px 8px 40px;
+  color: var(--fg);
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.axonpack-sbx-lines li::marker { color: var(--muted); }
+.axonpack-sbx-copy-url { align-self: center; margin: 0 4px; }
+.axonpack-sbx-send { display: flex; align-items: center; gap: 4px; }
+.axonpack-sbx-play::before {
+  content: "";
+  display: block;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+/* A labelled field on one line, "Bearer Token: …", across the section as Scalar draws it. */
+.axonpack-sbx-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 6px 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+.axonpack-sbx-field > span { color: var(--fg); white-space: nowrap; }
+.axonpack-sbx-field > input {
+  flex: 1;
+  min-width: 0;
   border: 0;
+  outline: 0;
+  background: none;
+  color: var(--fg);
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.axonpack-sbx-note { margin: 0; padding: 8px 10px; color: var(--muted); }
+.axonpack-sbx-summary-end .axonpack-net-select { margin: 0; }
+/* The body's own bar: its content type, and the switch between the tree and the text. */
+.axonpack-sbx-body-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px 0 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.axonpack-sbx-toggle {
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 3px;
   background: none;
   color: var(--muted);
-  font: inherit;
-  white-space: nowrap;
+  font: 12px system-ui, sans-serif;
 }
-.axonpack-sbx-tabs button:hover { color: var(--fg); }
-.axonpack-sbx-tabs button[aria-selected="true"] { color: var(--fg); }
-.axonpack-sbx-tabs button[aria-selected="true"]::after {
+.axonpack-sbx-toggle[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg);
+}
+.axonpack-sbx-response-body .axonpack-json { padding: 6px 10px; }
+.axonpack-sbx-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  text-decoration: none;
+}
+.axonpack-sbx-download:hover { color: var(--fg); }
+.axonpack-sbx-download::before {
   content: "";
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 0;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: var(--link);
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
 }
 .axonpack-sbx-count {
   min-width: 14px;
@@ -830,14 +931,7 @@ ${dragRules}
 .axonpack-sbx-hint { grid-column: 1 / -1; margin: 0; color: var(--muted); }
 /* Key and value cells, ruled like a spreadsheet, the way API clients draw them. */
 .axonpack-sbx-table { display: grid; grid-template-columns: 28px minmax(0, 2fr) minmax(0, 3fr) 28px; }
-.axonpack-sbx-table-head,
 .axonpack-sbx-table-row { display: contents; }
-.axonpack-sbx-table-head > span {
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
-  font-weight: 500;
-}
 .axonpack-sbx-table-row > * {
   min-width: 0;
   height: 26px;
@@ -869,7 +963,8 @@ ${dragRules}
 }
 .axonpack-sbx-form > span:not(.axonpack-net-select):not(.axonpack-sbx-header) { color: var(--muted); }
 .axonpack-sbx-form > .axonpack-net-select { justify-self: start; margin: 0; }
-.axonpack-sbx-form > input {
+.axonpack-sbx-form > input,
+.axonpack-sbx-header > input {
   box-sizing: border-box;
   height: 24px;
   padding: 0 8px;
@@ -880,14 +975,15 @@ ${dragRules}
   color: var(--fg);
   font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
 }
-.axonpack-sbx-form > input:focus { border-color: var(--link); }
+.axonpack-sbx-form > input:focus,
+.axonpack-sbx-header > input:focus { border-color: var(--link); }
 .axonpack-sbx-header { display: contents; }
 .axonpack-sbx-header > span:first-child { color: var(--muted); font-weight: 500; }
 .axonpack-sbx-header > span:last-child { overflow-wrap: anywhere; }
-.axonpack-sbx-body { display: flex; flex-direction: column; height: 100%; }
+.axonpack-sbx-body { display: flex; flex-direction: column; }
 .axonpack-sbx-body textarea {
   flex: 1;
-  min-height: 180px;
+  min-height: 140px;
   padding: 10px 12px;
   border: 0;
   outline: 0;
@@ -906,14 +1002,6 @@ ${dragRules}
 }
 .axonpack-sbx-code { flex: 1; margin: 0; padding: 10px 12px; line-height: 1.5; }
 .axonpack-sbx-code[data-tone="error"] { color: var(--net-red); }
-.axonpack-sbx-footnote {
-  flex: none;
-  margin: 0;
-  padding: 5px 10px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 11px;
-}
 .axonpack-net-editor-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .axonpack-net-action {
   padding: 3px 12px;

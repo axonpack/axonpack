@@ -18,7 +18,7 @@ const EXTENSIONS: Record<string, string> = {
 };
 
 /** Named after the request, so a saved body is recognisable once it is out of the app. */
-export function responseFileName(entry: NetworkLogEntry): string {
+export function responseFileName(entry: Pick<NetworkLogEntry, 'url' | 'mimeType'>): string {
   const fromUrl = entry.url.split('?')[0].split('/').filter(Boolean).pop() ?? 'response';
   const base = fromUrl.replace(/[^\w.-]/g, '_').slice(0, 60) || 'response';
   if (base.includes('.')) return base;
