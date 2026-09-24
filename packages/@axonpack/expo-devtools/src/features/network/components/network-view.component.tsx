@@ -5,6 +5,7 @@ import { DetailPanel } from './detail-panel';
 import { FilterPanel } from './filter-panel.component';
 import { LogRow } from './log-row.component';
 import { OverrideEditor } from './override-editor.component';
+import { SandboxSheet } from './sandbox';
 import { OverviewStrip } from './overview-strip.component';
 import { SettingsPanel } from './settings-panel.component';
 import { SocketDetailPanel } from './socket-detail-panel.component';
@@ -65,11 +66,13 @@ export function NetworkView() {
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
   const [overrideEntry, setOverrideEntry] = useState<NetworkLogEntry | null>(null);
+  const [sandboxEntry, setSandboxEntry] = useState<NetworkLogEntry | null>(null);
 
   // Stable, so the sheets below can be memoised: the list re-renders on every request, and an open
   // detail panel re-rendering with it is the most expensive thing in the tab.
   const closeEntry = useCallback(() => setSelectedEntry(null), []);
   const closeOverride = useCallback(() => setOverrideEntry(null), []);
+  const closeSandbox = useCallback(() => setSandboxEntry(null), []);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -208,6 +211,7 @@ export function NetworkView() {
           }
           onPress={setSelectedEntry}
           onOverride={setOverrideEntry}
+          onSandbox={setSandboxEntry}
         />
       ),
     [bigRows, matcher]
@@ -312,6 +316,7 @@ export function NetworkView() {
       />
 
       <OverrideEditor entry={overrideEntry} onClose={closeOverride} />
+      <SandboxSheet visible={sandboxEntry !== null} entry={sandboxEntry} onClose={closeSandbox} />
 
       <SocketDetailPanel
         entry={selectedEntry?.kind === 'websocket' ? selectedEntry : null}
