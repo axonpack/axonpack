@@ -3,10 +3,10 @@ import type { ComponentType } from 'react';
 import type { MaterialIcon } from './material-icons.const';
 import { ConsolePanel } from '../components/console-panel';
 import { CrashesPanel } from '../components/crashes-panel';
+import { DebugPanel } from '../components/debug-panel';
 import { NetworkPanel } from '../components/network-panel';
 import { ConsoleBadge, CrashesBadge } from '../components/panel-badges.component';
 import { PerformancePanel } from '../components/performance-panel';
-import { PlaceholderPanel } from '../components/placeholder-panel.component';
 import { StoragePanel } from '../components/storage-panel';
 
 export type AxonpackPanel = {
@@ -57,7 +57,7 @@ const BUILT_IN: AxonpackPanel[] = [
     id: 'debug',
     title: 'Debug',
     icon: 'construction',
-    component: () => <PlaceholderPanel title="Debug" />,
+    component: DebugPanel,
   },
 ];
 

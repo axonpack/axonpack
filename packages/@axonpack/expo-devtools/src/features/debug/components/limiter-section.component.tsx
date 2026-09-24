@@ -2,43 +2,25 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
+import { LIMITER_PRESETS_MS } from '../constants/limiter.const';
 import {
-  blockJsThread,
-  blockMainThread,
-  crashJsThread,
-  crashMainThread,
+  blockThread,
+  crashThread,
   isMainThreadLimiterAvailable,
 } from '../services/limiter.service';
+import { limiterStore, useLimiterStore } from '../stores/limiter.store';
+import { blockNote, crashNote, formatPreset } from '../utils/limiter-copy.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { Chip } from '../../../core/components/ui/chip.ui';
-
-type Target = 'js' | 'main';
-
-const PRESETS = [100, 250, 500, 1000, 3000];
-
-/**
- * Names the package rather than the tab it was pressed on. This string becomes the crash record's
- * message and outlives the UI around it — it read "Crash from the devtools Limiter" until the Limiter
- * stopped being a tab, and whoever reads it in a bug report cares that the devtools caused it, not
- * where the button happened to live that release.
- */
-const CRASH_MESSAGE = 'Deliberate crash from @axonpack/expo-devtools';
 
 export function LimiterSection() {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const [target, setTarget] = useState<Target>('js');
-  const [durationMs, setDurationMs] = useState(250);
-  const [customText, setCustomText] = useState('');
+  const { target, durationMs, customText } = useLimiterStore();
   const [armed, setArmed] = useState(false);
 
   const mainThreadAvailable = isMainThreadLimiterAvailable();
   const targetAvailable = target === 'js' || mainThreadAvailable;
-
-  const block = () => {
-    if (target === 'main') blockMainThread(durationMs);
-    else blockJsThread(durationMs);
-  };
 
   const crash = () => {
     if (!armed) {
@@ -46,41 +28,40 @@ export function LimiterSection() {
       return;
     }
     setArmed(false);
-    if (target === 'main') crashMainThread(`${CRASH_MESSAGE} (main thread)`);
-    else crashJsThread(`${CRASH_MESSAGE} (JS thread)`);
+    crashThread(target);
   };
 
   return (
     <View style={styles.panel}>
       <Text style={styles.label}>Thread</Text>
       <View style={styles.row}>
-        <Chip label="JavaScript" active={target === 'js'} onPress={() => setTarget('js')} />
-        <Chip label="Main (UI)" active={target === 'main'} onPress={() => setTarget('main')} />
+        <Chip
+          label="JavaScript"
+          active={target === 'js'}
+          onPress={() => limiterStore.setTarget('js')}
+        />
+        <Chip
+          label="Main (UI)"
+          active={target === 'main'}
+          onPress={() => limiterStore.setTarget('main')}
+        />
       </View>
 
       <Text style={styles.label}>For</Text>
       <View style={styles.row}>
-        {PRESETS.map((preset) => (
+        {LIMITER_PRESETS_MS.map((preset) => (
           <Chip
             key={preset}
-            label={preset >= 1000 ? `${preset / 1000}s` : `${preset}ms`}
+            label={formatPreset(preset)}
             active={durationMs === preset && customText.length === 0}
-            onPress={() => {
-              setCustomText('');
-              setDurationMs(preset);
-            }}
+            onPress={() => limiterStore.choosePreset(preset)}
           />
         ))}
         <View style={styles.customRow}>
           <TextInput
             style={styles.customInput}
             value={customText}
-            onChangeText={(text) => {
-              const digitsOnly = text.replace(/[^0-9]/g, '');
-              setCustomText(digitsOnly);
-              const parsed = Number(digitsOnly);
-              if (digitsOnly.length > 0 && parsed > 0) setDurationMs(parsed);
-            }}
+            onChangeText={limiterStore.setCustomText}
             placeholder="Custom"
             placeholderTextColor={COLORS.textSecondary}
             keyboardType="number-pad"
@@ -95,7 +76,7 @@ export function LimiterSection() {
         <TouchableOpacity
           style={[styles.button, !targetAvailable && styles.buttonDisabled]}
           disabled={!targetAvailable}
-          onPress={block}>
+          onPress={() => blockThread(target, durationMs)}>
           <Text style={[styles.buttonLabel, !targetAvailable && styles.buttonLabelDisabled]}>
             Block for {durationMs}ms
           </Text>
@@ -111,26 +92,8 @@ export function LimiterSection() {
         </TouchableOpacity>
       </View>
 
-      {target === 'main' && !mainThreadAvailable ? (
-        <Text style={styles.note}>
-          Blocking the main thread needs a dev build. The JS thread works anywhere.
-        </Text>
-      ) : (
-        <Text style={styles.note}>
-          {target === 'js'
-            ? 'Blocking shows up as a long task and drops the JS frame rate — both on the Performance tab.'
-            : 'Blocking freezes the screen while JavaScript keeps ticking. The Performance tab shows the gap: its JS numbers stay fine throughout.'}
-        </Text>
-      )}
-
-      {/* The two crashes are not the same event, and the difference is the whole point of the
-          Crashes tab: a JS throw is caught and reported before you let go of the button, while a
-          main-thread crash ends the process and is read back off disk at the next launch. */}
-      <Text style={styles.note}>
-        {target === 'js'
-          ? 'Crashing throws on the JS thread. The report opens straight away and stays in the Crashes tab.'
-          : 'Crashing ends the process. Reopen the app and the report is waiting in the Crashes tab.'}
-      </Text>
+      <Text style={styles.note}>{blockNote(target, mainThreadAvailable)}</Text>
+      <Text style={styles.note}>{crashNote(target)}</Text>
     </View>
   );
 }
