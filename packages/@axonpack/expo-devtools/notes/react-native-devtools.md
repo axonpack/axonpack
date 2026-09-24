@@ -1,29 +1,35 @@
 # React Native DevTools tab
 
-An **Axon Network** tab in React Native DevTools, beside Console and Sources, drawn by a component
+An **Axonpack** tab in React Native DevTools, beside Console and Sources, drawn by a component
 that runs in the app.
 
-- [x] With the dev server running, opening React Native DevTools shows an Axon Network tab.
+- [x] With the dev server running, opening React Native DevTools shows an Axonpack tab.
 - [x] Chrome's Network panel, feature for feature with the on-device tab: the toolbar, the filter
       and settings drawers, the overview strip, the sortable list and the detail pane.
 - [x] Search with regex, case and whole-word modes, inverted, with the matches marked.
 - [x] Filter by type, method, source, a status expression, size and duration; in flight only,
       intercepted only, hide data URLs, hide failed.
-- [x] Dense rows, grouping by client, the overview strip, stacked header values, and sorting by
-      time, size, duration or status from the column headers.
-- [x] Throttling and the user agent, which are the device's own and change what the app really does.
-- [x] Detail: Headers, Payload, Preview, Response, Events, Timing, Cookies, Initiator and Snippets,
-      plus Messages for a socket.
+- [x] Dense rows, grouping by client, the overview strip, and sorting by time, size, duration or
+      status from the column headers.
+- [x] Throttling presets, which are the device's own and change what the app really does.
+- [x] Detail: Headers, Payload, Preview, Response, EventStream, Timing, Cookies and Initiator, plus
+      Messages for a socket.
 - [x] Preview draws an image, a page and an SVG, and lays out XML as a tree; Response carries both
-      sizes and a hex dump of a binary body.
+      sizes.
 - [x] Initiator symbolicates against the dev server and shows the source around the line.
-- [x] Block a URL or answer it yourself, and edit any request and send it again for real.
+- [x] Block a URL from the row menu.
+- [x] The row menu's copies, which land on the device's clipboard.
+- [ ] Answer a request yourself with an override.
+- [ ] Edit any request in the sandbox and send it again for real.
+- [ ] A custom throttle speed, and the user agent.
+- [ ] Stacked header values.
+- [ ] A hex dump of a binary body.
 - [x] The whole log as the export file, and every count as the device counts it.
 - [x] Reading on the desktop changes nothing on the device: the on-device panel still opens, still
       records, and still works with the dev server gone.
 - [x] An app that does not opt in sees no tab and no change at all.
-- [ ] Saving a body to a file, and copying to the clipboard: both need a real element to click, and
-      a `ref` in a tab holds a stand-in. Snippets and Export show the text to select instead.
+- [ ] Saving a body to a file from the browser: it needs a real element to click, and a `ref` in a
+      tab holds a stand-in.
 - [ ] Dragging a range across the overview strip, for the same reason: nothing to measure against.
 - [ ] The rest of the panel: console, storage, performance and crashes.
 - [ ] A prompt box in the tab answers questions about the project on the developer's machine.
@@ -47,7 +53,7 @@ is a component running in the app. All of it is gone, `panel/` included.
 
 ## The tab is written for a browser, not reused from the device
 
-`src/react-native-devtools-tab/` holds the tab and nothing else, in `div` and `table`. Nothing in it
+`src/devtools-remote-tab/` holds the tab and nothing else, in `div` and `table`. Nothing in it
 is rendered on a device and nothing on a device imports it, so the mobile panel is untouched by
 whatever this needs.
 
