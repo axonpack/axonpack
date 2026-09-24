@@ -22,3 +22,13 @@ export const DEVTOOLS_ROUTE = `/${DEVTOOLS_ID}-tab`;
  * the tab strip empty until the app itself restarted.
  */
 export const DEVTOOLS_TABS = `__${DEVTOOLS_ID}_tabs__`;
+
+/**
+ * The tab the next DevTools window should open on, left here by `focus()`.
+ *
+ * A note rather than a message, because the window it is for does not exist yet. `openDebugger` asks
+ * Metro for a window and cannot say which panel to show on iOS, and the frontend's own `panel`
+ * parameter is read at startup, before any tab of ours has been added. So the window reads this when
+ * it connects, the same way it reads the tab list, and clears it so only one window acts on it.
+ */
+export const DEVTOOLS_FOCUS = `__${DEVTOOLS_ID}_focus__`;

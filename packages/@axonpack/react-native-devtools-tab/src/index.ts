@@ -1,8 +1,13 @@
 import { createElement, type ComponentType } from "react";
 
-import { DEVTOOLS_ID, DEVTOOLS_TABS } from "./core/constants/devtools.const";
+import {
+  DEVTOOLS_FOCUS,
+  DEVTOOLS_ID,
+  DEVTOOLS_TABS,
+} from "./core/constants/devtools.const";
 import {
   ACTION,
+  FOCUS,
   HELLO,
   MUTATE,
   REGISTER,
@@ -118,10 +123,19 @@ export type TabOptions = {
  */
 export type ReactNativeDevtoolsPanel = {
   /** Adds a tab to React Native DevTools. Call it once per tab, as many times as you have tabs. */
-  registerTab: (options: TabOptions) => void;
+  registerTab: (options: TabOptions) => RegisteredTab;
 };
 
-function registerTab(options: TabOptions): void {
+export type RegisteredTab = {
+  /**
+   * Shows this tab in React Native DevTools: now, in a window that is already open, and in the next
+   * window that connects. Call it just before opening DevTools from the app, for example with
+   * `DevSettings`' `openDebugger`, so the window lands here instead of on Console.
+   */
+  focus: () => void;
+};
+
+function registerTab(options: TabOptions): RegisteredTab {
   const id = idFor(options.name);
   const tab = createTabChannel(channel, id);
   let sender: RemoteSender | null = null;
@@ -168,6 +182,13 @@ function registerTab(options: TabOptions): void {
     const event = payload as TabAction;
     sender?.dispatch(event.action, event.payload);
   });
+
+  return {
+    focus: () => {
+      (globalThis as Record<string, unknown>)[DEVTOOLS_FOCUS] = id;
+      tab.send(FOCUS);
+    },
+  };
 }
 
 export const ReactNativeDevtoolsPanel: ReactNativeDevtoolsPanel = {
