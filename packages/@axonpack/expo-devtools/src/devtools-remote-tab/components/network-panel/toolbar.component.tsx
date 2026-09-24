@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import { Checkbox } from './checkbox.component';
+// TODO(network): only the hidden Preserve log checkbox below uses it.
+// import { Checkbox } from './checkbox.component';
 import {
   THROTTLE_PRESET_IDS,
   THROTTLE_PRESET_LABELS,
@@ -44,7 +45,8 @@ export function NetworkToolbar({
   onToggleSettings: () => void;
 }) {
   const recording = !useNetworkLogStore(networkLogStore.isPaused);
-  const preserveLog = useNetworkLogStore(networkLogStore.isPreserveLogEnabled);
+  // TODO(network): hidden for now, with its checkbox below. Uncomment both to bring it back.
+  // const preserveLog = useNetworkLogStore(networkLogStore.isPreserveLogEnabled);
   const throttleId = useNetworkConditionsStore((state) => state.throttleId);
   const { filters, sort } = useNetworkViewStore();
   const timeRange = useNetworkViewStore(activeTimeRange);
@@ -96,6 +98,7 @@ export function NetworkToolbar({
         title="Filter"
         onClick={onToggleFilterBar}
       />
+      {/* TODO(network): Preserve log, hidden for now.
       <span className="axonpack-net-divider" />
       <Checkbox
         label="Preserve log"
@@ -103,6 +106,7 @@ export function NetworkToolbar({
         checked={preserveLog}
         onChange={networkLogStore.setPreserveLog}
       />
+      */}
       <span className="axonpack-net-divider" />
       <span className="axonpack-net-select" title="Throttling">
         <select

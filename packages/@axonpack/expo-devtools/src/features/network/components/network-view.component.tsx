@@ -53,7 +53,8 @@ export function NetworkView() {
   const { width } = useWindowDimensions();
   const logs = useNetworkLogStore(networkLogStore.getMergedSnapshot);
   const paused = useNetworkLogStore(networkLogStore.isPaused);
-  const preserveLog = useNetworkLogStore(networkLogStore.isPreserveLogEnabled);
+  // TODO(network): hidden for now, with its toolbar button below. Uncomment both to bring it back.
+  // const preserveLog = useNetworkLogStore(networkLogStore.isPreserveLogEnabled);
 
   // Shared with the React Native DevTools tab's toolbar, so a change on either side shows on both.
   const {
@@ -243,6 +244,7 @@ export function NetworkView() {
 
         <ToolbarDivider />
 
+        {/* TODO(network): Preserve log, hidden for now.
         <IconButton
           name={preserveLog ? 'bookmark' : 'bookmark-border'}
           color={preserveLog ? COLORS.accent : COLORS.textSecondary}
@@ -252,6 +254,7 @@ export function NetworkView() {
         />
 
         <ToolbarDivider />
+        */}
 
         <IconButton
           name="file-download"
