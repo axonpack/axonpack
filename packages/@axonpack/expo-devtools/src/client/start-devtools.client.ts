@@ -22,12 +22,14 @@ import { patchFetch } from '../features/network/services/patch-fetch.service';
 import { patchWebSocket } from '../features/network/services/patch-websocket.service';
 import { patchXHR } from '../features/network/services/patch-xhr.service';
 import { setStreamCapture } from '../features/network/services/record-stream-events.service';
+import { configureNetworkRedaction } from '../features/network/services/redact-network.service';
 import {
   setWebViewSocketCapture,
   setWebViewStreamCapture,
 } from '../features/network/services/webview-network-logger.service';
 import { networkConditionsStore } from '../features/network/stores/network-conditions.store';
 import { networkLogStore } from '../features/network/stores/network-log.store';
+import type { NetworkLogEntry } from '../features/network/stores/network-log.store';
 import { startPerformanceCollectors } from '../features/performance/services/performance-collectors.service';
 import {
   clearRecordedMarks,
@@ -81,6 +83,32 @@ export type DevtoolsNetworkConfig = {
    * a way to keep the patches out of the app.
    */
   disabledByDefault?: boolean;
+  /**
+   * Header names whose values are replaced with `[redacted]` before a request is stored, matched
+   * without regard to case. Nothing downstream sees the real value: not the list, the detail panel,
+   * copy, export, the DevTools tab or crash breadcrumbs. Replaying a request from the panel sends the
+   * placeholder too.
+   *
+   * Empty by default, so nothing is redacted until you list it. While `cookie` is in the list, a
+   * page's `document.cookie` is redacted as well.
+   *
+   * ```ts
+   * redactHeaders: ['authorization', 'cookie', 'set-cookie']
+   * ```
+   */
+  redactHeaders?: readonly string[];
+  /**
+   * Your chance to strip anything else sensitive, such as a token in a query string or a body. Runs
+   * after `redactHeaders`, each time a request's entry changes, before it is stored. Return the
+   * entry, edited or not, or `null` to drop the request. If it throws, the request is dropped.
+   *
+   * ```ts
+   * redact: (entry) => ({ ...entry, url: entry.url.replace(/token=[^&]+/, 'token=[redacted]') })
+   * ```
+   *
+   * WebSocket rows do not pass through it.
+   */
+  redact?: (entry: NetworkLogEntry) => NetworkLogEntry | null;
 };
 
 /** Everything the Console tab does. Both switches default to `true`. */
@@ -395,6 +423,8 @@ export function startDevtools<TThemeName extends string = never>(
     websocket: captureSockets = true,
     sse: captureStreams = true,
     disabledByDefault: networkStartsPaused = false,
+    redactHeaders,
+    redact: redactNetwork,
   } = config?.network ?? {};
   const {
     capture: captureConsole = true,
@@ -494,6 +524,7 @@ export function startDevtools<TThemeName extends string = never>(
   // First among the subsystems, so the handlers are already listening if anything below throws.
   initCrashCapture(true);
 
+  configureNetworkRedaction({ headers: redactHeaders, redact: redactNetwork });
   networkLogStore.setEnabled(true);
   if (networkStartsPaused) networkLogStore.setPaused(true);
   if (captureHttp) {
