@@ -118,7 +118,7 @@ The provider calls `startDevtools(config)` **during render**, not in an effect: 
 
 ### Network logging (`src/features/network/services/`, `src/features/network/stores/`)
 
-Three independent interception paths feed one shared store (`features/network/stores/network-log.store.ts`, an in-memory ring buffer capped at 200 entries, pub/sub via `expo`'s `EventEmitter`, read via `useSyncExternalStore` in `network-view.component.tsx`):
+Three independent interception paths feed one shared store (`features/network/stores/network-log.store.ts`, an in-memory ring buffer capped at 1,000 entries, pub/sub via `expo`'s `EventEmitter`, read via `useSyncExternalStore` in `network-view.component.tsx`):
 
 - `features/network/services/patch-fetch.service.ts`: wraps `globalThis.fetch`. Required because **Expo installs its own native fetch by default** (`expo/winter/fetch`), which does not route through `XMLHttpRequest` the way the old whatwg-fetch polyfill did, so patching XHR alone cannot see it.
 - `features/network/services/patch-xhr.service.ts`: patches `XMLHttpRequest.prototype.open`/`.send`. This is what actually catches third-party HTTP client libraries whose RN adapter is built on XHR rather than fetch (a common pattern) and any raw `XMLHttpRequest` usage.

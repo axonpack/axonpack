@@ -45,9 +45,9 @@ function countFor(entry: NetworkEntry): number | undefined {
  * Chrome's request table over the same filters, window and sort as the app's list, so both show the
  * same rows in the same order.
  *
- * Every row is drawn, with no windowing. The log holds 200 at most, only the rows that change cross
- * to the panel, and a tab cannot virtualise the usual way anyway: no scroll offset or measurement
- * reaches the app.
+ * Every row is drawn, with no windowing. The log holds 1,000 at most, only the rows that change
+ * cross to the panel, and a tab cannot virtualise the usual way anyway: no scroll offset or
+ * measurement reaches the app.
  */
 export function RequestGrid({
   visible,

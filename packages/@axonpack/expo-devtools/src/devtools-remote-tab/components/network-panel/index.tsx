@@ -57,7 +57,7 @@ export function NetworkPanel() {
     [logs, filters, timeRange, sort]
   );
 
-  // Gone from the log, cleared or pushed out of the 200, closes the pane with it.
+  // Gone from the log, cleared or pushed out of the 1,000, closes the pane with it.
   const selected = logs.find((entry) => entry.id === selectedId);
 
   return (
