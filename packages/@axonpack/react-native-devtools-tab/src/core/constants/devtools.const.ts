@@ -32,3 +32,14 @@ export const DEVTOOLS_TABS = `__${DEVTOOLS_ID}_tabs__`;
  * it connects, the same way it reads the tab list, and clears it so only one window acts on it.
  */
 export const DEVTOOLS_FOCUS = `__${DEVTOOLS_ID}_focus__`;
+
+/**
+ * The one attribute the panel acts on itself: a click on an element that has it copies its value to
+ * the clipboard of the computer DevTools runs on.
+ *
+ * A handler runs in the app, so a copy written the ordinary way lands on the device's clipboard,
+ * and a phone does not share that with the computer. The clipboard that matters is the browser's,
+ * and so is the click it needs, so the text comes as a prop and the panel does the copying. Any
+ * `onClick` on the element still runs, after the copy.
+ */
+export const COPY_ATTRIBUTE = "data-devtools-copy";

@@ -309,3 +309,31 @@ test("a right-click a tab handles does not open the browser's own menu", async (
   container.querySelector("span")!.dispatchEvent(unhandled);
   expect(unhandled.defaultPrevented).toBe(false);
 });
+
+test("an element with the copy attribute copies its text here, and still calls home", async () => {
+  const { container, sent, apply } = draw();
+  const copied: string[] = [];
+  Object.defineProperty(dom.window.navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: async (text: string) => void copied.push(text) },
+  });
+
+  await apply(
+    {
+      op: "create",
+      id: 1,
+      type: "button",
+      props: {
+        "data-devtools-copy": "curl https://x.dev",
+        onClick: { handler: "1:onClick" },
+      },
+    },
+    { op: "append", parent: 0, child: 1 },
+  );
+
+  (container.querySelector("button") as HTMLButtonElement).click();
+
+  // The copy is this page's, so it happens here rather than in the app.
+  expect(copied).toEqual(["curl https://x.dev"]);
+  expect(sent.map((call) => call.handler)).toEqual(["1:onClick"]);
+});

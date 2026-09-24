@@ -281,3 +281,27 @@ body {
     transform: rotate(1turn);
   }
 }
+
+/* What a copy did. Fixed to the bottom of the tab, over whatever the tab drew there. */
+.axonpack-tab-toast {
+  position: fixed;
+  z-index: 1001;
+  bottom: 12px;
+  left: 50%;
+  translate: -50% 0;
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--pop);
+  color: var(--fg);
+  box-shadow: 0 2px 8px #0006;
+  font:
+    12px system-ui,
+    sans-serif;
+  pointer-events: none;
+}
+
+.axonpack-tab-toast[data-failed] {
+  color: #f28b82;
+}

@@ -60,6 +60,8 @@ function idFor(name: string): string {
   return id;
 }
 
+export { COPY_ATTRIBUTE } from "./core/constants/devtools.const";
+
 export type TabOptions = {
   /** The label in the DevTools tab strip, and what the tab's id is built from. */
   name: string;

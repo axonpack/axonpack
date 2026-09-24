@@ -155,6 +155,8 @@ class TabPanel extends UI.View.SimpleView {
     const iframe = document.createElement('iframe');
     iframe.src = '${ROUTE}/panel/index.html?tab=' + encodeURIComponent(tab.id);
     iframe.style.cssText = 'width:100%;height:100%;border:0';
+    // So a tab can copy to this computer's clipboard. See COPY_ATTRIBUTE in the renderer.
+    iframe.allow = 'clipboard-write';
     this.contentElement.appendChild(iframe);
     this.iframe = iframe;
   }
