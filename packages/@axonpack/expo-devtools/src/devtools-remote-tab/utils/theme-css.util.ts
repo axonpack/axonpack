@@ -39,6 +39,7 @@ export function themeCss(palette: Palette): string {
   --pop: ${palette.surface};
   --muted: ${palette.textSecondary};
   --link: ${palette.accent};
+  --error: ${palette.error};
   /* Inherited, so this one rule themes every scroller in the tab. */
   scrollbar-color: ${mix(palette.textSecondary, 45)} transparent;
 }

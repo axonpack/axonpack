@@ -132,6 +132,12 @@ export const crashStore = {
   isEnabled(): boolean {
     return enabled;
   },
+  /** A number rather than the records, so a badge re-renders when the count changes and no more. */
+  getUnseenCount(): number {
+    let count = 0;
+    for (const record of records) if (!record.seen) count++;
+    return count;
+  },
   subscribe(listener: () => void) {
     const subscription = emitter.addListener('change', listener);
     return () => subscription.remove();

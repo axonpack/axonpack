@@ -51,6 +51,7 @@ export function PanelTabs({
               style={position(panel.id)}>
               <PanelIcon icon={panel.icon} />
               {panel.title}
+              {panel.Badge && <panel.Badge />}
             </button>
           ))}
           <span className="axonpack-panel-tab-spacer" />
@@ -81,6 +82,8 @@ export function PanelTabs({
             {...tabProps(panel.id)}>
             <PanelIcon icon={panel.icon} />
             {panel.title}
+            {/* Not on the open tab, as in the app: you are already looking at what it counts. */}
+            {panel.Badge && panel.id !== activeId && <panel.Badge />}
             {dragged && (
               <span className="axonpack-drag-spots">
                 {Array.from({ length: DRAG_SPOTS }, (_, index) => (

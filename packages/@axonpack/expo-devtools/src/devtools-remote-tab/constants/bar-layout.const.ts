@@ -230,6 +230,19 @@ ${Object.entries(MATERIAL_ICONS)
 .axonpack-panel-tab {
   position: relative;
 }
+.axonpack-panel-badge {
+  display: inline-block;
+  min-width: 14px;
+  margin-left: 5px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: var(--error, #dc362e);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
 .axonpack-panel-tab[aria-selected="true"] {
   color: var(--fg);
 }

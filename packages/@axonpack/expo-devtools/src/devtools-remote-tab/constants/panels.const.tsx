@@ -4,6 +4,7 @@ import type { MaterialIcon } from './material-icons.const';
 import { ConsolePanel } from '../components/console-panel';
 import { CrashesPanel } from '../components/crashes-panel';
 import { NetworkPanel } from '../components/network-panel';
+import { ConsoleBadge, CrashesBadge } from '../components/panel-badges.component';
 import { PerformancePanel } from '../components/performance-panel';
 import { PlaceholderPanel } from '../components/placeholder-panel.component';
 import { StoragePanel } from '../components/storage-panel';
@@ -16,6 +17,11 @@ export type AxonpackPanel = {
   icon?: MaterialIcon;
   /** Ours rather than a plugin's. Drawn with a tint on its top half, so the two can be told apart. */
   builtIn?: boolean;
+  /**
+   * A count on the tab while another is open, as the app's tab bar has. A component, so each badge
+   * subscribes to its own number and a log line re-renders only that badge.
+   */
+  Badge?: ComponentType;
 };
 
 // Same tabs, same order as the in-app panel's `devtools-tab-bar.component.tsx`.
@@ -26,6 +32,7 @@ const BUILT_IN: AxonpackPanel[] = [
     title: 'Console',
     icon: 'terminal',
     component: ConsolePanel,
+    Badge: ConsoleBadge,
   },
   {
     id: 'performance',
@@ -44,6 +51,7 @@ const BUILT_IN: AxonpackPanel[] = [
     title: 'Crashes',
     icon: 'bug-report',
     component: CrashesPanel,
+    Badge: CrashesBadge,
   },
   {
     id: 'debug',
