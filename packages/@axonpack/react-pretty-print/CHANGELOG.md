@@ -1,5 +1,11 @@
 # @axonpack/react-pretty-print
 
+## 0.1.1
+
+### Patch Changes
+
+- 2588d90: - **The text behind a copy action**: a JSON tree's copy menu items now carry what they copy, for a host that does the copying itself
+
 ## 0.1.0
 
 ### Minor Changes
