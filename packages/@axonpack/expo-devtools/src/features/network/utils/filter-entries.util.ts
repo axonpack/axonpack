@@ -8,6 +8,7 @@ import {
   type Matcher,
   type SearchModes,
 } from '../../../core/utils/text-search.util';
+import { isFetchXhrSource } from '../constants/sources.const';
 import type { NetworkEntry, NetworkLogEntry, WebSocketLogEntry } from '../stores/network-log.store';
 
 /** A `2xx`-style band, or the two states that have no code of their own. */
@@ -148,6 +149,16 @@ function matchesSelection(selected: readonly string[], value: string | undefined
 }
 
 /**
+ * Fetch/XHR is the API that sent a request, as it is in Chrome, not what came back: a fetch that
+ * returned an image is still one. The other types have no API of their own, so they go by MIME type.
+ */
+function matchesType(entry: NetworkLogEntry, type: ResourceType | null): boolean {
+  if (type === null) return true;
+  if (type === 'fetch-xhr') return isFetchXhrSource(entry.source);
+  return classifyResourceType(entry.mimeType) === type;
+}
+
+/**
  * `invert` negates what you asked *for* — search, type, methods, sources, status, the thresholds and
  * the two "only" toggles. The two hide toggles stay absolute: inverting them would resurrect the exact
  * noise they were flipped on to suppress.
@@ -164,7 +175,7 @@ export function matchesFilters(
   const matches =
     matchesSelection(filters.sources, entry.source) &&
     matchesSelection(filters.methods, entry.method) &&
-    (filters.type === null || classifyResourceType(entry.mimeType) === filters.type) &&
+    matchesType(entry, filters.type) &&
     (compiled.status === null ||
       matchesStatusQuery(
         {
