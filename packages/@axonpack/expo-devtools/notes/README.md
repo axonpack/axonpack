@@ -17,6 +17,7 @@ only disagree with these.
 | [devtools-console-plan.md](./devtools-console-plan.md)                 | Console in the DevTools tab, built, not yet walked |
 | [devtools-tab-storage-plan.md](./devtools-tab-storage-plan.md)         | Storage in the DevTools tab, built, not yet walked |
 | [devtools-performance-plan.md](./devtools-performance-plan.md)         | Performance in the DevTools tab, built, not walked |
+| [devtools-crashes-plan.md](./devtools-crashes-plan.md)                 | Crashes in the DevTools tab, built, not yet walked |
 | [database.md](./database.md)                                           | Not built — and why it is not the Storage tab      |
 | [performance-landscape.md](./performance-landscape.md)                 | Research: what other performance tools measure     |
 | [react-native-performance-apis.md](./react-native-performance-apis.md) | Research: the platform surface underneath          |
