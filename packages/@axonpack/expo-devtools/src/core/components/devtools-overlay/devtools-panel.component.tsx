@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
+import { MetroStrip } from './metro-strip.component';
 import { ThemePicker } from './theme-picker.component';
 import { ConsoleView } from '../../../features/console/components/console-view.component';
 import {
@@ -82,6 +83,7 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
           hitSlop={HIT_SLOP.default}
         />
       </View>
+      <MetroStrip />
 
       <View style={styles.tabPanel}>{tabContent}</View>
 
