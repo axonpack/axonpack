@@ -32,5 +32,14 @@ function servedByMetro(): boolean {
 export const canOpenDebugger = typeof devSettings?.openDebugger === 'function' && servedByMetro();
 
 export function openDebugger() {
-  devSettings?.openDebugger?.();
+  if (!devSettings?.openDebugger) return;
+
+  // Loaded here rather than imported: the tab is only registered in a debug build, and this only
+  // runs in one. Optional because a tab package older than `focus` returns nothing from
+  // `registerTab`, and then the window simply opens where DevTools chooses.
+  const { axonpackTab } =
+    require('../../devtools-remote-tab/services/register-tab.service') as typeof import('../../devtools-remote-tab/services/register-tab.service');
+  axonpackTab?.focus?.();
+
+  devSettings.openDebugger();
 }
