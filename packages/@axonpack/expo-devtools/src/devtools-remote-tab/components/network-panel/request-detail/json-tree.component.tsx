@@ -1,5 +1,9 @@
 import { COPY_ATTRIBUTE } from '@axonpack/react-native-devtools-tab';
-import { JsonTree as PrettyJsonTree, type MenuItem } from '@axonpack/react-pretty-print';
+import {
+  JsonTree as PrettyJsonTree,
+  type JsonTreeProps,
+  type MenuItem,
+} from '@axonpack/react-pretty-print';
 import { useState } from 'react';
 
 import { MenuSlot, TAB_PRIMITIVES } from './tab-primitives.component';
@@ -14,7 +18,12 @@ import { prettyPrintTheme } from '../../../utils/pretty-print-theme.util';
  * A copy item carries its text, and the browser copies it, so it lands on this computer's clipboard
  * rather than the device's. Its `onSelect` still runs, and copies nothing here.
  */
-export function JsonTree({ value }: { value: JsonValue }) {
+export function JsonTree({
+  value,
+  rootLabel,
+  defaultExpanded,
+  matcher,
+}: { value: JsonValue } & Pick<JsonTreeProps, 'rootLabel' | 'defaultExpanded' | 'matcher'>) {
   const palette = useThemeStore(themeStore.getPalette);
   const [openId, setOpenId] = useState<string | null>(null);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -47,6 +56,9 @@ export function JsonTree({ value }: { value: JsonValue }) {
         <PrettyJsonTree
           primitives={TAB_PRIMITIVES}
           value={value}
+          rootLabel={rootLabel}
+          defaultExpanded={defaultExpanded}
+          matcher={matcher}
           theme={prettyPrintTheme(palette)}
           // Offered so the tree lists its copy items; the copying itself is the browser's.
           onCopy={() => {}}

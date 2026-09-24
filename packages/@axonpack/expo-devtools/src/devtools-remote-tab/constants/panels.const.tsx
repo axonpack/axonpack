@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import type { MaterialIcon } from './material-icons.const';
 import { NetworkPanel } from '../components/network-panel';
 import { PlaceholderPanel } from '../components/placeholder-panel.component';
+import { StoragePanel } from '../components/storage-panel';
 
 export type AxonpackPanel = {
   id: string;
@@ -33,7 +34,7 @@ const BUILT_IN: AxonpackPanel[] = [
     id: 'storage',
     title: 'Storage',
     icon: 'storage',
-    component: () => <PlaceholderPanel title="Storage" />,
+    component: StoragePanel,
   },
   {
     id: 'crashes',

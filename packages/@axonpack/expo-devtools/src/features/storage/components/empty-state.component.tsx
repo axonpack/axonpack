@@ -4,33 +4,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ReadOnlyTextInput } from '../../../core/components/ui/read-only-text-input.ui';
 import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
+import { STORAGE_SETUP_SNIPPET } from '../constants/setup-snippet.const';
 import { storageStore, useStorageStore } from '../stores/storage.store';
-
-const SNIPPET = `import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MMKV } from 'react-native-mmkv';
-import * as SecureStore from 'expo-secure-store';
-import {
-  DevtoolsProvider,
-  asyncStorageAdapter,
-  mmkvAdapter,
-  secureStoreAdapter,
-} from '@axonpack/expo-devtools';
-
-const mmkv = new MMKV();
-
-<DevtoolsProvider
-  config={{
-    storage: {
-      adapters: [
-        asyncStorageAdapter({ driver: AsyncStorage }),
-        mmkvAdapter({ driver: mmkv }),
-        // SecureStore can't list its own keys, so you name them.
-        secureStoreAdapter({ driver: SecureStore, keys: ['session'] }),
-      ],
-    },
-  }}>
-  <App />
-</DevtoolsProvider>;`;
 
 export function EmptyState() {
   const styles = useStyles();
@@ -68,7 +43,7 @@ export function EmptyState() {
         every key shows up here.
       </Text>
 
-      <ReadOnlyTextInput value={SNIPPET} style={styles.snippet} />
+      <ReadOnlyTextInput value={STORAGE_SETUP_SNIPPET} style={styles.snippet} />
     </ScrollView>
   );
 }

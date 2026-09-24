@@ -2,7 +2,9 @@ import type { StorageEntry } from '../../stores/storage.store';
 import { buildMatcher, DEFAULT_SEARCH_MODES } from '../../../../core/utils/text-search.util';
 import type { StoredValueKind } from '../classify-value.util';
 import {
+  countByKind,
   DEFAULT_STORAGE_FILTERS,
+  groupByNamespace,
   hasActiveFilters,
   matchesFilters,
   sortEntries,
@@ -115,5 +117,29 @@ describe('sortEntries', () => {
     const original = [...entries];
     sortEntries(entries, 'size', true);
     expect(entries).toEqual(original);
+  });
+});
+
+describe('countByKind', () => {
+  it('counts each type present and leaves the rest out', () => {
+    expect(
+      countByKind([entry('a', '1'), entry('b', '2'), entry('c', '{}', 'json-object')])
+    ).toEqual({ string: 2, 'json-object': 1 });
+  });
+});
+
+describe('groupByNamespace', () => {
+  it('groups by prefix in name order, keeping the order inside a group', () => {
+    const groups = groupByNamespace([
+      entry('user:b', ''),
+      entry('auth:x', ''),
+      entry('plain', ''),
+      entry('user:a', ''),
+    ]);
+    expect(groups.map((group) => [group.title, group.data.map((it) => it.key)])).toEqual([
+      ['auth', ['auth:x']],
+      ['Ungrouped', ['plain']],
+      ['user', ['user:b', 'user:a']],
+    ]);
   });
 });

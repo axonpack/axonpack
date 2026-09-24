@@ -64,6 +64,11 @@ export function buildStorageExport(
   };
 }
 
+export function storageExportFileName(adapterName: string): string {
+  const slug = adapterName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return `storage-${slug}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+}
+
 export type StorageExportParse =
   { ok: true; file: StorageExport } | { ok: false; path: string; message: string };
 
@@ -233,4 +238,40 @@ export function planStorageImport(
   }
 
   return plan;
+}
+
+/** How each skip reason reads in a sentence: "3 skipped, hidden by the blacklist". */
+export const STORAGE_IMPORT_SKIP_REASONS: Record<StorageImportSkip['reason'], string> = {
+  hidden: 'hidden by the blacklist',
+  unsupported: 'a type this store does not hold',
+  empty: 'no value to write',
+};
+
+export type StorageImportReading =
+  | { state: 'empty' }
+  | { state: 'unreadable'; message: string }
+  | { state: 'read'; plan: StorageImportPlan };
+
+/** Pasted text to a plan, or to the reason it is not one. */
+export function readStorageImport(
+  text: string,
+  adapter: StorageAdapter,
+  entries: readonly StorageEntry[]
+): StorageImportReading {
+  if (text.trim().length === 0) return { state: 'empty' };
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (error) {
+    return {
+      state: 'unreadable',
+      message: `Not JSON — ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+
+  const parsed = parseStorageExport(raw);
+  if (!parsed.ok) return { state: 'unreadable', message: `${parsed.path} — ${parsed.message}` };
+
+  return { state: 'read', plan: planStorageImport(parsed.file, adapter, entries) };
 }

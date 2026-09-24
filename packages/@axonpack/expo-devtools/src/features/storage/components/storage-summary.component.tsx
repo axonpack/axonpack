@@ -1,10 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { StorageAdapterState, StorageEntry } from '../stores/storage.store';
-import { formatSize } from '../../../core/utils/format-bytes.util';
-import { describeAdapterKind, formatReadTime } from '../utils/formatters.util';
-import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
+import { formatSize } from '../../../core/utils/format-bytes.util';
+import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
+import type { StorageAdapterState } from '../stores/storage.store';
+import { describeAdapterKind, formatReadTime } from '../utils/formatters.util';
+import { summarizeStorage } from '../utils/summary.util';
 
 export function StorageSummary({
   state,
@@ -16,26 +17,7 @@ export function StorageSummary({
   const styles = useStyles();
   const { adapter, entries } = state;
 
-  const totalBytes = entries.reduce((sum, entry) => sum + entry.size, 0);
-  const largest = entries.reduce<StorageEntry | undefined>(
-    (biggest, entry) => (biggest === undefined || entry.size > biggest.size ? entry : biggest),
-    undefined
-  );
-
-  // Stated rather than glossed over: a capped or unenumerable read looks like an empty store
-  // otherwise, and that's the one thing a storage inspector must never imply by accident.
-  const notes = [
-    adapter.canEnumerate
-      ? undefined
-      : `${adapter.name} can't list its own keys — showing the ${entries.length} you declared.`,
-    state.truncated
-      ? `Read ${entries.length} of ${state.totalKeys} keys — the rest are past the cap.`
-      : undefined,
-    adapter.readOnly ? 'Read-only — values here cannot be edited or deleted.' : undefined,
-    // Not "3 keys are hidden": the keys are filtered before they are read, so the count of what
-    // matched is something this tab deliberately never learns.
-    adapter.hasBlacklist ? 'A blacklist is set — any key it matches was never read.' : undefined,
-  ].filter((note): note is string => note !== undefined);
+  const { totalBytes, largest, notes } = summarizeStorage(state);
 
   return (
     <View style={styles.container}>
