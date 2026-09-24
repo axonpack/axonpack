@@ -68,6 +68,14 @@ const waitForFrontend = () =>
     observer.observe(document.body, { childList: true, subtree: true });
   });
 
+/**
+ * Every character past ASCII as a \\u escape, which a string literal reads back as the same text.
+ * A message goes to the app as source for Runtime.evaluate, and source holding an é or an emoji did
+ * not arrive: a keystroke in a field that held one was lost, and so was every event after it.
+ */
+const asciiOnly = (source) =>
+  source.replace(/[\\u007f-\\uffff]/g, (char) => '\\\\u' + char.charCodeAt(0).toString(16).padStart(4, '0'));
+
 const getRuntime = () => {
   const targets = SDK.TargetManager.TargetManager.instance();
   const target = targets.primaryPageTarget() ?? targets.rootTarget();
@@ -126,7 +134,7 @@ const connectToApp = async (onMessage) => {
             registered: JSON.parse(listed.result?.value || '[]'),
             focus: focused.result?.value ?? null,
             send: (message) => {
-              const serialized = JSON.stringify(JSON.stringify(message));
+              const serialized = asciiOnly(JSON.stringify(JSON.stringify(message)));
               void runtime.agent.invoke_evaluate({
                 expression:
                   DISPATCHER + '.sendMessage(' + JSON.stringify(DOMAIN) + ', ' + serialized + ')',
