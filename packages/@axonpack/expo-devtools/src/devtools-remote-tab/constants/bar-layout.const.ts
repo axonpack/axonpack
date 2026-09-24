@@ -9,9 +9,9 @@ const timeline = (id: string) => `--axonpack-tab-${id}`;
  *
  * That bar is the package's, and it takes nothing of ours, so this rearranges the page instead:
  * `display: contents` on the bar and on the body lets their children join one grid on `#root`, and
- * the buttons take the row the bar was in, between its name and refresh, with the theme switcher
- * just before refresh. Nothing is moved in the
- * DOM, because the page's own React owns those nodes and would fail on the next update if it were.
+ * the buttons take the row the bar was in, between its name and refresh, with the theme switcher and
+ * our Reload chip just before refresh. Nothing is moved in the DOM, because the page's own React owns
+ * those nodes and would fail on the next update if it were.
  *
  * It leans on the package's class names, which are not public API. If the bar ever renders on its
  * own row again under our buttons, a class name changed.
@@ -22,7 +22,7 @@ const timeline = (id: string) => `--axonpack-tab-${id}`;
 export const BAR_LAYOUT_CSS = `
 #root {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   grid-template-rows: var(--bar-height) minmax(0, 1fr);
 }
 #root::before {
@@ -40,43 +40,40 @@ export const BAR_LAYOUT_CSS = `
   align-self: center;
   padding: 0 12px 0 8px;
 }
-/*
-  The package's refresh button, as a chip that says what it does. Pressing it reloads the app (see
-  \`axonpack-tab.component.tsx\`), so "Reload" is the honest word for it. The label is a pseudo-element
-  because the button's markup is the package's, and its accessible name stays the package's too.
-*/
+/* The package's refresh, left as its own icon. It redraws the tab and leaves the app alone. */
 .axonpack-tab-bar > button {
+  grid-area: 1 / 5;
+  align-self: center;
+  /* The bar's own right padding, which \`display: contents\` above takes away with the bar's box. */
+  margin-right: 4px;
+  /* The package's rule inherits the colour, and what it inherits is the panel's text, not the bar's. */
+  color: var(--muted);
+}
+.axonpack-tab-bar > button:hover {
+  color: var(--fg);
+}
+/* Ours, and it reloads the app. Text only, so it does not read as a second refresh arrow. */
+.axonpack-reload {
   grid-area: 1 / 4;
   align-self: center;
   /* The bar's rule takes the row's last pixel, so the bar that shows is a pixel short of the row.
-     This centres the chip on what shows. The right edge matches the name's 8px on the left. */
-  margin: 0 8px 1px 0;
+     This centres the chip on what shows. */
+  margin: 0 4px 1px 0;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: auto;
   height: 18px;
-  padding: 0 8px 0 6px;
+  padding: 0 8px;
   border: 1px solid color-mix(in srgb, var(--link) 25%, transparent);
   border-radius: 9px;
   background: color-mix(in srgb, var(--link) 8%, transparent);
   color: var(--muted);
   font: 500 11px system-ui, sans-serif;
-  /* The font's own line height made the label's box taller than its letters, off centre against the icon. */
+  /* The font's own line height made the label's box taller than its letters, off centre. */
   line-height: 1;
   cursor: default;
 }
-.axonpack-tab-bar > button:hover {
+.axonpack-reload:hover {
   background: color-mix(in srgb, var(--link) 14%, transparent);
   color: var(--fg);
-}
-.axonpack-tab-bar > button::before {
-  width: 12px;
-  height: 12px;
-}
-.axonpack-tab-bar > button::after {
-  content: "Reload";
 }
 .axonpack-theme {
   grid-area: 1 / 3;

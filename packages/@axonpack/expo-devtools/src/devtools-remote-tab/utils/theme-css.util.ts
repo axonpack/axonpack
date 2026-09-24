@@ -45,6 +45,7 @@ export function themeCss(palette: Palette): string {
 :root .axonpack-tab-name,
 :root .axonpack-panel-tabs,
 :root .axonpack-theme,
+:root .axonpack-reload,
 :root .axonpack-tab-bar > button {
   --fg: ${palette.toolbarTextActive};
   --muted: ${palette.toolbarText};

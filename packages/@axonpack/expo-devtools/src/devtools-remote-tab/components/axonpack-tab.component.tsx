@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DevSettings } from 'react-native';
 
 import { PanelTabs } from './panel-tabs.component';
@@ -7,17 +7,6 @@ import { themeStore, useThemeStore } from '../../core/stores/theme.store';
 import { BAR_LAYOUT_CSS } from '../constants/bar-layout.const';
 import { PANELS } from '../constants/panels.const';
 import { themeCss } from '../utils/theme-css.util';
-
-/**
- * Whether this JS session has mounted the tab before.
- *
- * The tab package's refresh button unmounts the tab behind its loader and mounts it again, and that is
- * the only thing that ever remounts it: a DevTools reload replays the tree instead. Its renderer is not
- * hooked into Fast Refresh, so that remount would draw the component functions from before your last
- * save. A second mount therefore means refresh was pressed, and it gets a full reload, the same as
- * pressing `r`, which is the one thing that does pick up new code. The flag resets with the reload.
- */
-let mountedBefore = false;
 
 /**
  * The one Axonpack tab in React Native DevTools, with its panel buttons inside the package's bar.
@@ -32,17 +21,18 @@ export function AxonpackTab() {
   const active = PANELS.find((panel) => panel.id === activeId);
   const palette = useThemeStore(themeStore.getPalette);
 
-  useEffect(() => {
-    if (mountedBefore) DevSettings.reload('Axonpack tab refresh');
-    mountedBefore = true;
-  }, []);
-
   return (
     <>
       <style>{BAR_LAYOUT_CSS}</style>
       <style>{themeCss(palette)}</style>
       <PanelTabs activeId={activeId} onSelect={setActiveId} />
       <ThemeSwitcher />
+      <button
+        className="axonpack-reload"
+        title="Reload the app"
+        onClick={() => DevSettings.reload('Axonpack tab reload')}>
+        Reload
+      </button>
       <div className="axonpack-panel-body">{active && <active.component />}</div>
     </>
   );
