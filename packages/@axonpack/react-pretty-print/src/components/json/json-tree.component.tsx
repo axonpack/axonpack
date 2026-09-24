@@ -16,7 +16,15 @@ import type { Matcher } from '../../utils/shared/text-search.util';
 
 const ROOT_PATH = '$';
 
-export type MenuItem = { label: string; onSelect: () => void };
+export type MenuItem = {
+  label: string;
+  onSelect: () => void;
+  /**
+   * On a copy item, the text it copies. For a host that has to do the copying somewhere
+   * `onSelect` does not run, such as a browser drawing a menu for a device.
+   */
+  copyText?: string;
+};
 
 export type JsonTreeProps = {
   primitives: Primitives;
@@ -107,6 +115,7 @@ export function JsonTree({
       items.push({
         label: isExpandable(atValue) ? 'Copy object' : 'Copy value',
         onSelect: () => onCopy(formatCopyValue(atValue)),
+        copyText: formatCopyValue(atValue),
       });
     }
     if (hasChildren(atValue)) {
