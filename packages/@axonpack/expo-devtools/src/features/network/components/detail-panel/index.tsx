@@ -107,8 +107,6 @@ function DetailPanelBase({
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.tabBar}
-              automaticallyAdjustKeyboardInsets
-              automaticallyAdjustsScrollIndicatorInsets
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
               contentContainerStyle={styles.tabBarContent}>
@@ -164,8 +162,6 @@ function DetailPanelBase({
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
-          automaticallyAdjustKeyboardInsets
-          automaticallyAdjustsScrollIndicatorInsets
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive">
           <View>

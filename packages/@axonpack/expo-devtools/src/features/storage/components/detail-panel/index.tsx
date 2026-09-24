@@ -105,7 +105,6 @@ export function DetailPanel({
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.tabBar}
-            automaticallyAdjustKeyboardInsets
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.tabBarContent}>
             {TABS.map((current) => (
@@ -158,7 +157,6 @@ export function DetailPanel({
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
-        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive">
         <View>
