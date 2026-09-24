@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { DevSettings } from 'react-native';
 
 import { PanelTabs } from './panel-tabs.component';
@@ -6,6 +5,7 @@ import { ThemeSwitcher } from './theme-switcher.component';
 import { themeStore, useThemeStore } from '../../core/stores/theme.store';
 import { BAR_LAYOUT_CSS } from '../constants/bar-layout.const';
 import { PANELS } from '../constants/panels.const';
+import { axonpackTabStore, useAxonpackTabStore } from '../stores/axonpack-tab.store';
 import { themeCss } from '../utils/theme-css.util';
 
 /**
@@ -17,7 +17,7 @@ import { themeCss } from '../utils/theme-css.util';
  * which does mean a panel's filters and scroll are gone when you come back.
  */
 export function AxonpackTab() {
-  const [activeId, setActiveId] = useState(PANELS[0]?.id);
+  const activeId = useAxonpackTabStore((state) => state.activeId);
   const active = PANELS.find((panel) => panel.id === activeId);
   const palette = useThemeStore(themeStore.getPalette);
 
@@ -25,7 +25,7 @@ export function AxonpackTab() {
     <>
       <style>{BAR_LAYOUT_CSS}</style>
       <style>{themeCss(palette)}</style>
-      <PanelTabs activeId={activeId} onSelect={setActiveId} />
+      <PanelTabs activeId={activeId} onSelect={axonpackTabStore.select} />
       <ThemeSwitcher />
       <button
         className="axonpack-reload"

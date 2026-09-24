@@ -24,12 +24,7 @@ import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
 import { HIT_SLOP, TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
-import {
-  buildMatcher,
-  DEFAULT_SEARCH_MODES,
-  testMatch,
-} from '../../../core/utils/text-search.util';
-import type { SearchModes } from '../../../core/utils/text-search.util';
+import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import {
   CONSOLE_LEVEL_LABELS,
@@ -38,7 +33,13 @@ import {
 } from '../constants/console-levels.const';
 import { isReplEnabled } from '../services/evaluate-expression.service';
 import { consoleLogStore, useConsoleLogStore } from '../stores/console-log.store';
-import type { ConsoleLogEntry, ConsoleLogLevel } from '../stores/console-log.store';
+import type { ConsoleLogEntry } from '../stores/console-log.store';
+import { consoleViewStore, useConsoleViewStore } from '../stores/console-view.store';
+import {
+  countByLevel,
+  filterConsoleEntries,
+  listSources,
+} from '../utils/filter-console-entries.util';
 import { formatConsoleSource } from '../utils/formatters.util';
 
 const NEAR_BOTTOM_SLACK = 40;
@@ -53,47 +54,26 @@ export function ConsoleView() {
   const entries = useConsoleLogStore(consoleLogStore.getSnapshot);
   const paused = useConsoleLogStore(consoleLogStore.isPaused);
 
-  const [searchText, setSearchText] = useState('');
-  const [searchModes, setSearchModes] = useState<SearchModes>(DEFAULT_SEARCH_MODES);
-  const [activeLevel, setActiveLevel] = useState<ConsoleLogLevel | null>(null);
-  const [activeSource, setActiveSource] = useState<string | null>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const { filters, filtersOpen } = useConsoleViewStore();
+  const patch = consoleViewStore.patchFilters;
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   const listRef = useRef<FlatList<ConsoleLogEntry>>(null);
 
   const followingTail = useRef(true);
 
-  const countsByLevel = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const entry of entries) {
-      counts[entry.level] = (counts[entry.level] ?? 0) + 1;
-    }
-    return counts;
-  }, [entries]);
-
-  const sources = useMemo(() => {
-    const seen = new Set<string>();
-    for (const entry of entries) {
-      if (entry.source) seen.add(entry.source);
-    }
-    return seen.size > 1 ? Array.from(seen) : [];
-  }, [entries]);
+  const countsByLevel = useMemo(() => countByLevel(entries), [entries]);
+  const sources = useMemo(() => listSources(entries), [entries]);
 
   // One compiled matcher for the whole list — recompiling per row would run it on every keystroke.
   const matcher = useMemo(
-    () => buildMatcher({ text: searchText, ...searchModes }),
-    [searchText, searchModes]
+    () => buildMatcher({ text: filters.search, ...filters.modes }),
+    [filters.search, filters.modes]
   );
 
   const visibleEntries = useMemo(
-    () =>
-      entries.filter((entry) => {
-        if (activeLevel !== null && entry.level !== activeLevel) return false;
-        if (activeSource !== null && entry.source !== activeSource) return false;
-        return testMatch(entry.text, matcher);
-      }),
-    [entries, activeLevel, activeSource, matcher]
+    () => filterConsoleEntries(entries, filters, matcher),
+    [entries, filters, matcher]
   );
 
   const renderConsoleRow = useCallback(
@@ -153,7 +133,7 @@ export function ConsoleView() {
           active={filtersOpen}
           onPress={() => {
             animateNextLayout();
-            setFiltersOpen((current) => !current);
+            consoleViewStore.setFiltersOpen(!filtersOpen);
           }}
           label="Filter"
         />
@@ -162,10 +142,10 @@ export function ConsoleView() {
       {filtersOpen && (
         <View style={styles.panel}>
           <SearchInput
-            value={searchText}
-            onChangeText={setSearchText}
-            modes={searchModes}
-            onModesChange={setSearchModes}
+            value={filters.search}
+            onChangeText={(search) => patch({ search })}
+            modes={filters.modes}
+            onModesChange={(modes) => patch({ modes })}
             invalid={matcher?.invalid ?? false}
           />
 
@@ -173,8 +153,8 @@ export function ConsoleView() {
           <View style={styles.chipsRow}>
             <Chip
               label={`All (${entries.length})`}
-              active={activeLevel === null}
-              onPress={() => setActiveLevel(null)}
+              active={filters.level === null}
+              onPress={() => patch({ level: null })}
             />
             {CONSOLE_LEVELS.map((level) => {
               const { icon, color } = consoleLevelVisuals(COLORS)[level];
@@ -185,8 +165,8 @@ export function ConsoleView() {
 
                   icon={icon ?? undefined}
                   tint={icon ? color : undefined}
-                  active={activeLevel === level}
-                  onPress={() => setActiveLevel(level)}
+                  active={filters.level === level}
+                  onPress={() => patch({ level })}
                 />
               );
             })}
@@ -198,15 +178,15 @@ export function ConsoleView() {
               <View style={styles.chipsRow}>
                 <Chip
                   label="All"
-                  active={activeSource === null}
-                  onPress={() => setActiveSource(null)}
+                  active={filters.source === null}
+                  onPress={() => patch({ source: null })}
                 />
                 {sources.map((source) => (
                   <Chip
                     key={source}
                     label={formatConsoleSource(source)}
-                    active={activeSource === source}
-                    onPress={() => setActiveSource(source)}
+                    active={filters.source === source}
+                    onPress={() => patch({ source })}
                   />
                 ))}
               </View>

@@ -12,6 +12,7 @@ export function SyncedInput({
   label = placeholder,
   multiline = false,
   type,
+  autoFocus,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -22,6 +23,8 @@ export function SyncedInput({
   multiline?: boolean;
   /** An `input`'s type, for a secret to hide. A change swaps the field, and keeps what was typed. */
   type?: 'text' | 'password';
+  /** Taken again on every remount, so a field whose value is set from outside keeps the caret. */
+  autoFocus?: boolean;
 }) {
   const [sent, setSent] = useState(value);
   const [generation, setGeneration] = useState(0);
@@ -39,6 +42,7 @@ export function SyncedInput({
       placeholder={placeholder}
       aria-label={label}
       type={multiline ? undefined : type}
+      autoFocus={autoFocus}
       spellCheck={false}
       onChange={(event) => {
         const next = String(event.target.value ?? '');

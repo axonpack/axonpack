@@ -14,6 +14,7 @@ only disagree with these.
 | [crash.md](./crash.md)                                                 | The four capture tiers and the report sheets       |
 | [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose          |
 | [react-native-devtools.md](./react-native-devtools.md)                 | The panel again, inside React Native DevTools      |
+| [devtools-console-plan.md](./devtools-console-plan.md)                 | Console in the DevTools tab, built, not yet walked |
 | [devtools-tab-storage-plan.md](./devtools-tab-storage-plan.md)         | Storage in the DevTools tab, built, not yet walked |
 | [devtools-performance-plan.md](./devtools-performance-plan.md)         | Performance in the DevTools tab, built, not walked |
 | [database.md](./database.md)                                           | Not built — and why it is not the Storage tab      |

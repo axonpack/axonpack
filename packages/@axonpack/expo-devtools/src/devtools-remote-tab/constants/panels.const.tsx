@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 
 import type { MaterialIcon } from './material-icons.const';
+import { ConsolePanel } from '../components/console-panel';
 import { NetworkPanel } from '../components/network-panel';
 import { PerformancePanel } from '../components/performance-panel';
 import { PlaceholderPanel } from '../components/placeholder-panel.component';
@@ -23,7 +24,7 @@ const BUILT_IN: AxonpackPanel[] = [
     id: 'console',
     title: 'Console',
     icon: 'terminal',
-    component: () => <PlaceholderPanel title="Console" />,
+    component: ConsolePanel,
   },
   {
     id: 'performance',
