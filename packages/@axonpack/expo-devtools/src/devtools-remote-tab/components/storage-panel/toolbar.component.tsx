@@ -103,13 +103,14 @@ export function StorageToolbar({
       )}
       <button
         className="axonpack-sto-text-button"
-        data-icon="refresh"
         title="Read the store again"
         onClick={() => (state ? readAdapterById(state.adapter.id) : readAllAdapters())}>
+        <span className="axonpack-material" data-material="refresh" />
         Refresh
       </button>
       {canEdit && (
         <button className="axonpack-sto-text-button" title="Add a key" onClick={onAdd}>
+          <span className="axonpack-material" data-material="add" />
           Add key
         </button>
       )}
@@ -158,6 +159,7 @@ export function StorageToolbar({
       />
       {canEdit && (
         <button className="axonpack-sto-text-button" title="Import a snapshot" onClick={onImport}>
+          <span className="axonpack-material" data-material="file-upload" />
           Import
         </button>
       )}

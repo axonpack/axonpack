@@ -1,4 +1,7 @@
-import { STORED_VALUE_LABELS } from '../../../features/storage/constants/value-type-icons.const';
+import {
+  STORED_VALUE_ICONS,
+  STORED_VALUE_LABELS,
+} from '../../../features/storage/constants/value-type-icons.const';
 import type { StorageDraftRow } from '../../../features/storage/stores/storage-drafts.store';
 import { classifyStoredValue } from '../../../features/storage/utils/classify-value.util';
 
@@ -14,14 +17,20 @@ export function DraftRow({
   error: string | undefined;
   onRemove: () => void;
 }) {
+  const kind = classifyStoredValue(row.text, row.valueType);
+
   return (
     <div className="axonpack-net-row" data-pending data-error={error !== undefined || undefined}>
-      <span title={error ?? `${row.key} is added when you sync`}>{row.key}</span>
+      <span title={error ?? `${row.key} is added when you sync`}>
+        <span
+          className="axonpack-material axonpack-sto-kind-icon"
+          data-material={STORED_VALUE_ICONS[kind]}
+        />
+        {row.key}
+      </span>
       {!compact && (
         <>
-          <span className="axonpack-sto-kind">
-            {STORED_VALUE_LABELS[classifyStoredValue(row.text, row.valueType)]}
-          </span>
+          <span className="axonpack-sto-kind">{STORED_VALUE_LABELS[kind]}</span>
           <span className="axonpack-sto-value" title={error ?? row.text}>
             {row.text}
           </span>

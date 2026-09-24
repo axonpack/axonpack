@@ -5,7 +5,10 @@ import { HighlightedText } from '../console-panel/highlighted-text.component';
 import type { Palette } from '../../../core/constants/theme.const';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
-import { STORED_VALUE_LABELS } from '../../../features/storage/constants/value-type-icons.const';
+import {
+  STORED_VALUE_ICONS,
+  STORED_VALUE_LABELS,
+} from '../../../features/storage/constants/value-type-icons.const';
 import type { StorageEntry } from '../../../features/storage/stores/storage.store';
 import {
   classifyStoredValue,
@@ -54,6 +57,7 @@ function EntryRowBase({
   const shown = draft ?? entry.text;
   // What the value would be once synced, so the type follows the typing rather than the last read.
   const kind = draft === undefined ? entry.kind : classifyStoredValue(draft, entry.valueType);
+  const tint = selected ? undefined : { color: storedValueColor(palette, kind) };
   const preview = previewLine(shown);
   const open = () => onSelect(entry.key);
   const stored = entry.text ?? '';
@@ -71,14 +75,16 @@ function EntryRowBase({
         data-error={error !== undefined || undefined}
         onContextMenu={() => onMenu(entry.key)}>
         <span title={error ?? entry.key} onClick={open}>
+          <span
+            className="axonpack-material axonpack-sto-kind-icon"
+            data-material={STORED_VALUE_ICONS[kind]}
+            style={tint}
+          />
           <HighlightedText text={entry.key} ranges={findMatches(entry.key, matcher)} />
         </span>
         {!compact && (
           <>
-            <span
-              className="axonpack-sto-kind"
-              style={selected ? undefined : { color: storedValueColor(palette, kind) }}
-              onClick={open}>
+            <span className="axonpack-sto-kind" style={tint} onClick={open}>
               {STORED_VALUE_LABELS[kind]}
             </span>
             {editing ? (

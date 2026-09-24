@@ -5,6 +5,7 @@ import { SearchField } from './search-field.component';
 import { themeStore, useThemeStore } from '../../../core/stores/theme.store';
 import type { Matcher } from '../../../core/utils/text-search.util';
 import {
+  STORED_VALUE_ICONS,
   STORED_VALUE_KINDS,
   STORED_VALUE_LABELS,
 } from '../../../features/storage/constants/value-type-icons.const';
@@ -116,6 +117,10 @@ export function StorageFilterBar({
                   filters.kind === kind ? undefined : { color: storedValueColor(palette, kind) }
                 }
                 onClick={() => patch({ kind })}>
+                <span
+                  className="axonpack-material axonpack-sto-kind-icon"
+                  data-material={STORED_VALUE_ICONS[kind]}
+                />
                 {`${STORED_VALUE_LABELS[kind]} (${countsByKind[kind] ?? 0})`}
               </button>
             ))}

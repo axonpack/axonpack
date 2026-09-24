@@ -1,6 +1,4 @@
-/** Material's refresh, the icon the app's Refresh button draws. */
-const REFRESH_ICON =
-  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z'/></svg>";
+import { STORAGE_ICONS } from './storage-icons.const';
 
 /**
  * What the Storage panel needs on top of the Network panel's CSS, which it wraps itself in for the
@@ -36,11 +34,17 @@ export const STORAGE_PANEL_CSS = `
   font: inherit;
 }
 .axonpack-sto-text-button:hover { background: var(--hover); color: var(--fg); }
-.axonpack-sto-text-button[data-icon] { display: inline-flex; align-items: center; gap: 3px; }
-.axonpack-sto-text-button[data-icon]::before { width: 14px; height: 14px; }
-.axonpack-sto [data-icon="refresh"]::before {
-  --icon: url("data:image/svg+xml,${encodeURIComponent(REFRESH_ICON)}");
-}
+.axonpack-sto-text-button:has(.axonpack-material) { display: inline-flex; align-items: center; gap: 3px; }
+.axonpack-sto-text-button .axonpack-material { width: 14px; height: 14px; }
+${Object.entries(STORAGE_ICONS)
+  .map(
+    ([name, svg]) =>
+      `.axonpack-sto [data-material="${name}"] { --icon: url("data:image/svg+xml,${encodeURIComponent(svg)}"); }`
+  )
+  .join('\n')}
+/* The app's type glyph before a key, and on a type filter button. */
+.axonpack-sto-kind-icon { width: 13px; height: 13px; margin-right: 4px; vertical-align: -2px; }
+.axonpack-net-type .axonpack-sto-kind-icon { width: 12px; height: 12px; }
 /* The store on screen reads as the heading it replaced. */
 .axonpack-sto-store select,
 .axonpack-sto-store-name { font-weight: 700; color: var(--fg); }

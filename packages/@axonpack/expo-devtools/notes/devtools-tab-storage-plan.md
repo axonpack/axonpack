@@ -214,11 +214,11 @@ when it lands.
 beside the table with the split drag, as the request pane does. Add key and Import open in that
 same pane in place of a key, the way the override editor and sandbox do in Network.
 
-**Icons do not cross as a font.** The kind icons (`data-object`, `data-array`, `text-fields`,
-`numbers`, `toggle-on`, `memory`, `remove`, `help-outline`) and the toolbar's add, upload and
-refresh marks would need SVGs in `MATERIAL_ICONS`, a file the whole tab shares. So a kind is its
-coloured label, and Refresh, Add key and Import are text buttons. Filter and Export have Chrome
-icons already.
+**Icons do not cross as a font.** So the ones this panel draws (the eight type icons, and
+refresh, add and upload) are SVGs taken from the same Material Icons font file the app draws from,
+masked in the text's colour the way the tab's own panel icons are. They live in the panel's folder,
+not the tab's shared icon file, since only this panel uses them. A type's icon is looked up through
+the app's `STORED_VALUE_ICONS`, so the two surfaces cannot drift apart.
 
 **A right-click is the long press.** A row's menu opens on `onContextMenu` and is drawn under the
 row, since no pointer position reaches the app. The same for the tree's own menu, which already
