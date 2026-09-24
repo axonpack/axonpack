@@ -52,6 +52,7 @@
   },
   "scripts": {
     "build": "rm -rf build && tsc",
+    "prepare": "bun run build",
     "clean": "rm -rf build",
     "lint": "oxlint src",
     "format": "oxlint src --fix",

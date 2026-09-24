@@ -6,6 +6,7 @@
     "jsx": "react-native",
     "target": "esnext",
     "moduleResolution": "bundler",
+    "customConditions": ["expo-source"],
     "module": "esnext",
     "moduleDetection": "force",
     "esModuleInterop": true,
