@@ -15,6 +15,7 @@ only disagree with these.
 | [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose          |
 | [react-native-devtools.md](./react-native-devtools.md)                 | The panel again, inside React Native DevTools      |
 | [devtools-tab-storage-plan.md](./devtools-tab-storage-plan.md)         | Storage in the DevTools tab, built, not yet walked |
+| [devtools-performance-plan.md](./devtools-performance-plan.md)         | Performance in the DevTools tab, built, not walked |
 | [database.md](./database.md)                                           | Not built — and why it is not the Storage tab      |
 | [performance-landscape.md](./performance-landscape.md)                 | Research: what other performance tools measure     |
 | [react-native-performance-apis.md](./react-native-performance-apis.md) | Research: the platform surface underneath          |

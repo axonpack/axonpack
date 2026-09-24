@@ -4,7 +4,7 @@ import { Chip } from '../../../core/components/ui/chip.ui';
 
 export type PerformanceSection = 'statistics' | 'longTasks' | 'userTiming' | 'interactions';
 
-const SECTIONS: { key: PerformanceSection; label: string }[] = [
+export const SECTIONS: { key: PerformanceSection; label: string }[] = [
   { key: 'statistics', label: 'Statistics' },
   { key: 'userTiming', label: 'User timing' },
   { key: 'interactions', label: 'Interactions' },
