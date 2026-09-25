@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "test": "turbo run test",
+    "test": "turbo run test --filter='./packages/*' --filter='./packages/@axonpack/*'",
     "dev": "turbo run dev",
     "dev:docs": "cd docs && bun run dev",
     "lint": "turbo run lint",
