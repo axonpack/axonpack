@@ -144,6 +144,7 @@ Already cloned without `--recurse-submodules`? `git submodule update --init` fil
 | `bun run build`       | `turbo run build` across every workspace that defines it |
 | `bun run lint`        | `turbo run lint` (oxlint)                                |
 | `bun run check-types` | `turbo run check-types` (`tsc --noEmit`)                 |
+| `bun run test`        | `turbo run test` (jest and `bun test`)                   |
 | `bun run format`      | Prettier over the repo                                   |
 | `bun run dev:docs`    | Start the documentation site                             |
 | `bun run changeset`   | Record a release note for a change                       |
@@ -153,6 +154,25 @@ depends on the root lockfile.
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full workflow, coding conventions, commit format,
 and how to run a package's example app.
+
+## Releases
+
+Every change that should reach npm carries a changeset (`bun run changeset`). What happens after
+that is automatic:
+
+1. **A PR merges into `main`.** If it carries a changeset, two things run at once. A canary of every
+   package it touched is published under the `canary` dist-tag, as `3.3.0-canary-<commit>`, and the
+   Version Packages PR is opened or refreshed with the version bumps and the changelog.
+2. **More PRs merge.** Each one publishes a fresh canary and brings the Version Packages PR up to
+   date, so it always describes what is on `main`.
+3. **A maintainer merges the Version Packages PR.** That is the release: the packages are published
+   to `latest` and tagged. Nothing else ever publishes to `latest`.
+
+Try a canary with `bun add @axonpack/expo-devtools@canary`. To try a PR before it merges, add the
+`preview` label and CI posts an install link from pkg.pr.new on the PR; npm is not involved.
+
+Publishing uses npm trusted publishing, so there is no npm token anywhere, and every release carries a
+provenance attestation you can check with `npm audit signatures`.
 
 ## Contributing
 

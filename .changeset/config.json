@@ -8,5 +8,9 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "privatePackages": { "version": false, "tag": false },
-  "ignore": ["linter"]
+  "ignore": ["linter"],
+  "snapshot": {
+    "useCalculatedVersion": true,
+    "prereleaseTemplate": "{tag}-{commit}"
+  }
 }

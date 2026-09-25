@@ -1,0 +1,4 @@
+# `bun test` run from the root would otherwise scan every directory it can see, including the
+# git-ignored `examples/` checkouts, and try to run their suites. Tests live in packages only.
+[test]
+root = "packages"
