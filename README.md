@@ -7,7 +7,7 @@
 Axonpack ends the guesswork when things break. Answers you and your agent can both read: every
 request, error, log and stored value, captured on the device and copied out as structured JSON.
 
-**[Documentation](https://axonpack.github.io/docs)** · [Expo Devtools](https://axonpack.github.io/docs/expo-devtools) · [React Native Devtools Tab](https://axonpack.github.io/docs/react-native-devtools-tab) · [React Pretty Print](https://axonpack.github.io/docs/react-pretty-print)
+**[Documentation](https://axonpack.github.io/docs)** · [Board](https://github.com/orgs/axonpack/projects/1)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-fe5196.svg)](https://www.conventionalcommits.org)
@@ -158,6 +158,11 @@ and how to run a package's example app.
 
 Contributions are very welcome: bug reports, docs fixes, and PRs alike. Please read
 [`CONTRIBUTING.md`](./CONTRIBUTING.md) and our [Code of Conduct](./CODE_OF_CONDUCT.md) first.
+
+What is planned and what is in progress is on the
+[Axonpack board](https://github.com/orgs/axonpack/projects/1), grouped by
+[milestone](https://github.com/axonpack/axonpack/milestones). Pick anything there that is not
+already claimed.
 
 ## License
 
