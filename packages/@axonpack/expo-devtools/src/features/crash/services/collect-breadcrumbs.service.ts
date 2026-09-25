@@ -1,5 +1,5 @@
 import { consoleLogStore } from '../../console/stores/console-log.store';
-import { navigationStore } from '../../navigation/stores/navigation.store';
+import { navigationStore, ROOT_CONTAINER } from '../../navigation/stores/navigation.store';
 import { formatMoveTitle } from '../../navigation/utils/format-navigation.util';
 import { networkLogStore } from '../../network/stores/network-log.store';
 import type { CrashBreadcrumb } from '../stores/crash.store';
@@ -47,7 +47,10 @@ export function collectBreadcrumbs(): CrashBreadcrumb[] {
         at: move.timestamp,
         category: 'navigation',
         level: move.action,
-        message: formatMoveTitle(move),
+        message:
+          move.container === ROOT_CONTAINER
+            ? formatMoveTitle(move)
+            : `${move.container}: ${formatMoveTitle(move)}`,
       });
     }
   } catch {

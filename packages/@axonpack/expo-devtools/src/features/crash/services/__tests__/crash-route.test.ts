@@ -16,12 +16,14 @@ beforeEach(() => {
   crashStore.setEnabled(true);
   navigationStore.reset();
   navigationStore.setEnabled(true);
+  navigationStore.attachContainer('root', 'context');
 });
 
 describe('the route on a crash record', () => {
   it('is the route on screen, read from the Navigation tab', () => {
     navigationStore.record({
       id: 'm1',
+      container: 'root',
       timestamp: 1,
       action: 'NAVIGATE',
       from: null,

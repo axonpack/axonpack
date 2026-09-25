@@ -4,6 +4,7 @@ import { collectRouteNames, lastParamsFor } from '../collect-route-names.util';
 function move(name: string, params?: object): NavigationMove {
   return {
     id: name,
+    container: 'root',
     timestamp: 0,
     action: 'NAVIGATE',
     from: null,

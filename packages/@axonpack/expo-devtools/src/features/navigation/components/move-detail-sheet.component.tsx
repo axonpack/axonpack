@@ -47,6 +47,7 @@ export function MoveDetailSheet({
 
   const rows: [string, string][] = [
     ['Time', formatClockTime(active.timestamp)],
+    ['Container', active.container],
     ['Action', formatActionLabel(active.action)],
     ['From', formatRouteName(active.from)],
     ['To', formatRouteName(active.to)],
@@ -57,7 +58,7 @@ export function MoveDetailSheet({
   // An arrow rather than a declaration: a hoisted function loses the non-null narrowing above.
   const goAgain = () => {
     if (!active.to) return;
-    const message = navigateTo(active.to.name, active.to.params);
+    const message = navigateTo(active.to.name, active.to.params, active.container);
     if (message === null) onClose();
     else Alert.alert('Could not navigate', message);
   };

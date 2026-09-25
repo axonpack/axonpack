@@ -11,6 +11,7 @@ import {
   DevtoolsToolbar,
   ToolbarDivider,
 } from '../../../core/components/devtools-toolbar.component';
+import { Chip } from '../../../core/components/ui/chip.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
@@ -24,13 +25,18 @@ import {
   useNavigationStore,
   type NavigationMove,
 } from '../stores/navigation.store';
-import { navigationLogMarkdown, shareNavigationLog } from '../utils/export-navigation-log.util';
 import { collectRouteNames, lastParamsFor } from '../utils/collect-route-names.util';
-import { filterMoves } from '../utils/filter-moves.util';
+import { navigationLogMarkdown, shareNavigationLog } from '../utils/export-navigation-log.util';
+import { filterMoves, listContainers } from '../utils/filter-moves.util';
 import { timeOnScreen } from '../utils/format-navigation.util';
 
 function keyExtractor(move: NavigationMove): string {
   return move.id;
+}
+
+/** The focused container's `canGoBack`, read as a selector so a move re-reads it. */
+function focusedCanGoBack(): boolean {
+  return canGoBack();
 }
 
 export function NavigationView() {
@@ -39,7 +45,7 @@ export function NavigationView() {
   const attached = useNavigationStore(navigationStore.isAttached);
   const moves = useNavigationStore(navigationStore.getSnapshot);
   const paused = useNavigationStore(navigationStore.isPaused);
-  const backPossible = useNavigationStore(canGoBack);
+  const backPossible = useNavigationStore(focusedCanGoBack);
   const rootState = useNavigationStore(navigationStore.getRootState);
   const { filters, filtersOpen } = useNavigationViewStore();
 
@@ -50,7 +56,11 @@ export function NavigationView() {
     () => buildMatcher({ text: filters.search, ...filters.modes }),
     [filters.search, filters.modes]
   );
-  const visible = useMemo(() => filterMoves(moves, matcher), [moves, matcher]);
+  const containerNames = useMemo(() => listContainers(moves), [moves]);
+  const visible = useMemo(
+    () => filterMoves(moves, matcher, filters.container),
+    [moves, matcher, filters.container]
+  );
   const routeNames = useMemo(() => collectRouteNames(rootState, moves), [rootState, moves]);
 
   // Worked out over the whole history, not the filtered list: a hidden row still ended a stay.
@@ -59,16 +69,18 @@ export function NavigationView() {
     [moves]
   );
 
+  const showContainer = containerNames.length > 1;
   const renderRow = useCallback(
     ({ item }: { item: NavigationMove }) => (
       <MoveRow
         move={item}
         stayed={stays.get(item.id) ?? null}
         matcher={matcher}
+        showContainer={showContainer}
         onPress={(move) => setSelectedId(move.id)}
       />
     ),
-    [stays, matcher]
+    [stays, matcher, showContainer]
   );
 
   if (!attached) return <WaitingState />;
@@ -151,6 +163,27 @@ export function NavigationView() {
                   placeholder="Filter moves"
                   invalid={matcher?.invalid ?? false}
                 />
+                {showContainer && (
+                  <>
+                    <Text style={styles.filterSectionLabel}>Container</Text>
+                    <View style={styles.chipsRow}>
+                      <Chip
+                        label="All"
+                        active={filters.container === null}
+                        onPress={() => navigationViewStore.patchFilters({ container: null })}
+                      />
+                      {containerNames.map((name) => (
+                        <Chip
+                          key={name}
+                          icon="account-tree"
+                          label={name}
+                          active={filters.container === name}
+                          onPress={() => navigationViewStore.patchFilters({ container: name })}
+                        />
+                      ))}
+                    </View>
+                  </>
+                )}
               </View>
             )}
             <CurrentRouteCard />
@@ -199,6 +232,20 @@ const useStyles = makeThemedStyles((COLORS) => ({
     padding: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+  },
+  filterSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
   },
   empty: {
     textAlign: 'center',

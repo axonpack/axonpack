@@ -4,6 +4,8 @@ import { DEFAULT_SEARCH_MODES, type SearchModes } from '../../../core/utils/text
 export type NavigationFilters = {
   search: string;
   modes: SearchModes;
+  /** One container's moves only, or every container's with `null`. */
+  container: string | null;
 };
 
 export type NavigationViewState = {
@@ -16,7 +18,7 @@ export type NavigationViewState = {
  * and the React Native DevTools tab. Which move is open stays each surface's own.
  */
 const initial: NavigationViewState = {
-  filters: { search: '', modes: DEFAULT_SEARCH_MODES },
+  filters: { search: '', modes: DEFAULT_SEARCH_MODES, container: null },
   filtersOpen: false,
 };
 

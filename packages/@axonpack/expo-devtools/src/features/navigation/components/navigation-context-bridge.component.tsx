@@ -5,7 +5,7 @@ import {
   type NavigationContainerLike,
 } from '../services/attach-navigation.service';
 import { getReactNavigationContainerContext } from '../services/detect-router.service';
-import { navigationStore } from '../stores/navigation.store';
+import { navigationStore, ROOT_CONTAINER } from '../stores/navigation.store';
 
 /** Read when React Navigation is not installed, so the hook below has a context either way. */
 const NO_CONTAINER = createContext<unknown>(undefined);
@@ -23,7 +23,7 @@ export function NavigationContextBridge() {
   useEffect(() => {
     if (!container || !navigationStore.isEnabled()) return;
     navigationStore.setRouterKind('react-navigation');
-    return attachNavigationRef({ current: container }, 'context');
+    return attachNavigationRef({ current: container }, ROOT_CONTAINER, 'context');
   }, [container]);
 
   return null;

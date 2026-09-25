@@ -8,7 +8,7 @@ the panel.
 - [x] The tab is there only when a router is installed; an app without one never sees it
 - [x] With Expo Router, the tab finds the navigator on its own; nothing to wire
 - [x] With React Navigation, nothing to wire when the provider sits inside the container; one line
-      when it sits above
+      when it sits above, and that line names the container
 - [x] The current route, with its path and its params
 - [x] The whole navigator state as a tree: every stack and tab, and what is on top of each
 - [x] A history of moves: when, which action, from where to where, with the params
@@ -23,7 +23,8 @@ the panel.
 - [x] Rewrite or drop a move before it is stored, so a token in a param never lands in the log
 - [x] Export as JSON, copy as Markdown
 - [x] Says which router it found and how to finish wiring it, when it is still waiting
-- [ ] Several containers at once, side by side
+- [x] Several containers at once, each named, every move filed under its container, one in focus for
+      the toolbar
 
 ## What it can find on its own, and what it cannot
 
@@ -79,10 +80,14 @@ that never mounts, and the tab says so.
 
 ## Decisions worth knowing
 
-- **One container at a time.** An app with more than one, such as a modal flow with a container
-  of its own, has the newest to mount followed while it is up, and the one under it followed again
-  when it goes. Moves the other container makes in the meantime are not seen. Side by side is a
-  store keyed by container and a picker, and nobody has asked for it.
+- **Containers are named, and all of them are followed.** The one found on its own, by context or
+  by Expo Router, is `root`; the hook names the rest, and defaults to `root` for the app whose one
+  container sits inside the provider. Every move is filed under its container, the row and the
+  export say which once there is more than one, and the filter panel narrows to one. One container
+  is in focus at a time: the one that moved last, or the one picked on the route card. The card
+  shows its route and how it was reached, and Go back and Navigate act on it; a row's "go here
+  again" acts on the row's own container. A name handed over twice is one container, and the later
+  attachment replaces the earlier.
 - **Two gates, as everywhere.** `navigation.disabledByDefault` sets `paused`, never `enabled`, and
   the record button in the toolbar is what flips it back.
 - **A stream store.** Moves arrive continuously, so the store is a ring buffer with a batched

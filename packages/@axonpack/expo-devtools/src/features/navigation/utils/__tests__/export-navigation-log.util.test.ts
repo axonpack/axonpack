@@ -8,13 +8,22 @@ const details = { key: 'b', name: 'Details', path: '/details/7', params: { id: 7
 const moves: NavigationMove[] = [
   {
     id: 'm2',
+    container: 'root',
     timestamp: 1_700_000_002_000,
     action: 'NAVIGATE',
     from: home,
     to: details,
     noop: false,
   },
-  { id: 'm1', timestamp: 1_700_000_000_000, action: 'INITIAL', from: null, to: home, noop: false },
+  {
+    id: 'm1',
+    container: 'root',
+    timestamp: 1_700_000_000_000,
+    action: 'INITIAL',
+    from: null,
+    to: home,
+    noop: false,
+  },
 ];
 
 describe('navigationLogJson', () => {

@@ -8,10 +8,13 @@ import type { StackFrame } from '../../../core/utils/parse-stack.util';
 export type NavigationRouterKind = 'expo-router' | 'react-navigation';
 
 /**
- * How the container was reached: Expo Router's own store, React Navigation's context from a
+ * How a container was reached: Expo Router's own store, React Navigation's context from a
  * provider inside the container, or the hook from a provider above it.
  */
 export type NavigationAttachment = 'expo-router' | 'context' | 'hook';
+
+/** The container found on its own, by context or by Expo Router, and the hook's default name. */
+export const ROOT_CONTAINER = 'root';
 
 /**
  * A route as React Navigation reports it. `path` is the URL path, which only exists where linking
@@ -45,23 +48,25 @@ export type NavigationState = {
 };
 
 /**
- * One row in the Navigation tab: a move the navigator made. Read them with
+ * One row in the Navigation tab: a move a navigator made. Read them with
  * `devtools.navigationStore.getSnapshot()`; the store keeps the most recent 200, newest first.
  */
 export type NavigationMove = {
   /** Unique id for this row, stable for as long as it is in the buffer. */
   id: string;
+  /** The container that moved: `root`, or the name the hook was given. */
+  container: string;
   /** When the navigator changed, as `Date.now()` milliseconds. */
   timestamp: number;
   /**
    * The action's type as React Navigation names it: `NAVIGATE`, `GO_BACK`, `JUMP_TO`, `PUSH`...
-   * `INITIAL` for the first row, written when the navigator was found. `UNKNOWN` when the state
+   * `INITIAL` for a container's first row, written when it was found. `UNKNOWN` when the state
    * changed with no action ahead of it, which is how a change made outside a dispatch arrives.
    */
   action: string;
   /** What the action carried: the route name, the params, and whatever else was dispatched. */
   payload?: Record<string, unknown>;
-  /** The route on top before the move. `null` on the first row. */
+  /** The route on top before the move. `null` on a container's first row. */
   from: NavigationRoute | null;
   /** The route on top after it. */
   to: NavigationRoute | null;
@@ -77,6 +82,14 @@ export type NavigationMove = {
   state?: NavigationState;
 };
 
+/** A container being followed: what it is called, how it was reached, and what is on top of it. */
+export type NavigationContainerInfo = {
+  name: string;
+  via: NavigationAttachment;
+  route: NavigationRoute | null;
+  state: NavigationState | null;
+};
+
 type NavigationEvents = {
   change: () => void;
 };
@@ -85,16 +98,20 @@ const MAX_MOVES = 200;
 
 let moves: NavigationMove[] = [];
 let routerKind: NavigationRouterKind | null = null;
-let attached = false;
-let attachedVia: NavigationAttachment | null = null;
-let currentRoute: NavigationRoute | null = null;
-let rootState: NavigationState | null = null;
+/** In the order they were attached. Every one is followed; `focused` is the one the toolbar acts on. */
+let containers: NavigationContainerInfo[] = [];
+let focused: string | null = null;
 let paused = false;
 let enabled = false;
 let redact: ((move: NavigationMove) => NavigationMove | null) | undefined;
 
 const emitter = new EventEmitter<NavigationEvents>();
 const notify = coalesceNotify(emitter);
+
+function findContainer(name: string | null): NavigationContainerInfo | null {
+  if (name === null) return null;
+  return containers.find((container) => container.name === name) ?? null;
+}
 
 export const navigationStore = {
   getSnapshot(): NavigationMove[] {
@@ -103,18 +120,28 @@ export const navigationStore = {
   getRouterKind(): NavigationRouterKind | null {
     return routerKind;
   },
-  /** Whether a navigator has been found and is being listened to. */
+  /** Whether any container is being followed. */
   isAttached(): boolean {
-    return attached;
+    return containers.length > 0;
   },
-  getAttachment(): NavigationAttachment | null {
-    return attachedVia;
+  getContainers(): NavigationContainerInfo[] {
+    return containers;
+  },
+  /** The container the toolbar acts on and the card shows: the one that moved last, or the one picked. */
+  getFocused(): string | null {
+    return focused;
+  },
+  getFocusedContainer(): NavigationContainerInfo | null {
+    return findContainer(focused);
   },
   getCurrentRoute(): NavigationRoute | null {
-    return currentRoute;
+    return findContainer(focused)?.route ?? null;
   },
   getRootState(): NavigationState | null {
-    return rootState;
+    return findContainer(focused)?.state ?? null;
+  },
+  getAttachment(): NavigationAttachment | null {
+    return findContainer(focused)?.via ?? null;
   },
   isPaused(): boolean {
     return paused;
@@ -138,9 +165,22 @@ export const navigationStore = {
     routerKind = kind;
     notify();
   },
-  setAttached(nextAttached: boolean, via: NavigationAttachment | null = null) {
-    attached = nextAttached;
-    attachedVia = nextAttached ? via : null;
+  /** A name attached twice is one container: the later attachment replaces the earlier. */
+  attachContainer(name: string, via: NavigationAttachment) {
+    containers = [
+      ...containers.filter((container) => container.name !== name),
+      { name, via, route: null, state: null },
+    ];
+    focused = name;
+    notify();
+  },
+  detachContainer(name: string) {
+    containers = containers.filter((container) => container.name !== name);
+    if (focused === name) focused = containers[containers.length - 1]?.name ?? null;
+    notify();
+  },
+  setFocused(name: string) {
+    if (findContainer(name)) focused = name;
     notify();
   },
   /**
@@ -151,9 +191,10 @@ export const navigationStore = {
     redact = next;
   },
   /**
-   * The one way a move gets in. The current route follows every move, paused or not: pausing
+   * The one way a move gets in. The container's route follows every move, paused or not: pausing
    * stops the history, and the route on top is a live reading rather than a row. Both go through
-   * the redaction hook first, so a token in a param never reaches the card either.
+   * the redaction hook first, so a token in a param never reaches the card either. The container
+   * that moved becomes the focused one, since it is the one being used.
    */
   record(move: NavigationMove) {
     if (!enabled) return;
@@ -168,23 +209,26 @@ export const navigationStore = {
     }
     if (redacted === null) return;
 
-    currentRoute = redacted.to;
-    rootState = redacted.state ?? null;
-    if (!paused) moves = [redacted, ...moves].slice(0, MAX_MOVES);
+    const entry = redacted;
+    containers = containers.map((container) =>
+      container.name === entry.container
+        ? { ...container, route: entry.to, state: entry.state ?? null }
+        : container
+    );
+    if (findContainer(entry.container)) focused = entry.container;
+    if (!paused) moves = [entry, ...moves].slice(0, MAX_MOVES);
     notify();
   },
   clear() {
     moves = [];
     notify();
   },
-  /** Test-only; nothing detaches a navigator for the life of the process otherwise. */
+  /** Test-only; nothing detaches every container for the life of the process otherwise. */
   reset() {
     moves = [];
     routerKind = null;
-    attached = false;
-    attachedVia = null;
-    currentRoute = null;
-    rootState = null;
+    containers = [];
+    focused = null;
     paused = false;
     enabled = false;
     redact = undefined;

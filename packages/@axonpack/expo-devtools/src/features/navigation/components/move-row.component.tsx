@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { CallSite } from '../../../core/components/call-site.component';
 import { HighlightedText } from '../../../core/components/ui/highlighted-text.ui';
+import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
 import { MONOSPACE } from '../../../core/constants/typography.const';
 import { formatDuration } from '../../../core/utils/format-duration.util';
 import { findMatches, type Matcher } from '../../../core/utils/text-search.util';
@@ -21,12 +22,15 @@ function MoveRowComponent({
   move,
   stayed,
   matcher,
+  showContainer,
   onPress,
 }: {
   move: NavigationMove;
   /** How long the screen this move landed on stayed on top; `null` while it still is. */
   stayed: number | null;
   matcher: Matcher | null;
+  /** Name the container on the row, which is worth the space only once there is more than one. */
+  showContainer: boolean;
   onPress: (move: NavigationMove) => void;
 }) {
   const styles = useStyles();
@@ -51,6 +55,7 @@ function MoveRowComponent({
           <Text style={[styles.action, { color: visual.color }]}>
             {formatActionLabel(move.action)}
           </Text>
+          {showContainer && <InfoBadge icon="account-tree" label={move.container} />}
           {move.noop && <Text style={styles.noop}>no change</Text>}
           <Text style={styles.time}>{formatClockTime(move.timestamp)}</Text>
         </View>
@@ -118,7 +123,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   topRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     gap: 8,
   },
   action: {

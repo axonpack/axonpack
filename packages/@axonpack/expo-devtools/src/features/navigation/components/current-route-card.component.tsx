@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { JsonTree } from '../../../core/components/json-tree';
+import { Chip } from '../../../core/components/ui/chip.ui';
 import { CollapsibleSection } from '../../../core/components/ui/collapsible-section.ui';
 import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
 import { MONOSPACE } from '../../../core/constants/typography.const';
@@ -12,39 +13,65 @@ import {
   type NavigationAttachment,
 } from '../stores/navigation.store';
 
-/** Which of the three layouts the tab is running on, so a setup question needs no code reading. */
+/** Which of the three layouts a container came in by, so a setup question needs no code reading. */
 const ATTACHMENT_LABELS: Record<NavigationAttachment, string> = {
   'expo-router': 'Expo Router',
   context: 'React Navigation, found from inside the container',
   hook: 'React Navigation, handed over with useDevtoolsNavigation',
 };
 
-/** What is on top right now, and the whole navigator state under it for when the top is not enough. */
+/**
+ * What is on top of the focused container right now, and the whole navigator state under it for
+ * when the top is not enough. With more than one container attached, a chip row picks which one
+ * the card shows and the toolbar acts on.
+ */
 export function CurrentRouteCard() {
   const styles = useStyles();
-  const route = useNavigationStore(navigationStore.getCurrentRoute);
-  const state = useNavigationStore(navigationStore.getRootState);
-  const attachment = useNavigationStore(navigationStore.getAttachment);
+  const containers = useNavigationStore(navigationStore.getContainers);
+  const focused = useNavigationStore(navigationStore.getFocusedContainer);
 
-  if (!route) return null;
+  if (!focused) return null;
 
-  const params = route.params && Object.keys(route.params).length > 0 ? route.params : null;
+  const { route, state } = focused;
+  const params = route?.params && Object.keys(route.params).length > 0 ? route.params : null;
 
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>On screen</Text>
-      <View style={styles.nameRow}>
-        <Text style={styles.name} selectable>
-          {route.name}
-        </Text>
-        <CopyIconButton value={route.path ?? route.name} />
-      </View>
-      {route.path && (
-        <Text style={styles.path} selectable>
-          {route.path}
-        </Text>
+      {containers.length > 1 && (
+        <View style={styles.chips}>
+          {containers.map((container) => (
+            <Chip
+              key={container.name}
+              icon="account-tree"
+              label={container.name}
+              active={container.name === focused.name}
+              onPress={() => navigationStore.setFocused(container.name)}
+            />
+          ))}
+        </View>
       )}
-      {attachment && <Text style={styles.attachment}>{ATTACHMENT_LABELS[attachment]}</Text>}
+
+      <Text style={styles.label}>On screen</Text>
+      {route ? (
+        <>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} selectable>
+              {route.name}
+            </Text>
+            <CopyIconButton value={route.path ?? route.name} />
+          </View>
+          {route.path && (
+            <Text style={styles.path} selectable>
+              {route.path}
+            </Text>
+          )}
+        </>
+      ) : (
+        <Text style={styles.waiting}>Nothing yet: the navigator has not mounted.</Text>
+      )}
+      <Text style={styles.attachment}>
+        {focused.name} · {ATTACHMENT_LABELS[focused.via]}
+      </Text>
 
       {params && (
         <CollapsibleSection title="Params" initiallyExpanded={false}>
@@ -69,6 +96,12 @@ const useStyles = makeThemedStyles((COLORS) => ({
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 10,
+  },
   label: {
     fontSize: 10,
     fontWeight: '700',
@@ -90,6 +123,11 @@ const useStyles = makeThemedStyles((COLORS) => ({
     fontFamily: MONOSPACE,
     fontSize: 11,
     color: COLORS.textSecondary,
+  },
+  waiting: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   attachment: {
     fontSize: 10,

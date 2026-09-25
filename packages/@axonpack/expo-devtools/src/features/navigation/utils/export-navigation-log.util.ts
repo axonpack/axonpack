@@ -36,11 +36,14 @@ function routeLine(route: NavigationRoute | null): string {
 /**
  * The history as Markdown, for an issue or a chat: one line per move, oldest first, with how long
  * each screen stayed on top. A fenced block keeps the arrows and braces from being re-wrapped.
+ * The container is named on a line only when the log has more than one, so a one-container app's
+ * log stays uncluttered.
  */
 export function navigationLogMarkdown(
   moves: readonly NavigationMove[],
   currentRoute: NavigationRoute | null
 ): string {
+  const several = new Set(moves.map((move) => move.container)).size > 1;
   const lines = moves.map((move, index) => {
     const stayed = timeOnScreen(moves, index);
     const params =
@@ -49,7 +52,8 @@ export function navigationLogMarkdown(
         : '';
     const stay = stayed === null ? '' : `  (${formatDuration(stayed)} on screen)`;
     const noop = move.noop ? '  (no change)' : '';
-    return `${formatClockTime(move.timestamp)}  ${formatActionLabel(move.action)}  ${formatMoveTitle(move)}${params}${stay}${noop}`;
+    const where = several ? `[${move.container}]  ` : '';
+    return `${formatClockTime(move.timestamp)}  ${where}${formatActionLabel(move.action)}  ${formatMoveTitle(move)}${params}${stay}${noop}`;
   });
 
   return [

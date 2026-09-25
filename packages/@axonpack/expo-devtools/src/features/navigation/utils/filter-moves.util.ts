@@ -9,10 +9,11 @@ function json(value: unknown): string {
   }
 }
 
-/** Everything a search runs over: the action, both route names, the path and the params. */
+/** Everything a search runs over: the action, both route names, the path, the params, the container. */
 export function moveSearchText(move: NavigationMove): string {
   return [
     move.action,
+    move.container,
     move.from?.name,
     move.to?.name,
     move.to?.path,
@@ -23,7 +24,21 @@ export function moveSearchText(move: NavigationMove): string {
     .join(' ');
 }
 
-export function filterMoves(moves: NavigationMove[], matcher: Matcher | null): NavigationMove[] {
-  if (!matcher?.pattern) return moves;
-  return moves.filter((move) => testMatch(moveSearchText(move), matcher));
+export function filterMoves(
+  moves: NavigationMove[],
+  matcher: Matcher | null,
+  container: string | null = null
+): NavigationMove[] {
+  return moves.filter(
+    (move) =>
+      (container === null || move.container === container) &&
+      testMatch(moveSearchText(move), matcher)
+  );
+}
+
+/** The containers the history has rows for, in first-seen order. */
+export function listContainers(moves: readonly NavigationMove[]): string[] {
+  const names: string[] = [];
+  for (const move of moves) if (!names.includes(move.container)) names.push(move.container);
+  return names;
 }

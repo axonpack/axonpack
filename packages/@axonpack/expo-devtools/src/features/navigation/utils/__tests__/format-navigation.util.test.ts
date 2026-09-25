@@ -7,7 +7,16 @@ import {
 } from '../format-navigation.util';
 
 function move(patch: Partial<NavigationMove>): NavigationMove {
-  return { id: 'm', timestamp: 0, action: 'NAVIGATE', from: null, to: null, noop: false, ...patch };
+  return {
+    id: 'm',
+    container: 'root',
+    timestamp: 0,
+    action: 'NAVIGATE',
+    from: null,
+    to: null,
+    noop: false,
+    ...patch,
+  };
 }
 
 describe('formatActionLabel', () => {

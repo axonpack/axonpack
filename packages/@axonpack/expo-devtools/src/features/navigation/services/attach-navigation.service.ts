@@ -33,25 +33,21 @@ type PendingAction = {
   stack?: string;
 };
 
-/** How often an empty ref is looked at again, and for how long, before the tab stops waiting. */
-const POLL_INTERVAL_MS = 250;
-const POLL_ATTEMPTS = 80;
-
 type Attachment = {
-  ref: NavigationContainerRefLike;
+  name: string;
   via: NavigationAttachment;
+  ref: NavigationContainerRefLike;
+  container: NavigationContainerLike | null;
   stopListening: (() => void) | null;
   timer: ReturnType<typeof setInterval> | null;
 };
 
-/**
- * Every container handed over and still mounted, oldest first. The newest is the one followed: a
- * modal flow with a container of its own is what is on screen while it is up, and the container
- * under it is what comes back when it goes. Several at once, side by side, is not built.
- */
-const attachments: Attachment[] = [];
-let active: Attachment | null = null;
-let container: NavigationContainerLike | null = null;
+/** How often an empty ref is looked at again, and for how long, before the tab stops waiting. */
+const POLL_INTERVAL_MS = 250;
+const POLL_ATTEMPTS = 80;
+
+/** Every container handed over and still mounted, by name. All of them are followed at once. */
+const attachments = new Map<string, Attachment>();
 let sequence = 0;
 
 function toRoute(route: NavigationRoute | undefined): NavigationRoute | null {
@@ -69,9 +65,10 @@ function nextId(): string {
   return `nav-${Date.now()}-${sequence}`;
 }
 
-function listen(navigation: NavigationContainerLike, via: NavigationAttachment): () => void {
+function listen(entry: Attachment, navigation: NavigationContainerLike): () => void {
   let pending: PendingAction | null = null;
   let lastState = navigation.getRootState();
+  let lastRoute = toRoute(navigation.getCurrentRoute());
 
   function record(
     action: PendingAction['action'],
@@ -79,24 +76,32 @@ function listen(navigation: NavigationContainerLike, via: NavigationAttachment):
     state: NavigationState | undefined,
     noop: boolean
   ) {
+    const to = toRoute(navigation.getCurrentRoute());
     const move: NavigationMove = {
       id: nextId(),
+      container: entry.name,
       timestamp: Date.now(),
       action: action.type,
       payload: action.payload,
-      from: navigationStore.getCurrentRoute(),
-      to: toRoute(navigation.getCurrentRoute()),
+      from: lastRoute,
+      to,
       noop,
       origin: stack ? parseStack(stack) : undefined,
       state,
     };
     navigationStore.record(move);
     lastState = state;
+    lastRoute = to;
   }
+
+  navigationStore.attachContainer(entry.name, entry.via);
 
   // The container mounts before its navigator, and a navigator can mount much later, in a tab or a
   // modal. Until it does there is no state, and the first `state` event writes the first row.
-  if (lastState) record({ type: 'INITIAL' }, undefined, lastState, false);
+  if (lastState) {
+    lastRoute = null;
+    record({ type: 'INITIAL' }, undefined, lastState, false);
+  }
 
   /**
    * Two events, paired the way React Navigation's own devtools pair them. The action fires first
@@ -122,14 +127,13 @@ function listen(navigation: NavigationContainerLike, via: NavigationAttachment):
     record(action, change?.stack, state, false);
   });
 
-  container = navigation;
-  navigationStore.setAttached(true, via);
+  entry.container = navigation;
 
   return () => {
     stopActions();
     stopStates();
-    container = null;
-    navigationStore.setAttached(false);
+    entry.container = null;
+    navigationStore.detachContainer(entry.name);
   };
 }
 
@@ -141,90 +145,94 @@ function stop(entry: Attachment) {
 }
 
 /**
- * Starts following one attachment. The ref is empty until its container mounts, which can be after
- * the caller's own effect, so an empty one is looked at again for a while rather than given up on.
- * Readiness is not waited for: a container with no navigator yet is listened to all the same, and
- * reports its first state when one mounts.
+ * Hands a container over under a name. The ref is empty until its container mounts, which can be
+ * after the caller's own effect, so an empty one is looked at again for a while rather than given
+ * up on. Readiness is not waited for: a container with no navigator yet is listened to all the
+ * same, and reports its first state when one mounts. A name handed over twice is one container,
+ * and the later attachment replaces the earlier. Returns the detach for this one.
  */
-function follow(entry: Attachment) {
-  if (active) stop(active);
-  active = entry;
+export function attachNavigationRef(
+  ref: NavigationContainerRefLike,
+  name: string,
+  via: NavigationAttachment
+): () => void {
+  const previous = attachments.get(name);
+  if (previous) stop(previous);
+
+  const entry: Attachment = { name, via, ref, container: null, stopListening: null, timer: null };
+  attachments.set(name, entry);
 
   function tryAttach(): boolean {
     let current: NavigationContainerLike | null;
     try {
-      current = entry.ref.current;
+      current = ref.current;
     } catch {
       // Expo Router's ref throws until its root has mounted, which is the same as being empty.
       current = null;
     }
     if (!current) return false;
-    entry.stopListening = listen(current, entry.via);
+    entry.stopListening = listen(entry, current);
     return true;
   }
 
-  if (tryAttach()) return;
-  let attempts = 0;
-  entry.timer = setInterval(() => {
-    attempts += 1;
-    if (tryAttach() || attempts >= POLL_ATTEMPTS) {
-      clearInterval(entry.timer!);
-      entry.timer = null;
-    }
-  }, POLL_INTERVAL_MS);
-}
-
-/**
- * Hands a container over. The newest handed over is the one followed, and when it is taken back
- * the one before it is followed again. Returns the detach for this one.
- */
-export function attachNavigationRef(
-  ref: NavigationContainerRefLike,
-  via: NavigationAttachment
-): () => void {
-  const entry: Attachment = { ref, via, stopListening: null, timer: null };
-  attachments.push(entry);
-  follow(entry);
+  if (!tryAttach()) {
+    let attempts = 0;
+    entry.timer = setInterval(() => {
+      attempts += 1;
+      if (tryAttach() || attempts >= POLL_ATTEMPTS) {
+        clearInterval(entry.timer!);
+        entry.timer = null;
+      }
+    }, POLL_INTERVAL_MS);
+  }
 
   return () => {
-    const index = attachments.indexOf(entry);
-    if (index === -1) return;
-    attachments.splice(index, 1);
-    if (active !== entry) return;
+    if (attachments.get(name) !== entry) return;
     stop(entry);
-    active = null;
-    const previous = attachments[attachments.length - 1];
-    if (previous) follow(previous);
+    attachments.delete(name);
   };
 }
 
 /** Takes every container back. Test-only; a mounted app only ever takes back its own. */
 export function detachNavigation() {
-  for (const entry of attachments) stop(entry);
-  attachments.length = 0;
-  active = null;
+  for (const entry of attachments.values()) stop(entry);
+  attachments.clear();
 }
 
-/** Runs the real navigator, so the app sees the move exactly as it sees its own. */
-export function navigateTo(name: string, params?: object): string | null {
-  if (!container) return 'No navigator is attached.';
+function containerNamed(name: string | null): NavigationContainerLike | null {
+  if (name === null) return null;
+  return attachments.get(name)?.container ?? null;
+}
+
+/**
+ * Runs the real navigator, so the app sees the move exactly as it sees its own. Acts on the named
+ * container, or on the focused one when none is named.
+ */
+export function navigateTo(
+  routeName: string,
+  params?: object,
+  container: string | null = navigationStore.getFocused()
+): string | null {
+  const navigation = containerNamed(container);
+  if (!navigation) return 'No navigator is attached.';
   try {
-    container.navigate(name, params);
+    navigation.navigate(routeName, params);
     return null;
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
   }
 }
 
-export function goBack(): string | null {
-  if (!container) return 'No navigator is attached.';
-  if (!container.canGoBack()) return 'There is nothing to go back to.';
-  container.goBack();
+export function goBack(container: string | null = navigationStore.getFocused()): string | null {
+  const navigation = containerNamed(container);
+  if (!navigation) return 'No navigator is attached.';
+  if (!navigation.canGoBack()) return 'There is nothing to go back to.';
+  navigation.goBack();
   return null;
 }
 
-export function canGoBack(): boolean {
-  return container?.canGoBack() ?? false;
+export function canGoBack(container: string | null = navigationStore.getFocused()): boolean {
+  return containerNamed(container)?.canGoBack() ?? false;
 }
 
 /** Hands the URL to the OS, which is how a deep link reaches the router in a running app. */

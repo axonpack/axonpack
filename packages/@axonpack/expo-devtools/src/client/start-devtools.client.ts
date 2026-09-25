@@ -18,7 +18,7 @@ import {
 import { crashStore, type CrashRecord } from '../features/crash/stores/crash.store';
 import { attachNavigationRef } from '../features/navigation/services/attach-navigation.service';
 import { detectRouter } from '../features/navigation/services/detect-router.service';
-import { navigationStore } from '../features/navigation/stores/navigation.store';
+import { navigationStore, ROOT_CONTAINER } from '../features/navigation/stores/navigation.store';
 import type { NavigationMove } from '../features/navigation/stores/navigation.store';
 import { installNativeTimingReporter } from '../features/network/services/native-timing.service';
 import { observeNitroFetch } from '../features/network/services/nitro-fetch.service';
@@ -627,6 +627,7 @@ export function startDevtools<TThemeName extends string = never>(
             return getContainerRef()?.current ?? null;
           },
         },
+        ROOT_CONTAINER,
         'expo-router'
       );
     }

@@ -7,6 +7,7 @@ import {
 } from '../attach-navigation.service';
 import {
   navigationStore,
+  ROOT_CONTAINER,
   type NavigationRoute,
   type NavigationState,
 } from '../../stores/navigation.store';
@@ -16,7 +17,6 @@ type Listener = (event: { data: unknown }) => void;
 /** The two events a container emits, in the order React Navigation emits them. */
 class FakeContainer implements NavigationContainerLike {
   listeners = new Map<string, Set<Listener>>();
-  ready = true;
   back = true;
   navigate = jest.fn();
   goBack = jest.fn();
@@ -26,9 +26,6 @@ class FakeContainer implements NavigationContainerLike {
     public route: NavigationRoute | undefined
   ) {}
 
-  isReady() {
-    return this.ready;
-  }
   getRootState() {
     return this.state;
   }
@@ -64,8 +61,14 @@ class FakeContainer implements NavigationContainerLike {
 
 const home: NavigationRoute = { key: 'home-1', name: 'Home' };
 const details: NavigationRoute = { key: 'details-1', name: 'Details', params: { id: 7 } };
+const cart: NavigationRoute = { key: 'cart-1', name: 'Cart' };
 const homeState: NavigationState = { index: 0, routes: [home] };
 const detailsState: NavigationState = { index: 1, routes: [home, details] };
+const cartState: NavigationState = { index: 0, routes: [cart] };
+
+function attachRoot(container: FakeContainer) {
+  return attachNavigationRef({ current: container }, ROOT_CONTAINER, 'hook');
+}
 
 beforeEach(() => {
   navigationStore.reset();
@@ -78,12 +81,12 @@ afterEach(() => {
 });
 
 describe('attachNavigationRef', () => {
-  it('writes the state already there as the first row', () => {
-    const container = new FakeContainer(homeState, home);
-    attachNavigationRef({ current: container }, 'hook');
+  it('writes the state already there as the first row, under the container name', () => {
+    attachRoot(new FakeContainer(homeState, home));
 
     const [first] = navigationStore.getSnapshot();
     expect(first.action).toBe('INITIAL');
+    expect(first.container).toBe(ROOT_CONTAINER);
     expect(first.from).toBeNull();
     expect(first.to?.name).toBe('Home');
     expect(navigationStore.isAttached()).toBe(true);
@@ -92,7 +95,7 @@ describe('attachNavigationRef', () => {
 
   it('listens to a container whose navigator has not mounted, and starts on its first state', () => {
     const container = new FakeContainer(undefined, undefined);
-    attachNavigationRef({ current: container }, 'hook');
+    attachRoot(container);
     expect(navigationStore.isAttached()).toBe(true);
     expect(navigationStore.getSnapshot()).toEqual([]);
 
@@ -107,7 +110,7 @@ describe('attachNavigationRef', () => {
 
   it('pairs the action with the state that follows it', () => {
     const container = new FakeContainer(homeState, home);
-    attachNavigationRef({ current: container }, 'hook');
+    attachRoot(container);
 
     container.dispatch(
       { type: 'NAVIGATE', payload: { name: 'Details', params: { id: 7 } } },
@@ -136,7 +139,7 @@ describe('attachNavigationRef', () => {
 
   it('keeps an action that changed nothing, marked as such', () => {
     const container = new FakeContainer(homeState, home);
-    attachNavigationRef({ current: container }, 'hook');
+    attachRoot(container);
 
     container.dispatch({ type: 'NAVIGATE', payload: { name: 'Home' } }, null);
 
@@ -148,7 +151,7 @@ describe('attachNavigationRef', () => {
 
   it('logs a state change with no action ahead of it as unknown, and skips a re-emit', () => {
     const container = new FakeContainer(homeState, home);
-    attachNavigationRef({ current: container }, 'hook');
+    attachRoot(container);
 
     container.emit('state', { state: homeState });
     expect(navigationStore.getSnapshot()).toHaveLength(1);
@@ -171,7 +174,8 @@ describe('attachNavigationRef', () => {
           return current;
         },
       },
-      'hook'
+      ROOT_CONTAINER,
+      'expo-router'
     );
     expect(navigationStore.isAttached()).toBe(false);
 
@@ -182,40 +186,45 @@ describe('attachNavigationRef', () => {
     current = container;
     jest.advanceTimersByTime(250);
     expect(navigationStore.isAttached()).toBe(true);
+    expect(navigationStore.getAttachment()).toBe('expo-router');
     expect(navigationStore.getSnapshot()[0].action).toBe('INITIAL');
   });
 
-  it('follows the newest container, and the one before it when that goes', () => {
-    const first = new FakeContainer(homeState, home);
-    const second = new FakeContainer(homeState, home);
-    const detachFirst = attachNavigationRef({ current: first }, 'hook');
-    const detachSecond = attachNavigationRef({ current: second }, 'hook');
+  it('follows two containers at once, each row under its own name', () => {
+    const root = new FakeContainer(homeState, home);
+    const flow = new FakeContainer(cartState, cart);
+    const detachRoot = attachRoot(root);
+    const detachFlow = attachNavigationRef({ current: flow }, 'checkout', 'hook');
 
-    first.dispatch({ type: 'GO_BACK' }, { state: homeState, route: home });
-    expect(navigationStore.getSnapshot().map((m) => m.action)).toEqual(['INITIAL', 'INITIAL']);
+    root.dispatch({ type: 'NAVIGATE' }, { state: detailsState, route: details });
+    flow.dispatch({ type: 'GO_BACK' }, { state: cartState, route: cart });
 
-    detachSecond();
-    expect(navigationStore.isAttached()).toBe(true);
-    first.dispatch({ type: 'GO_BACK' }, { state: homeState, route: home });
-    expect(navigationStore.getSnapshot()[0].action).toBe('GO_BACK');
+    const rows = navigationStore.getSnapshot().map((m) => `${m.container}:${m.action}`);
+    expect(rows).toEqual(['checkout:GO_BACK', 'root:NAVIGATE', 'checkout:INITIAL', 'root:INITIAL']);
+    expect(navigationStore.getFocused()).toBe('checkout');
 
-    detachFirst();
-    expect(navigationStore.isAttached()).toBe(false);
-    expect(navigationStore.getAttachment()).toBeNull();
-    first.dispatch({ type: 'GO_BACK' }, { state: homeState, route: home });
-    expect(navigationStore.getSnapshot()[0].action).toBe('GO_BACK');
+    detachFlow();
+    expect(navigationStore.getContainers().map((c) => c.name)).toEqual([ROOT_CONTAINER]);
+    expect(navigationStore.getFocused()).toBe(ROOT_CONTAINER);
+    flow.dispatch({ type: 'GO_BACK' }, { state: cartState, route: cart });
     expect(navigationStore.getSnapshot()).toHaveLength(4);
+
+    detachRoot();
+    expect(navigationStore.isAttached()).toBe(false);
   });
 
-  it('taking back a container that is not the one followed changes nothing', () => {
+  it('treats a name handed over twice as one container', () => {
     const first = new FakeContainer(homeState, home);
     const second = new FakeContainer(homeState, home);
-    const detachFirst = attachNavigationRef({ current: first }, 'hook');
-    attachNavigationRef({ current: second }, 'hook');
+    const detachFirst = attachRoot(first);
+    attachRoot(second);
 
+    first.dispatch({ type: 'GO_BACK' }, { state: homeState, route: home });
+    expect(navigationStore.getContainers()).toHaveLength(1);
+    expect(navigationStore.getSnapshot().map((m) => m.action)).toEqual(['INITIAL', 'INITIAL']);
+
+    // The first attachment's detach is stale and must not take the second one down.
     detachFirst();
-    second.dispatch({ type: 'GO_BACK' }, { state: homeState, route: home });
-    expect(navigationStore.getSnapshot()[0].action).toBe('GO_BACK');
     expect(navigationStore.isAttached()).toBe(true);
   });
 });
@@ -226,17 +235,21 @@ describe('navigating from the panel', () => {
     expect(goBack()).toBe('No navigator is attached.');
   });
 
-  it('runs the real navigator, and refuses a back it cannot do', () => {
-    const container = new FakeContainer(homeState, home);
-    attachNavigationRef({ current: container }, 'hook');
+  it('acts on the focused container by default, or the one named', () => {
+    const root = new FakeContainer(homeState, home);
+    const flow = new FakeContainer(cartState, cart);
+    attachRoot(root);
+    attachNavigationRef({ current: flow }, 'checkout', 'hook');
 
-    expect(navigateTo('Details', { id: 7 })).toBeNull();
-    expect(container.navigate).toHaveBeenCalledWith('Details', { id: 7 });
+    expect(navigateTo('Address')).toBeNull();
+    expect(flow.navigate).toHaveBeenCalledWith('Address', undefined);
 
-    container.back = false;
+    expect(navigateTo('Details', { id: 7 }, ROOT_CONTAINER)).toBeNull();
+    expect(root.navigate).toHaveBeenCalledWith('Details', { id: 7 });
+
+    flow.back = false;
     expect(goBack()).toBe('There is nothing to go back to.');
-    container.back = true;
-    expect(goBack()).toBeNull();
-    expect(container.goBack).toHaveBeenCalled();
+    expect(goBack(ROOT_CONTAINER)).toBeNull();
+    expect(root.goBack).toHaveBeenCalled();
   });
 });

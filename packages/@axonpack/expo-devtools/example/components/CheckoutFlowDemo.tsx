@@ -109,7 +109,7 @@ function DoneScreen() {
 }
 
 export function CheckoutFlowDemo() {
-  useDevtoolsNavigation(flowRef);
+  useDevtoolsNavigation(flowRef, 'checkout');
 
   return (
     // React Navigation refuses a container inside another unless it is declared independent.
