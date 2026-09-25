@@ -36,6 +36,7 @@ type PendingAction = {
 type Attachment = {
   name: string;
   via: NavigationAttachment;
+  hostRouteKey: string | undefined;
   ref: NavigationContainerRefLike;
   container: NavigationContainerLike | null;
   stopListening: (() => void) | null;
@@ -94,7 +95,7 @@ function listen(entry: Attachment, navigation: NavigationContainerLike): () => v
     lastRoute = to;
   }
 
-  navigationStore.attachContainer(entry.name, entry.via);
+  navigationStore.attachContainer(entry.name, entry.via, entry.hostRouteKey);
 
   // The container mounts before its navigator, and a navigator can mount much later, in a tab or a
   // modal. Until it does there is no state, and the first `state` event writes the first row.
@@ -154,12 +155,22 @@ function stop(entry: Attachment) {
 export function attachNavigationRef(
   ref: NavigationContainerRefLike,
   name: string,
-  via: NavigationAttachment
+  via: NavigationAttachment,
+  /** The route of another container this one is mounted in, when it is. */
+  hostRouteKey?: string
 ): () => void {
   const previous = attachments.get(name);
   if (previous) stop(previous);
 
-  const entry: Attachment = { name, via, ref, container: null, stopListening: null, timer: null };
+  const entry: Attachment = {
+    name,
+    via,
+    hostRouteKey,
+    ref,
+    container: null,
+    stopListening: null,
+    timer: null,
+  };
   attachments.set(name, entry);
 
   function tryAttach(): boolean {

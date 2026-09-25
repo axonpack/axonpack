@@ -1,24 +1,21 @@
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 
-import { CurrentRouteCard } from './current-route-card.component';
 import { MoveDetailSheet } from './move-detail-sheet.component';
 import { MoveRow } from './move-row.component';
 import { NavigateSheet } from './navigate-sheet.component';
+import { NavigatorCard } from './navigator-card.component';
 import { WaitingState } from './waiting-state.component';
-import {
-  DevtoolsToolbar,
-  ToolbarDivider,
-} from '../../../core/components/devtools-toolbar.component';
+import { DevtoolsToolbar } from '../../../core/components/devtools-toolbar.component';
 import { Chip } from '../../../core/components/ui/chip.ui';
+import { CollapsibleSection } from '../../../core/components/ui/collapsible-section.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { canGoBack, goBack } from '../services/attach-navigation.service';
 import { navigationViewStore, useNavigationViewStore } from '../stores/navigation-view.store';
 import {
   navigationStore,
@@ -34,23 +31,17 @@ function keyExtractor(move: NavigationMove): string {
   return move.id;
 }
 
-/** The focused container's `canGoBack`, read as a selector so a move re-reads it. */
-function focusedCanGoBack(): boolean {
-  return canGoBack();
-}
-
 export function NavigationView() {
   const styles = useStyles();
   const COLORS = useThemeColors();
   const attached = useNavigationStore(navigationStore.isAttached);
   const moves = useNavigationStore(navigationStore.getSnapshot);
   const paused = useNavigationStore(navigationStore.isPaused);
-  const backPossible = useNavigationStore(focusedCanGoBack);
   const rootState = useNavigationStore(navigationStore.getRootState);
-  const { filters, filtersOpen } = useNavigationViewStore();
+  const { filters, filtersOpen, historyOpen } = useNavigationViewStore();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [navigateOpen, setNavigateOpen] = useState(false);
+  const [navigateIn, setNavigateIn] = useState<string | null>(null);
 
   const matcher = useMemo(
     () => buildMatcher({ text: filters.search, ...filters.modes }),
@@ -129,26 +120,10 @@ export function NavigationView() {
           }}
           label="Filter"
         />
-        <ToolbarDivider />
-        <IconButton
-          name="arrow-back"
-          color={backPossible ? COLORS.textSecondary : COLORS.border}
-          onPress={() => {
-            const message = goBack();
-            if (message !== null) Alert.alert('Could not go back', message);
-          }}
-          label="Go back"
-        />
-        <IconButton
-          name="navigation"
-          color={COLORS.textSecondary}
-          onPress={() => setNavigateOpen(true)}
-          label="Navigate"
-        />
       </DevtoolsToolbar>
 
       <FlatList
-        data={visible}
+        data={historyOpen ? visible : []}
         keyExtractor={keyExtractor}
         renderItem={renderRow}
         initialNumToRender={15}
@@ -158,46 +133,57 @@ export function NavigationView() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View>
-            {filtersOpen && (
-              <View style={styles.filters}>
-                <SearchInput
-                  value={filters.search}
-                  onChangeText={(search) => navigationViewStore.patchFilters({ search })}
-                  modes={filters.modes}
-                  onModesChange={(modes) => navigationViewStore.patchFilters({ modes })}
-                  placeholder="Filter moves"
-                  invalid={matcher?.invalid ?? false}
-                />
-                {showContainer && (
-                  <>
-                    <Text style={styles.filterSectionLabel}>Container</Text>
-                    <View style={styles.chipsRow}>
-                      <Chip
-                        label={`All (${moves.length})`}
-                        active={filters.container === null}
-                        onPress={() => navigationViewStore.patchFilters({ container: null })}
-                      />
-                      {containerNames.map((name) => (
+            <NavigatorCard onNavigate={setNavigateIn} />
+            <View style={styles.sections}>
+              <CollapsibleSection
+                title="History"
+                count={visible.length}
+                expanded={historyOpen}
+                onToggle={navigationViewStore.toggleHistory}>
+                {null}
+              </CollapsibleSection>
+              {historyOpen && filtersOpen && (
+                <View style={styles.filters}>
+                  <SearchInput
+                    value={filters.search}
+                    onChangeText={(search) => navigationViewStore.patchFilters({ search })}
+                    modes={filters.modes}
+                    onModesChange={(modes) => navigationViewStore.patchFilters({ modes })}
+                    placeholder="Filter moves"
+                    invalid={matcher?.invalid ?? false}
+                  />
+                  {showContainer && (
+                    <>
+                      <Text style={styles.filterSectionLabel}>Container</Text>
+                      <View style={styles.chipsRow}>
                         <Chip
-                          key={name}
-                          icon="account-tree"
-                          label={`${name} (${countByContainer.get(name) ?? 0})`}
-                          active={filters.container === name}
-                          onPress={() => navigationViewStore.patchFilters({ container: name })}
+                          label={`All (${moves.length})`}
+                          active={filters.container === null}
+                          onPress={() => navigationViewStore.patchFilters({ container: null })}
                         />
-                      ))}
-                    </View>
-                  </>
-                )}
-              </View>
-            )}
-            <CurrentRouteCard />
+                        {containerNames.map((name) => (
+                          <Chip
+                            key={name}
+                            icon="account-tree"
+                            label={`${name} (${countByContainer.get(name) ?? 0})`}
+                            active={filters.container === name}
+                            onPress={() => navigationViewStore.patchFilters({ container: name })}
+                          />
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>
-            {moves.length === 0 ? 'No moves recorded yet' : 'No moves match your filter'}
-          </Text>
+          historyOpen ? (
+            <Text style={styles.empty}>
+              {moves.length === 0 ? 'No moves recorded yet' : 'No moves match your filter'}
+            </Text>
+          ) : null
         }
         ListFooterComponent=<InsetPadding edge="bottom" />
       />
@@ -208,10 +194,10 @@ export function NavigationView() {
         onClose={() => setSelectedId(null)}
       />
       <NavigateSheet
-        visible={navigateOpen}
+        container={navigateIn}
         suggestions={routeNames}
         lastParams={(route) => lastParamsFor(route, moves)}
-        onClose={() => setNavigateOpen(false)}
+        onClose={() => setNavigateIn(null)}
       />
     </View>
   );
@@ -233,8 +219,12 @@ const useStyles = makeThemedStyles((COLORS) => ({
     flexGrow: 1,
     paddingBottom: 24,
   },
+  /** The accordion headers pull themselves out to the edges from this padding, as the sheets' do. */
+  sections: {
+    paddingHorizontal: 12,
+  },
   filters: {
-    padding: 12,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
@@ -255,6 +245,6 @@ const useStyles = makeThemedStyles((COLORS) => ({
   empty: {
     textAlign: 'center',
     color: COLORS.textSecondary,
-    marginTop: 40,
+    marginTop: 24,
   },
 }));

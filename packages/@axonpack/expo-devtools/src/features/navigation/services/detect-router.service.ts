@@ -89,3 +89,19 @@ export function containerContextFrom(module: unknown): React.Context<unknown> | 
 export function getReactNavigationContainerContext(): React.Context<unknown> | null {
   return containerContextFrom(reactNavigationModule);
 }
+
+/**
+ * The route a component is rendered in, which React Navigation puts into this context for every
+ * screen. A hook called from a screen reads it to learn which route a container was handed over
+ * from, so that container can hang under that route in the outline.
+ */
+export function routeContextFrom(module: unknown): React.Context<unknown> | null {
+  const context = (module as { NavigationRouteContext?: unknown } | null)?.NavigationRouteContext;
+  return typeof context === 'object' && context !== null
+    ? (context as React.Context<unknown>)
+    : null;
+}
+
+export function getReactNavigationRouteContext(): React.Context<unknown> | null {
+  return routeContextFrom(reactNavigationModule);
+}

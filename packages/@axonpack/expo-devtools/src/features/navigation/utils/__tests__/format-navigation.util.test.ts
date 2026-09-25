@@ -2,6 +2,7 @@ import type { NavigationMove } from '../../stores/navigation.store';
 import {
   formatActionLabel,
   formatMoveTitle,
+  formatParamLines,
   formatParamsPreview,
   timeOnScreen,
 } from '../format-navigation.util';
@@ -58,5 +59,18 @@ describe('timeOnScreen', () => {
     expect(timeOnScreen(moves, 1)).toBe(1500);
     expect(timeOnScreen(moves, 2)).toBe(500);
     expect(timeOnScreen(moves, 3)).toBeNull();
+  });
+});
+
+describe('formatParamLines', () => {
+  it('reads params as key: value lines, cuts long values, and folds the rest', () => {
+    expect(formatParamLines(undefined)).toEqual([]);
+    expect(formatParamLines({ id: 7, name: 'ada', nested: { a: 1 } })).toEqual([
+      'id: 7',
+      'name: ada',
+      'nested: {"a":1}',
+    ]);
+    expect(formatParamLines({ long: 'x'.repeat(60) })[0]).toBe(`long: ${'x'.repeat(40)}…`);
+    expect(formatParamLines({ a: 1, b: 2, c: 3 }, 2)).toEqual(['a: 1', 'b: 2', '+1 more']);
   });
 });

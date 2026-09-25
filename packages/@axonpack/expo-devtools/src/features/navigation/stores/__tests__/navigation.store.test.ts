@@ -78,7 +78,7 @@ describe('navigationStore.record', () => {
 });
 
 describe('containers', () => {
-  it('follows every container, with the one that moved last in focus', () => {
+  it('follows every container, with the one that moved last on screen', () => {
     navigationStore.attachContainer('checkout', 'hook');
     expect(navigationStore.getFocused()).toBe('checkout');
 
@@ -90,10 +90,6 @@ describe('containers', () => {
     expect(navigationStore.getFocused()).toBe('checkout');
     expect(navigationStore.getCurrentRoute()?.name).toBe('Cart');
     expect(navigationStore.getAttachment()).toBe('hook');
-
-    navigationStore.setFocused(ROOT_CONTAINER);
-    expect(navigationStore.getCurrentRoute()?.name).toBe('Home');
-    expect(navigationStore.getAttachment()).toBe('context');
   });
 
   it('hands focus to the container left when the focused one goes', () => {

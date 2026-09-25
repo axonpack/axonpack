@@ -11,6 +11,7 @@ the panel.
       when it sits above, and that line names the container
 - [x] The current route, with its path and its params
 - [x] The whole navigator state as a tree: every stack and tab, and what is on top of each
+- [x] A container started inside a screen of another is drawn under that screen
 - [x] A history of moves: when, which action, from where to where, with the params
 - [x] Where in your own code each move was dispatched from, with the source around the line
 - [x] How long each screen stayed on top
@@ -83,11 +84,16 @@ that never mounts, and the tab says so.
 - **Containers are named, and all of them are followed.** The one found on its own, by context or
   by Expo Router, is `root`; the hook names the rest, and defaults to `root` for the app whose one
   container sits inside the provider. Every move is filed under its container, the row and the
-  export say which once there is more than one, and the filter panel narrows to one. One container
-  is in focus at a time: the one that moved last, or the one picked on the route card. The card
-  shows its route and how it was reached, and Go back and Navigate act on it; a row's "go here
-  again" acts on the row's own container. A name handed over twice is one container, and the later
-  attachment replaces the earlier.
+  export say which once there is more than one, and the filter panel narrows to one. The navigator
+  card shows one container at a time, picked in its dropdown, or the one that moved last until
+  something is picked: its route on screen, its outline, and the two buttons that move it, so what
+  a button acts on is what the card is showing. A row's "go here again" acts on the row's own
+  container. The container that moved last is the one on screen, and its route is what a crash
+  report carries. A container handed over from a screen of another, as a checkout
+  flow is, hangs under that screen in the outline: the hook reads the route it is rendered in from
+  React Navigation's route context, so the call has to sit outside the flow's own independent
+  tree, which clears that context. Called inside it, the container is listed on its own instead.
+  A name handed over twice is one container, and the later attachment replaces the earlier.
 - **Two gates, as everywhere.** `navigation.disabledByDefault` sets `paused`, never `enabled`, and
   the record button in the toolbar is what flips it back.
 - **A stream store.** Moves arrive continuously, so the store is a ring buffer with a batched

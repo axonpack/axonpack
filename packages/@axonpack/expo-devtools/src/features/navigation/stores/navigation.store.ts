@@ -86,6 +86,8 @@ export type NavigationMove = {
 export type NavigationContainerInfo = {
   name: string;
   via: NavigationAttachment;
+  /** The key of the route in another container this one is mounted in, when it is. */
+  hostRouteKey?: string;
   route: NavigationRoute | null;
   state: NavigationState | null;
 };
@@ -98,7 +100,7 @@ const MAX_MOVES = 200;
 
 let moves: NavigationMove[] = [];
 let routerKind: NavigationRouterKind | null = null;
-/** In the order they were attached. Every one is followed; `focused` is the one the toolbar acts on. */
+/** In the order they were attached, `root` first. Every one is followed; `focused` moved last. */
 let containers: NavigationContainerInfo[] = [];
 let focused: string | null = null;
 let paused = false;
@@ -127,7 +129,7 @@ export const navigationStore = {
   getContainers(): NavigationContainerInfo[] {
     return containers;
   },
-  /** The container the toolbar acts on and the card shows: the one that moved last, or the one picked. */
+  /** The container that moved last, which is the one whose route the person is looking at. */
   getFocused(): string | null {
     return focused;
   },
@@ -169,9 +171,9 @@ export const navigationStore = {
    * A name attached twice is one container: the later attachment replaces the earlier. `root` is
    * kept first whatever order things mounted in, since it is the one every list leads with.
    */
-  attachContainer(name: string, via: NavigationAttachment) {
+  attachContainer(name: string, via: NavigationAttachment, hostRouteKey?: string) {
     const others = containers.filter((container) => container.name !== name);
-    const next = { name, via, route: null, state: null };
+    const next = { name, via, hostRouteKey, route: null, state: null };
     containers = name === ROOT_CONTAINER ? [next, ...others] : [...others, next];
     focused = name;
     notify();
@@ -179,10 +181,6 @@ export const navigationStore = {
   detachContainer(name: string) {
     containers = containers.filter((container) => container.name !== name);
     if (focused === name) focused = containers[containers.length - 1]?.name ?? null;
-    notify();
-  },
-  setFocused(name: string) {
-    if (findContainer(name)) focused = name;
     notify();
   },
   /**
@@ -195,8 +193,8 @@ export const navigationStore = {
   /**
    * The one way a move gets in. The container's route follows every move, paused or not: pausing
    * stops the history, and the route on top is a live reading rather than a row. Both go through
-   * the redaction hook first, so a token in a param never reaches the card either. The container
-   * that moved becomes the focused one, since it is the one being used.
+   * the redaction hook first, so a token in a param never reaches the summary either. The container
+   * that moved is the one on screen, so the summary and the crash report follow it.
    */
   record(move: NavigationMove) {
     if (!enabled) return;

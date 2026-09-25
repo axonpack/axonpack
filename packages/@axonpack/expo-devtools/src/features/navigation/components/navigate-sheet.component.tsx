@@ -29,12 +29,13 @@ function parseParams(text: string): { params?: Record<string, unknown>; error?: 
  * run the real navigator, so the app sees the move as it sees its own and is free to refuse it.
  */
 export function NavigateSheet({
-  visible,
+  container,
   suggestions,
   lastParams,
   onClose,
 }: {
-  visible: boolean;
+  /** The container the sheet moves. `null` keeps the sheet closed. */
+  container: string | null;
   /** The route names the navigator has declared or the history has visited. */
   suggestions: string[];
   /** The params a route had the last time it was on top, to fill the field in. */
@@ -63,7 +64,7 @@ export function NavigateSheet({
 
   async function submitNavigate() {
     if (parsed.error) return setError(parsed.error);
-    const message = navigateTo(name.trim(), parsed.params);
+    const message = navigateTo(name.trim(), parsed.params, container);
     if (message === null) onClose();
     else setError(message);
   }
@@ -76,9 +77,9 @@ export function NavigateSheet({
 
   return (
     <BottomSheet
-      visible={visible}
+      visible={container !== null}
       onClose={onClose}
-      headerContent={<Text style={styles.title}>Navigate</Text>}>
+      headerContent={<Text style={styles.title}>Navigate · {container}</Text>}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TextField label="Route name" value={name} onChangeText={setName} placeholder="Details" />
         {matching.length > 0 && (
