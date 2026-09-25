@@ -105,7 +105,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
     paddingTop: 8,
     paddingBottom: 10,
     gap: 4,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },

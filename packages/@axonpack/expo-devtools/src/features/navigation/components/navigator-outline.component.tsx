@@ -191,7 +191,7 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   nodeIdle: {
     borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
   },
   nodeActive: {
     borderColor: COLORS.accent,

@@ -19,7 +19,10 @@ export function WaitingState() {
   const kind = useNavigationStore(navigationStore.getRouterKind);
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled">
       <View style={styles.badge}>
         <MaterialIcons name="alt-route" size={22} color={COLORS.accent} />
       </View>
@@ -48,6 +51,10 @@ export function WaitingState() {
 }
 
 const useStyles = makeThemedStyles((COLORS) => ({
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   container: {
     alignItems: 'center',
     gap: 10,
