@@ -20,6 +20,10 @@ export type OutlineRow = {
   trail: (string | null)[];
   /** A route's own rail: on through to the next route, or ending at this node for the last one. */
   rail: 'through' | 'end' | 'none';
+  /** The container this route hosts, when a flow with a container of its own is mounted in it. */
+  hosts?: string;
+  /** Whether that hosted container is drawn under the route right now. */
+  open?: boolean;
 };
 
 /** The containers mounted inside a screen of another, by the key of that screen's route. */
@@ -68,7 +72,12 @@ export function flattenNavigator(
   /** The container whose track this is. */
   owner = 'root',
   /** Draw the container's chip above this navigator: true at the root of a container. */
-  chip = true
+  chip = true,
+  /**
+   * Route rows whose hosted container is flipped from its default: open under the active route,
+   * closed under a past one, which is still mounted and can be looked into.
+   */
+  toggled: ReadonlySet<string> = new Set()
 ): OutlineRow[] {
   const rows: OutlineRow[] = chip
     ? [
@@ -105,11 +114,18 @@ export function flattenNavigator(
       trail,
       rail: last ? 'end' : 'through',
     });
-    if (!active) return;
+    const row = rows[rows.length - 1];
+    const open = child?.state ? active !== toggled.has(key) : false;
+    if (child?.state) {
+      row.hosts = child.name;
+      row.open = open;
+    }
+    if (!active && !open) return;
 
     // What hangs under this route sits one column in, beside this rail if it carries on.
     const nestedTrail = [...trail, last ? null : owner];
-    if (route.state) {
+    // An inactive route's own nested navigator is still skipped: an inactive tab's is not mounted.
+    if (route.state && active) {
       rows.push(
         ...flattenNavigator(
           route.state,
@@ -119,11 +135,12 @@ export function flattenNavigator(
           `${key}/nav`,
           nestedTrail,
           owner,
-          false
+          false,
+          toggled
         )
       );
     }
-    if (child?.state) {
+    if (child?.state && open) {
       rows.push(
         ...flattenNavigator(
           child.state,
@@ -133,7 +150,8 @@ export function flattenNavigator(
           `${key}/${child.name}`,
           nestedTrail,
           child.name,
-          true
+          true,
+          toggled
         )
       );
     }

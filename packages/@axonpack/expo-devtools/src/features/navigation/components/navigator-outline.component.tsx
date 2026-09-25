@@ -39,7 +39,19 @@ export function NavigatorOutline({
   const styles = useStyles();
   const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState<string | null>(null);
-  const rows = flattenNavigator(state, currentKey, hosted, 0, 'nav', [], container, true);
+  // Hosted containers flipped from their default, by the key of the route that hosts them.
+  const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
+  const rows = flattenNavigator(state, currentKey, hosted, 0, 'nav', [], container, true, toggled);
+
+  function toggleHosted(key: string) {
+    animateNextLayout();
+    setToggled((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   function guides(row: OutlineRow) {
     return row.trail.map((owner, index) => (
@@ -84,6 +96,19 @@ export function NavigatorOutline({
                     ]}>
                     {row.label}
                   </Text>
+                  {row.hosts && (
+                    <View style={styles.hostChip}>
+                      <MaterialIcons
+                        name={row.open ? 'expand-less' : 'expand-more'}
+                        size={14}
+                        color={containerColor(row.hosts, COLORS)}
+                      />
+                      <Text
+                        style={[styles.hostChipText, { color: containerColor(row.hosts, COLORS) }]}>
+                        {row.hosts}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
@@ -100,8 +125,10 @@ export function NavigatorOutline({
         return (
           <View key={row.key}>
             <TouchableOpacity
-              disabled={params.length === 0}
+              // A route hosting a container opens and closes it; any other opens its params.
+              disabled={!row.hosts && params.length === 0}
               onPress={() => {
+                if (row.hosts) return toggleHosted(row.key);
                 animateNextLayout();
                 setExpanded(open ? null : row.key);
               }}
@@ -163,7 +190,7 @@ export function NavigatorOutline({
                 </TouchableOpacity>
               )}
             </TouchableOpacity>
-            {open && row.params && (
+            {open && !row.hosts && row.params && (
               <View style={[styles.tree, { marginLeft: (row.trail.length + 1) * COLUMN }]}>
                 <JsonTree value={row.params as unknown as JsonValue} />
               </View>
@@ -304,6 +331,15 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   tree: {
     paddingVertical: 4,
+  },
+  hostChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 1,
+  },
+  hostChipText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   back: {
     flexDirection: 'row',

@@ -124,3 +124,46 @@ describe('resolveOnScreen', () => {
     expect(resolveOnScreen(checkout, hosted)).toBe(checkout);
   });
 });
+
+describe('a container hosted by a past screen', () => {
+  const root = {
+    type: 'stack',
+    index: 1,
+    routes: [
+      { key: 'checkout-1', name: 'Checkout' },
+      { key: 'details-1', name: 'Details' },
+    ],
+  };
+  const checkout: NavigationContainerInfo = {
+    name: 'checkout',
+    via: 'hook',
+    hostRouteKey: 'checkout-1',
+    route: { key: 'cart-1', name: 'Cart' },
+    state: { index: 0, routes: [{ key: 'cart-1', name: 'Cart' }] },
+  };
+  const hosted = hostedContainers([checkout]);
+
+  it('is closed by default, and marked on its host so it can be opened', () => {
+    const rows = flattenNavigator(root, 'details-1', hosted);
+    const host = rows.find((row) => row.label === 'Checkout');
+    expect(host?.hosts).toBe('checkout');
+    expect(host?.open).toBe(false);
+    expect(rows.some((row) => row.label === 'Cart')).toBe(false);
+  });
+
+  it('opens when its host row is toggled', () => {
+    const rows = flattenNavigator(
+      root,
+      'details-1',
+      hosted,
+      0,
+      'nav',
+      [],
+      'root',
+      true,
+      new Set(['nav/checkout-1'])
+    );
+    expect(rows.find((row) => row.label === 'Checkout')?.open).toBe(true);
+    expect(rows.find((row) => row.label === 'Cart')?.container).toBe('checkout');
+  });
+});
