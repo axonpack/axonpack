@@ -90,27 +90,7 @@ export function NavigationView() {
         paused={paused}
         onTogglePaused={() => navigationStore.setPaused(!paused)}
         onClear={navigationStore.clear}
-        clearLabel="Clear history"
-        trailing={
-          <View style={styles.trailing}>
-            <IconButton
-              name="content-copy"
-              color={COLORS.textSecondary}
-              onPress={() => {
-                Clipboard.setStringAsync(
-                  navigationLogMarkdown(visible, navigationStore.getCurrentRoute())
-                );
-              }}
-              label="Copy as Markdown"
-            />
-            <IconButton
-              name="ios-share"
-              color={COLORS.textSecondary}
-              onPress={() => shareNavigationLog(visible)}
-              label="Export"
-            />
-          </View>
-        }>
+        clearLabel="Clear history">
         <IconButton
           name="filter-list"
           color={filtersOpen ? COLORS.accent : COLORS.textSecondary}
@@ -146,7 +126,30 @@ export function NavigationView() {
                 title="History"
                 count={visible.length}
                 expanded={historyOpen}
-                onToggle={navigationViewStore.toggleHistory}>
+                onToggle={navigationViewStore.toggleHistory}
+                // Beside what they copy and export: the rows under this header, as filtered.
+                headerRight={
+                  <View style={styles.trailing}>
+                    <IconButton
+                      name="content-copy"
+                      color={COLORS.textSecondary}
+                      onPress={() => {
+                        Clipboard.setStringAsync(
+                          navigationLogMarkdown(visible, navigationStore.getCurrentRoute())
+                        );
+                      }}
+                      label="Copy as Markdown"
+                      dense
+                    />
+                    <IconButton
+                      name="ios-share"
+                      color={COLORS.textSecondary}
+                      onPress={() => shareNavigationLog(visible)}
+                      label="Export"
+                      dense
+                    />
+                  </View>
+                }>
                 {null}
               </CollapsibleSection>
               {historyOpen && filtersOpen && (
