@@ -15,7 +15,14 @@ import { TabFrame } from "../../device/components/tab-frame.component";
  * the iframe's own console. Running it here turns that into a failing test.
  */
 const dist = path.resolve(import.meta.dir, "../../../dist/renderer");
-const settle = () => new Promise((resolve) => setTimeout(resolve, 40));
+// Turns of the event loop, not a clock. Everything waited on here is queued on this same loop, so
+// a turn always runs behind the hop it waits for. A timer does not: on a starved CI runner it fired
+// before the chain had finished.
+const settle = async () => {
+  for (let turn = 0; turn < 50; turn++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+};
 
 function load(tab = "session") {
   const html = fs.readFileSync(path.join(dist, "index.html"), "utf8");

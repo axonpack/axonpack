@@ -80,7 +80,14 @@ function mount() {
   };
 }
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+// Turns of the event loop, not a clock. Everything waited on here is queued on this same loop, so
+// a turn always runs behind the hop it waits for. A timer does not: on a starved CI runner it fired
+// before the chain had finished.
+const settle = async () => {
+  for (let turn = 0; turn < 50; turn++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+};
 
 test("a component's hooks run in the app and its DOM appears in the panel", async () => {
   const { container, sender, pressed, click } = mount();

@@ -1,104 +1,130 @@
 # Publishing
 
-This repo publishes to npm with [Changesets](https://github.com/changesets/changesets). Normally
-that happens in the "Release" GitHub Action (see
-[`.github/workflows/release.yml`](./.github/workflows/release.yml)). This doc is the same process,
-run by hand from your own machine, for when you don't want to go through GitHub.
+This repo publishes to npm with [Changesets](https://github.com/changesets/changesets), from the
+Release workflow in [`.github/workflows/release.yml`](./.github/workflows/release.yml). Nobody
+publishes from a laptop in the normal course of things. This doc covers what the workflow does, the
+one-time setup it depends on, and the fallback for when GitHub is not an option.
 
-## How CI authenticates
+## The normal path
 
-The workflow uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers). There is no
-npm token in the repo or in GitHub secrets: npm trusts `release.yml` in `axonpack/axonpack` and
-hands it a short-lived token per run. Every version it publishes carries a provenance attestation,
-which users can check with `npm audit signatures`.
+There is nothing to run. The workflow reacts to merges into `main`.
 
-Each published package needs a trusted publisher set on npmjs.com, under the package's
-**Settings** → **Trusted publishing** → **GitHub Actions**:
+1. **Every change that should ship carries a changeset.** `bun run changeset` from the root, pick
+   the packages and the bump level, write the entry for the person using the library.
+2. **A PR with a changeset merges.** Two jobs run at once:
+   - **Canary Release** publishes every package with a pending changeset under the `canary`
+     dist-tag, versioned `<next version>-canary-<commit>`. The version bump happens in the runner
+     only; nothing is committed and the changeset files stay on `main`.
+   - **Release PR** opens or refreshes the Version Packages PR on the `changeset-release/main`
+     branch: `package.json` bumps, `CHANGELOG.md` entries and the refreshed `bun.lock`. Nothing is
+     published to `latest`.
+3. **More PRs merge.** Each one publishes a fresh canary and force-updates the Version Packages PR,
+   so it always describes what is on `main`. Do not edit that branch by hand; the next merge
+   overwrites it. To fix a changelog line, fix the changeset file on `main` through a normal PR.
+4. **A maintainer merges the Version Packages PR.** The workflow recognises it by its branch name.
+   Its merge leaves no changesets, so **Stable Release** builds, publishes to `latest`, and pushes
+   the `@axonpack/<name>@<version>` tags. Nothing else ever publishes to `latest`.
+
+A PR with no changeset publishes nothing when it merges. A direct push to `main` runs nothing.
+
+### Running it by hand
+
+Actions → Release → Run workflow, on `main`, and pick a channel:
+
+- `canary`: snapshot and publish whatever changesets are pending. Useful after a failed canary run.
+- `stable`: refresh the Version Packages PR if changesets are pending, otherwise build and publish
+  to `latest`. This is how to retry a stable publish that failed, for example after fixing the npm
+  settings below, without a new commit.
+
+## One-time setup
+
+**npm trusted publishing.** There is no npm token in the repo or in GitHub secrets. npm trusts
+`release.yml` in `axonpack/axonpack` and hands each run a short-lived token. Set it once per
+package on npmjs.com, under **Settings** → **Trusted publishing** → **GitHub Actions**:
 
 - Organization or user: `axonpack`
 - Repository: `axonpack`
 - Workflow filename: `release.yml`
 - Environment: leave empty
 
-Do this once for each of `@axonpack/expo-devtools`, `@axonpack/react-pretty-print` and
+Do this for `@axonpack/expo-devtools`, `@axonpack/react-pretty-print` and
 `@axonpack/react-native-devtools-tab`, and for any new package after its first publish. npm only
-offers the setting on a package that already exists, so a brand-new package has to go out once by
-hand.
+offers the setting on a package that already exists, so a brand-new package goes out once by hand
+(see below). Until the setting is in place the publish step fails with
+`403 OIDC permission denied`.
 
-A version published by hand from your machine has **no provenance**. Prefer the workflow.
+**GitHub Actions may open pull requests.** Repository **Settings** → **Actions** → **General** →
+"Allow GitHub Actions to create and approve pull requests". Without it the bot can push the
+`changeset-release/main` branch but cannot open the Version Packages PR.
 
-## Prerequisites
+**Branch protection on `main`.** Require a pull request and the CI check. The bot never pushes to
+`main` directly, so it needs no bypass. This is what makes "merge equals release" safe.
 
-- You're logged in to npm with publish access to the `@axonpack` scope: `npm whoami` should print
-  your username. If not, `npm login` first.
-- The package still allows token publishing. If its **Publishing access** on npmjs.com is set to
-  disallow tokens, only the workflow can publish it.
-- You're on `main`, up to date, with no uncommitted changes.
+**pkg.pr.new app**, for the `preview` label in CI. Install it on the repo once. It publishes a PR's
+packages to its own registry for testing, never to npm.
 
-## Steps
+## Provenance
 
-1. **Make sure every change has a changeset.** If you already added one with `bunx changeset add`
-   when you made the change, skip this. Otherwise, run it now and follow the prompts (pick the
-   package, pick a bump level, write a plain-language summary):
+Every version the workflow publishes carries a provenance attestation, which anyone can check with:
 
-   ```sh
-   bunx changeset add
-   ```
+```sh
+npm audit signatures
+```
 
-2. **See what's about to happen.**
+A version published from a laptop has no provenance. That is the main reason to prefer the workflow,
+and to use the manual `stable` run rather than a local publish when something needs retrying.
+
+## Publishing from a machine
+
+Only for a brand-new package's first publish, or when GitHub itself is unavailable.
+
+Prerequisites:
+
+- `npm whoami` prints a user with publish access to the `@axonpack` scope. If not, `npm login`.
+- The package still allows token publishing. If **Publishing access** on npmjs.com disallows tokens,
+  only the workflow can publish it.
+- A clean checkout of `main`, up to date.
+
+Steps:
+
+1. **See what is pending.**
 
    ```sh
    bunx changeset status
    ```
 
-   This lists which package(s) have pending changesets and what bump level each will get. If it
-   says there's nothing pending, there's nothing to release — stop here.
-
-3. **Version the packages.** This bumps each affected package's `package.json` version, writes the
-   changelog entry into that package's `CHANGELOG.md`, and deletes the changeset file(s) it just
-   applied:
+2. **Version on a branch.** `main` is PR-only, so the bump goes through a PR like any other change.
+   This also refreshes `bun.lock`, which records each workspace's version.
 
    ```sh
+   git switch -c release/version-packages
    bun run version-packages
+   git add .
+   git commit -m "release: version packages"
+   git push -u origin release/version-packages
    ```
 
-   Look at the diff (`git diff`) before continuing — this is your last chance to catch a wrong
-   bump level or a changelog typo.
+   Open the PR, read the diff (this is the last look at the bump levels and the changelog), merge
+   it. Its merge has no changesets left and is not the bot's branch, so the workflow publishes
+   nothing on its own.
 
-4. **Commit the version bump.** Normally a `pre-commit` hook blocks committing straight to `main`
-   — that's intentional for regular work, but the same rule would also block this release commit.
-   Skip hooks for this one commit only:
-
-   ```sh
-   HUSKY=0 git add .
-   HUSKY=0 git commit -m "release: version packages"
-   ```
-
-5. **Build and publish.**
+3. **Publish.** Prefer the workflow: run it by hand with `channel: stable`, and you get provenance.
+   Only if that is not possible, from an up-to-date `main`:
 
    ```sh
    bun run release
-   ```
-
-   This runs `turbo run build` (compiles each package's `src` → `build`, which is what
-   actually gets published) followed by `changeset publish`, which pushes to npm any package whose
-   version isn't live on the registry yet, and tags each one it publishes
-   (e.g. `@axonpack/expo-devtools@0.2.0`) as a local git tag.
-
-6. **Push the commit and the tags.**
-
-   ```sh
-   git push origin main
    git push origin --tags
    ```
 
-   The tags step matters — `changeset publish` only creates tags locally; without this they'd
-   never reach GitHub.
+   `bun run release` builds every package and runs `changeset publish`, which publishes any package
+   whose version is not on the registry yet and tags it locally. The tags only reach GitHub with
+   the second command.
 
 ## Notes
 
-- `linter` and `devtools-example` never publish — both are `"private": true`, and
-  Changesets skips private packages automatically. You won't be prompted for them in step 1, and
-  they're excluded from versioning and publishing in every step above.
-- Verify a publish landed with `npm view @axonpack/expo-devtools version` or by checking
-  [npmjs.com/package/@axonpack/expo-devtools](https://www.npmjs.com/package/@axonpack/expo-devtools).
+- `linter` and the example apps never publish. They are `"private": true`, and Changesets skips
+  private packages everywhere: prompts, versioning and publishing.
+- Canary versions sort below every stable release, so `^3.2.0` never resolves to one. They are
+  installed on purpose only: `bun add @axonpack/expo-devtools@canary`.
+- Check what is live with `npm view @axonpack/expo-devtools dist-tags`, which lists `latest` and
+  `canary` side by side.

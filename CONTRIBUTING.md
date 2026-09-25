@@ -60,6 +60,7 @@ From the repo root, `turbo` fans commands out to every workspace that defines th
 bun run build         # turbo run build
 bun run lint          # turbo run lint
 bun run check-types   # turbo run check-types
+CI=1 bun run test     # turbo run test; CI=1 keeps expo-devtools' jest out of watch mode
 bun run format        # prettier --write "**/*.{ts,tsx,md}" across the whole repo
 ```
 
@@ -104,8 +105,9 @@ cd packages/@axonpack/react-pretty-print/example-web    && bun run test
 cd packages/@axonpack/react-pretty-print/example-native && bun run test
 ```
 
-There is no root `test` task: `@axonpack/expo-devtools` runs jest in watch mode unless `CI` is set,
-so `turbo run test` from the root would hang locally. Run them per workspace.
+`bun run test` from the root runs every workspace's tests through turbo, which is what CI does on a
+pull request. `@axonpack/expo-devtools` runs jest in watch mode unless `CI` is set, so prefix the
+root command with `CI=1` locally or it waits for a keypress.
 
 ## Coding conventions
 
@@ -131,7 +133,7 @@ fix(@axonpack/expo-devtools): resolve scroll issue in detail panel
 docs: update contributing guide
 ```
 
-Direct commits to `main`/`dev` are blocked by a pre-commit hook — always work on a feature branch:
+Direct commits to `main` are blocked by a pre-commit hook, so always work on a feature branch:
 
 ```sh
 git switch -c <type>/<short-description>
@@ -142,23 +144,35 @@ git switch -c <type>/<short-description>
 ## Adding a changeset
 
 User-facing changes to a package should ship with a changeset, so they land in that package's
-changelog on release:
+changelog on release. From the repo root:
 
 ```sh
-cd packages/@axonpack/expo-devtools
-bun run release:add
+bun run changeset
 ```
 
-Write the entry for the person using the library, not for another developer — plain language,
-one bullet per change, no internal file/function names.
+Pick the packages you changed and the bump level. Write the entry for the person using the library,
+not for another developer: plain language, one bullet per change, no internal file or function names.
+
+A changeset is also what makes a merge publish. Without one, a merged PR publishes nothing, which is
+right for docs, CI and refactors that change no behaviour.
 
 ## Submitting a pull request
 
 1. Fork the repo and create your branch from `main`.
 2. Make your change, following the conventions above.
 3. Add a changeset if the change is user-facing (see above).
-4. Make sure `bun run lint`, `bun run check-types`, and the affected package's `bun run test` pass.
+4. Make sure `bun run build`, `bun run lint`, `bun run check-types` and `CI=1 bun run test` pass
+   from the root. CI runs the same four on the PR.
 5. Open a PR with a clear description of the change and why it's needed.
+6. Want someone to try the branch in an app? Add the `preview` label and CI publishes the packages
+   to pkg.pr.new and posts an install link on the PR. Nothing reaches npm.
+
+### After it merges
+
+If the PR carries a changeset, the merge publishes a canary of the packages it touched under the
+`canary` dist-tag, and opens or refreshes the Version Packages PR with the version bumps and the
+changelog. A maintainer merges that PR when a stable release is due, and that merge publishes to
+`latest`. The whole flow is in the [Releases](./README.md#releases) section of the README.
 
 By contributing, you agree that your contributions will be licensed under this repo's
 [MIT License](./LICENSE).

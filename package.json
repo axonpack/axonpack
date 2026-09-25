@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "test": "turbo run test --filter='./packages/*' --filter='./packages/@axonpack/*'",
     "dev": "turbo run dev",
     "dev:docs": "cd docs && bun run dev",
     "lint": "turbo run lint",
@@ -10,7 +11,7 @@
     "check-types": "turbo run check-types",
     "prepare": "husky",
     "changeset": "changeset",
-    "version-packages": "changeset version && bun run sync:docs-changelog",
+    "version-packages": "changeset version && bun install --lockfile-only && bun run sync:docs-changelog",
     "sync:docs-changelog": "test -f docs/scripts/sync-changelog.mjs && node docs/scripts/sync-changelog.mjs || echo \"docs/ not checked out, skipping changelog sync\"",
     "release": "turbo run prepare && changeset publish"
   },

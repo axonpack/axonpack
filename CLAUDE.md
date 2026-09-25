@@ -39,10 +39,19 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*`, the free OSS
 ### Root (fans out via turbo)
 
 - `bun install`: also runs `prepare` (husky) automatically as part of its own lifecycle.
-- `bun run build` / `bun run lint` / `bun run check-types`: `turbo run <task>`; only runs for workspaces that define that script, others are silently skipped.
+- `bun run build` / `bun run lint` / `bun run check-types` / `bun run test`: `turbo run <task>`; only runs for workspaces that define that script, others are silently skipped.
 - `bun run format`: `prettier --write "**/*.{ts,tsx,md}"` across the whole repo.
 - `bun run dev:docs`: `cd docs && bun run dev`. The one root script that reaches into the submodule, and it only runs its dev server; nothing here builds or lints it.
-- `bun run changeset` / `bun run version-packages` / `bun run release`: Changesets. `version-packages` also runs `sync:docs-changelog`, which regenerates the docs site's changelog pages from each package's `CHANGELOG.md` and skips quietly when the submodule isn't checked out.
+- `bun run changeset` / `bun run version-packages` / `bun run release`: Changesets. `version-packages` also refreshes `bun.lock`, which records each workspace's version and would otherwise fail the frozen-lockfile install in CI, and runs `sync:docs-changelog`, which regenerates the docs site's changelog pages from each package's `CHANGELOG.md` and skips quietly when the submodule isn't checked out.
+
+### Releases (`.github/workflows/release.yml`)
+
+- **The trigger is a PR merged into `main`**: `pull_request_target` on `closed`, gated on `merged`, which is how GitHub exposes a merge. There is no `push` trigger, so a direct push to `main` releases nothing. Every checkout in the workflow is `main`, never the PR head: that is the one rule that keeps `pull_request_target` safe, since the event runs with write and OIDC permissions.
+- **A merge with changesets pending does two things at once.** Canary Release publishes every package with a changeset under the `canary` dist-tag as `<next version>-canary-<commit>`; the snapshot lives only in the runner, nothing is committed, and the changesets stay on `main`. Release PR runs `changesets/action`, which opens or refreshes the Version Packages PR from `changeset-release/main` (bumps, changelog, refreshed lockfile).
+- **Merging the Version Packages PR is the release.** The workflow recognises it by its branch name, and its merge leaves no changesets, so Stable Release builds, publishes to `latest` and pushes tags. That is the only publish to `latest`.
+- **Manual runs** (`workflow_dispatch`) offer `canary` (snapshot only) or `stable` (refresh the Version Packages PR, or publish when nothing is pending), default `canary`, and only do anything from `main`.
+- **CI** (`.github/workflows/ci.yml`) runs build, lint, types and tests on every PR. The `preview` label also publishes the PR to pkg.pr.new for installing the branch; npm is never involved.
+- Publishing is npm trusted publishing (OIDC): no npm secret exists, and each package must be authorised for this repo and workflow on npmjs.com.
 
 ### `@axonpack/expo-devtools` package (run from `packages/@axonpack/expo-devtools`)
 
@@ -81,7 +90,7 @@ Its own repository, `axonpack/axonpack.github.io`, serving `https://axonpack.git
 
 ### Git hooks (husky, installed automatically by root `prepare`)
 
-- `pre-commit`: blocks direct commits to `main`/`dev` (create a feature branch: `git switch -c <type>/<short-description>`), then runs `bun run format && bun run lint`.
+- `pre-commit`: blocks direct commits to `main` (create a feature branch: `git switch -c <type>/<short-description>`), then runs `bun run format && bun run lint`.
 - `commit-msg`: runs commitlint (`commitlint.config.js` at repo root): conventional-commit `type` restricted to a fixed enum, and if a scope is given it must be one of `@axonpack/expo-devtools`, `@axonpack/react-pretty-print`, `linter` or `docs`. Extend `scope-enum` there when adding a package.
 - `post-merge`: runs `bun install`.
 
