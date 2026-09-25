@@ -1,6 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoveDetailSheet } from './move-detail-sheet.component';
 import { MoveRow } from './move-row.component';
@@ -12,6 +13,7 @@ import { Chip } from '../../../core/components/ui/chip.ui';
 import { CollapsibleSection } from '../../../core/components/ui/collapsible-section.ui';
 import { IconButton } from '../../../core/components/ui/icon-button.ui';
 import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
+import { HIT_SLOP } from '../../../core/constants/metrics.const';
 import { SearchInput } from '../../../core/components/ui/search-input.ui';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { buildMatcher } from '../../../core/utils/text-search.util';
@@ -101,12 +103,16 @@ export function NavigationView() {
           }}
           label="Filter"
         />
-        <IconButton
-          name="navigation"
-          color={COLORS.textSecondary}
+        {/* Worded, because an arrow on its own read as nothing in particular. Styled like the Back
+            pill on the track, the other control here that moves the app. */}
+        <TouchableOpacity
+          hitSlop={HIT_SLOP.default}
+          accessibilityLabel="Open a screen or a deep link"
           onPress={() => setNavigateOpen(true)}
-          label="Navigate"
-        />
+          style={styles.goTo}>
+          <MaterialIcons name="open-in-new" size={13} color={COLORS.accent} />
+          <Text style={styles.goToLabel}>Open screen</Text>
+        </TouchableOpacity>
       </DevtoolsToolbar>
 
       <FlatList
@@ -231,6 +237,23 @@ const useStyles = makeThemedStyles((COLORS) => ({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  goTo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+    backgroundColor: COLORS.sectionTint,
+  },
+  goToLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.accent,
   },
   trailing: {
     flexDirection: 'row',

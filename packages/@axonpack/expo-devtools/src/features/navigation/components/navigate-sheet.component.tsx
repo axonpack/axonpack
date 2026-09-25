@@ -92,7 +92,7 @@ export function NavigateSheet({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      headerContent={<Text style={styles.title}>Navigate</Text>}>
+      headerContent={<Text style={styles.title}>Open a screen or a link</Text>}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {containers.length > 1 && (
           <View style={styles.field}>
@@ -140,7 +140,7 @@ export function NavigateSheet({
           style={[styles.button, (name.trim().length === 0 || parsed.error) && styles.buttonOff]}
           disabled={name.trim().length === 0 || parsed.error !== undefined}
           onPress={submitNavigate}>
-          <Text style={styles.buttonLabel}>Navigate</Text>
+          <Text style={styles.buttonLabel}>Open screen</Text>
         </TouchableOpacity>
 
         <View style={styles.divider} />
