@@ -24,6 +24,8 @@ export type OutlineRow = {
   hosts?: string;
   /** Whether that hosted container is drawn under the route right now. */
   open?: boolean;
+  /** What `open` is with nobody having touched it: open when the host is on screen. */
+  openByDefault?: boolean;
 };
 
 /** The containers mounted inside a screen of another, by the key of that screen's route. */
@@ -74,10 +76,13 @@ export function flattenNavigator(
   /** Draw the container's chip above this navigator: true at the root of a container. */
   chip = true,
   /**
-   * Route rows whose hosted container is flipped from its default: open under the active route,
-   * closed under a past one, which is still mounted and can be looked into.
+   * Hosted containers opened or closed by hand, by host row key, with the default they were
+   * changed from. The choice lasts only while that default holds, so a host coming on screen
+   * always opens and one left behind always closes.
    */
-  toggled: ReadonlySet<string> = new Set()
+  toggled: ReadonlyMap<string, { open: boolean; from: boolean }> = new Map(),
+  /** Whether this navigator is on the path to what the person sees, rather than under a past screen. */
+  visible = true
 ): OutlineRow[] {
   const rows: OutlineRow[] = chip
     ? [
@@ -115,10 +120,19 @@ export function flattenNavigator(
       rail: last ? 'end' : 'through',
     });
     const row = rows[rows.length - 1];
-    const open = child?.state ? active !== toggled.has(key) : false;
+    // Open by default when the host is on the way down to the screen the person sees.
+    const onPath = active && visible;
+    const openByDefault = onPath;
+    const choice = toggled.get(key);
+    const open = child?.state
+      ? choice && choice.from === openByDefault
+        ? choice.open
+        : openByDefault
+      : false;
     if (child?.state) {
       row.hosts = child.name;
       row.open = open;
+      row.openByDefault = openByDefault;
     }
     if (!active && !open) return;
 
@@ -136,7 +150,8 @@ export function flattenNavigator(
           nestedTrail,
           owner,
           false,
-          toggled
+          toggled,
+          visible
         )
       );
     }
@@ -144,14 +159,17 @@ export function flattenNavigator(
       rows.push(
         ...flattenNavigator(
           child.state,
-          child.route?.key,
+          // On screen only through a host that is on the path: a flow under a past screen is
+          // mounted, not seen.
+          onPath ? child.route?.key : undefined,
           hosted,
           depth + 1,
           `${key}/${child.name}`,
           nestedTrail,
           child.name,
           true,
-          toggled
+          toggled,
+          onPath
         )
       );
     }

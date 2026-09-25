@@ -161,9 +161,43 @@ describe('a container hosted by a past screen', () => {
       [],
       'root',
       true,
-      new Set(['nav/checkout-1'])
+      new Map([['nav/checkout-1', { open: true, from: false }]])
     );
     expect(rows.find((row) => row.label === 'Checkout')?.open).toBe(true);
     expect(rows.find((row) => row.label === 'Cart')?.container).toBe('checkout');
+    // Mounted under a past screen, so not what the person sees.
+    expect(rows.filter((row) => row.onScreen).map((row) => row.label)).toEqual(['Details']);
+  });
+});
+
+describe('a host coming back on screen', () => {
+  it('opens even after it was opened by hand while it was a past screen', () => {
+    const root = {
+      type: 'stack',
+      index: 0,
+      routes: [{ key: 'checkout-1', name: 'Checkout' }],
+    };
+    const checkout: NavigationContainerInfo = {
+      name: 'checkout',
+      via: 'hook',
+      hostRouteKey: 'checkout-1',
+      route: { key: 'cart-1', name: 'Cart' },
+      state: { index: 0, routes: [{ key: 'cart-1', name: 'Cart' }] },
+    };
+    const openedWhilePast = new Map([['nav/checkout-1', { open: true, from: false }]]);
+    const rows = flattenNavigator(
+      root,
+      'checkout-1',
+      hostedContainers([checkout]),
+      0,
+      'nav',
+      [],
+      'root',
+      true,
+      openedWhilePast
+    );
+
+    expect(rows.find((row) => row.label === 'Checkout')?.open).toBe(true);
+    expect(rows.find((row) => row.label === 'Cart')?.onScreen).toBe(true);
   });
 });

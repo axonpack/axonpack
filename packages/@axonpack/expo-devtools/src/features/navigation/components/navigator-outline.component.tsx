@@ -40,17 +40,16 @@ export function NavigatorOutline({
   const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState<string | null>(null);
   // Hosted containers flipped from their default, by the key of the route that hosts them.
-  const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
+  const [toggled, setToggled] = useState<ReadonlyMap<string, { open: boolean; from: boolean }>>(
+    () => new Map()
+  );
   const rows = flattenNavigator(state, currentKey, hosted, 0, 'nav', [], container, true, toggled);
 
-  function toggleHosted(key: string) {
+  function toggleHosted(row: OutlineRow) {
     animateNextLayout();
-    setToggled((previous) => {
-      const next = new Set(previous);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    setToggled((previous) =>
+      new Map(previous).set(row.key, { open: !row.open, from: row.openByDefault ?? false })
+    );
   }
 
   function guides(row: OutlineRow) {
@@ -128,7 +127,7 @@ export function NavigatorOutline({
               // A route hosting a container opens and closes it; any other opens its params.
               disabled={!row.hosts && params.length === 0}
               onPress={() => {
-                if (row.hosts) return toggleHosted(row.key);
+                if (row.hosts) return toggleHosted(row);
                 animateNextLayout();
                 setExpanded(open ? null : row.key);
               }}
