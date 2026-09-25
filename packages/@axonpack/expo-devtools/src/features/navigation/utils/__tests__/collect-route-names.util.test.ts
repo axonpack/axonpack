@@ -1,5 +1,6 @@
 import type { NavigationMove } from '../../stores/navigation.store';
 import { collectRouteNames, lastParamsFor } from '../collect-route-names.util';
+import { listContainers } from '../filter-moves.util';
 
 function move(name: string, params?: object): NavigationMove {
   return {
@@ -47,5 +48,18 @@ describe('lastParamsFor', () => {
     expect(lastParamsFor('Details', moves)).toEqual({ id: 2 });
     expect(lastParamsFor('Home', moves)).toBeUndefined();
     expect(lastParamsFor('Settings', moves)).toBeUndefined();
+  });
+});
+
+describe('listContainers', () => {
+  it('leads with root, then the rest as first seen', () => {
+    const moves = [
+      { ...move('Address'), container: 'checkout' },
+      { ...move('Cart'), container: 'checkout' },
+      { ...move('Modal'), container: 'sheet' },
+      { ...move('Home'), container: 'root' },
+    ];
+    expect(listContainers(moves)).toEqual(['root', 'checkout', 'sheet']);
+    expect(listContainers([])).toEqual([]);
   });
 });

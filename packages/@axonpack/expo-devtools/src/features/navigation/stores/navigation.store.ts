@@ -165,12 +165,14 @@ export const navigationStore = {
     routerKind = kind;
     notify();
   },
-  /** A name attached twice is one container: the later attachment replaces the earlier. */
+  /**
+   * A name attached twice is one container: the later attachment replaces the earlier. `root` is
+   * kept first whatever order things mounted in, since it is the one every list leads with.
+   */
   attachContainer(name: string, via: NavigationAttachment) {
-    containers = [
-      ...containers.filter((container) => container.name !== name),
-      { name, via, route: null, state: null },
-    ];
+    const others = containers.filter((container) => container.name !== name);
+    const next = { name, via, route: null, state: null };
+    containers = name === ROOT_CONTAINER ? [next, ...others] : [...others, next];
     focused = name;
     notify();
   },

@@ -57,6 +57,11 @@ export function NavigationView() {
     [filters.search, filters.modes]
   );
   const containerNames = useMemo(() => listContainers(moves), [moves]);
+  const countByContainer = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const move of moves) counts.set(move.container, (counts.get(move.container) ?? 0) + 1);
+    return counts;
+  }, [moves]);
   const visible = useMemo(
     () => filterMoves(moves, matcher, filters.container),
     [moves, matcher, filters.container]
@@ -168,7 +173,7 @@ export function NavigationView() {
                     <Text style={styles.filterSectionLabel}>Container</Text>
                     <View style={styles.chipsRow}>
                       <Chip
-                        label="All"
+                        label={`All (${moves.length})`}
                         active={filters.container === null}
                         onPress={() => navigationViewStore.patchFilters({ container: null })}
                       />
@@ -176,7 +181,7 @@ export function NavigationView() {
                         <Chip
                           key={name}
                           icon="account-tree"
-                          label={name}
+                          label={`${name} (${countByContainer.get(name) ?? 0})`}
                           active={filters.container === name}
                           onPress={() => navigationViewStore.patchFilters({ container: name })}
                         />

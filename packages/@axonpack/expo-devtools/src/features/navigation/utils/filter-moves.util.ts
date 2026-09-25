@@ -1,5 +1,5 @@
 import { testMatch, type Matcher } from '../../../core/utils/text-search.util';
-import type { NavigationMove } from '../stores/navigation.store';
+import { ROOT_CONTAINER, type NavigationMove } from '../stores/navigation.store';
 
 function json(value: unknown): string {
   try {
@@ -36,9 +36,11 @@ export function filterMoves(
   );
 }
 
-/** The containers the history has rows for, in first-seen order. */
+/** The containers the history has rows for: `root` first, then the rest in first-seen order. */
 export function listContainers(moves: readonly NavigationMove[]): string[] {
   const names: string[] = [];
   for (const move of moves) if (!names.includes(move.container)) names.push(move.container);
-  return names;
+  return names.includes(ROOT_CONTAINER)
+    ? [ROOT_CONTAINER, ...names.filter((name) => name !== ROOT_CONTAINER)]
+    : names;
 }

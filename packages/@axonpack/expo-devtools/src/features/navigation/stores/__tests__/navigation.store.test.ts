@@ -106,6 +106,17 @@ describe('containers', () => {
     expect(navigationStore.getFocused()).toBeNull();
   });
 
+  it('keeps root first whatever order things mounted in', () => {
+    navigationStore.reset();
+    navigationStore.setEnabled(true);
+    navigationStore.attachContainer('checkout', 'hook');
+    navigationStore.attachContainer(ROOT_CONTAINER, 'context');
+    expect(navigationStore.getContainers().map((c) => c.name)).toEqual([
+      ROOT_CONTAINER,
+      'checkout',
+    ]);
+  });
+
   it('treats a name attached twice as one container', () => {
     navigationStore.attachContainer(ROOT_CONTAINER, 'hook');
     expect(navigationStore.getContainers()).toHaveLength(1);

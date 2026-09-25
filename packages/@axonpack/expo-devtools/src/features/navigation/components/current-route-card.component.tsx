@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { JsonTree } from '../../../core/components/json-tree';
 import { Chip } from '../../../core/components/ui/chip.ui';
@@ -38,7 +38,14 @@ export function CurrentRouteCard() {
   return (
     <View style={styles.card}>
       {containers.length > 1 && (
-        <View style={styles.chips}>
+        // One line that scrolls rather than a row that wraps: a container has a short name, and a
+        // card that grows a line per container pushes the route it is there to show off screen.
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chips}
+          contentContainerStyle={styles.chipsContent}
+          keyboardShouldPersistTaps="handled">
           {containers.map((container) => (
             <Chip
               key={container.name}
@@ -48,7 +55,7 @@ export function CurrentRouteCard() {
               onPress={() => navigationStore.setFocused(container.name)}
             />
           ))}
-        </View>
+        </ScrollView>
       )}
 
       <Text style={styles.label}>On screen</Text>
@@ -97,10 +104,14 @@ const useStyles = makeThemedStyles((COLORS) => ({
     backgroundColor: COLORS.surface,
   },
   chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    flexGrow: 0,
+    marginHorizontal: -12,
     marginBottom: 10,
+  },
+  chipsContent: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
   },
   label: {
     fontSize: 10,
