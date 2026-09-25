@@ -11,11 +11,6 @@ export type NavigationFilters = {
 export type NavigationViewState = {
   filters: NavigationFilters;
   filtersOpen: boolean;
-  /**
-   * The container the navigator card shows and its buttons act on, as picked in its dropdown.
-   * `null` until something is picked, and then the card follows whichever container moved last.
-   */
-  selectedContainer: string | null;
   /** The History accordion. Kept here so leaving the tab keeps it as it was. */
   historyOpen: boolean;
 };
@@ -27,7 +22,6 @@ export type NavigationViewState = {
 const initial: NavigationViewState = {
   filters: { search: '', modes: DEFAULT_SEARCH_MODES, container: null },
   filtersOpen: false,
-  selectedContainer: null,
   historyOpen: true,
 };
 
@@ -35,7 +29,6 @@ export const navigationViewStore = createAxonStore(initial, (set, get) => ({
   patchFilters: (patch: Partial<NavigationFilters>) =>
     set({ filters: { ...get().filters, ...patch } }),
   setFiltersOpen: (filtersOpen: boolean) => set({ filtersOpen }),
-  selectContainer: (selectedContainer: string | null) => set({ selectedContainer }),
   toggleHistory: () => set({ historyOpen: !get().historyOpen }),
 }));
 

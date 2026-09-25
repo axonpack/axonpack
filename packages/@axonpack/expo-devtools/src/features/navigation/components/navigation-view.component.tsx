@@ -24,6 +24,7 @@ import {
 } from '../stores/navigation.store';
 import { collectRouteNames, lastParamsFor } from '../utils/collect-route-names.util';
 import { navigationLogMarkdown, shareNavigationLog } from '../utils/export-navigation-log.util';
+import { hostedContainers, resolveOnScreen } from '../utils/flatten-navigator.util';
 import { filterMoves, listContainers } from '../utils/filter-moves.util';
 import { timeOnScreen } from '../utils/format-navigation.util';
 
@@ -37,11 +38,12 @@ export function NavigationView() {
   const attached = useNavigationStore(navigationStore.isAttached);
   const moves = useNavigationStore(navigationStore.getSnapshot);
   const paused = useNavigationStore(navigationStore.isPaused);
-  const rootState = useNavigationStore(navigationStore.getRootState);
   const { filters, filtersOpen, historyOpen } = useNavigationViewStore();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [navigateIn, setNavigateIn] = useState<string | null>(null);
+  const [navigateOpen, setNavigateOpen] = useState(false);
+  const containers = useNavigationStore(navigationStore.getContainers);
+  const latest = useNavigationStore(navigationStore.getFocusedContainer);
 
   const matcher = useMemo(
     () => buildMatcher({ text: filters.search, ...filters.modes }),
@@ -57,7 +59,6 @@ export function NavigationView() {
     () => filterMoves(moves, matcher, filters.container),
     [moves, matcher, filters.container]
   );
-  const routeNames = useMemo(() => collectRouteNames(rootState, moves), [rootState, moves]);
 
   // Worked out over the whole history, not the filtered list: a hidden row still ended a stay.
   const stays = useMemo(
@@ -120,6 +121,12 @@ export function NavigationView() {
           }}
           label="Filter"
         />
+        <IconButton
+          name="navigation"
+          color={COLORS.textSecondary}
+          onPress={() => setNavigateOpen(true)}
+          label="Navigate"
+        />
       </DevtoolsToolbar>
 
       <FlatList
@@ -133,7 +140,7 @@ export function NavigationView() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View>
-            <NavigatorCard onNavigate={setNavigateIn} />
+            <NavigatorCard />
             <View style={styles.sections}>
               <CollapsibleSection
                 title="History"
@@ -194,10 +201,24 @@ export function NavigationView() {
         onClose={() => setSelectedId(null)}
       />
       <NavigateSheet
-        container={navigateIn}
-        suggestions={routeNames}
-        lastParams={(route) => lastParamsFor(route, moves)}
-        onClose={() => setNavigateIn(null)}
+        visible={navigateOpen}
+        containers={containers.map((container) => container.name)}
+        defaultContainer={
+          latest ? resolveOnScreen(latest, hostedContainers(containers)).name : null
+        }
+        suggestions={(name) =>
+          collectRouteNames(
+            containers.find((container) => container.name === name)?.state ?? null,
+            moves.filter((move) => move.container === name)
+          )
+        }
+        lastParams={(route, name) =>
+          lastParamsFor(
+            route,
+            moves.filter((move) => move.container === name)
+          )
+        }
+        onClose={() => setNavigateOpen(false)}
       />
     </View>
   );

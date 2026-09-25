@@ -1,14 +1,16 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 
 import { JsonTree } from '../../../core/components/json-tree';
+import { HIT_SLOP } from '../../../core/constants/metrics.const';
 import { MONOSPACE } from '../../../core/constants/typography.const';
 import type { JsonValue } from '../../../core/utils/json-tree.util';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import type { NavigationContainerInfo, NavigationState } from '../stores/navigation.store';
 import { containerColor } from '../constants/container-colors.const';
+import { canGoBack, goBack } from '../services/attach-navigation.service';
+import type { NavigationContainerInfo, NavigationState } from '../stores/navigation.store';
 import { flattenNavigator, type OutlineRow } from '../utils/flatten-navigator.util';
 import { formatParamLines } from '../utils/format-navigation.util';
 
@@ -139,6 +141,27 @@ export function NavigatorOutline({
                   </Text>
                 )}
               </View>
+              {/* On the screen it would leave, and in the colour-free chip every panel uses, worded
+                  as well as drawn. Each on-screen route moves its own container. */}
+              {row.onScreen && (
+                <TouchableOpacity
+                  // Slim so it does not set the row's height; the slop keeps it easy to hit.
+                  hitSlop={HIT_SLOP.dense}
+                  onPress={() => {
+                    const message = goBack(row.container);
+                    if (message !== null) Alert.alert('Could not go back', message);
+                  }}
+                  style={[styles.back, !canGoBack(row.container) && styles.backOff]}>
+                  {/* Across and then up, since going back is a step up the track from this screen. */}
+                  <MaterialIcons
+                    name="subdirectory-arrow-left"
+                    size={12}
+                    color={COLORS.accent}
+                    style={styles.backIcon}
+                  />
+                  <Text style={styles.backLabel}>Back</Text>
+                </TouchableOpacity>
+              )}
             </TouchableOpacity>
             {open && row.params && (
               <View style={[styles.tree, { marginLeft: (row.trail.length + 1) * COLUMN }]}>
@@ -231,9 +254,11 @@ const useStyles = makeThemedStyles((COLORS) => ({
     fontWeight: '700',
   },
   onScreenPill: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 1,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
     backgroundColor: COLORS.sectionTint,
   },
   onScreenText: {
@@ -279,5 +304,27 @@ const useStyles = makeThemedStyles((COLORS) => ({
   },
   tree: {
     paddingVertical: 4,
+  },
+  back: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 3,
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    backgroundColor: COLORS.sectionTint,
+  },
+  backIcon: {
+    transform: [{ rotate: '90deg' }],
+  },
+  backLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.accent,
+  },
+  backOff: {
+    opacity: 0.4,
   },
 }));
