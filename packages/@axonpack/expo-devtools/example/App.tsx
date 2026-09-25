@@ -1,4 +1,5 @@
 import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -6,6 +7,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { ConsoleDemo } from './components/ConsoleDemo';
 import { CrashDemo } from './components/CrashDemo';
+import { NavigationDemo } from './components/NavigationDemo';
 import { PerformanceDemo } from './components/PerformanceDemo';
 import { RequestsScreen } from './components/RequestsScreen';
 import { StorageDemo } from './components/StorageDemo';
@@ -17,33 +19,40 @@ const TABS = [
   { key: 'console' as const, label: 'Console' },
   { key: 'performance' as const, label: 'Performance' },
   { key: 'storage' as const, label: 'Storage' },
+  { key: 'navigation' as const, label: 'Navigation' },
   { key: 'crash' as const, label: 'Crash' },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<'requests' | 'console' | 'performance' | 'storage' | 'crash'>(
-    'requests'
-  );
+  const [tab, setTab] = useState<
+    'requests' | 'console' | 'performance' | 'storage' | 'navigation' | 'crash'
+  >('requests');
 
   return (
-    <DevtoolsProvider
-      config={devtoolsConfig}
-      size={52}
-      color="#ffffff"
-      iconColor="#1a73e8"
-      showFloatingButton={true}>
-      <SafeAreaProvider>
-        <SafeAreaView style={styles.safeArea}>
-          <TabBar tabs={TABS} activeKey={tab} onChange={setTab} />
-          {tab === 'requests' ? <RequestsScreen /> : null}
-          {tab === 'console' ? <ConsoleDemo /> : null}
-          {tab === 'performance' ? <PerformanceDemo /> : null}
-          {tab === 'storage' ? <StorageDemo /> : null}
-          {tab === 'crash' ? <CrashDemo /> : null}
-          <StatusBar style="auto" />
-        </SafeAreaView>
-      </SafeAreaProvider>
-    </DevtoolsProvider>
+    // The container wraps the app and the provider sits inside it, which is what lets the Navigation
+    // tab find the container on its own. The navigator only mounts in the Navigation tab; the tab
+    // starts recording when it does.
+    <NavigationContainer>
+      <DevtoolsProvider
+        config={devtoolsConfig}
+        size={52}
+        color="#ffffff"
+        iconColor="#1a73e8"
+        showFloatingButton={true}>
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.safeArea}>
+            <TabBar tabs={TABS} activeKey={tab} onChange={setTab} />
+            {tab === 'requests' ? <RequestsScreen /> : null}
+            {tab === 'console' ? <ConsoleDemo /> : null}
+            {tab === 'performance' ? <PerformanceDemo /> : null}
+            {tab === 'storage' ? <StorageDemo /> : null}
+            {tab === 'navigation' ? <NavigationDemo /> : null}
+            {tab === 'crash' ? <CrashDemo /> : null}
+            <StatusBar style="auto" />
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </DevtoolsProvider>
+    </NavigationContainer>
   );
 }
 

@@ -6,6 +6,7 @@ import {
 } from './devtools-overlay/devtools-overlay.component';
 import { startDevtools, type DevtoolsConfig } from '../../client/start-devtools.client';
 import { CrashReportOverlay } from '../../features/crash/components/crash-report-overlay.component';
+import { NavigationContextBridge } from '../../features/navigation/components/navigation-context-bridge.component';
 
 /**
  * Props for `<DevtoolsProvider />`. All optional: the loose ones style the launcher button (see
@@ -43,6 +44,9 @@ export type DevtoolsProviderProps<TThemeName extends string = never> = DevtoolsO
  *
  * With `enabled: false` it renders its children and the crash sheet and nothing else: no patches, no
  * button, no panel. That makes the mount safe to leave in a release build unguarded.
+ *
+ * Mounted inside a React Navigation container, it finds that container on its own; above one, the
+ * app hands the container over with `useDevtoolsNavigation`.
  */
 export function DevtoolsProvider<TThemeName extends string = never>({
   config,
@@ -68,7 +72,10 @@ export function DevtoolsProvider<TThemeName extends string = never>({
       {/* The crash sheet is the one thing that works with the devtools off, so it is mounted either
           way. `DevtoolsOverlay` mounts its own, and they de-duplicate. */}
       {enabled ? (
-        <DevtoolsOverlay {...buttonProps} showButton={showFloatingButton} />
+        <>
+          <NavigationContextBridge />
+          <DevtoolsOverlay {...buttonProps} showButton={showFloatingButton} />
+        </>
       ) : (
         <CrashReportOverlay />
       )}

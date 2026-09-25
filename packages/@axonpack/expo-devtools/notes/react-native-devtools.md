@@ -32,6 +32,7 @@ that runs in the app.
 - [x] An app that does not opt in sees no tab and no change at all.
 - [x] Dragging a range across the overview strip, from strips the page draws, with no measurement.
 - [ ] The rest of the panel: console, storage, performance and crashes.
+- [ ] The Navigation panel, feature for feature with the on-device tab.
 - [ ] A prompt box in the tab answers questions about the project on the developer's machine.
 - [ ] A captured request, log or crash can be handed to that prompt in one click.
 

@@ -7,6 +7,12 @@ import { makeThemedStyles, useThemeColors } from '../../../../core/utils/themed-
 import type { CrashBreadcrumb, CrashRecord } from '../../stores/crash.store';
 import { formatCrashTime } from '../../utils/format-crash-report.util';
 
+const CATEGORY_ICONS = {
+  console: 'terminal',
+  network: 'swap-vert',
+  navigation: 'alt-route',
+} as const;
+
 function crumbColor(crumb: CrashBreadcrumb, error: string, warning: string, secondary: string) {
   if (crumb.level === 'error') return error;
   if (crumb.level === 'warn') return warning;
@@ -38,7 +44,7 @@ export function BreadcrumbsTab({ record }: { record: CrashRecord }) {
       {crumbs.map((crumb, index) => (
         <View key={`${crumb.at}-${index}`} style={styles.row}>
           <MaterialIcons
-            name={crumb.category === 'network' ? 'swap-vert' : 'terminal'}
+            name={CATEGORY_ICONS[crumb.category]}
             size={13}
             color={crumbColor(crumb, COLORS.error, COLORS.warning, COLORS.textSecondary)}
           />

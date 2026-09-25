@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { CallSite } from './call-site.component';
+import { CallSite } from '../../../core/components/call-site.component';
 import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
 import { InfoBadge } from '../../../core/components/ui/info-badge.ui';
 import { MONOSPACE } from '../../../core/constants/typography.const';

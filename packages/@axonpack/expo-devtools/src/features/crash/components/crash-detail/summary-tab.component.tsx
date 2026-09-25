@@ -43,6 +43,17 @@ export function SummaryTab({ record }: { record: CrashRecord }) {
           </Text>
         </View>
 
+        {record.route !== undefined && (
+          <View style={detailStyles.infoRow}>
+            <Text style={detailStyles.infoLabel}>Route</Text>
+            <Text style={detailStyles.infoValue} selectable>
+              {record.route.path
+                ? `${record.route.name} (${record.route.path})`
+                : record.route.name}
+            </Text>
+          </View>
+        )}
+
         {record.fromPreviousLaunch && (
           <Text style={detailStyles.note}>
             Recorded during an earlier run of the app and read back at launch — the process did not

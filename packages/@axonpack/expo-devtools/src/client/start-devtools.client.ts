@@ -16,6 +16,10 @@ import {
   installCrashHandlers,
 } from '../features/crash/services/install-crash-handlers.service';
 import { crashStore, type CrashRecord } from '../features/crash/stores/crash.store';
+import { attachNavigationRef } from '../features/navigation/services/attach-navigation.service';
+import { detectRouter } from '../features/navigation/services/detect-router.service';
+import { navigationStore } from '../features/navigation/stores/navigation.store';
+import type { NavigationMove } from '../features/navigation/stores/navigation.store';
 import { installNativeTimingReporter } from '../features/network/services/native-timing.service';
 import { observeNitroFetch } from '../features/network/services/nitro-fetch.service';
 import { patchFetch } from '../features/network/services/patch-fetch.service';
@@ -346,6 +350,34 @@ export type DevtoolsStorageConfig = {
 };
 
 /**
+ * The Navigation tab: the moves the navigator made, and a hook to strip what they carry. The tab is
+ * only there when a router is installed, and it finds Expo Router on its own; a React Navigation app
+ * hands its container over with `useDevtoolsNavigation`.
+ */
+export type DevtoolsNavigationConfig = {
+  /**
+   * Open the Navigation tab with recording paused, so no move is kept until the record button in its
+   * toolbar is pressed. Defaults to `false`. The route on screen is still shown while paused.
+   */
+  disabledByDefault?: boolean;
+  /**
+   * Your chance to strip anything sensitive from a move before it is stored: a token in a deep
+   * link's params, an OAuth code. Runs on every move, including the route shown as current, so
+   * nothing downstream sees the real value: not the list, the card, the export, the DevTools tab or
+   * crash breadcrumbs. Return the move, edited or not, or `null` to drop it. If it throws, the move
+   * is dropped.
+   *
+   * ```ts
+   * redact: (move) =>
+   *   move.to?.params && 'token' in move.to.params
+   *     ? { ...move, to: { ...move.to, params: { ...move.to.params, token: '[redacted]' } } }
+   *     : move
+   * ```
+   */
+  redact?: (move: NavigationMove) => NavigationMove | null;
+};
+
+/**
  * Everything `<DevtoolsProvider config={...} />` accepts. Every field is optional and the defaults
  * suit most apps — a provider with no config at all captures requests, console output and crashes.
  *
@@ -396,6 +428,8 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   performance?: DevtoolsPerformanceConfig;
   /** The Storage tab: which stores it can see. Nothing is inspected until you register one here. */
   storage?: DevtoolsStorageConfig;
+  /** The Navigation tab: whether it starts recording, and what it strips from a move. */
+  navigation?: DevtoolsNavigationConfig;
   /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
   crash?: DevtoolsCrashConfig;
 };
@@ -444,6 +478,8 @@ export function startDevtools<TThemeName extends string = never>(
     maxKeys: storageMaxKeys,
     readOnly: storageReadOnly,
   } = config?.storage ?? {};
+  const { disabledByDefault: navigationStartsPaused = false, redact: redactNavigation } =
+    config?.navigation ?? {};
   const {
     enabled: crashEnabled = true,
     enableWhileDevtoolsDisabled: crashSurvivesDisabled = false,
@@ -574,6 +610,28 @@ export function startDevtools<TThemeName extends string = never>(
   }
   storageStore.setEnabled(true);
 
+  navigationStore.setRedaction(redactNavigation);
+  navigationStore.setEnabled(true);
+  if (navigationStartsPaused) navigationStore.setPaused(true);
+  const router = detectRouter();
+  if (router) {
+    navigationStore.setRouterKind(router.kind);
+    // Expo Router keeps its container ref in a module singleton, so the start can attach it here.
+    // A React Navigation app hands its ref over through `useDevtoolsNavigation` instead. Read
+    // lazily: the ref does not exist until the router's root has mounted.
+    const getContainerRef = router.getContainerRef;
+    if (getContainerRef) {
+      attachNavigationRef(
+        {
+          get current() {
+            return getContainerRef()?.current ?? null;
+          },
+        },
+        'expo-router'
+      );
+    }
+  }
+
   // Last, so the launcher button appears only once there is a working panel behind it. Anything
   // above throwing leaves the overlay hidden, which is the honest outcome.
   devtoolsReadyStore.markReady();
@@ -652,6 +710,8 @@ export const devtools = {
   consoleLogStore,
   /** The registered stores and the keys last read from them. */
   storageStore,
+  /** The moves the navigator made and the route on screen, for reading or clearing them from code. */
+  navigationStore,
   /** The crash records held in memory, for reporting or clearing them from code. */
   crashStore,
 };

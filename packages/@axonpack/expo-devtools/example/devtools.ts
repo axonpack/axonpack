@@ -87,6 +87,13 @@ export const devtoolsConfig = {
     }),
     onCrash: (record) => {},
   },
+  navigation: {
+    // A token in a param is what the hook is for: the demo pushes one on purpose.
+    redact: (move) =>
+      move.to?.params && 'token' in move.to.params
+        ? { ...move, to: { ...move.to, params: { ...move.to.params, token: '[redacted]' } } }
+        : move,
+  },
   storage: {
     adapters: [
       asyncStorageAdapter({ driver: AsyncStorage }),

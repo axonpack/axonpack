@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 
-import { symbolicateStack } from '../../../core/services/symbolicate-stack.service';
-import { formatFrameLocation } from '../../../core/utils/frame-location.util';
-import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
-import type { StackFrame } from '../../../core/utils/parse-stack.util';
-import { primaryCallSite } from '../services/capture-call-site.service';
+import { symbolicateStack } from '../services/symbolicate-stack.service';
+import { formatFrameLocation } from '../utils/frame-location.util';
+import type { StackFrame } from '../utils/parse-stack.util';
+import { makeThemedStyles } from '../utils/themed-styles.util';
 
 /**
  * Where a row came from, as `file:line`.
  *
  * A development bundle names the bundle and not the file, so the frames have to go to Metro before
- * they read as anything — which is a request, so it happens here, per row, once the row is on screen.
+ * they read as anything, which is a request, so it happens here, per row, once the row is on screen.
  * The service caches per id and collapses duplicate calls, and a list only renders what is visible,
  * so scrolling does not ask twice for the same row.
  *
@@ -32,7 +31,9 @@ export function CallSite({ id, frames }: { id: string; frames: StackFrame[] }) {
     };
   }, [id, frames]);
 
-  const frame = primaryCallSite(resolved ?? frames);
+  // The nearest frame that is the app's own code, or the top one when the whole stack is a library's.
+  const shown = resolved ?? frames;
+  const frame = shown.find((candidate) => !candidate.vendor) ?? shown[0];
   if (!frame) return null;
 
   return (

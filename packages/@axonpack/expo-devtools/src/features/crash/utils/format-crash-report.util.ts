@@ -56,6 +56,12 @@ export function formatCrashReport(record: CrashRecord): string {
     }`,
   ];
 
+  if (record.route) {
+    sections.push(
+      `Route: ${record.route.name}${record.route.path ? ` (${record.route.path})` : ''}`
+    );
+  }
+
   if (record.stack) {
     sections.push('', '### Stack', '', '```', record.stack, '```');
   }
