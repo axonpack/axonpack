@@ -41,7 +41,14 @@ const { createRemoteReceiver } =
   await import("../../services/remote-receiver.service");
 const { RemoteTree } = await import("../remote-tree.component");
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+// Turns of the event loop, not a clock. Everything waited on here is queued on this same loop, so
+// a turn always runs behind the hop it waits for. A timer does not: on a starved CI runner it fired
+// before the chain had finished.
+const settle = async () => {
+  for (let turn = 0; turn < 50; turn++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+};
 
 function draw() {
   const container = dom.window.document.createElement("div");
@@ -131,8 +138,9 @@ test("a keyboard handler is given the key it was pressed with", async () => {
           key: "Enter",
           target: { value: "ada", checked: false },
           currentTarget: { value: "ada", checked: false },
-          // React Native's TextInput reads the text from here rather than from the target.
-          nativeEvent: { text: "ada", eventCount: 1 },
+          // React Native's TextInput reads the text from here rather than from the target. The
+          // count is one counter for the whole process, so which test files ran first decides it.
+          nativeEvent: { text: "ada", eventCount: expect.any(Number) },
         },
       ],
     },
