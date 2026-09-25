@@ -4,8 +4,6 @@ on:
   pull_request:
     # `labeled` is here so adding the `preview` label starts a run, rather than waiting for a push.
     types: [opened, synchronize, reopened, labeled]
-  push:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
