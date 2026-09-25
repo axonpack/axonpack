@@ -90,7 +90,7 @@ Its own repository, `axonpack/axonpack.github.io`, serving `https://axonpack.git
 
 ### Git hooks (husky, installed automatically by root `prepare`)
 
-- `pre-commit`: blocks direct commits to `main`/`dev` (create a feature branch: `git switch -c <type>/<short-description>`), then runs `bun run format && bun run lint`.
+- `pre-commit`: blocks direct commits to `main` (create a feature branch: `git switch -c <type>/<short-description>`), then runs `bun run format && bun run lint`.
 - `commit-msg`: runs commitlint (`commitlint.config.js` at repo root): conventional-commit `type` restricted to a fixed enum, and if a scope is given it must be one of `@axonpack/expo-devtools`, `@axonpack/react-pretty-print`, `linter` or `docs`. Extend `scope-enum` there when adding a package.
 - `post-merge`: runs `bun install`.
 

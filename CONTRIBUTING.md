@@ -133,7 +133,7 @@ fix(@axonpack/expo-devtools): resolve scroll issue in detail panel
 docs: update contributing guide
 ```
 
-Direct commits to `main`/`dev` are blocked by a pre-commit hook — always work on a feature branch:
+Direct commits to `main` are blocked by a pre-commit hook, so always work on a feature branch:
 
 ```sh
 git switch -c <type>/<short-description>
