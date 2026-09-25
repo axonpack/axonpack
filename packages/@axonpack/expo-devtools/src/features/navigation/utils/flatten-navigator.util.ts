@@ -11,11 +11,13 @@ export type OutlineRow = {
   active: boolean;
   /** The one route the person sees: the active route of the deepest active navigator. */
   onScreen: boolean;
+  /** The container whose track this row is on, which decides the colour of its rail and chip. */
+  container: string;
   /**
-   * For each column left of this row's own, whether an ancestor's rail runs through it, so a
-   * nested block is drawn beside its parent's rail rather than breaking it.
+   * For each column left of this row's own, the container whose rail runs through it, or `null`
+   * where none does, so a nested block is drawn beside its parent's rail in that rail's colour.
    */
-  trail: boolean[];
+  trail: (string | null)[];
   /** A route's own rail: on through to the next route, or ending at this node for the last one. */
   rail: 'through' | 'end' | 'none';
 };
@@ -54,7 +56,7 @@ export function resolveOnScreen(
  * under that route one column in. Only the active route's nested navigator is walked, since an
  * inactive tab's is not mounted and its screens are not anything the person can see. A container
  * mounted inside a route, a flow with a container of its own, hangs under that route the same way,
- * under a caption naming it; that route then hosts the screen rather than being it.
+ * under a caption naming it; that route is on screen along with the flow's own route on top.
  */
 export function flattenNavigator(
   state: NavigationState,
@@ -62,17 +64,20 @@ export function flattenNavigator(
   hosted: Map<string, NavigationContainerInfo> = new Map(),
   depth = 0,
   prefix = 'nav',
-  trail: boolean[] = [],
-  /** The container this navigator is the root of, drawn as a chip above it. `null` for a nested one. */
-  container: string | null = null
+  trail: (string | null)[] = [],
+  /** The container whose track this is. */
+  owner = 'root',
+  /** Draw the container's chip above this navigator: true at the root of a container. */
+  chip = true
 ): OutlineRow[] {
-  const rows: OutlineRow[] = container
+  const rows: OutlineRow[] = chip
     ? [
         {
           key: prefix,
           depth,
           kind: 'container',
-          label: container,
+          label: owner,
+          container: owner,
           active: true,
           onScreen: false,
           trail,
@@ -94,39 +99,41 @@ export function flattenNavigator(
       label: route.name,
       params: route.params,
       active,
-      onScreen: child === undefined && route.key !== undefined && route.key === currentKey,
+      // A route hosting another container is on screen too: the flow is drawn inside it.
+      onScreen: route.key !== undefined && route.key === currentKey,
+      container: owner,
       trail,
       rail: last ? 'end' : 'through',
     });
     if (!active) return;
 
     // What hangs under this route sits one column in, beside this rail if it carries on.
-    const nestedTrail = [...trail, !last];
+    const nestedTrail = [...trail, last ? null : owner];
     if (route.state) {
       rows.push(
-        ...flattenNavigator(route.state, currentKey, hosted, depth + 1, `${key}/nav`, nestedTrail)
+        ...flattenNavigator(
+          route.state,
+          currentKey,
+          hosted,
+          depth + 1,
+          `${key}/nav`,
+          nestedTrail,
+          owner,
+          false
+        )
       );
     }
     if (child?.state) {
-      const childPrefix = `${key}/${child.name}`;
-      rows.push({
-        key: childPrefix,
-        depth: depth + 1,
-        kind: 'container',
-        label: child.name,
-        active: true,
-        onScreen: false,
-        trail: nestedTrail,
-        rail: 'none',
-      });
       rows.push(
         ...flattenNavigator(
           child.state,
           child.route?.key,
           hosted,
           depth + 1,
-          childPrefix,
-          nestedTrail
+          `${key}/${child.name}`,
+          nestedTrail,
+          child.name,
+          true
         )
       );
     }

@@ -8,6 +8,7 @@ import type { JsonValue } from '../../../core/utils/json-tree.util';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import type { NavigationContainerInfo, NavigationState } from '../stores/navigation.store';
+import { containerColor } from '../constants/container-colors.const';
 import { flattenNavigator, type OutlineRow } from '../utils/flatten-navigator.util';
 import { formatParamLines } from '../utils/format-navigation.util';
 
@@ -36,12 +37,14 @@ export function NavigatorOutline({
   const styles = useStyles();
   const COLORS = useThemeColors();
   const [expanded, setExpanded] = useState<string | null>(null);
-  const rows = flattenNavigator(state, currentKey, hosted, 0, 'nav', [], container);
+  const rows = flattenNavigator(state, currentKey, hosted, 0, 'nav', [], container, true);
 
   function guides(row: OutlineRow) {
-    return row.trail.map((through, index) => (
+    return row.trail.map((owner, index) => (
       <View key={index} style={styles.column}>
-        {through && <View style={styles.guide} />}
+        {owner !== null && (
+          <View style={[styles.guide, { backgroundColor: containerColor(owner, COLORS) }]} />
+        )}
       </View>
     ));
   }
@@ -53,10 +56,33 @@ export function NavigatorOutline({
           return (
             <View key={row.key} style={styles.row}>
               {guides(row)}
-              <View style={styles.column} />
-              <View style={styles.containerCaption}>
-                <MaterialIcons name="account-tree" size={12} color={COLORS.accent} />
-                <Text style={styles.containerName}>{row.label}</Text>
+              {/* The chip sits in the rail's own column, flush left, and the rail starts from under
+                  it: the container is the first stop on its track. */}
+              <View style={styles.chipCell}>
+                <View
+                  style={[
+                    styles.chipRail,
+                    { backgroundColor: containerColor(row.container, COLORS) },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.containerCaption,
+                    { borderColor: containerColor(row.container, COLORS) },
+                  ]}>
+                  <MaterialIcons
+                    name="account-tree"
+                    size={12}
+                    color={containerColor(row.container, COLORS)}
+                  />
+                  <Text
+                    style={[
+                      styles.containerName,
+                      { color: containerColor(row.container, COLORS) },
+                    ]}>
+                    {row.label}
+                  </Text>
+                </View>
               </View>
             </View>
           );
@@ -80,7 +106,13 @@ export function NavigatorOutline({
               style={styles.row}>
               {guides(row)}
               <View style={styles.column}>
-                <View style={[styles.rail, row.rail === 'end' && styles.railEnd]} />
+                <View
+                  style={[
+                    styles.rail,
+                    row.rail === 'end' && styles.railEnd,
+                    { backgroundColor: containerColor(row.container, COLORS) },
+                  ]}
+                />
                 <View style={[styles.node, nodeStyle]} />
               </View>
               <View style={styles.body}>
@@ -216,14 +248,28 @@ const useStyles = makeThemedStyles((COLORS) => ({
     fontSize: 10,
     color: COLORS.textSecondary,
   },
+  chipCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  /** From the chip's middle down to the row's bottom, where the first route's rail picks it up. */
+  chipRail: {
+    position: 'absolute',
+    top: '50%',
+    bottom: 0,
+    left: COLUMN / 2 - 1,
+    width: 2,
+    backgroundColor: COLORS.border,
+  },
   containerCaption: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
+    borderWidth: 1.5,
     backgroundColor: COLORS.sectionTint,
   },
   containerName: {
