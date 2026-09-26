@@ -153,11 +153,11 @@ jobs:
       - name: Open or update the Version Packages PR
         uses: changesets/action@v2
         with:
-          version: bun run version-packages
-          commit: "release: version packages"
-          title: "release: version packages"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version-script: bun run version-packages
+          commit-message: "release: version packages"
+          pr-title: "release: version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: 0
 
   # The only publish to `latest`. Reached by merging the Version Packages PR, which leaves no
