@@ -17,7 +17,7 @@
     },
     "packages/@axonpack/expo-devtools": {
       "name": "@axonpack/expo-devtools",
-      "version": "3.2.0",
+      "version": "3.3.0",
       "dependencies": {
         "@axonpack/react-native-devtools-tab": "^0.1.2",
         "@axonpack/react-pretty-print": "^0.1.1",
