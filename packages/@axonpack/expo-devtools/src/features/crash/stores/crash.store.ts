@@ -1,4 +1,5 @@
 import { EventEmitter } from 'expo';
+
 import { createStoreHook } from '../../../core/stores/axon.store';
 
 /**
@@ -10,8 +11,8 @@ import { createStoreHook } from '../../../core/stores/axon.store';
 export type CrashKind =
   'js-fatal' | 'js-error' | 'unhandled-rejection' | 'react-render' | 'native-exception';
 
-/** Which log a breadcrumb came from — the Console tab or the Network tab. */
-export type CrashBreadcrumbCategory = 'console' | 'network';
+/** Which log a breadcrumb came from: the Console tab, the Network tab or the Navigation tab. */
+export type CrashBreadcrumbCategory = 'console' | 'network' | 'navigation';
 
 /**
  * One thing the app did shortly before it broke, read from the Console and Network logs at crash
@@ -100,6 +101,11 @@ export type CrashRecord = {
   breadcrumbs?: CrashBreadcrumb[];
   /** Whatever the app last passed to `devtools.setCrashContext`. Absent until you set some. */
   context?: Record<string, unknown>;
+  /**
+   * The route on screen when it broke, read from the Navigation tab. Absent when no navigator was
+   * attached, which is also what a release build reports.
+   */
+  route?: { name: string; path?: string };
   /** Native exception details. Present on a `'native-exception'` record only. */
   native?: CrashNativeDetail;
   /** Cleared once the report has been shown; drives both the popup and the tab badge. */

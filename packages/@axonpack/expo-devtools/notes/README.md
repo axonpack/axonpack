@@ -4,23 +4,24 @@ Scope: this package only. One note per area, and **each one owns its own feature
 built, what is not, and what never will be. There is no combined list anywhere; a second copy would
 only disagree with these.
 
-| Note                                                                   | Covers                                             |
-| ---------------------------------------------------------------------- | -------------------------------------------------- |
-| [core.md](./core.md)                                                   | The client, the gate, the launcher button, theming |
-| [network.md](./network.md)                                             | Requests from fetch, XHR and a WebView             |
-| [console.md](./console.md)                                             | Captured logs, and the prompt                      |
-| [storage.md](./storage.md)                                             | Keys and values in the stores you register         |
-| [performance.md](./performance.md)                                     | Frame rate, memory, startup, stalls                |
-| [crash.md](./crash.md)                                                 | The four capture tiers and the report sheets       |
-| [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose          |
-| [react-native-devtools.md](./react-native-devtools.md)                 | The panel again, inside React Native DevTools      |
-| [devtools-console-plan.md](./devtools-console-plan.md)                 | Console in the DevTools tab, built, not yet walked |
-| [devtools-tab-storage-plan.md](./devtools-tab-storage-plan.md)         | Storage in the DevTools tab, built, not yet walked |
-| [devtools-performance-plan.md](./devtools-performance-plan.md)         | Performance in the DevTools tab, built, not walked |
-| [devtools-crashes-plan.md](./devtools-crashes-plan.md)                 | Crashes in the DevTools tab, built, not yet walked |
-| [database.md](./database.md)                                           | Not built — and why it is not the Storage tab      |
-| [performance-landscape.md](./performance-landscape.md)                 | Research: what other performance tools measure     |
-| [react-native-performance-apis.md](./react-native-performance-apis.md) | Research: the platform surface underneath          |
+| Note                                                                   | Covers                                                     |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [core.md](./core.md)                                                   | The client, the gate, the launcher button, theming         |
+| [network.md](./network.md)                                             | Requests from fetch, XHR and a WebView                     |
+| [console.md](./console.md)                                             | Captured logs, and the prompt                              |
+| [storage.md](./storage.md)                                             | Keys and values in the stores you register                 |
+| [performance.md](./performance.md)                                     | Frame rate, memory, startup, stalls                        |
+| [crash.md](./crash.md)                                                 | The four capture tiers and the report sheets               |
+| [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose                  |
+| [navigation.md](./navigation.md)                                       | The screens the app moved through, and moving it from here |
+| [react-native-devtools.md](./react-native-devtools.md)                 | The panel again, inside React Native DevTools              |
+| [devtools-console-plan.md](./devtools-console-plan.md)                 | Console in the DevTools tab, built, not yet walked         |
+| [devtools-tab-storage-plan.md](./devtools-tab-storage-plan.md)         | Storage in the DevTools tab, built, not yet walked         |
+| [devtools-performance-plan.md](./devtools-performance-plan.md)         | Performance in the DevTools tab, built, not walked         |
+| [devtools-crashes-plan.md](./devtools-crashes-plan.md)                 | Crashes in the DevTools tab, built, not yet walked         |
+| [database.md](./database.md)                                           | Not built — and why it is not the Storage tab              |
+| [performance-landscape.md](./performance-landscape.md)                 | Research: what other performance tools measure             |
+| [react-native-performance-apis.md](./react-native-performance-apis.md) | Research: the platform surface underneath                  |
 
 ## How to edit an area note
 

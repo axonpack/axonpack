@@ -3,6 +3,7 @@ import { readDeviceInfo } from './device-info.service';
 import { persistCrashRecord } from './native-crash.service';
 import { crashLinkStore } from '../../../core/stores/crash-link.store';
 import { logCrashRow } from '../../console/services/log-crash-row.service';
+import { navigationStore } from '../../navigation/stores/navigation.store';
 import {
   crashStore,
   type CrashKind,
@@ -53,6 +54,12 @@ export function setCrashContext(next: Record<string, unknown> | null) {
   context = next ?? {};
 }
 
+/** Read at capture time, not kept in step: a crash asks once, and the store already knows. */
+function currentRoute(): CrashRecord['route'] {
+  const route = navigationStore.getCurrentRoute();
+  return route ? { name: route.name, path: route.path } : undefined;
+}
+
 function nextId(): string {
   sequence += 1;
   return `crash-${Date.now()}-${sequence}`;
@@ -97,6 +104,7 @@ export function captureCrash(
       device: readDeviceInfo(),
       breadcrumbs: options.breadcrumbs ? collectBreadcrumbs() : undefined,
       context: Object.keys(context).length > 0 ? { ...context } : undefined,
+      route: currentRoute(),
       seen: false,
     };
 
@@ -155,6 +163,7 @@ export function adoptPersistedCrash(partial: Partial<CrashRecord>): CrashRecord 
     device: partial.device,
     breadcrumbs: partial.breadcrumbs,
     context: partial.context,
+    route: partial.route,
     seen: false,
   };
 

@@ -14,6 +14,7 @@ import { CrashInspectionSheet } from '../../../features/crash/components/crash-i
 import { CrashView } from '../../../features/crash/components/crash-view.component';
 import { crashStore, useCrashStore } from '../../../features/crash/stores/crash.store';
 import { DebugView } from '../../../features/debug/components/debug-view.component';
+import { NavigationView } from '../../../features/navigation/components/navigation-view.component';
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
 import { StorageView } from '../../../features/storage/components/storage-view.component';
@@ -55,6 +56,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         return <PerformanceView />;
       case 'storage':
         return <StorageView />;
+      case 'navigation':
+        return <NavigationView />;
       case 'crashes':
         return <CrashView />;
       case 'debug':

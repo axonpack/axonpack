@@ -16,6 +16,7 @@ export type {
   DevtoolsPerformanceConfig,
   DevtoolsStorageConfig,
   DevtoolsCrashConfig,
+  DevtoolsNavigationConfig,
 } from './client/start-devtools.client';
 export { DevtoolsProvider } from './core/components/devtools-provider.component';
 export type { DevtoolsProviderProps } from './core/components/devtools-provider.component';
@@ -23,6 +24,17 @@ export { useDevtoolsPanel } from './core/services/use-devtools-panel.service';
 export type { DevtoolsPanelControls } from './core/services/use-devtools-panel.service';
 export { useDevtoolsWebView } from './core/services/use-devtools-webview.service';
 export type { DevtoolsWebViewProps } from './core/services/use-devtools-webview.service';
+export { useDevtoolsNavigation } from './core/services/use-devtools-navigation.service';
+export type {
+  NavigationContainerRefLike,
+  NavigationContainerLike,
+} from './features/navigation/services/attach-navigation.service';
+export type {
+  NavigationMove,
+  NavigationRoute,
+  NavigationRouterKind,
+  NavigationState,
+} from './features/navigation/stores/navigation.store';
 export { CrashReportOverlay } from './features/crash/components/crash-report-overlay.component';
 export type { CrashPopupDetail } from './features/crash/services/crash-popup.service';
 export { DevtoolsErrorBoundary } from './features/crash/components/devtools-error-boundary.component';

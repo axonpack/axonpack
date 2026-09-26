@@ -1,17 +1,23 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ScrollView, Text, TouchableOpacity } from 'react-native';
 
+import {
+  navigationStore,
+  useNavigationStore,
+} from '../../../features/navigation/stores/navigation.store';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
-export type DevtoolsTab = 'network' | 'console' | 'performance' | 'storage' | 'crashes' | 'debug';
+export type DevtoolsTab =
+  'network' | 'console' | 'performance' | 'storage' | 'navigation' | 'crashes' | 'debug';
 
 const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'network', label: 'Network', icon: 'swap-vert' },
   { key: 'console', label: 'Console', icon: 'terminal' },
   { key: 'performance', label: 'Performance', icon: 'speed' },
   { key: 'storage', label: 'Storage', icon: 'storage' },
+  { key: 'navigation', label: 'Navigation', icon: 'alt-route' },
   { key: 'crashes', label: 'Crashes', icon: 'bug-report' },
   { key: 'debug', label: 'Debug', icon: 'construction' },
 ];
@@ -28,6 +34,9 @@ export function DevtoolsTabBar({
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
+  // The one tab that is not always there: an app with no router has nothing it could ever show.
+  const routerKind = useNavigationStore(navigationStore.getRouterKind);
+  const tabs = routerKind === null ? TABS.filter((entry) => entry.key !== 'navigation') : TABS;
   return (
     <ScrollView
       horizontal
@@ -35,7 +44,7 @@ export function DevtoolsTabBar({
       style={styles.row}
       contentContainerStyle={styles.rowContent}
       keyboardShouldPersistTaps="handled">
-      {TABS.map(({ key, label, icon }) => {
+      {tabs.map(({ key, label, icon }) => {
         const active = tab === key;
         const badge = badges?.[key];
 

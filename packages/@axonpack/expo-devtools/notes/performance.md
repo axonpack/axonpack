@@ -18,7 +18,7 @@ Two companion notes cover the ground underneath this one:
 - [x] Slow interactions
 - [x] Your own marks and measures
 - [x] Pause and resume recording
-- [ ] Re-render and component timing
+- [ ] Renders per screen, counted and timed, through a layout you hand each navigator
 
 ## Decisions worth knowing
 
@@ -44,6 +44,14 @@ Two companion notes cover the ground underneath this one:
 - **Startup uses the real process start time from native**, because every clock reachable from JS
   starts long after the process did, and the platform's own startup markers are all nullable — it
   only fills them if its native code chose to.
+- **Renders are counted per screen, by a layout the app passes to each navigator.** Both routers
+  accept a screen layout on every navigator and call it once per screen, so a wrapper we ship puts
+  React's own profiler around the screen and reports each commit with its phase and duration.
+  That is a public API and one line per navigator, which is also the limit: a navigator without
+  the line is a hole, and the tab says which screens it has never seen render. The count is
+  commits that touched the screen's subtree, not renders of one component, so a child
+  re-rendering counts. That is the number people ask about, and the tab names it as such. The
+  profiler reports only in a development build, which the gate already assumes.
 
 ## Won't do
 
@@ -53,3 +61,7 @@ Two companion notes cover the ground underneath this one:
   memory anyway — the native reading beside it is.
 - **Disk space on iOS.** The call for it is a required-reason API, which would oblige every app
   embedding this package to file a privacy declaration, for a number that is not about performance.
+- **Per-component render counts, and why a component rendered.** React Native DevTools ships
+  both in its Profiler and Components panels. Getting them here would mean wrapping the React
+  DevTools hook and walking the fiber tree on every commit, against internals that move between
+  React versions, to reproduce a panel that already sits beside ours.

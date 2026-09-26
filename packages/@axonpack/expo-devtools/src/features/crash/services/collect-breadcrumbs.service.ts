@@ -1,4 +1,6 @@
 import { consoleLogStore } from '../../console/stores/console-log.store';
+import { navigationStore, ROOT_CONTAINER } from '../../navigation/stores/navigation.store';
+import { formatMoveTitle } from '../../navigation/utils/format-navigation.util';
 import { networkLogStore } from '../../network/stores/network-log.store';
 import type { CrashBreadcrumb } from '../stores/crash.store';
 
@@ -33,6 +35,22 @@ export function collectBreadcrumbs(): CrashBreadcrumb[] {
         category: 'network',
         level: entry.status,
         message: `${entry.method} ${entry.url}${entry.statusCode ? ` → ${entry.statusCode}` : ''}`,
+      });
+    }
+  } catch {
+    // As above.
+  }
+
+  try {
+    for (const move of navigationStore.getSnapshot()) {
+      crumbs.push({
+        at: move.timestamp,
+        category: 'navigation',
+        level: move.action,
+        message:
+          move.container === ROOT_CONTAINER
+            ? formatMoveTitle(move)
+            : `${move.container}: ${formatMoveTitle(move)}`,
       });
     }
   } catch {

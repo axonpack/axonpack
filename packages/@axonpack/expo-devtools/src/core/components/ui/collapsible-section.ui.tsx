@@ -10,19 +10,25 @@ export function CollapsibleSection({
   title,
   count,
   initiallyExpanded = true,
+  expanded: controlled,
+  onToggle,
   headerRight,
   children,
 }: {
   title: string;
   count?: number;
   initiallyExpanded?: boolean;
+  /** Hand the open state in, with `onToggle`, when it has to outlive the section: a store, say. */
+  expanded?: boolean;
+  onToggle?: () => void;
 
   headerRight?: ReactNode;
   children: ReactNode;
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  const [expanded, setExpanded] = useState(initiallyExpanded);
+  const [own, setOwn] = useState(initiallyExpanded);
+  const expanded = controlled ?? own;
 
   return (
     <View>
@@ -30,7 +36,8 @@ export function CollapsibleSection({
         style={styles.header}
         onPress={() => {
           animateNextLayout();
-          setExpanded((prev) => !prev);
+          if (onToggle) onToggle();
+          else setOwn((prev) => !prev);
         }}>
         <MaterialIcons
           name="arrow-drop-down"

@@ -2,8 +2,8 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { CallSite } from './call-site.component';
 import { ConsoleArgCell } from './console-arg-cell.component';
+import { CallSite } from '../../../core/components/call-site.component';
 import { CopyIconButton } from '../../../core/components/ui/copy-icon-button.ui';
 import { crashInspectionStore } from '../../../core/stores/crash-inspection.store';
 import type { Matcher } from '../../../core/utils/text-search.util';

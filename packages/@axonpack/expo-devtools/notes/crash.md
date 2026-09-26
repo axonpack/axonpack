@@ -19,7 +19,7 @@ the one subsystem here meant to survive into a release build.
 - [x] A fatal JS error is reported without ending the app, the way it never ends one in development
 - [ ] Send reports to a backend, with queueing and retry
 - [ ] Group duplicate crashes instead of one row each
-- [ ] Capture the current route automatically
+- [x] Capture the current route automatically
 
 ## The four tiers
 
@@ -116,8 +116,9 @@ Which tier caught a crash decides how much it can say:
   scroll position — while the disclosure arrow still expands the inline stack. `core/` mounts the
   sheet and holds the selected id (`crash-inspection.store.ts`); the console side imports nothing
   from this feature.
-- **Breadcrumbs cost almost nothing.** They are read from the console and network ring buffers that
-  already exist, so nothing is recorded _for_ crash reporting.
+- **Breadcrumbs cost almost nothing.** They are read from the console, network and navigation ring
+  buffers that already exist, so nothing is recorded _for_ crash reporting. The route on the report
+  is read the same way, from the Navigation tab's store, at capture time.
 - **Redaction runs before anything leaves the process** — the store, the disk and the consumer's
   hook all see the redacted record, so there is no ordering in which the raw one escapes.
 - **Turning off RN's red box uninstalls LogBox** rather than muting it, because muting only hides

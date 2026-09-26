@@ -26,6 +26,12 @@ export function SummaryTab({ record, palette }: { record: CrashRecord; palette: 
   const facts: [string, string][] = [['Captured', formatCrashTime(record.timestamp)]];
   if (record.native?.type !== undefined) facts.push(['Exception', record.native.type]);
   if (record.native?.thread !== undefined) facts.push(['Thread', record.native.thread]);
+  if (record.route !== undefined) {
+    facts.push([
+      'Route',
+      record.route.path ? `${record.route.name} (${record.route.path})` : record.route.name,
+    ]);
+  }
   for (const [key, value] of Object.entries(record.context ?? {})) {
     facts.push([key, stringify(value)]);
   }
