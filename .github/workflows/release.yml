@@ -151,7 +151,7 @@ jobs:
       # `version-packages` also refreshes the lockfile, which records each workspace's version. Without
       # that the PR would fail its own frozen-lockfile install, which is what broke the 3.2.0 release.
       - name: Open or update the Version Packages PR
-        uses: changesets/action@v2
+        uses: changesets/action@v1
         with:
           version: bun run version-packages
           commit: "release: version packages"
