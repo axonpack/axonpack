@@ -3,8 +3,6 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  # A pull request builds to prove it still compiles, and stops before publishing.
-  pull_request:
   # Versions, download counts and changelogs come from npm at build time, so they go stale on
   # their own with no commit to trigger a rebuild.
   schedule:
@@ -58,15 +56,12 @@ jobs:
         run: bun run build
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: out
 
   deploy:
     name: Deploy
-    # Only main publishes.
-    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:
