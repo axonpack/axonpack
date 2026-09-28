@@ -170,6 +170,31 @@ function parse(markdown) {
   return releases;
 }
 
+/**
+ * A version that never reached npm but sits below one that did will never be published: the
+ * release above it went out and carried its changes. Left alone it shows as "Not yet published"
+ * forever. So its sections move into the nearest published release above it, which is the one a
+ * user actually installs to get them. Only unpublished versions above every published one stay
+ * pending. Without `dates` (npm unreachable) nothing is known, so nothing moves.
+ */
+function foldSkipped(releases, dates) {
+  if (!dates) return releases;
+  const out = [];
+  for (const release of releases) {
+    const carrier = out.findLast((r) => dates[r.version]);
+    if (dates[release.version] || !carrier) {
+      out.push(release);
+      continue;
+    }
+    for (const section of release.sections) {
+      const same = carrier.sections.find((s) => s.bump === section.bump);
+      if (same) same.lines.push(...section.lines);
+      else carrier.sections.push(section);
+    }
+  }
+  return out;
+}
+
 async function sync({ name, slug }) {
   // The registry doc has to come first: it is where the tarball URL lives.
   const registry = await readRegistry(name);
@@ -196,7 +221,7 @@ async function sync({ name, slug }) {
     return { slug, latest, date: latest ? fmtDate(latest) : null };
   }
 
-  const releases = parse(markdown);
+  const releases = foldSkipped(parse(markdown), known ? dates : null);
 
   const body = releases
     .map((r) => {
