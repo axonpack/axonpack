@@ -81,6 +81,11 @@ async function axiosUpload(url: string, formData: FormData) {
   return { status: response.status, text: JSON.stringify(response.data).slice(0, 300) };
 }
 
+async function fetchWithSecrets(url: string) {
+  const response = await fetch(url, { headers: { 'X-Api-Key': 'demo-secret' } });
+  return { status: response.status, text: await response.text() };
+}
+
 async function fetchImage() {
   const response = await fetch(IMAGE_URL);
   return {
@@ -244,6 +249,28 @@ export function NativeRequests() {
           <Button
             title="Fetch image"
             onPress={() => runRequest('image', fetchImage)}
+            disabled={loading !== null}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionHeader}>Redaction</Text>
+        <View style={styles.group}>
+          <Button
+            title="GET with an API key and a token"
+            onPress={() =>
+              runRequest('redact', () => fetchWithSecrets(`${BASE_URL}/posts/1?token=demo-secret`))
+            }
+            disabled={loading !== null}
+          />
+        </View>
+        <View style={styles.group}>
+          <Button
+            title="GET that the hook drops"
+            onPress={() =>
+              runRequest('redact-drop', () => fetchWithSecrets(`${BASE_URL}/posts/2?skip-devtools`))
+            }
             disabled={loading !== null}
           />
         </View>

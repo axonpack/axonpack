@@ -71,4 +71,38 @@ describe('network redaction', () => {
     networkLogStore.add({ ...request, pageCookies: 'sid=1' });
     expect(networkLogStore.getSnapshot()[0].pageCookies).toBe('[redacted]');
   });
+
+  it('passes socket rows through the hook, on add and on update', () => {
+    configureNetworkRedaction({
+      redact: (entry) =>
+        entry.kind === 'websocket' && entry.url.includes('/drop')
+          ? null
+          : { ...entry, url: entry.url.replace(/token=[^&]+/, 'token=x') },
+    });
+    const socket = {
+      id: 'ws1',
+      method: 'WS' as const,
+      socketId: 1,
+      url: 'wss://example.test/socket?token=abc',
+      status: 'connecting' as const,
+      startedAt: 0,
+    };
+    networkLogStore.add(request);
+    networkLogStore.addWebSocket(socket);
+    networkLogStore.updateWebSocket('ws1', { url: 'wss://example.test/other?token=def' });
+
+    expect(networkLogStore.getSnapshot()[0].url).toBe('https://example.test/me?token=x');
+    expect(networkLogStore.getWebSocketSnapshot()[0].url).toBe('wss://example.test/other?token=x');
+
+    networkLogStore.addWebSocketMessage('ws1', {
+      id: 'm1',
+      direction: 'sent',
+      data: 'hi',
+      messageType: 'text',
+      timestamp: 0,
+    });
+    networkLogStore.updateWebSocket('ws1', { url: 'wss://example.test/drop' });
+    expect(networkLogStore.getWebSocketSnapshot()).toEqual([]);
+    expect(networkLogStore.getWebSocketMessages('ws1')).toEqual([]);
+  });
 });

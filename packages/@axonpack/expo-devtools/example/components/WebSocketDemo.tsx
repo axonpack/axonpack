@@ -15,9 +15,9 @@ export function WebSocketDemo() {
 
   const note = (line: string) => setLog((lines) => [`${line}`, ...lines].slice(0, 20));
 
-  function connect() {
+  function connect(url = ECHO_URL) {
     if (socketRef.current) return note('already connected');
-    const socket = new WebSocket(ECHO_URL, ['chat']);
+    const socket = new WebSocket(url, ['chat']);
     socketRef.current = socket;
     socket.onopen = () => note('open');
     socket.onmessage = (event) => note(`received: ${String(event.data).slice(0, 60)}`);
@@ -53,7 +53,12 @@ export function WebSocketDemo() {
         Open the devtools panel and look at the Network tab — the connection appears as a WS row,
         and opening it shows every message in both directions.
       </Text>
-      <ActionButton label="Connect" onPress={connect} />
+      <ActionButton label="Connect" onPress={() => connect()} />
+      {/* The row should show `token=[redacted]`: `network.redact` in devtools.ts strips it. */}
+      <ActionButton
+        label="Connect with a token"
+        onPress={() => connect(`${ECHO_URL}?token=demo-secret`)}
+      />
       <ActionButton label="Send text" onPress={sendText} />
       <ActionButton label="Send binary" onPress={sendBinary} />
       <ActionButton label="Close" onPress={close} />

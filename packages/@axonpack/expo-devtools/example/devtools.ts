@@ -64,6 +64,12 @@ export const devtoolsConfig = {
     http: true,
     websocket: true,
     sse: true,
+    // The Redaction buttons in NativeRequests and the WebSocket demo send these secrets on purpose.
+    redactHeaders: ['x-api-key'],
+    redact: (entry) =>
+      entry.url.includes('skip-devtools')
+        ? null
+        : { ...entry, url: entry.url.replace(/token=[^&]+/, 'token=[redacted]') },
   },
   console: {
     disabledByDefault: false,
