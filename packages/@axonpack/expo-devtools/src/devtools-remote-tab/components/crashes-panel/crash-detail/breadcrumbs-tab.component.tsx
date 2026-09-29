@@ -18,9 +18,9 @@ export function BreadcrumbsTab({ record, palette }: { record: CrashRecord; palet
       <>
         <p className="axonpack-net-none">No breadcrumbs were recorded</p>
         <p className="axonpack-crash-note">
-          Breadcrumbs replay the console and network entries leading up to the crash. They are off
-          by default outside development, because that trail carries request URLs and whatever the
-          app logged. Turn them on with {'`crash: { breadcrumbs: true }`'}.
+          Breadcrumbs replay the console lines, requests and screen changes leading up to the
+          crash. They are on by default, so an empty trail means nothing happened first or the app
+          turned them off with {'`crash: { breadcrumbs: false }`'}.
         </p>
       </>
     );

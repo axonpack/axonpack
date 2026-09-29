@@ -364,8 +364,8 @@ export type DevtoolsNavigationConfig = {
   /**
    * Your chance to strip anything sensitive from a move before it is stored: a token in a deep
    * link's params, an OAuth code. Runs on every move, including the route shown as current, so
-   * nothing downstream sees the real value: not the list, the card, the export, the DevTools tab or
-   * crash breadcrumbs. Return the move, edited or not, or `null` to drop it. If it throws, the move
+   * nothing downstream sees the real value: not the history, the tree, copy, export or crash
+   * reports. Return the move, edited or not, or `null` to drop it. If it throws, the move
    * is dropped.
    *
    * ```ts
