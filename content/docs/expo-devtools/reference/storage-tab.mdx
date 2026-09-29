@@ -11,9 +11,9 @@ AsyncStorage  ·  Async  ·  read at 14:22:07
 [12 keys] [4.1 KB] [cache/feed · 1.2 KB]
 ```
 
-Unlike the other three recording tabs, this one **finds nothing by itself**. A key-value store is a
-separate install with its own native code, and this package depends on none of them, so the stores
-arrive through `storage.adapters` in the client config. With none registered the tab explains that and
+Unlike every other tab, this one **finds nothing by itself**. A key-value store is a separate install
+with its own native code, and this package depends on none of them, so the stores arrive through
+`storage.adapters` in the provider's config. With none registered the tab explains that and
 shows the snippet to copy, rather than an empty list that would read as "you have no data".
 
 ## Toolbar
@@ -29,11 +29,11 @@ shows the snippet to copy, rather than an empty list that would read as "you hav
 
 Adding a key is a distinct operation from editing one, not an alias: the type is chosen rather than
 inherited from a value that is already there, and a key the store already holds is refused rather than
-quietly overwritten. The check asks the store, not the list on screen — a store the tab cannot enumerate
-holds keys the list never had.
+quietly overwritten. The check asks the store, not the list on screen, because a store the tab cannot
+enumerate holds keys the list never had.
 
-There is **no record button** — storage is a pull, not a stream, so there is no stream to pause. And no
-clear button: that icon means "clear the log" in the other three tabs, and it must never come to mean
+There is **no record button**. Storage is a pull, not a stream, so there is nothing to pause. There is no
+clear button either: that icon means "clear the log" in the other tabs, and it must never come to mean
 "wipe your storage". The tab reads on open and on Refresh; nothing polls.
 
 ## Import
@@ -42,12 +42,12 @@ There is no filesystem module in this package and no dev server to upload to, so
 the way it left: as text. The sheet takes a paste, or reads the clipboard for you.
 Before anything is written it reports what the file would do: how many keys are new, how many would be
 overwritten, how many already hold exactly that value, and how many are skipped. Each skip gives its
-reason — hidden by the blacklist, a type this store does not hold, or no value to write. A file exported from a different store
+reason: hidden by the blacklist, a type this store does not hold, or no value to write. A file exported from a different store
 is not refused, but it is called out.
 
 Only then does the Write button do anything. Keys are written one at a time so a failure names the key
-that caused it, and the store is re-read afterwards rather than patched key by key — an import is the
-one write here big enough for the difference to matter, and a store is free to normalise every value it
+that caused it. The store is re-read afterwards rather than patched key by key. An import is the one
+write here big enough for the difference to matter, and a store is free to normalise every value it
 was handed.
 
 A file from a schema version this build does not read is refused outright, with the version it found.
@@ -55,29 +55,35 @@ A file from a schema version this build does not read is refused outright, with 
 ## Store summary
 
 The toolbar is the only pinned row. The summary and the filter panel are the list's header, so they
-scroll away with the rows — an open filter panel would otherwise leave a phone with almost no list.
+scroll away with the rows. An open filter panel would otherwise leave a phone with almost no list.
 
 The summary names the store, whether it is `Async` or `Sync`, when it was last read, its key count,
-total bytes and largest key — plus whatever needs saying honestly:
+total bytes and largest key. Under that it adds a note when one applies:
 
-- `SecureStore can't list its own keys — showing the 2 you declared.`
-- `Read 1,000 of 4,312 keys — the rest are past the cap.`
-- `Read-only — values here cannot be edited or deleted.`
+- The store cannot list its own keys (SecureStore), so it shows only the keys you declared.
+- The read stopped at the `storage.maxKeys` cap, with how many keys it read out of the total.
+- The store is read-only, so values cannot be edited or deleted.
+- A blacklist is set, so any key it matches was never read.
 
 ## Filters panel
 
 | Section      | What it holds                                                                                                              |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| Header       | `n of m`, **Invert**, **Clear** — as in the Network tab.                                                                   |
+| Header       | `n of m`, **Invert**, **Clear**, as in the Network tab.                                                                    |
 | Search       | The shared search box, with match-case / whole-word / regex modes.                                                          |
 | Search in    | **Keys + values**, **Keys**, **Values**. A key and its value are different haystacks.                                       |
 | Type         | Object · Array · String · Number · Boolean · Binary · Empty · Missing, with counts. Only types actually present get a chip. |
 | Sort by      | **Key**, **Size**, **Type**, plus an ascending/descending chip. Sorted by key within a type.                               |
 | More filters | **Group by namespace**, **Hide empty values**, **JSON values only**.                                                       |
 
-**Group by namespace** recovers the prefix conventions no store knows about — `auth:token`,
-`cache/user/1`, `settings.theme`, `user_name` — splitting on the first of `:` `/` `.` `_` and grouping
-under it. A key with no prefix lands under `Ungrouped`.
+**Group by namespace** recovers the prefix conventions no store knows about, such as `auth:token`,
+`cache/user/1`, `settings.theme` and `user_name`. It splits on `:` if the key has one, else `/`, else
+`.`, else `_`, and groups under the part before it. So `auth:cache.v1` groups under `auth`. A key with
+no prefix lands under `Ungrouped`.
+
+Filters, sort and grouping live in a store shared with the Storage panel in
+[React Native DevTools](/docs/expo-devtools/reference/devtools-tab#storage), so a choice made on either side shows
+on both.
 
 ## A key row
 
@@ -86,7 +92,7 @@ highlighted in both the key and the value.
 
 **Empty** and **Missing** are separate types on purpose: an empty string is a value a store can hold,
 and conflating the two hides a real one. A key that failed to read shows the reason in red instead of a
-value — SecureStore throws per key on a value it cannot decrypt, and losing the whole store to that
+value. SecureStore throws per key on a value it cannot decrypt, and losing the whole store to that
 would be the wrong trade. Long-press for the copy menu.
 
 ## Detail sheet
@@ -97,7 +103,7 @@ Copy as JSON / Copy value (formatted), and **Delete key** when the store can del
 | Tab   | What it shows                                                                                                                                               |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Value | The same inspectable, syntax-highlighted JSON tree as the Network tab's Preview when the text parses as an object or array; monospace text when it does not. |
-| Raw   | The characters exactly as stored — no parsing, no pretty-printing — with the character and byte counts.                                                     |
+| Raw   | The characters exactly as stored (no parsing, no pretty-printing), with the character and byte counts.                                                      |
 | Edit  | The value in an editable box, with Revert and Save.                                                                                                         |
 | Info  | Key, store, how it is shown, how it is stored, size, read time, whether it can be edited or deleted.                                                        |
 
@@ -107,18 +113,18 @@ tab's detail sheet uses.
 **Editing.** Save writes through the type the value was read as, so a number edited in a text box is
 still a number to the store; a non-numeric edit of a numeric key is refused rather than silently
 stringified. The key is then read back rather than assumed, because a store is free to normalise what it
-was handed. Broken JSON in a value that was stored as JSON is a **warning, not a block** — a store can
-legitimately hold text that was never JSON. Edit says why it is unavailable when it is: the store is
+was handed. Broken JSON in a value that was stored as JSON is a **warning, not a block**, because a
+store can legitimately hold text that was never JSON. Edit says why it is unavailable when it is: the store is
 read-only, or was registered without a way to write, or the value is binary.
 
 **Deleting** asks for confirmation first, and acts on exactly one key. There is no store-wide clear
-anywhere in the tab, and no way to add a key that is not already there.
+anywhere in the tab. New keys come in through **Add key** or **Import**, never through Edit.
 
 ## What this tab does not do
 
 - **No mutation history.** Nothing patches the store instance you hand over, so the tab shows state, not
   the writes that produced it.
-- **No SQLite.** A table needs schema, queries and paging, not a key list — and squeezing `expo-sqlite`
+- **No SQLite.** A table needs schema, queries and paging, not a key list. Squeezing `expo-sqlite`
   into a key-value adapter would serve neither.
 - **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
   their length is reported.

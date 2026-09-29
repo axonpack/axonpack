@@ -24,7 +24,7 @@ take it and leave the components alone.
 | `collectMatchingPaths`   | `(path, value, matcher, rootLabel?) => Set<string>`            | The branches a search opens, and nothing else                  |
 | `collectMatchingXmlPaths` | `(root, path, matcher) => Set<string>`                        | The same for `XmlTree`                                         |
 | `formatCopyValue`        | `(value: JsonValue) => string`                                 | `JSON.stringify` at two spaces                                 |
-| `buildMatcher`           | `(query: SearchQuery) => Matcher`                              | See [Search](/docs/react-pretty-print/search)                  |
+| `buildMatcher`           | `(query: SearchQuery) => Matcher \| null`                      | `null` for an empty query. See [Search](/docs/react-pretty-print/search) |
 | `findMatches`            | ranges over a string                                           | With `clipMatches`, `splitByMatches` and `testMatch`           |
 
 ## Constants

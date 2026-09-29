@@ -42,6 +42,10 @@ a single WebView can call the hook with no argument, which labels it `webview`.
 Everything the hook returns is inert until the devtools are running: the injected script is empty, and
 with no `onMessage` behind it `react-native-webview` does not install the page bridge at all.
 
+Each page request also records what the page's `document.cookie` held, shown in the Cookies tab.
+Listing `cookie` in `network.redactHeaders` redacts that too. See
+[Redaction](/docs/expo-devtools/network#redaction).
+
 A page can never be *fully* throttled: images, stylesheets and scripts the browser loads by itself
 still go out at full speed.
 

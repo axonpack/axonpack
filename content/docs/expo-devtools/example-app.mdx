@@ -3,8 +3,8 @@ title: Example app
 description: A runnable Expo app for trying all of this against real traffic.
 ---
 
-`example/` in the repository is a runnable Expo app for trying all of this against real traffic. It has
-one screen per tab, each a wall of buttons.
+`example/` in the repository is a runnable Expo app for trying all of this against real traffic. Each of
+its screens is a wall of buttons.
 
 ```sh
 git clone https://github.com/axonpack/axonpack.git
@@ -17,30 +17,52 @@ bun run ios     # or: bun run android (full native build)
 
 ## What each screen does
 
-- **Requests** fires GET, POST and DELETE, downloads an image and uploads one, across `fetch`,
-  `XMLHttpRequest` and axios, so you can watch all three interception paths land in the same list. Its
-  WebView sub-tab loads a real external site, whose own requests arrive tagged with their source.
-- **Console** covers every kind of output worth testing, in three groups. Levels; argument shapes —
+- **Requests** has a sub-tab per way a request can leave the app:
+  - **Native** fires GET, POST and DELETE, downloads an image and uploads one, across `fetch`, `XMLHttpRequest` and
+    axios, so you can watch all three land in the same list.
+  - **WebView** loads a real external site, whose own requests arrive tagged with their source.
+  - **Socket** connects to an echo server and sends text and binary messages.
+  - **Stream** opens a server-sent event stream with `XMLHttpRequest` and with `fetch`.
+  - **expo/fetch** calls Expo's fetch both off the global and imported from `expo/fetch`, and reads a
+    chunked body and an event stream.
+  - **Page APIs** loads a page that opens its own sockets and streams, sets cookies and makes requests.
+  - **nitro-fetch** sends requests through `react-native-nitro-fetch`, which no patch can see.
+- **Console** covers every kind of output worth testing, in groups. Levels. Argument shapes:
   mixed arguments, nested objects, arrays of objects, class instances, `Map` and `Set`, exotic
-  primitives, empty values; and edge cases — circular references, a throwing getter, an unhandled
-  rejection, a message repeated five times, a very long message, and a 600-entry flood.
+  primitives, empty values. Edge cases: circular references, deep nesting, errors with stacks, a
+  throwing getter, an unhandled rejection, a message repeated five times, a very long message, and a
+  600-entry flood. Known gaps: printf specifiers, `group`, `count`, `table` and `clear`, which are
+  expected to look wrong.
 - **Performance** blocks the JS thread for 60 ms, 150 ms, 400 ms or three bursts in a row, runs a
   deliberately slow tap handler, records `mark` and `measure` pairs with and without `detail`, and
   allocates memory you can retain or release to make the heap chart move.
 - **Storage** seeds AsyncStorage, MMKV, SecureStore and an in-memory `Map` with a spread of value
   shapes, and can write past the 1,000-key read cap.
+- **Navigation** is a React Navigation stack. It pushes, replaces, resets and goes back, sets params,
+  pushes a screen with a `token` param for the redact hook to strip, and opens a checkout flow in a
+  container of its own.
+- **Crash** throws in a timer, reads a property of `undefined`, rejects promises three ways, throws
+  during render inside a `DevtoolsErrorBoundary`, raises an uncaught native exception, and sets and
+  clears crash context.
 
 ## A worked configuration
 
 `example/metro.config.js` already has the `withDevtools` line, so pressing `j` in Metro opens React
 Native DevTools with the [Axonpack tab](/docs/expo-devtools/react-native-devtools) in it.
 
-`example/devtools.ts` doubles as a worked configuration: a dark default theme, a custom `midnight` one,
-a `console.context` you can reach from the prompt, and all four storage adapters registered against
-real AsyncStorage, MMKV, SecureStore and an in-memory `Map`.
+`example/App.tsx` puts the provider inside React Navigation's `NavigationContainer`, which is how the
+Navigation tab finds the container with no hook. It also sets the launcher's `size`, `color` and
+`iconColor`.
 
-<Callout type="info" title="MMKV is not in Expo Go">
+`example/devtools.ts` doubles as a worked configuration: two custom themes, one of which the panel
+opens on, a `console.context` you can reach from the prompt, crash capture that survives
+`enabled: false` with breadcrumbs and a `redact` hook, a `navigation.redact` that hides a `token`
+param, and all four storage adapters registered against real AsyncStorage, MMKV, SecureStore and an
+in-memory `Map`.
+
+<Callout type="info" title="MMKV and nitro-fetch are not in Expo Go">
   AsyncStorage and SecureStore ship inside Expo Go, so `bun run start` exercises them as-is. MMKV does
-  not, and `createMMKV()` throws when its native module is missing — the example catches that and
-  registers the other three stores instead of crashing. `bun run ios` gets you all four.
+  not, and `createMMKV()` throws when its native module is missing. The example catches that and
+  registers the other three stores instead of crashing. The nitro-fetch screen is loaded the same way.
+  `bun run ios` gets you everything.
 </Callout>

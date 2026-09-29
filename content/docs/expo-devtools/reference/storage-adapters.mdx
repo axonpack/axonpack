@@ -39,7 +39,7 @@ const devtoolsConfig = {
 | Factory                                | For                                                                                                                                              |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `asyncStorageAdapter({ driver })`      | `@react-native-async-storage/async-storage` and anything copying its API. Uses `getMany` (v3) or `multiGet` (v1/v2) for batch reads when present. |
-| `mmkvAdapter({ driver })`              | `react-native-mmkv`, both majors — v4's `remove` and v3's `delete` are both accepted.                                                             |
+| `mmkvAdapter({ driver })`              | `react-native-mmkv`, both majors. v4's `remove` and v3's `delete` are both accepted.                                                              |
 | `secureStoreAdapter({ driver, keys })` | `expo-secure-store`. Takes `keys` because the keychain cannot be listed, and an optional `options` passed through to every call.                  |
 | `defineStorageAdapter({ ... })`        | Anything else. Duck-types nothing; takes exactly what you hand it.                                                                                |
 
@@ -47,17 +47,22 @@ const devtoolsConfig = {
 
 All four accept these:
 
-| Field            | Type                                       | What it does                                                                        |
-| ---------------- | ------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `name`           | `string`                                   | Shown in the store dropdown. Defaulted from the library.                            |
-| `readOnly`       | `boolean`                                  | Makes this store read-only regardless of what else you passed.                      |
-| `supportedTypes` | `StorageValueType[]`                       | What the store can actually hold: `'string'`, `'number'`, `'boolean'`, `'buffer'`. Defaults to all four. |
-| `blacklist`      | `RegExp \| ((key: string) => boolean)`     | A key it matches is never listed, never read and never written.                     |
-| `kind`           | `'sync' \| 'async'`                        | The badge the tab shows. Never a branch — every read is awaited either way.          |
+| Field       | Type                                   | What it does                                                                                          |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `name`      | `string`                               | Shown in the store dropdown. The three library factories default it; `defineStorageAdapter` requires it. |
+| `readOnly`  | `boolean`                              | Makes this store read-only, whatever `storage.readOnly` says.                                         |
+| `blacklist` | `RegExp \| ((key: string) => boolean)` | A key it matches is never listed, never read and never written.                                       |
+
+`defineStorageAdapter` also takes these two. The library factories set them for you:
+
+| Field            | Type                 | What it does                                                                                             |
+| ---------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `supportedTypes` | `StorageValueType[]` | What the store can actually hold: `'string'`, `'number'`, `'boolean'`, `'buffer'`. Defaults to all four. |
+| `kind`           | `'sync' \| 'async'`  | The badge the tab shows. Defaults to `'async'`. Never a branch: every read is awaited either way.        |
 
 ## `defineStorageAdapter`
 
-Needs either `getAllKeys` or a fixed `keys` list — passing `keys` is what turns enumeration off, and it
+Needs either `getAllKeys` or a fixed `keys` list. Passing `keys` is what turns enumeration off, and it
 may be a function, resolved on every read, for an app that keeps its own list of what it stored. Then
 any of `getItem` (required), `getMany`, `setItem` and `removeItem`.
 
@@ -65,14 +70,14 @@ any of `getItem` (required), `getMany`, `setItem` and `removeItem`.
 registered read-only in effect is read-only in the UI without a flag. Sync functions are fine
 everywhere: they are awaited, not branched on.
 
-`getItem` may return a bare `string | null`, or a `{ text, valueType }` when the type matters — that
+`getItem` may return a bare `string | null`, or a `{ text, valueType }` when the type matters. That
 second form is how `mmkvAdapter` keeps a stored `1` from rendering as `"1"`, and what an edit is written
 back through.
 
 ## `blacklist`
 
 A `RegExp` or a `(key: string) => boolean`. A key it matches is never listed, never read, and never
-written — the filtering happens in the adapter, before the read, not in the view, so the value never
+written. The filtering happens in the adapter, before the read, not in the view, so the value never
 reaches memory at all. A `/g` regex is safe: `lastIndex` is reset before every test.
 
 The summary says a blacklist is set, but never how many keys it matched. That is a count this tab
@@ -86,5 +91,5 @@ The list of types the store can really hold, out of `'string'`, `'number'`, `'bo
 takes all four.
 
 The Add-key sheet offers only these types, so a write the store would have flattened is never offered in
-the first place. Binary is never offered for either creating or editing — there is no text form of the
+the first place. Binary is never offered for either creating or editing, since there is no text form of the
 bytes to round-trip.

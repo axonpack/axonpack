@@ -75,6 +75,27 @@ event itself, with `preventDefault` and `stopPropagation` there but doing nothin
 Everything else a devtools tab usually wants needs none of that: reading the app's state, calling
 into it, drawing a table, filtering a list.
 
+## Copying and downloading
+
+Copying is the one thing a handler cannot do for you, since it runs in the app and lands on the
+device's clipboard. Give the element `COPY_ATTRIBUTE` with the text instead, and the panel copies it
+to the computer's clipboard on the click:
+
+```tsx
+import { COPY_ATTRIBUTE } from "@axonpack/react-native-devtools-tab";
+
+<button {...{ [COPY_ATTRIBUTE]: curl }}>Copy as cURL</button>;
+```
+
+A download needs nothing special: an `<a href="data:…" download="name">` is a real link in the
+panel, and the browser saves it.
+
+## Right-click menus
+
+A tab that handles a right-click with `onContextMenu` does not get the browser's menu on top of its
+own. The panel cancels that for you, because your handler runs in the app and would be too late to
+call `preventDefault` itself.
+
 ## The bar at the top
 
 Every tab gets one, drawn by this package: its `name`, and a button that renders the component

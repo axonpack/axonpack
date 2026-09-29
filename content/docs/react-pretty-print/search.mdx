@@ -20,7 +20,8 @@ const matcher = buildMatcher({ text: query, ...DEFAULT_SEARCH_MODES, matchCase: 
 <JsonTree primitives={domPrimitives} value={data} matcher={matcher} />;
 ```
 
-`SearchModes` are `matchCase`, `wholeWord` and `regex`.
+`SearchModes` are `matchCase`, `wholeWord` and `regex`. An empty query gives `null`, which the
+renderers take as no search.
 
 ## Two behaviours worth knowing
 

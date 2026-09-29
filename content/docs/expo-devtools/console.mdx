@@ -4,18 +4,21 @@ description: Everything your app logs, on the device, plus a prompt that runs Ja
 ---
 
 The Console tab mirrors everything your app logs, on the device. Warnings sit on a yellow row and
-errors on a red one, and the toolbar keeps a running count of each — so you can see at a glance
-whether anything went wrong while you were not looking.
+errors on a red one. The toolbar keeps a running count of warnings, errors and crashes, so you can see
+at a glance whether anything went wrong while you were not looking.
 
 ![Console tab listing captured logs](/expo-devtools/screenshots/console-log.png)
 
 - Each thing you logged gets its own line, so a message and the object next to it do not run together.
   Objects and arrays start collapsed. Tap to open them up, level by level.
 - Errors show their message on the row and the **full stack** when you tap it.
+- Warnings and errors show the **file and line** that logged them.
+- A **crash** gets a card of its own in the list. Tap it to open its full report from the
+  [Crashes tab](/docs/expo-devtools/crash-reporting).
 - The same message logged over and over becomes **one row with a count**, so a chatty screen does not
   bury everything else.
-- Filter by level (each chip carries a live count) or by source, or search the text of every message —
-  with match case, whole word and regex, and every match highlighted where it sits.
+- Filter by level (each chip carries a live count) or by source, or search the text of every message.
+  Search has match case, whole word and regex, and every match is highlighted where it sits.
 - The newest output stays in view automatically, and stops following if you scroll back to read
   something, with a button to jump back to the newest.
 - Copy any line with one tap.
@@ -52,11 +55,15 @@ It is also the only thing that works in a release build, where the module list t
 read is not available.
 
 <Callout type="warn" title="The prompt is on by default, in every build">
-  `console.repl` defaults to `true`, and it is not gated on `__DEV__`. Wherever the devtools are on the
-  prompt is there — including in a release build, where it will run whatever is typed into it. Ship
+  `console.repl` defaults to `true`, and it is not gated on `__DEV__`. Wherever the devtools are on, the
+  prompt is there. That includes a release build, where it will run whatever is typed into it. Ship
   with `enabled: false` (see [Leaving it in production](/docs/expo-devtools/production)), or turn the prompt
   off explicitly with `console: { repl: false }`.
 </Callout>
+
+The same list and prompt are on the Console panel of the Axonpack tab in
+[React Native DevTools](/docs/expo-devtools/react-native-devtools#console), with the same levels, filters and
+search. Filters set on either side show on both.
 
 ## Limits
 

@@ -1,6 +1,6 @@
 {
   "title": "Expo Devtools",
-  "description": "On-device network, console, performance, storage and crash devtools",
+  "description": "On-device network, console, performance, storage, navigation and crash devtools",
   "root": true,
   "icon": "Bug",
   "pages": [
@@ -14,6 +14,7 @@
     "console",
     "performance",
     "storage",
+    "navigation",
     "crash-reporting",
     "debug",
     "themes",

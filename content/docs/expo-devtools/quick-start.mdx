@@ -71,13 +71,17 @@ export default function App() {
 </Tabs>
 
 That is it. Drag the button anywhere on screen, tap it to open the panel, and the Network and Console
-tabs are already recording. The Storage tab is empty until you tell it which stores you use — see
-[Storage](/docs/expo-devtools/storage). The panel reopens on whichever tab you last had open, for as long as
+tabs are already recording. Navigation records too, once it has found your navigator. The Storage tab is empty until you tell it which stores you
+use. See [Storage](/docs/expo-devtools/storage). The panel reopens on whichever tab you last had open, for as long as
 the app is running.
 
-## 3. Optional: the Network tab on your computer
+The Navigation tab finds Expo Router on its own. With React Navigation, put the provider inside your
+`NavigationContainer` and it finds that too. A provider above the container needs the container handed
+over with `useDevtoolsNavigation`. See [Navigation](/docs/expo-devtools/navigation).
 
-For the same Network tab in React Native DevTools too, add one line to `metro.config.js` and restart
+## 3. Optional: the tabs on your computer
+
+For the same tabs in React Native DevTools too, add one line to `metro.config.js` and restart
 Metro:
 
 ```js title="metro.config.js"
@@ -103,7 +107,7 @@ DevTools](/docs/expo-devtools/react-native-devtools) has the rest.
   are global and go in one time. Changing the object later has no effect, so `enabled` cannot be
   flipped at runtime.
 - **Performance starts paused.** Measuring is not free, so press its record button when you want it.
-  The other two recording tabs record from launch.
+  The other recording tabs record from launch.
 - **Expo Go works.** See [Installation](/docs/expo-devtools/installation) for the handful of readings that go
   quiet there.
 - **In-app browser pages need one hook** on the `<WebView />` itself. See
