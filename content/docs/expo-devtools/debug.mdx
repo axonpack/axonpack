@@ -12,8 +12,8 @@ crashes a thread on demand, which is the only way to see what a real freeze does
 
 Pick a thread, pick a duration (100 ms to 3 s, or type your own), and block it:
 
-- **JavaScript** — shows up as a long task and drops the FPS reading. Works everywhere.
-- **Main (UI)** — freezes what you see and touch while the JS numbers stay perfectly healthy. That gap
+- **JavaScript**: shows up as a long task and drops the FPS reading. Works everywhere.
+- **Main (UI)**: freezes what you see and touch while the JS numbers stay perfectly healthy. That gap
   is the blind spot the frame-rate card warns about, and this is how you see it for yourself. Needs a
   development build.
 
@@ -29,10 +29,14 @@ off disk at the next launch. Either way the report is waiting on the Crashes tab
 <Callout type="error" title="These buttons are not gated on __DEV__">
   They call straight into the native module, so they work whenever the panel is on screen.
   `enabled: false` is what keeps them out of a release, because it is what makes the panel
-  unreachable — see [Leaving it in production](/docs/expo-devtools/production).
+  unreachable. See [Leaving it in production](/docs/expo-devtools/production).
 </Callout>
 
 There is no record button and nothing to clear, so the tab carries no toolbar.
+
+The same controls are on the Debug panel of the Axonpack tab in
+[React Native DevTools](/docs/expo-devtools/react-native-devtools#debug), so you can block or crash a thread
+from the desktop.
 
 ## Next step
 

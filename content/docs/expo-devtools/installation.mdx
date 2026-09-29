@@ -7,8 +7,8 @@ description: Install @axonpack/expo-devtools and its three peer dependencies.
 npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview expo-clipboard
 ```
 
-`react-native-safe-area-context`, `react-native-webview` and `expo-clipboard` are peer dependencies —
-your app supplies them, so each resolves to the version your Expo SDK ships rather than one this
+`react-native-safe-area-context`, `react-native-webview` and `expo-clipboard` are peer dependencies.
+Your app supplies them, so each resolves to the version your Expo SDK ships rather than one this
 package pins.
 
 There is nothing else to install: no config plugin, no `app.json` changes, and no native code to
@@ -17,16 +17,17 @@ write.
 ## Expo Go or a development build
 
 Both work. The package ships exactly one native module, loaded optionally, so an app running in Expo
-Go still gets the whole panel — a handful of readings simply go quiet:
+Go still gets the whole panel. A handful of readings go quiet:
 
 - Main-thread frame rate
 - App memory and device memory
 - Disk space (Android only in any case)
 - The measured startup breakdown
 - The Debug tab's main-thread controls
-- Native crash capture
+- Native crash capture, and most device details on a crash report
+- The measured phases of a request, in the Timing tab
 
-Everything else, including all of Network and Console, behaves identically. A development build made
+Everything else, including all of Console and Navigation, behaves the same. A development build made
 with `expo run:ios`, `expo run:android` or EAS lights the rest up. The full list is in
 [What needs a development build](/docs/expo-devtools/reference/development-build).
 
@@ -38,6 +39,6 @@ with `expo run:ios`, `expo run:android` or EAS lights the rest up. The full list
 ## Next step
 
 <Cards>
-  <Card title="Quick start" href="/docs/expo-devtools/quick-start" description="Create the client and mount the overlay." />
+  <Card title="Quick start" href="/docs/expo-devtools/quick-start" description="Wrap your app in the provider." />
   <Card title="Changelog" href="/docs/expo-devtools/changelog" description="What shipped in this version, and the ones before it." />
 </Cards>

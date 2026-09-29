@@ -1,10 +1,10 @@
 ---
 title: Hooks and the devtools object
-description: useDevtoolsPanel, useDevtoolsWebView, and the module-level devtools object.
+description: useDevtoolsPanel, useDevtoolsWebView, useDevtoolsNavigation, and the module-level devtools object.
 ---
 
-Three exports cover everything the provider does not: opening the panel, wiring a `<WebView />`, and
-the imperative calls.
+Four exports cover everything the provider does not: opening the panel, wiring a `<WebView />`,
+handing over a navigation container, and the imperative calls.
 
 ## `useDevtoolsPanel()`
 
@@ -28,7 +28,7 @@ const panel = useDevtoolsPanel();
 It reads the same state the launcher button does, so the two stay in step. Branch your own trigger on
 `enabled` and a release build has no dead button in it.
 
-## `useDevtoolsWebView(source?)`
+## `useDevtoolsWebView(name)`
 
 Returns the props one `<WebView />` needs to report in. See
 [In-app browsers](/docs/expo-devtools/in-app-browsers) for the whole story.
@@ -53,6 +53,35 @@ a label: name each WebView when the app has more than one.
 Everything it returns is inert until the devtools are running: the injected script is empty, and with no
 `onMessage` behind it `react-native-webview` does not install the page bridge at all.
 
+## `useDevtoolsNavigation(ref, name?)`
+
+Hands the Navigation tab a React Navigation container the provider cannot see: one mounted inside the
+provider. Call it from the component that owns the container. See
+[Navigation](/docs/expo-devtools/navigation) for the whole story.
+
+```tsx
+import { useDevtoolsNavigation } from '@axonpack/expo-devtools';
+
+const navigationRef = createNavigationContainerRef();
+
+function App() {
+  useDevtoolsNavigation(navigationRef);
+  return <NavigationContainer ref={navigationRef}>...</NavigationContainer>;
+}
+```
+
+| Argument | What it is                                                                                                  |
+| -------- | ------------------------------------------------------------------------------------------------------------- |
+| `ref`    | The container's ref, as `createNavigationContainerRef()` or Expo Router's `useNavigationContainerRef()` returns it. |
+| `name`   | What the tab files this container's moves under. Defaults to `'root'`.                                     |
+
+An Expo Router app needs no call, and neither does a provider mounted inside a container: both are found
+on their own, under `root`. Name a second container, such as a checkout flow with its own, so the tab
+can tell the two apart. Called from a screen of another container, the hook also learns which route it
+sits in, and the tab draws this container under that route.
+
+It is inert until the devtools are running, so the call is safe to leave in a release build.
+
 ## `devtools`
 
 A module-level object, for the things the panel cannot do for you.
@@ -67,8 +96,8 @@ import { devtools } from '@axonpack/expo-devtools';
 | `measure(name, startOrOptions?, endMark?)` | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree. |
 | `clearMarks(name?)`                        | Drops recorded marks, all of them or one name.                                                                                                                                        |
 | `clearMeasures(name?)`                     | Drops recorded measures, all of them or one name.                                                                                                                                     |
-| `setCrashContext(context)`                 | Keys attached to every crash record from here on: user id, route, feature flags. Replaces rather than merges; `null` clears it.                                                        |
-| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore`, `crashStore` | The underlying stores, if you want to read or drive them yourself.                                                                  |
+| `setCrashContext(context)`                 | Keys attached to every crash record from here on: user id, feature flags. Replaces rather than merges; `null` clears it.                                                        |
+| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore`, `navigationStore`, `crashStore` | The underlying stores, if you want to read or drive them yourself.                                                                  |
 
 Nothing on it does anything until a provider has started with `enabled: true`, so call sites need no
 guard of their own.

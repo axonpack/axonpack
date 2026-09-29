@@ -17,7 +17,7 @@ The mount can stay exactly where it is. With `enabled: false` the provider rende
 the crash sheet and nothing else:
 
 - **No capture.** The `fetch`, `XMLHttpRequest`, `WebSocket` and `console` patches are never
-  installed, and no store is ever read.
+  installed, no store is ever read, and no navigator is watched.
 - **No access.** There is no launcher button, and `useDevtoolsPanel().show()` opens nothing. That hook
   reports `enabled` so your own trigger can hide itself rather than open an empty panel.
 
@@ -39,11 +39,23 @@ unreachable with the devtools off.
 ## The two things that do run in production
 
 - **Crash reporting**, if you asked for it. `crash: { enableWhileDevtoolsDisabled: true }` installs the
-  handlers even with `enabled: false`. It is the one subsystem meant to survive into a release build —
-  see [Crash reporting](/docs/expo-devtools/crash-reporting).
+  handlers even with `enabled: false`. It is the one subsystem meant to survive into a release build.
+  See [Crash reporting](/docs/expo-devtools/crash-reporting).
 - **The `>` prompt**, in any build where the devtools are on. `console.repl` defaults to `true` and is
   not gated on `__DEV__`, so a build with `enabled: true` gets a prompt that runs whatever is typed
   into it. Set `console: { repl: false }` for any build where that is not what you want.
+
+## Keeping secrets out of a build that records
+
+A build with `enabled: true`, such as one for testers, keeps every request whole: headers, query
+strings and bodies. Two options strip what should not be kept before a request is stored:
+
+- `network.redactHeaders` lists header names whose values are stored as `[redacted]`.
+- `network.redact(entry)` rewrites a request before it is stored, or returns `null` to drop it.
+
+Both are on [Network](/docs/expo-devtools/network). `navigation.redact` does the same for a screen's
+params, on [Navigation](/docs/expo-devtools/navigation), and `crash.redact` for a crash report, on
+[Crash reporting](/docs/expo-devtools/crash-reporting).
 
 ## The Metro line
 

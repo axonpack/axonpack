@@ -1,0 +1,138 @@
+---
+title: Navigation tab
+description: Toolbar, the navigator tree, history, filters, the move detail sheet and the Open screen sheet.
+---
+
+Every move the navigator made, newest first, under a tree of every navigator that is mounted. Holds
+the **200** most recent moves.
+
+```
+[⏺] [⊘] │ [Filter] [Open screen]
+● root
+├ Home
+└ ◉ Details  id: 42   on screen  [Back]
+History 12                     [⧉] [⤓]
+```
+
+The tab is in the panel only when `expo-router` or `@react-navigation/native` is installed. How it
+finds a navigator is in the [Navigation guide](/docs/expo-devtools/navigation#setting-it-up).
+
+## Waiting state
+
+Before a navigator is attached, the tab shows what it is waiting for instead of an empty list.
+
+| Router found     | What it says                                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Expo Router      | **Waiting for Expo Router**. The navigator is picked up once the router's root has mounted.                                                        |
+| React Navigation | **Waiting for a navigation container**, with a snippet showing both ways in: the provider inside the container, or `useDevtoolsNavigation(ref)`. |
+
+An empty ref handed to the hook is checked again every 250 ms for 20 seconds, since a container can
+mount after the effect that handed it over.
+
+## Toolbar
+
+| Control        | What it does                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Record / Clear | As on [the panel](/docs/expo-devtools/reference/panel#toolbar-row). Paused, the tree still follows the app; only the history stops. |
+| Filter         | Shows the filter fields under the **History** header.                                                                                        |
+| Open screen    | Opens the [Open screen sheet](#open-screen-sheet).                                                                                            |
+
+`navigation.disabledByDefault` opens the tab paused. See [the provider reference](/docs/expo-devtools/reference/provider).
+
+## Navigator tree
+
+Every container is drawn as a track. A container handed over from a screen of another container hangs
+under that screen instead of starting its own track.
+
+| Element         | Meaning                                                                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Container chip  | The container's name, at the top of its track. Each container has its own colour, used for its rail and chip.                            |
+| Route node      | One per route in a navigator. Filled for a route on the path to the current screen, hollow for the rest.                                 |
+| On screen       | The larger node with a ring and an **on screen** pill: the active route of the deepest active navigator.                                 |
+| Params          | Up to three `key: value` pairs on the route's line, then `+n more`. Tap the route to open its params as a tree.                          |
+| Hosted flow     | A route that holds another container draws that container's track under it. Tap the route to show or hide it. Shown by default when the route is on the path to the current screen. |
+| Back            | Beside the on-screen route. Goes back in that route's container. Dimmed when there is nothing to go back to; pressing it then says so. |
+
+A navigator inside an inactive route is not drawn, because it is not mounted. A container with no
+navigator in it yet reads `root: no navigator mounted in it yet.`
+
+## History
+
+The **History** header carries the row count and two buttons. Tap the header to collapse the list.
+
+| Button            | What it does                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Copy as Markdown  | Copies the filtered rows, oldest first, with the current route on top and how long each screen stayed. Names the container on each line when there is more than one. |
+| Export            | The filtered rows as JSON through the OS share sheet, oldest first, under a `schemaVersion`. iOS offers it as a file named `navigation-log-<time>.json`; Android shares the text. |
+
+## Filters
+
+| Field           | What it does                                                                                                                       |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Search box      | Matches the action, the container, both route names, the path, the params and the payload. Match case, whole word and regex modes. |
+| **Container**   | `All (n)` and one chip per container with its count. Shown only when the history has more than one container.                     |
+
+Filters and the open or closed state of History are kept when you leave the tab.
+
+## A move row
+
+| Element     | Meaning                                                                                                                                   |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Icon        | The kind of move. Accent for forward moves (Navigate, Push, Preload, Jump to), muted for backward ones (Go back, Pop, Pop to, Pop to top) and Set params, warning colour for Replace and Reset. |
+| Action      | The action's type in words: `GO_BACK` reads **Go back**. A container's first row is **Start**. A state change with no action ahead of it is **Changed**. |
+| Container   | A badge with the container's name, once the history has more than one.                                                                    |
+| no change   | The action left the state as it was, such as navigating to the screen already on top. The row is faded.                                 |
+| Time        | Wall-clock time of the move.                                                                                                              |
+| Title       | `From → To`, or only the destination on a container's first row.                                                                          |
+| Path        | The route's URL path, when linking gives it one. Expo Router sets one on every route.                                                    |
+| Params      | A one-line JSON preview, cut at 120 characters.                                                                                          |
+| Call site   | `file:line` of the code that dispatched the move, the nearest frame that is your own code. Raw until the dev server has answered.        |
+| On screen   | How long the screen this move landed on stayed on top. The newest row reads **on screen**.                                               |
+
+Search matches are highlighted in the title and the params.
+
+## Move detail sheet
+
+Tap a row. The header carries the title, **Go here again** (↻) and **Copy as JSON**.
+
+| Field     | What it shows                                                        |
+| --------- | -------------------------------------------------------------------- |
+| Time      | When the move happened.                                              |
+| Container | The container that moved.                                            |
+| Action    | The action's type in words.                                          |
+| From      | The route on top before the move, or `(none)`.                       |
+| To        | The route on top after it.                                           |
+| Path      | The URL path of the destination, when it has one.                    |
+| On screen | How long it stayed, `still` for the newest row, `no change` for a no-op. |
+
+| Section         | What it holds                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Params          | The destination's params as a tree. Open.                                                                                        |
+| Action payload  | Whatever the action carried, as a tree. Collapsed.                                                                               |
+| Dispatched from | The call stack that dispatched the move, symbolicated against the dev server, with the source around the first frame it can map. Collapsed. |
+| State after     | The whole navigator state after the move. Collapsed.                                                                             |
+
+**Go here again** navigates the same container to the row's destination with the row's params. If the
+navigator refuses, an alert says why.
+
+## Open screen sheet
+
+| Field          | What it does                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Container      | One chip per attached container, shown when there is more than one. Starts on the container of the screen on screen.                        |
+| Route name     | The route to open. Suggestion chips below it list the names that container's navigators declare and the routes its history has visited.    |
+| Params (JSON)  | Optional. Must be a JSON object. Picking a suggestion fills it with the params that route had last time, when the field is empty.           |
+| Open screen    | Calls `navigate(name, params)` on the chosen container.                                                                                      |
+| Deep link      | A URL such as `myapp://details/42`.                                                                                                          |
+| Open link      | Hands the URL to the OS with `Linking.openURL`, so it reaches your router the way a real link does.                                          |
+
+An error from either button, or invalid params, shows under the fields. The sheet closes on success.
+
+## What reaches the store
+
+`navigation.redact` runs on every move before anything stores it. Its result is what the history, the
+tree, copy, export and crash reports all read. It returns the move or `null`, and a move it drops, or
+one it throws on, never updates the tree. The guide has [an example](/docs/expo-devtools/navigation#keeping-tokens-out-of-the-log).
+
+Moves are readable from code through `devtools.navigationStore`, newest first. See
+[Hooks](/docs/expo-devtools/reference/hooks) and [Exported types](/docs/expo-devtools/reference/types).

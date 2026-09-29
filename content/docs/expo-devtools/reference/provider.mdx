@@ -75,16 +75,31 @@ whether it went out through `fetch`, through `XMLHttpRequest`, from a JSI client
 | `network.websocket`         | `boolean` | `true`  | Capture [WebSocket connections](/docs/expo-devtools/reference/network-tab#a-socket-row) and their messages, the app's own and a page's. |
 | `network.sse`               | `boolean` | `true`  | Capture server-sent event streams and their events, whichever client opened them. |
 | `network.disabledByDefault` | `boolean` | `false` | Open the Network tab paused.                                                    |
+| `network.redactHeaders`     | `readonly string[]` | `[]` | Header names whose values are stored as `[redacted]`, matched without regard to case. Listing `cookie` also redacts a page's `document.cookie`. |
+| `network.redact`            | `(entry: NetworkEntry) => NetworkEntry \| null` | `undefined` | Runs after `redactHeaders`, each time an entry changes, before it is stored. An entry is an HTTP row (`NetworkLogEntry`) or a WebSocket row, told apart by `kind`. Return the entry, edited or not, or `null` to drop the row. If it throws, the row is dropped. |
 
-With `sse` off, the app's own stream is still recognised as one — its endless body has to be, or it
-would be read as a response — so the row remains and only the events are dropped. A page's stream has no
+With `sse` off, the app's own stream is still recognised as one. Its endless body has to be, or it
+would be read as a response. So the row remains and only the events are dropped. A page's stream has no
 request underneath it that anything here can see, so that one disappears entirely.
+
+Redaction happens before a request is stored, so nothing downstream sees the real value: not the list,
+the detail panel, copy, export, the DevTools tab or crash breadcrumbs. Replaying a request from the panel
+sends the placeholder too. `redactHeaders` covers HTTP rows only, while `redact` sees WebSocket rows
+too. Socket frames and stream events pass through neither. See
+[Redaction](/docs/expo-devtools/network#redaction).
+
+```ts
+network: {
+  redactHeaders: ['authorization', 'cookie', 'set-cookie'],
+  redact: (entry) => ({ ...entry, url: entry.url.replace(/token=[^&]+/, 'token=[redacted]') }),
+}
+```
 
 ## Console
 
 | Option                      | Type                      | Default     | What it does                                                              |
 | --------------------------- | ------------------------- | ----------- | --------------------------------------------------------------------------- |
-| `console.capture`           | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews. |
+| `console.capture`           | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from WebViews wired with `useDevtoolsWebView`. |
 | `console.repl`              | `boolean`                 | `true`      | Show the `>` prompt.                                                      |
 | `console.context`           | `Record<string, unknown>` | `undefined` | Extra names an expression can use, for example `{ store, queryClient }`.  |
 | `console.disabledByDefault` | `boolean`                 | `false`     | Open the Console tab paused. The prompt still works.                      |
@@ -115,6 +130,31 @@ request underneath it that anything here can see, so that one disappears entirel
 
 See [Storage adapters](/docs/expo-devtools/reference/storage-adapters) for how to build one.
 
+## Navigation
+
+| Option                         | Type                                                 | Default     | What it does                                                                 |
+| ------------------------------ | ---------------------------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `navigation.disabledByDefault` | `boolean`                                            | `false`     | Open the Navigation tab paused. The route on screen is still shown.          |
+| `navigation.redact`            | `(move: NavigationMove) => NavigationMove \| null` | `undefined` | Runs on every move before it is stored, including the route shown as current. Return the move, edited or not, or `null` to drop it. If it throws, the move is dropped. |
+
+The tab is there only when a router is installed. Expo Router is found on its own. So is a React
+Navigation container the provider sits inside. A container mounted inside the provider is handed over
+with [`useDevtoolsNavigation`](/docs/expo-devtools/reference/hooks#usedevtoolsnavigationref-name).
+
+What `redact` returns is all anything downstream sees: the history, the tree, copy, export and crash
+reports.
+
+```ts
+navigation: {
+  redact: (move) =>
+    move.to?.params && 'token' in move.to.params
+      ? { ...move, to: { ...move.to, params: { ...move.to.params, token: '[redacted]' } } }
+      : move,
+}
+```
+
+See [Navigation](/docs/expo-devtools/navigation) and the [Navigation tab](/docs/expo-devtools/reference/navigation-tab).
+
 ## Crash
 
 Crash capture is the only part of this package that runs with the devtools off.
@@ -123,12 +163,12 @@ Crash capture is the only part of this package that runs with the devtools off.
 | ----------------------------------- | ------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------- |
 | `crash.enabled`                     | `boolean`                                  | `true`   | Capture at all.                                                                                  |
 | `crash.enableWhileDevtoolsDisabled` | `boolean`                                  | `false`  | Install the handlers even with `enabled: false`, so a release build still reports crashes.        |
-| `crash.handlers.jsErrors`           | `boolean`                                  | `true`   | The `ErrorUtils` global handler — fatal and non-fatal JS errors.                                  |
+| `crash.handlers.jsErrors`           | `boolean`                                  | `true`   | The `ErrorUtils` global handler, for fatal and non-fatal JS errors.                               |
 | `crash.handlers.unhandledRejections` | `boolean`                                 | `true`   | Unhandled promise rejections, via the Hermes rejection tracker.                                  |
 | `crash.handlers.nativeExceptions`   | `boolean`                                  | `true`   | Uncaught Java/Kotlin and Objective-C exceptions, via the native module.                          |
 | `crash.popupDetail`                 | `'auto' \| 'full' \| 'compact'`            | `'auto'` | Which sheet a crash opens. `'auto'` is the full sheet when the devtools are enabled, compact when not. |
 | `crash.disableDefaultLogBox`        | `boolean`                                  | `false`  | Uninstall React Native's LogBox, so a JS error is reported here and nowhere else.                |
-| `crash.breadcrumbs`                 | `boolean`                                  | `true`   | Attach the recent console and network entries to each record.                                    |
+| `crash.breadcrumbs`                 | `boolean`                                  | `true`   | Attach the recent console, network and navigation entries to each record.                                    |
 | `crash.maxRecords`                  | `number`                                   | `25`     | Reports kept in memory.                                                                          |
 | `crash.persistNonFatal`             | `boolean`                                  | `false`  | Also write non-fatal records to disk.                                                            |
 | `crash.redact`                      | `(record: CrashRecord) => CrashRecord \| null` | `undefined` | Runs before the record reaches the store, the disk or `onCrash`. Return `null` to drop it.  |
@@ -140,7 +180,7 @@ concern, and the sheet there is in front of a user. A fatal JS error still arriv
 into a native exception on the way to killing the process.
 
 `disableDefaultLogBox` uninstalls LogBox rather than muting it, which takes the **yellow warning toasts
-with it** — LogBox is one component and the two cannot be separated. Warnings are still captured by the
+with it**. LogBox is one component and the two cannot be separated. Warnings are still captured by the
 Console tab. It only does anything in development; LogBox is already an empty stub in a release build.
 
 ## Related components

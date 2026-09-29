@@ -4,7 +4,7 @@ description: Browser-style devtools that live inside your React Native or Expo a
 icon: House
 ---
 
-Tap a floating button and get six tabs on the device itself. No desktop debugger, no cable, and
+Tap a floating button and get a panel of tabs on the device itself. No desktop debugger, no cable, and
 nothing captured until you switch it on.
 
 ```sh
@@ -18,11 +18,12 @@ npx expo install @axonpack/expo-devtools react-native-safe-area-context react-na
 | **[Network](/docs/expo-devtools/network)**         | Every request, searchable, resendable, with connection throttling                         |
 | **[Console](/docs/expo-devtools/console)**         | Every log, plus a `>` prompt that answers                                                 |
 | **[Performance](/docs/expo-devtools/performance)** | Frame rate, memory, startup, and the moments the app froze                                |
-| **[Storage](/docs/expo-devtools/storage)**         | Every key you have saved — search it, edit it, import and export it                       |
+| **[Storage](/docs/expo-devtools/storage)**         | Every key you have saved. Search it, edit it, import and export it                        |
+| **[Navigation](/docs/expo-devtools/navigation)**   | Every screen the app moved through, with its params and how long it stayed                |
 | **[Crashes](/docs/expo-devtools/crash-reporting)** | JS errors, unhandled rejections, render errors and native exceptions, as readable reports |
 | **[Debug](/docs/expo-devtools/debug)**             | Tools that block or crash a thread on purpose                                             |
 
-The Network tab is also on your computer, in [React Native
+Network, Console, Performance, Storage, Crashes and Debug are also on your computer, in [React Native
 DevTools](/docs/expo-devtools/react-native-devtools), from one line in `metro.config.js`.
 
 Two more guides cover things that are not tabs: [themes](/docs/expo-devtools/themes), and
@@ -59,7 +60,7 @@ Two more guides cover things that are not tabs: [themes](/docs/expo-devtools/the
   <Card
     title="Quick start"
     href="/docs/expo-devtools/quick-start"
-    description="Create the client, mount the overlay, done."
+    description="Wrap your app in the provider, once, at the root."
   />
   <Card
     title="Reference"

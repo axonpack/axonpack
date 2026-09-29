@@ -1,6 +1,6 @@
 ---
 title: Storage
-description: Every key you have saved — but only for the stores you hand over, because this package depends on none of them.
+description: Every key you have saved, for the stores you hand over, because this package depends on none of them.
 ---
 
 The Storage tab lists every key you have saved, on the device, so you never have to write
@@ -14,7 +14,7 @@ The Storage tab lists every key you have saved, on the device, so you never have
 
 ## Registering your stores
 
-Hand over the stores you already use, once, where you create the client:
+Hand over the stores you already use, once, in the config you pass to `<DevtoolsProvider>`:
 
 ```ts title="devtools.ts"
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -36,9 +36,9 @@ export const devtoolsConfig = {
       asyncStorageAdapter({ driver: AsyncStorage }),
       mmkvAdapter({ driver: mmkv }),
       // SecureStore can't list its own keys, so you name the ones worth watching.
-      // A function works too, if your app keeps its own list — it's read on every refresh.
+      // A function works too, if your app keeps its own list. It's read on every refresh.
       secureStoreAdapter({ driver: SecureStore, keys: ['session'] }),
-      // Anything else — your own cache, a wrapper, an in-memory store.
+      // Anything else: your own cache, a wrapper, an in-memory store.
       defineStorageAdapter({
         name: 'My cache',
         kind: 'sync',
@@ -62,7 +62,7 @@ value.
 
 - **Search** keys, values or both, with match case / whole word / regex, and matches highlighted in
   place.
-- **Filter** by value type — Object, Array, String, Number, Boolean, Binary, Empty, Missing — with
+- **Filter** by value type (Object, Array, String, Number, Boolean, Binary, Empty, Missing) with
   counts, or narrow to JSON only and hide empty values.
 - **Sort** by key, size or type, ascending or descending, and **group by namespace**: the `auth:token`,
   `cache/user/1`, `settings.theme` prefixes your keys already use, which no store knows about.
@@ -74,7 +74,8 @@ value.
 - **Export** the filtered keys of a store as JSON through the share sheet. The file carries a version,
   so it can be read back later.
 - **Import** one of those files: paste it in and you are told how many keys are new, how many would be
-  overwritten, how many already hold that value and how many are skipped — before anything is written.
+  overwritten, how many already hold that value and how many are skipped. Nothing is written until you
+  say so.
 
 ## What a store is allowed to do
 
@@ -84,16 +85,23 @@ a `setItem` and the editor says so. Add and Import only appear for a store that 
 
 Two more options on an adapter are worth knowing:
 
-- **`blacklist`** — a `RegExp` or a function. A key it matches is never listed, never read and never
+- **`blacklist`**: a `RegExp` or a function. A key it matches is never listed, never read and never
   written, so its value never reaches the panel at all. The tab says a blacklist is set, but not how
   many keys it hid.
-- **`supportedTypes`** — what the store can really hold. AsyncStorage and SecureStore hand back a string
+- **`supportedTypes`**: what the store can really hold. AsyncStorage and SecureStore hand back a string
   whatever went in, so they declare `['string']` for you; MMKV takes all four. The Add-key sheet offers
   only these, so you cannot write something the store would flatten.
 
+## In React Native DevTools
+
+The same stores are on the Storage panel of the Axonpack tab in
+[React Native DevTools](/docs/expo-devtools/react-native-devtools#storage), as a table. Double-click a value to
+edit it, add keys in the empty row at the bottom, and **Sync** writes the changes together. Export and
+import work from there too. Filters, sorting and grouping set on either side show on both.
+
 ## Why there is no record button
 
-Storage is a pull, not a stream, so there is no stream to pause — the toolbar carries Refresh where the
+Storage is a pull, not a stream, so there is nothing to pause. The toolbar carries Refresh where the
 other tabs carry a record button. There is no clear button either: that icon means "clear the log" in
 three tabs, and it must never come to mean "wipe your storage".
 

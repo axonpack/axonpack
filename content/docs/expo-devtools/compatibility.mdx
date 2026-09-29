@@ -11,7 +11,7 @@ description: The versions this is built against, what it requires you to have in
 | ------------------------- | -------- | ------------ | ----- |
 | <VersionRange slug="expo-devtools" /> | 57 | 0.86 | 19.2 |
 
-That row is what the package is **built and tested against** — the versions in its own dev
+That row is what the package is **built and tested against**: the versions in its own dev
 dependencies and in the example app that exercises every tab.
 
 The [React Native DevTools tab](/docs/expo-devtools/react-native-devtools) comes from
@@ -43,10 +43,10 @@ Every peer range is `*`. That is deliberate: the point of a peer is that your SD
 version, and a narrower range here would fight it. It does mean npm will not warn you when you are
 outside what has been tested, so treat the table above, not the peer range, as the answer.
 
-`expo-clipboard` is a peer rather than a dependency for that reason — as a dependency it would have
+`expo-clipboard` is a peer rather than a dependency for that reason. As a dependency it would have
 to name a version, and any version it named would tie the package to one SDK line. React Native does
 still ship a built-in `Clipboard`, but it is deprecated, slated for removal, and warns through
-`console.warn`, which this package patches — so its own deprecation notice would appear in its own
+`console.warn`, which this package patches. Its own deprecation notice would then appear in its own
 Console tab.
 
 ## Platforms
@@ -57,9 +57,21 @@ Console tab.
 | **Android** | Full support, native module included                                      |
 
 The native module is written once per platform and is loaded **optionally**, so the panel itself is
-plain JavaScript and never depends on it existing. That is what makes Expo Go work — see
+plain JavaScript and never depends on it existing. That is what makes Expo Go work. See
 [What needs a development build](/docs/expo-devtools/reference/development-build) for the handful of
 readings that go quiet there.
+
+## Navigation libraries
+
+The [Navigation tab](/docs/expo-devtools/navigation) depends on neither router. It looks for each one
+when the devtools start, and uses what it finds.
+
+| Library                  | How the tab finds it                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `expo-router`            | On its own. Nothing to wire                                                                       |
+| `@react-navigation/native` | On its own when the provider sits inside the container, otherwise through `useDevtoolsNavigation` |
+
+The example app is built against React Navigation 7.
 
 ## Storage libraries
 
@@ -68,8 +80,8 @@ the example app is built against:
 
 | Library                                       | Versions handled                                                     |
 | --------------------------------------------- | --------------------------------------------------------------------- |
-| `@react-native-async-storage/async-storage`   | v1, v2 and v3 — `getMany` and `multiGet` are both accepted           |
-| `react-native-mmkv`                           | v3 and v4 — `delete` and `remove` are both accepted                  |
+| `@react-native-async-storage/async-storage`   | v1, v2 and v3: `getMany` and `multiGet` are both accepted            |
+| `react-native-mmkv`                           | v3 and v4: `delete` and `remove` are both accepted                   |
 | `expo-secure-store`                           | SDK 57                                                               |
 | anything else                                 | via `defineStorageAdapter`, which duck-types nothing                 |
 

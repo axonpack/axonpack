@@ -11,6 +11,7 @@
     "console-tab",
     "performance-tab",
     "storage-tab",
+    "navigation-tab",
     "debug-tab",
     "devtools-tab",
     "---API---",

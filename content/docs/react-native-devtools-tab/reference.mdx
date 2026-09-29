@@ -46,6 +46,22 @@ Call `focus()` just before opening DevTools from the app, for example with `DevS
 choose the panel: `openDebugger` takes no argument, and DevTools picks its starting panel before
 any tab of yours has been added.
 
+```tsx
+import { TurboModuleRegistry } from "react-native";
+
+const tab = ReactNativeDevtoolsPanel.registerTab({
+  name: "Session",
+  component: Session,
+});
+
+// Later, from a button in the app, in a debug build:
+tab.focus();
+// React Native's own DevSettings: openDebugger is what the dev menu's Open DevTools calls.
+TurboModuleRegistry.get<{ openDebugger?: () => void }>(
+  "DevSettings",
+)?.openDebugger?.();
+```
+
 ## COPY_ATTRIBUTE
 
 ```ts

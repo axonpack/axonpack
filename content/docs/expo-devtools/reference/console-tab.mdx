@@ -12,15 +12,19 @@ Holds the **500** most recent rows.
 | ----------------- | -------------------------------------------------------------------------------- |
 | Record / Clear    | As on [the panel](/docs/expo-devtools/reference/panel#toolbar-row). The `>` prompt still answers while capture is paused. |
 | Filter (⌕ list)   | Opens the filters panel.                                                       |
-| Warn/error counts | On the right: a live count of captured warnings and errors, each in its colour. |
+| Warn/error/crash counts | On the right: a live count of captured warnings, errors and crashes, each in its colour. |
 
 ## Filters panel
 
 | Field            | What it does                                                                                     |
 | ---------------- | -------------------------------------------------------------------------------------------------- |
-| Search box       | Matches the rendered text of a message.                                                          |
-| **Level** chips  | `All (n)`, `Logs (n)`, `Info (n)`, `Warnings (n)`, `Errors (n)`, `Debug (n)`. Counts are live.    |
-| **Source** chips | One per source, shown only when more than one source has logged — that is, once a WebView reports in. |
+| Search box       | Matches the rendered text of a message, with match-case / whole-word / regex modes.              |
+| **Level** chips  | `All (n)`, `Logs (n)`, `Info (n)`, `Warnings (n)`, `Errors (n)`, `Debug (n)`, `Crashes (n)`. Counts are live. |
+| **Source** chips | One per source, shown only when more than one source has logged, which means once a WebView reports in. |
+
+Filters live in a store shared with the Console panel in
+[React Native DevTools](/docs/expo-devtools/reference/devtools-tab#console), so a filter set on either side shows on
+both, and switching tabs keeps them.
 
 ## A console row
 
@@ -29,6 +33,7 @@ Holds the **500** most recent rows.
 | Level icon | Info, warning, error and debug get a glyph and colour; warnings and errors tint the whole row.                                                          |
 | Arguments  | One cell per logged argument, so a message and its object stay apart. Objects and arrays render as a collapsed JSON tree; tap to expand level by level. |
 | Error      | The message on the row; tap to expand the full stack.                                                                                                  |
+| Call site  | On warnings and errors: the `file:line` that logged them, resolved through Metro in a development build.                                             |
 | Source     | `WebView::[name]` for browser-view output; absent for your app's own.                                                                                  |
 | ×n         | Repeat count. Consecutive identical messages from the same source collapse into one row.                                                               |
 | Time       | Wall-clock time of the most recent occurrence.                                                                                                         |
@@ -37,8 +42,11 @@ Holds the **500** most recent rows.
 The list follows the newest output and stops following the moment you scroll back, with a ⌄ button to
 jump to the newest again.
 
-A row for an uncaught error links to its own crash report: tapping the message opens the report over
-the Console tab, while the disclosure arrow still expands the inline stack.
+Every crash is also written into the list, at the `Crashes` level, as a card rather than a line: its
+name and message, its kind, a **Previous launch** badge when it was read back from disk, and
+**Open report**. Tapping the card opens the full report over the Console tab. An error row that belongs
+to a crash works the same way: tapping the message opens the report, while the disclosure arrow still
+expands the inline stack.
 
 ## The `>` prompt
 
