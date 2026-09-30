@@ -332,10 +332,9 @@ export const networkLogStore = {
   },
   addWebSocket(entry: Omit<WebSocketLogEntry, 'kind'>) {
     if (!enabled || paused) return;
-    socketEntries = [{ ...entry, kind: 'websocket' as const }, ...socketEntries].slice(
-      0,
-      MAX_ENTRIES
-    );
+    const redacted = redactNetworkEntry({ ...entry, kind: 'websocket' as const });
+    if (!redacted) return;
+    socketEntries = [redacted, ...socketEntries].slice(0, MAX_ENTRIES);
     remerge();
     notify();
   },
@@ -346,12 +345,21 @@ export const networkLogStore = {
   updateWebSocket(id: string, patch: Partial<Omit<WebSocketLogEntry, 'kind' | 'id'>>) {
     if (!enabled) return;
     let changed = false;
-    socketEntries = socketEntries.map((entry) => {
-      if (entry.id !== id) return entry;
-      changed = true;
-      return { ...entry, ...patch };
-    });
+    const next: WebSocketLogEntry[] = [];
+    for (const entry of socketEntries) {
+      if (entry.id !== id) next.push(entry);
+      else {
+        changed = true;
+        const redacted = redactNetworkEntry({ ...entry, ...patch });
+        if (redacted) next.push(redacted);
+        else {
+          socketMessages = new Map(socketMessages);
+          socketMessages.delete(id);
+        }
+      }
+    }
     if (changed) {
+      socketEntries = next;
       remerge();
       notify();
     }
@@ -383,6 +391,8 @@ export const networkLogStore = {
    */
   addStreamEvent(id: string, event: ServerSentEvent) {
     if (!enabled || paused) return;
+    // Same reason as socket frames: the row may have been dropped by redaction.
+    if (!entries.some((entry) => entry.id === id)) return;
     const existing = streamEvents.get(id) ?? [];
     const next = [...existing, event];
     streamEvents = new Map(streamEvents).set(

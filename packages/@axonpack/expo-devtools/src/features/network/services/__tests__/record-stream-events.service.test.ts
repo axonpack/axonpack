@@ -15,6 +15,14 @@ describe('stream capture', () => {
   beforeEach(() => {
     networkLogStore.clear();
     setStreamCapture(true);
+    networkLogStore.add({
+      id: 'r1',
+      method: 'GET',
+      url: 'https://example.test/stream',
+      status: 'pending',
+      eventStream: true,
+      startedAt: 0,
+    });
   });
   afterAll(() => setStreamCapture(true));
 
@@ -23,6 +31,12 @@ describe('stream capture', () => {
 
     expect(isStreamCaptureEnabled()).toBe(true);
     expect(networkLogStore.getStreamEvents('r1')).toMatchObject([{ type: 'price', data: '42' }]);
+  });
+
+  it('keeps none for a stream whose row is not in the list', () => {
+    recordStreamEvents('dropped', [{ type: 'price', data: '42' }]);
+
+    expect(networkLogStore.getStreamEvents('dropped')).toEqual([]);
   });
 
   it('keeps none of them while they are off', () => {

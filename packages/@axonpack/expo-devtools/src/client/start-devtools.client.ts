@@ -33,7 +33,7 @@ import {
 } from '../features/network/services/webview-network-logger.service';
 import { networkConditionsStore } from '../features/network/stores/network-conditions.store';
 import { networkLogStore } from '../features/network/stores/network-log.store';
-import type { NetworkLogEntry } from '../features/network/stores/network-log.store';
+import type { NetworkEntry } from '../features/network/stores/network-log.store';
 import { startPerformanceCollectors } from '../features/performance/services/performance-collectors.service';
 import {
   clearRecordedMarks,
@@ -103,16 +103,17 @@ export type DevtoolsNetworkConfig = {
   redactHeaders?: readonly string[];
   /**
    * Your chance to strip anything else sensitive, such as a token in a query string or a body. Runs
-   * after `redactHeaders`, each time a request's entry changes, before it is stored. Return the
-   * entry, edited or not, or `null` to drop the request. If it throws, the request is dropped.
+   * after `redactHeaders`, each time a row changes, before it is stored. Return the entry, edited or
+   * not, or `null` to drop the row. If it throws, the row is dropped.
+   *
+   * It sees HTTP rows and WebSocket rows, told apart by `kind`. A socket row's URL, protocols, close
+   * reason and error pass through it; its frames do not, and neither do a stream's events.
    *
    * ```ts
    * redact: (entry) => ({ ...entry, url: entry.url.replace(/token=[^&]+/, 'token=[redacted]') })
    * ```
-   *
-   * WebSocket rows do not pass through it.
    */
-  redact?: (entry: NetworkLogEntry) => NetworkLogEntry | null;
+  redact?: (entry: NetworkEntry) => NetworkEntry | null;
 };
 
 /** Everything the Console tab does. Both switches default to `true`. */
@@ -363,8 +364,8 @@ export type DevtoolsNavigationConfig = {
   /**
    * Your chance to strip anything sensitive from a move before it is stored: a token in a deep
    * link's params, an OAuth code. Runs on every move, including the route shown as current, so
-   * nothing downstream sees the real value: not the list, the card, the export, the DevTools tab or
-   * crash breadcrumbs. Return the move, edited or not, or `null` to drop it. If it throws, the move
+   * nothing downstream sees the real value: not the history, the tree, copy, export or crash
+   * reports. Return the move, edited or not, or `null` to drop it. If it throws, the move
    * is dropped.
    *
    * ```ts

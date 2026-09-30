@@ -9,8 +9,9 @@ import type { CrashBreadcrumb } from '../stores/crash.store';
  * is the whole reason this is cheap enough to run inside an error handler. Nothing is recorded *for*
  * crash reporting; a crash just reads what the Console and Network tabs were holding anyway.
  *
- * Off in production by default: a breadcrumb trail carries request URLs and whatever the app logged,
- * which is a different privacy proposition from a stack trace.
+ * On by default, even in production. A breadcrumb trail carries request URLs and whatever the app
+ * logged, which is a different privacy proposition from a stack trace, so `crash.breadcrumbs: false`
+ * is there to turn it off.
  */
 export function collectBreadcrumbs(): CrashBreadcrumb[] {
   const crumbs: CrashBreadcrumb[] = [];

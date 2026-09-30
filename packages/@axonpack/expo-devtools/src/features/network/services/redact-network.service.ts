@@ -1,13 +1,13 @@
-import type { NetworkLogEntry } from '../stores/network-log.store';
+import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
 
 export const REDACTED = '[redacted]';
 
 let redactedHeaders = new Set<string>();
-let redactHook: ((entry: NetworkLogEntry) => NetworkLogEntry | null) | undefined;
+let redactHook: ((entry: NetworkEntry) => NetworkEntry | null) | undefined;
 
 export function configureNetworkRedaction(options: {
   headers?: readonly string[];
-  redact?: (entry: NetworkLogEntry) => NetworkLogEntry | null;
+  redact?: (entry: NetworkEntry) => NetworkEntry | null;
 }) {
   redactedHeaders = new Set((options.headers ?? []).map((name) => name.toLowerCase()));
   redactHook = options.redact;
@@ -24,25 +24,30 @@ function redactHeaders(headers: Record<string, string> | undefined) {
   return result ?? headers;
 }
 
-/**
- * Runs before an entry is stored, so the list, the detail panel, copy, export, the DevTools tab and
- * crash breadcrumbs only ever see what comes out of here. `null` means do not keep it at all.
- */
-export function redactNetworkEntry(entry: NetworkLogEntry): NetworkLogEntry | null {
+function redactHttpHeaders(entry: NetworkLogEntry): NetworkLogEntry {
   const requestHeaders = redactHeaders(entry.requestHeaders);
   const responseHeaders = redactHeaders(entry.responseHeaders);
   // A page's `document.cookie` is the same secret as the cookie header, just read another way.
   const pageCookies =
     entry.pageCookies && redactedHeaders.has('cookie') ? REDACTED : entry.pageCookies;
-  const redacted =
-    requestHeaders === entry.requestHeaders &&
+  return requestHeaders === entry.requestHeaders &&
     responseHeaders === entry.responseHeaders &&
     pageCookies === entry.pageCookies
-      ? entry
-      : { ...entry, requestHeaders, responseHeaders, pageCookies };
+    ? entry
+    : { ...entry, requestHeaders, responseHeaders, pageCookies };
+}
+
+/**
+ * Runs before an entry is stored, so the list, the detail panel, copy, export, the DevTools tab and
+ * crash breadcrumbs only ever see what comes out of here. `null` means do not keep it at all.
+ * Socket frames and stream events are not passed through: they are per message, and the hook runs
+ * on rows.
+ */
+export function redactNetworkEntry<T extends NetworkEntry>(entry: T): T | null {
+  const redacted = entry.kind === 'http' ? (redactHttpHeaders(entry) as T) : entry;
   if (!redactHook) return redacted;
   try {
-    return redactHook(redacted);
+    return redactHook(redacted) as T | null;
   } catch {
     // Fail closed. Keeping the entry after the app's own redaction broke could store the very value
     // it was written to remove.
