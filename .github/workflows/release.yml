@@ -1,17 +1,15 @@
 name: Release
 
-# Runs when a PR into main is merged, and on demand. `pull_request_target` rather than
-# `pull_request` because a PR from a fork would otherwise get a read-only token and no OIDC token,
-# and could never publish. It is safe here for one reason only: every checkout below is `main`,
-# never the PR's own code. Keep it that way. There is no `push` trigger, so a direct push to main
-# releases nothing; branch protection stops those anyway.
+# Runs on every push to main, which is what a merged PR is, and on demand. Not `pull_request_target`:
+# a canary run from it failed trusted publishing with E404, no merge-triggered run has ever
+# published, and every release on npm so far came from a manual run of this same workflow.
 #
-# With changesets pending, a merge does two things at once: publishes a canary of what changed and
-# opens or refreshes the Version Packages PR. Merging that PR leaves no changesets, and its branch
-# name routes it to the stable publish.
+# With changesets pending, a push does two things at once: publishes a canary of what changed and
+# opens or refreshes the Version Packages PR. Merging that PR leaves no changesets, which routes it
+# to the stable publish. Any other push with nothing pending lands there too and publishes nothing,
+# since every version in the repo is already on npm.
 on:
-  pull_request_target:
-    types: [closed]
+  push:
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -30,9 +28,9 @@ jobs:
   plan:
     name: Pick the channel
     runs-on: ubuntu-latest
-    # A closed-but-not-merged PR is nothing to release. A dispatch from any other branch would
-    # publish that branch, so only main counts.
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true)
+    # A dispatch from any other branch would publish that branch, so only main counts. Forks skip it,
+    # and every other job needs this one, so they skip with it.
+    if: github.repository == 'axonpack/axonpack' && github.ref == 'refs/heads/main'
     outputs:
       pending: ${{ steps.pick.outputs.pending }}
       channel: ${{ steps.pick.outputs.channel }}
@@ -44,12 +42,9 @@ jobs:
 
       - name: Pick the channel
         id: pick
-        # Through env, not inline: a branch name is contributor-controlled text, and interpolating
-        # it straight into a script under this event's permissions is a script injection.
         env:
           EVENT: ${{ github.event_name }}
           INPUT_CHANNEL: ${{ inputs.channel }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           if compgen -G ".changeset/*.md" > /dev/null && [ -n "$(ls .changeset/*.md | grep -v README.md)" ]; then
             pending=true
@@ -58,11 +53,10 @@ jobs:
           fi
           if [ "$EVENT" = "workflow_dispatch" ]; then
             channel="$INPUT_CHANNEL"
-          # The Version Packages PR is the release by definition; its branch name is set by the action.
-          elif [ "$HEAD_REF" = "changeset-release/main" ]; then
-            channel=stable
-          else
+          elif [ "$pending" = "true" ]; then
             channel=canary
+          else
+            channel=stable
           fi
           echo "pending=$pending" >> "$GITHUB_OUTPUT"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
@@ -74,7 +68,7 @@ jobs:
   canary:
     name: Canary Release
     needs: plan
-    if: needs.plan.outputs.pending == 'true' && (github.event_name == 'pull_request_target' || needs.plan.outputs.channel == 'canary')
+    if: needs.plan.outputs.pending == 'true' && (github.event_name == 'push' || needs.plan.outputs.channel == 'canary')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -121,7 +115,7 @@ jobs:
   release-pr:
     name: Release PR
     needs: plan
-    if: needs.plan.outputs.pending == 'true' && (github.event_name == 'pull_request_target' || needs.plan.outputs.channel == 'stable')
+    if: needs.plan.outputs.pending == 'true' && (github.event_name == 'push' || needs.plan.outputs.channel == 'stable')
     runs-on: ubuntu-latest
     permissions:
       contents: write
