@@ -391,6 +391,8 @@ export const networkLogStore = {
    */
   addStreamEvent(id: string, event: ServerSentEvent) {
     if (!enabled || paused) return;
+    // Same reason as socket frames: the row may have been dropped by redaction.
+    if (!entries.some((entry) => entry.id === id)) return;
     const existing = streamEvents.get(id) ?? [];
     const next = [...existing, event];
     streamEvents = new Map(streamEvents).set(

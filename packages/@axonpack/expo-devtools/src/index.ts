@@ -59,8 +59,10 @@ export type {
 export type { UserAgentPresetId } from './features/network/constants/user-agent-presets.const';
 export type { ResolvedNetworkConditions } from './features/network/stores/network-conditions.store';
 export type {
+  NetworkEntry,
   NetworkLogEntry,
   NetworkLogStatus,
+  WebSocketLogEntry,
 } from './features/network/stores/network-log.store';
 export type {
   LongTaskEntry,
