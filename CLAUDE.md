@@ -24,7 +24,7 @@ changesets, and replies in chat.
 
 ## Repository overview
 
-Turborepo + bun workspaces monorepo intended to hold `@axonpack/*`, the free OSS foundation libraries for React Native/Expo (`@axonpack/lite-storage`, `@axonpack/expo-devtools`, `@axonpack/api-kit`, `@axonpack/i18n`). **All three are published: `@axonpack/expo-devtools` and `@axonpack/react-pretty-print`** (collapsible JSON/XML trees and a syntax highlighter, for React and React Native from one implementation, with its own `example-web` and `example-native` apps). The third, `@axonpack/react-native-devtools-tab`, puts a tab of your own in React Native DevTools, drawn from a component that runs in the app, so the tab reads the app's own state with no bridge and no copy. Its own README is the reference, and `packages/@axonpack/react-native-devtools-tab/notes/README.md` indexes its notes. `docs/` is the documentation site (Next.js + Fumadocs, MDX under `content/docs/<package-slug>/`), but it is **not part of this repo**: it is a git submodule of `axonpack/docs`, mounted the same way `marketing/` is. It is self-contained (own lockfile, own `node_modules`, own oxlint config, no workspace dependency) and it builds and deploys itself; nothing here builds or lints it. `packages/linter` (npm name: `linter`, deliberately _not_ `@axonpack/*`-scoped) is separate from that roadmap. It's an internal, non-public shared oxlint base config, not a `@axonpack/*` product library. Only packages actually meant for npm carry the `@axonpack/` scope; right now that's those three.
+Turborepo + bun workspaces monorepo intended to hold `@axonpack/*`, the free OSS foundation libraries for React Native/Expo (`@axonpack/lite-storage`, `@axonpack/expo-devtools`, `@axonpack/api-kit`, `@axonpack/i18n`). **All three are published: `@axonpack/expo-devtools` and `@axonpack/react-pretty-print`** (collapsible JSON/XML trees and a syntax highlighter, for React and React Native from one implementation, with its own `example-web` and `example-native` apps). The third, `@axonpack/react-native-devtools-tab`, puts a tab of your own in React Native DevTools, drawn from a component that runs in the app, so the tab reads the app's own state with no bridge and no copy. Its own README is the reference, and `packages/@axonpack/react-native-devtools-tab/notes/README.md` indexes its notes. `docs/` is the documentation site (Next.js + Fumadocs, MDX under `content/docs/<package-slug>/`), but it is **not part of this repo**: it is a git submodule of `axonpack/axonpack.github.io` (which also serves the landing page), mounted the same way `marketing/` is. It is self-contained (own lockfile, own `node_modules`, own oxlint config, no workspace dependency) and it builds and deploys itself; nothing here builds or lints it. `packages/linter` (npm name: `linter`, deliberately _not_ `@axonpack/*`-scoped) is separate from that roadmap. It's an internal, non-public shared oxlint base config, not a `@axonpack/*` product library. Only packages actually meant for npm carry the `@axonpack/` scope; right now that's those three.
 
 ## Package manager & workspaces
 
@@ -63,7 +63,7 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*`, the free OSS
 
 ### Docs site (the `docs/` submodule)
 
-Its own repository, `axonpack/docs`, so almost everything about it is documented in `docs/README.md` rather than here. What matters from this side:
+Its own repository, `axonpack/axonpack.github.io`, which serves both the landing page and the docs, so almost everything about it is documented in `docs/README.md` rather than here. What matters from this side:
 
 - **Both live sites show only what is published.** A planned package gets no entry in `docs`'s `src/lib/packages.ts`, no `content/docs/<slug>/` folder, no card on the landing page, and there is no roadmap on either site. It earns those on the day it goes to npm. Naming a library on a public page is a promise and documentation is a promise that something works as described; neither has anything behind it until the thing is installable. Unshipped work lives in `notes/plan.md` in this repo and nowhere else.
 
@@ -71,16 +71,7 @@ Its own repository, `axonpack/docs`, so almost everything about it is documented
 - **A docs change is two commits**: one in the submodule, one here to move the gitlink. `git submodule update --remote docs` pulls the latest.
 - `docs` is in `.prettierignore` for the same reason `marketing` is: the root `format` task would rewrite it and leave the gitlink permanently dirty.
 - It **deploys itself**, via `.github/workflows/deploy.yml` in that repo, on its own `GITHUB_TOKEN`, no secret and no credential to rotate. That is the whole point of the docs living in the repo they are served from; a cross-repo push needed a deploy key or a token, and both were tried and thrown away.
-- Served at `https://axonpack.github.io/docs`, a Pages **project site**, so the URL prefix is the repo name. Because that repo is named `docs`, the app's own routes sit at _its_ root (the introduction at `/`, a package at `/<slug>`); a second `/docs` segment would only double the prefix.
-
-### Landing page (the `landing-page/` submodule)
-
-Its own repository, `axonpack/axonpack.github.io`, serving `https://axonpack.github.io`. **That name is the only reason the repo exists**: GitHub serves the organisation root from a repository named after the org and nothing else. It coexists with the docs because GitHub routes `/<repo>` to the matching project site, so `axonpack/docs` keeps `/docs`. **Never add a `docs/` directory to the landing repo**; it would shadow that path.
-
-- One `index.html`, four images in `assets/`, no build step, no dependencies, no workflow. Pages serves the branch directly. A page that changes a few times a year does not earn a toolchain, and without one there is nothing to break in CI.
-- Edit and push; Pages redeploys itself. Its Pages source is **Deploy from a branch**, `main` / `(root)`, not GitHub Actions.
-- Its palette mirrors the docs site on purpose, so the two do not read as different products.
-- In `.prettierignore` for the same reason `docs` and `marketing` are.
+- The repo is named after the org, so Pages serves it as the **organisation root site**: the landing page at `https://axonpack.github.io` and the docs at `https://axonpack.github.io/docs`. There is no `basePath`; `/docs` is a real route segment in the app. The landing page's prose lives in `src/content.json`.
 
 ### Example app (run from `packages/@axonpack/expo-devtools/example`)
 
