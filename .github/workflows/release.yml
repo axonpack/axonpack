@@ -199,8 +199,15 @@ jobs:
       - name: Build packages
         run: bun run build
 
-      - name: Publish to npm
-        run: bunx changeset publish
-
-      - name: Push release tags
-        run: git push origin --tags
+      # Not a bare `changeset publish`: its tags are annotated, which needs a git identity the runner
+      # doesn't have, and it drops the failure without a word. The action sets one, pushes the tags
+      # and opens a Release from each version's CHANGELOG section.
+      - name: Publish to npm, tag and create GitHub Releases
+        uses: changesets/action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          publish-script: bunx changeset publish
+          push-git-tags: true
+          create-github-releases: true
+        env:
+          HUSKY: 0
