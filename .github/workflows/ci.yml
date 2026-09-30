@@ -12,6 +12,8 @@ concurrency:
 jobs:
   check:
     name: Build, lint, types, tests
+    # Forks skip it. `preview` needs this job, so it skips with it.
+    if: github.repository == 'axonpack/axonpack'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
