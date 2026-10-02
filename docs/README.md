@@ -85,8 +85,8 @@ entry anywhere.
 
 Release notes work the same way. `scripts/sync-changelog.mjs` reads each library's `CHANGELOG.md`
 from its published npm tarball, parses it into entries, and dates them from npm's publish times.
-Those become both the blog and each package's `changelog.mdx`, which is why that file says not to
-edit it by hand. A changeset that ships turns into a release entry with nothing to copy across.
+Those become both the blog and each package's `changelog.mdx`. Both are gitignored and rebuilt by
+every `build` and `dev`, so never edit them by hand. A changeset that ships turns into a release entry with nothing to copy across.
 
 GitHub is not used for any of this. Every source is a public npm endpoint, so the build needs no
 credentials.

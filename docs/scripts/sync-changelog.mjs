@@ -1,10 +1,9 @@
 /**
  * Rebuilds each package's `content/docs/<slug>/changelog.mdx` from its own CHANGELOG.md.
  *
- * The changelogs are written by Changesets in the monorepo, and this site is a different repository —
- * so the pages here are generated and committed rather than fetched at build time. A build that has
- * to reach GitHub to render a page fails whenever GitHub does, and a release only happens a few
- * times a month, which is exactly the cadence a manual `bun run sync:changelog` suits.
+ * The changelogs are written by Changesets in `packages/`, beside this folder, so they are read from
+ * disk. The pages are gitignored and rebuilt by every `build` and `dev`, so they can never lag a
+ * release. It has to run before `fetch-packages`, which checks whether each page exists.
  *
  * Release dates come from the npm registry: Changesets does not record them, and the git tags that
  * would carry them are not reliably pushed.
@@ -54,16 +53,12 @@ function fileFromTarball(archive, wanted) {
 }
 
 /**
- * The changelog, from the published package itself.
+ * The changelog from `packages/`, or from the published tarball when that folder is missing.
  *
- * It used to come from `main` of the monorepo over raw.githubusercontent, which tied this build to
- * another repository's branch state: a package on npm whose source had not reached `main` yet gave
- * a 404 and failed the deploy. The tarball cannot have that problem, because it is the thing that
- * was published. It is also what the README always claimed this site does.
- *
- * The local checkout still wins when there is one, so a version bumped in the monorepo shows here
- * before it is published. That does mean a local run can succeed where CI would not, since CI only
- * ever checks out this repository.
+ * The local file wins so a version bumped by `changeset version` shows before it is published. The
+ * tarball only matters if this folder is ever built on its own, without the monorepo around it.
+ * It is never `main` over raw.githubusercontent: that 404s for a package whose source has not
+ * reached `main` yet, and failed the deploy when this site was a separate repository.
  */
 async function readChangelog(name, registry) {
   try {
@@ -74,12 +69,12 @@ async function readChangelog(name, registry) {
     console.log(`${name}: ../packages (local checkout)`);
     return local;
   } catch {
-    // No monorepo around this checkout, which is the normal case in CI.
+    // Built outside the monorepo. Fall back to npm.
   }
 
   const tarball = registry?.versions?.[registry?.["dist-tags"]?.latest]?.dist?.tarball;
   if (!tarball) {
-    console.warn(`${name}: no tarball listed on npm — leaving the committed changelog alone`);
+    console.warn(`${name}: no tarball listed on npm — leaving the page on disk alone`);
     return null;
   }
 
@@ -91,9 +86,9 @@ async function readChangelog(name, registry) {
       console.log(`${name}: npm tarball`);
       return changelog;
     }
-    console.warn(`${name}: the tarball ships no CHANGELOG.md — leaving the committed page alone`);
+    console.warn(`${name}: the tarball ships no CHANGELOG.md — leaving the page on disk alone`);
   } catch (error) {
-    console.warn(`${name}: could not read the tarball (${error.message}) — leaving the committed page alone`);
+    console.warn(`${name}: could not read the tarball (${error.message}) — leaving the page on disk alone`);
   }
   return null;
 }
@@ -215,8 +210,8 @@ async function sync({ name, slug }) {
 
   const latest = registry?.['dist-tags']?.latest;
 
-  // Nothing to regenerate from. The page on disk is committed, so it stays as it was rather than
-  // being emptied, and the version still reaches releases.generated.ts if npm answered.
+  // Nothing to regenerate from. Whatever page is on disk stays as it was rather than being
+  // emptied, and the version still reaches releases.generated.ts if npm answered.
   if (markdown === null) {
     return { slug, latest, date: latest ? fmtDate(latest) : null };
   }
