@@ -21,25 +21,15 @@ export const gitConfig = {
   branch: 'main',
 };
 
-/**
- * The repository these pages live in, which is this one. Kept separate from `gitConfig` because a
- * page's "open in GitHub" link has to resolve to the file, and the file is not in the monorepo.
- */
-export const docsRepo = {
-  user: 'axonpack',
-  repo: 'axonpack.github.io',
-  branch: 'main',
-};
-
 export const pageSourceUrl = (path: string) =>
-  `https://github.com/${docsRepo.user}/${docsRepo.repo}/blob/${docsRepo.branch}/content/docs/${path}`;
+  `https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/docs/content/docs/${path}`;
 
 /**
  * The deployed origin. `metadataBase` resolves every relative URL in the metadata against it, and
  * the sitemap and robots routes need it spelled out, since neither is metadata and neither sees
  * `metadataBase`. The override is for a preview deploy on some other origin.
  */
-export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://axonpack.github.io';
+export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://axonpack.dev';
 
 /**
  * `next.config.mjs` sets `trailingSlash`, so /docs/foo is a redirect and /docs/foo/ is the page.

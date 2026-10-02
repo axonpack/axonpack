@@ -1,10 +1,10 @@
 # Reference
 
 Every control, section and field in the panel, and the whole public API. The
-[guides](https://axonpack.github.io/docs/expo-devtools) are the tour; this is the map.
+[guides](https://axonpack.dev/docs/expo-devtools) are the tour; this is the map.
 
 This file ships inside the package. The same reference, split into pages and searchable, is at
-[axonpack.github.io/docs/expo-devtools/reference](https://axonpack.github.io/docs/expo-devtools/reference).
+[axonpack.dev/docs/expo-devtools/reference](https://axonpack.dev/docs/expo-devtools/reference).
 
 - [The panel](#the-panel)
 - [Network tab](#network-tab)
@@ -539,7 +539,7 @@ next launch.
 
 The tab reads the same stores as the panel on the device, so a filter, a sort, a setting or a rule
 changed here is changed there too, and the other way round. Setting it up is on [React Native
-DevTools](https://axonpack.github.io/docs/expo-devtools/react-native-devtools).
+DevTools](https://axonpack.dev/docs/expo-devtools/react-native-devtools).
 
 ### The bar
 
@@ -757,7 +757,7 @@ a key of `config.themes`.
 | `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.               |
 
 `crash` is documented on its own, under
-[Crash reporting](https://axonpack.github.io/docs/expo-devtools/crash-reporting).
+[Crash reporting](https://axonpack.dev/docs/expo-devtools/crash-reporting).
 
 ### Storage adapters
 

@@ -28,7 +28,7 @@ Points that may matter for the listing:
 - No config plugin and no `app.json` changes: install it and wrap the app in one provider.
 - iOS and Android. MIT.
 
-Docs: https://axonpack.github.io/docs/expo-devtools
+Docs: https://axonpack.dev/docs/expo-devtools
 
 > [!NOTE]
 > This is an automatic submission created via `rn-directory` CLI.

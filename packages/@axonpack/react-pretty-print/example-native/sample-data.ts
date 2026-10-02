@@ -75,7 +75,7 @@ export const CODE_SAMPLES: Record<Language, string> = {
   xml: '<feed count="2" lang="en"><item id="a"><title>Hello</title></item><item id="b"/></feed>',
   svg: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16M12 4v16" stroke="#888"/></svg>',
   markdown:
-    '# Totals\n\nNine items, **90.00** after discount.\n\n- one\n- two\n\nSee [the docs](https://axonpack.github.io/docs) or `formatCode`.',
+    '# Totals\n\nNine items, **90.00** after discount.\n\n- one\n- two\n\nSee [the docs](https://axonpack.dev/docs) or `formatCode`.',
   css: '.card{padding:12px;border:1px solid #30363d}.card h2{margin:0;font-size:13px}',
   scss: '$gap:8px;.card{padding:$gap;&:hover{opacity:.8}h2{margin:0}}',
   less: '@gap:8px;.card{padding:@gap;h2{margin:0}}',

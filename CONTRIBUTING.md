@@ -6,7 +6,7 @@ foundation libraries for React Native / Expo apps. Three are published:
 [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print). A third,
 [`@axonpack/react-native-devtools-tab`](./packages/@axonpack/react-native-devtools-tab), puts your
 own tab in React Native DevTools. The devtools
-[documentation](https://axonpack.github.io/docs/expo-devtools) covers what it does, and its
+[documentation](https://axonpack.dev/docs/expo-devtools) covers what it does, and its
 [notes](./packages/@axonpack/expo-devtools/notes/README.md) record what is built, area by area, and
 what is still open.
 
