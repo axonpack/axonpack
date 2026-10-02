@@ -1,0 +1,290 @@
+{
+  "brand": {
+    "name": "Axonpack",
+    "logo": "/assets/logo.png",
+    "logoDark": "/assets/logo-dark.png",
+    "url": "/"
+  },
+  "nav": {
+    "links": [
+      {
+        "label": "Docs",
+        "href": "/docs/",
+        "external": true
+      },
+      {
+        "label": "Packages",
+        "menu": [
+          {
+            "title": "Published",
+            "items": [
+              {
+                "label": "@axonpack/expo-devtools",
+                "href": "/docs/expo-devtools/",
+                "npm": "@axonpack/expo-devtools",
+                "description": "Browser-style devtools inside your app"
+              },
+              {
+                "label": "@axonpack/react-pretty-print",
+                "href": "/docs/react-pretty-print/",
+                "npm": "@axonpack/react-pretty-print",
+                "description": "Interactive JSON tree for React and React Native"
+              }
+            ]
+          },
+          {
+            "title": "Guides",
+            "items": [
+              {
+                "label": "Introduction",
+                "href": "/docs/"
+              },
+              {
+                "label": "Installation",
+                "href": "/docs/expo-devtools/installation/"
+              },
+              {
+                "label": "Reference",
+                "href": "/docs/expo-devtools/reference/"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "Community",
+        "menu": [
+          {
+            "title": "Project",
+            "items": [
+              {
+                "label": "GitHub",
+                "href": "https://github.com/axonpack/axonpack"
+              },
+              {
+                "label": "npm",
+                "href": "https://www.npmjs.com/package/@axonpack/expo-devtools"
+              },
+              {
+                "label": "Issues",
+                "href": "https://github.com/axonpack/axonpack/issues"
+              }
+            ]
+          },
+          {
+            "title": "Take part",
+            "items": [
+              {
+                "label": "Contributing",
+                "href": "https://github.com/axonpack/axonpack/blob/main/CONTRIBUTING.md"
+              },
+              {
+                "label": "Code of conduct",
+                "href": "https://github.com/axonpack/axonpack/blob/main/CODE_OF_CONDUCT.md"
+              },
+              {
+                "label": "Facebook",
+                "href": "https://www.facebook.com/axonpack"
+              },
+              {
+                "label": "YouTube",
+                "href": "https://www.youtube.com/@axonpack"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "github": {
+      "href": "https://github.com/axonpack/axonpack",
+      "repo": "axonpack/axonpack",
+      "label": "Star"
+    }
+  },
+  "hero": {
+    "eyebrow": "MIT licensed · React Native and Expo",
+    "title": "Foundation libraries for",
+    "titleAccent": "React Native and Expo",
+    "lead": "Small, focused, dependency-light packages. Drop one in and carry on — there is no framework here to adopt.",
+    "actions": [
+      {
+        "label": "Read the docs",
+        "href": "/docs/",
+        "variant": "primary",
+        "icon": "arrow-right"
+      },
+      {
+        "label": "View on GitHub",
+        "href": "https://github.com/axonpack/axonpack",
+        "variant": "outline",
+        "icon": "arrow-up-right",
+        "external": true
+      }
+    ],
+    "install": "npx expo install @axonpack/expo-devtools"
+  },
+  "stats": [
+    {
+      "value": "2",
+      "label": "packages published"
+    },
+    {
+      "value": "6",
+      "label": "devtools tabs"
+    },
+    {
+      "value": "7",
+      "label": "built-in themes"
+    },
+    {
+      "value": "MIT",
+      "label": "licensed, no tiers"
+    }
+  ],
+  "packages": {
+    "title": "What is published",
+    "body": "Each package is released and documented on its own. Two are out today; the rest are still being written, and get a page here when they are real.",
+    "items": [
+      {
+        "name": "@axonpack/expo-devtools",
+        "href": "/docs/expo-devtools/",
+        "description": "Browser-style devtools that live inside your app: network, console, performance, storage, crashes and a debug tab, behind a draggable button.",
+        "tags": [
+          "Network",
+          "Console",
+          "Performance",
+          "Storage",
+          "Crashes",
+          "Debug"
+        ],
+        "npm": "@axonpack/expo-devtools"
+      },
+      {
+        "name": "@axonpack/react-pretty-print",
+        "href": "/docs/react-pretty-print/",
+        "npm": "@axonpack/react-pretty-print",
+        "description": "Collapsible JSON and XML trees and a syntax highlighter, from one implementation for React and React Native. You pass the container, text and pressable components in; it owns the logic.",
+        "tags": [
+          "JSON",
+          "XML",
+          "Highlighter",
+          "38 languages",
+          "130 palettes",
+          "No dependencies"
+        ]
+      }
+    ]
+  },
+  "usage": {
+    "title": "One factory, one call",
+    "body": "No provider to wrap your tree in and no context to thread through it. Configure the client once, call init() at startup, and mount the overlay where you want it.",
+    "filename": "devtools.ts",
+    "code": "import { createDevtoolsClient } from '@axonpack/expo-devtools';\n\nexport const devtools = createDevtoolsClient({\n  theme: 'dark',\n  network: { http: true, websocket: true, sse: true },\n  console: { capture: true, repl: true },\n});\n\n// Guard this one call and the whole package stays dark in production.\ndevtools.init();",
+    "note": "Nothing records anywhere until init() runs — which is what makes shipping the code to production free."
+  },
+  "principles": {
+    "title": "How they are built",
+    "body": "The point of a foundation library is that you stop thinking about it. These are what keep them that way.",
+    "items": [
+      {
+        "icon": "target",
+        "title": "Small and focused",
+        "body": "One package solves one problem. Nothing here grows into a framework that wants to own your app's structure."
+      },
+      {
+        "icon": "feather",
+        "title": "Dependency-light",
+        "body": "Adding a package should not add a supply chain. Where one needs a library you may already have, you hand it over rather than having it installed for you."
+      },
+      {
+        "icon": "layers",
+        "title": "Independently published",
+        "body": "Each package versions and ships on its own, with its own documentation. Installing one never drags in another."
+      },
+      {
+        "icon": "eye",
+        "title": "Honest about limits",
+        "body": "Every guide ends with what the thing cannot do, and why. A number that cannot be measured is not shown rather than invented."
+      }
+    ]
+  },
+  "showcase": {
+    "title": "It runs on the device",
+    "body": "Not a socket to a desktop window — the panel is part of the app, so it works on a real phone, over a tunnel, and in a release build you deliberately left it in.",
+    "imageLight": "/assets/network-light.webp",
+    "imageDark": "/assets/network-dark.webp",
+    "width": 640,
+    "height": 1385,
+    "alt": "A captured network request, opened inside the app",
+    "caption": "@axonpack/expo-devtools, running on the device"
+  },
+  "footer": {
+    "blurb": "Free, open-source foundation libraries for React Native and Expo apps. MIT licensed.",
+    "columns": [
+      {
+        "title": "Documentation",
+        "links": [
+          {
+            "label": "Introduction",
+            "href": "/docs/"
+          },
+          {
+            "label": "@axonpack/expo-devtools",
+            "href": "/docs/expo-devtools/"
+          },
+          {
+            "label": "Installation",
+            "href": "/docs/expo-devtools/installation/"
+          },
+          {
+            "label": "Reference",
+            "href": "/docs/expo-devtools/reference/"
+          }
+        ]
+      },
+      {
+        "title": "Project",
+        "links": [
+          {
+            "label": "GitHub",
+            "href": "https://github.com/axonpack/axonpack"
+          },
+          {
+            "label": "npm",
+            "href": "https://www.npmjs.com/package/@axonpack/expo-devtools"
+          },
+          {
+            "label": "Contributing",
+            "href": "https://github.com/axonpack/axonpack/blob/main/CONTRIBUTING.md"
+          },
+          {
+            "label": "Issues",
+            "href": "https://github.com/axonpack/axonpack/issues"
+          }
+        ]
+      },
+      {
+        "title": "Community",
+        "links": [
+          {
+            "label": "Facebook",
+            "href": "https://www.facebook.com/axonpack"
+          },
+          {
+            "label": "YouTube",
+            "href": "https://www.youtube.com/@axonpack"
+          },
+          {
+            "label": "Code of conduct",
+            "href": "https://github.com/axonpack/axonpack/blob/main/CODE_OF_CONDUCT.md"
+          },
+          {
+            "label": "License",
+            "href": "https://github.com/axonpack/axonpack/blob/main/LICENSE"
+          }
+        ]
+      }
+    ],
+    "legal": "© Axonpack Open Source · MIT licensed"
+  }
+}

@@ -1,0 +1,42 @@
+---
+title: Primitives
+description: The contract that lets one implementation render on both platforms.
+icon: Blocks
+---
+
+Every renderer takes its components from you. That is the whole reason there is no separate web
+build and no React Native build.
+
+```ts
+type Primitives = {
+  View: ComponentType<{ style?; children? }>;
+  Text: ComponentType<{ style?; children?; selectable? }>;
+  Pressable: ComponentType<{ style?; children?; onPress?; onLongPress? }>;
+};
+```
+
+| Platform     | What to pass                                                              |
+| ------------ | ------------------------------------------------------------------------- |
+| React Native | `{ View, Text, Pressable }` from `react-native`, with no wrapper          |
+| The DOM      | `domPrimitives`, exported from this package                               |
+
+Anything that accepts a style object and renders children will do, so a custom set is a few lines.
+
+## Why the types are loose
+
+`selectable` is there for React Native, where text is unselectable by default and a code block you
+cannot copy from is useless. `domPrimitives` drops it rather than forwarding an unknown attribute to
+a `<span>`.
+
+The style types are deliberately wide. React Native's `StyleProp<ViewStyle>` and React's
+`CSSProperties` are not assignable to each other in either direction, so a single concrete type
+would reject one platform outright.
+
+The long-press event is `unknown` and passed through untouched for the same reason. Anything
+narrower fails contravariance, which would force every React Native consumer to write a wrapper.
+Cast it at your own call site, as [the context menu](/docs/react-pretty-print/context-menu) shows.
+
+## Won't do
+
+- **Ship a default for React Native.** That would mean importing `react-native`, which is the one
+  thing this design rules out. The DOM set can ship because it needs no import at all.

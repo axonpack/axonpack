@@ -1,0 +1,26 @@
+{
+  "title": "Reference",
+  "description": "Every control, section and field in the panel, and the whole public API",
+  "icon": "SquareTerminal",
+  "defaultOpen": false,
+  "pages": [
+    "index",
+    "---The panel---",
+    "panel",
+    "network-tab",
+    "console-tab",
+    "performance-tab",
+    "storage-tab",
+    "navigation-tab",
+    "debug-tab",
+    "devtools-tab",
+    "---API---",
+    "provider",
+    "hooks",
+    "storage-adapters",
+    "themes",
+    "types",
+    "---Platform---",
+    "development-build"
+  ]
+}

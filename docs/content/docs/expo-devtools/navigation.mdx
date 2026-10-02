@@ -1,0 +1,199 @@
+---
+title: Navigation
+description: Every screen the app moved through, with where it came from, the params it carried and how long it stayed.
+---
+
+The Navigation tab records every move your navigator makes and draws the navigator tree as it is now.
+
+A row says what kind of move it was, when it happened, which screen it left and which it landed on,
+the params it carried, and how long that screen stayed on top. Above the history sits the tree: every
+navigator that is mounted, with the screen you are on marked and a Back button beside it.
+
+The tab works with Expo Router and with React Navigation. It only appears in the panel when one of
+them is installed. This package depends on neither: it looks for `expo-router` and
+`@react-navigation/native` when it starts, and uses whichever it finds.
+
+## Setting it up
+
+<Tabs items={['Expo Router', 'React Navigation']}>
+
+<Tab value="Expo Router">
+
+Nothing to do. The tab finds Expo Router's navigator on its own once the router's root has mounted.
+The provider goes in the root layout as usual, as in the [Quick start](/docs/expo-devtools/quick-start).
+
+</Tab>
+
+<Tab value="React Navigation">
+
+Put the provider inside `NavigationContainer` and the tab finds the container on its own:
+
+```tsx title="App.tsx"
+import { NavigationContainer } from '@react-navigation/native';
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import { devtoolsConfig } from './devtools';
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <DevtoolsProvider config={devtoolsConfig}>
+        <RootStack />
+      </DevtoolsProvider>
+    </NavigationContainer>
+  );
+}
+```
+
+If the provider sits above the container, the provider cannot see it. Hand the container's ref over
+with `useDevtoolsNavigation`, from the component that owns the container:
+
+```tsx title="Navigation.tsx"
+import {
+  NavigationContainer,
+  createNavigationContainerRef,
+} from '@react-navigation/native';
+import { useDevtoolsNavigation } from '@axonpack/expo-devtools';
+
+const navigationRef = createNavigationContainerRef();
+
+export function Navigation() {
+  useDevtoolsNavigation(navigationRef);
+  return (
+    <NavigationContainer ref={navigationRef}>
+      <RootStack />
+    </NavigationContainer>
+  );
+}
+```
+
+</Tab>
+
+</Tabs>
+
+Until a navigator is found, the tab says what it is waiting for. For React Navigation it also shows
+both of the snippets above, so you can copy the one you need.
+
+## More than one container
+
+Some apps mount a second `NavigationContainer`, for a checkout flow or an onboarding flow. Hand each
+one over with a name:
+
+```tsx
+useDevtoolsNavigation(checkoutRef, 'checkout');
+```
+
+The name is how the tab tells containers apart. It defaults to `root`, which is also what the tab
+calls a container it found on its own. Handing over the same name twice is one container: the later
+call replaces the earlier one.
+
+Call the hook from a screen of the outer container, as a flow like this usually is, and the tab also
+learns which screen the flow lives in. It then draws the flow's tree under that screen, rather than
+as a separate tree.
+
+The hook does nothing until the devtools are running, so it is safe to leave in a release build. Its
+full signature is in [Hooks](/docs/expo-devtools/reference/hooks).
+
+## What the tab shows
+
+**The navigator tree** is at the top. Each container is a track with a node per route. The routes on
+the path to the current screen are filled in, and the screen you are on is the larger node with a ring,
+marked **on screen**. A route's params sit on its line as `key: value`, and tapping the route opens
+them as a tree. A tab you are not on shows as a route, but the navigator inside it is not drawn,
+because it is not mounted.
+
+**The history** is under the tree, newest first. Each row has:
+
+- The kind of move (Navigate, Go back, Jump to, Replace, Reset and so on), with an icon and a colour.
+  Forward moves are in the accent colour, backward ones are muted, and moves that rewrite the stack
+  take the warning colour.
+- The time, and the container's name once there is more than one.
+- `From → To`, then the URL path when the route has one, and a one-line preview of the params.
+- The line in your code that dispatched the move, and how long the screen stayed on top. A **no
+  change** row has no time on top, since nothing moved.
+
+The first row for a container is **Start**, written when the tab found it. A move that asked for
+something already true, such as navigating to the screen already on top, is kept and marked
+**no change**.
+
+Tap a row for the whole move: the params and the action's payload as trees, the call stack that
+dispatched it with the source around it, and the full navigator state after it.
+
+## Acting from the panel
+
+Three controls move the app. Each one runs your real navigator, so your app sees the move the same
+way it sees its own, and is free to refuse it.
+
+- **Back**, beside the screen you are on in the tree. It is dimmed when there is nothing to go back
+  to.
+- **Open screen**, in the toolbar. Type a route name, with suggestions from the routes your navigators
+  have declared and visited, and params as JSON. Picking a route you have been to fills in the params
+  it had last time. The same sheet opens a deep link, which is handed to the OS so it reaches your
+  router the way a real link would.
+- **Go here again**, in a row's detail sheet. It navigates to that row's screen with that row's
+  params.
+
+## Search, pause and export
+
+The filter button opens a search over the move kind, the route names, the path, the params and the
+payload, with match case, whole word and regex. With more than one container you can also narrow the
+history to one of them.
+
+The record button pauses the history. The tree keeps following the app while paused, since it shows
+where you are rather than what happened. Clear empties the history.
+
+Beside the **History** header, one button copies the rows as Markdown for an issue or a chat, and one
+exports them as JSON through the share sheet. Both act on the rows the filter leaves.
+
+To open the tab paused:
+
+```ts title="devtools.ts"
+export const devtoolsConfig = {
+  navigation: { disabledByDefault: true },
+} satisfies DevtoolsConfig;
+```
+
+## Keeping tokens out of the log
+
+A deep link or an OAuth redirect can put a token in a screen's params. `navigation.redact` runs on
+every move before it is stored, so you can strip it:
+
+```ts title="devtools.ts"
+export const devtoolsConfig = {
+  navigation: {
+    redact: (move) =>
+      move.to?.params && 'token' in move.to.params
+        ? { ...move, to: { ...move.to, params: { ...move.to.params, token: '[redacted]' } } }
+        : move,
+  },
+} satisfies DevtoolsConfig;
+```
+
+Return the move, changed or not, or `null` to drop it. If the function throws, the move is dropped,
+because keeping it could store the very value you meant to remove. What it returns is all anything
+downstream sees: the history, the tree, copy, export and crash reports. A dropped move does not
+update the tree either, so the tree keeps showing the screen before it.
+
+The move's full shape is `NavigationMove`, listed in [Exported types](/docs/expo-devtools/reference/types).
+
+## Routes on crash reports
+
+A crash report caught in JavaScript carries the screen the app was on when it broke, with its path
+when it has one. A crash that ended the app is read back from native at the next launch, without one.
+With breadcrumbs on, each move in the history joins them too, named `From → To` and prefixed with the
+container when it is not `root`. See [Crash reporting](/docs/expo-devtools/crash-reporting).
+
+## Limits
+
+- The history holds the **200** most recent moves; older ones fall off the end.
+- The call stack behind a move is captured by React Navigation in a development build. It reads as
+  file and line once the dev server has turned it into your own source, so a release build shows raw
+  frames or none.
+- Route suggestions come from navigators that are mounted and screens you have visited. A screen
+  inside a navigator that has never mounted is not suggested, but you can still type its name.
+
+## Next step
+
+<Cards>
+  <Card title="Navigation tab reference" href="/docs/expo-devtools/reference/navigation-tab" description="Every control, section and field." />
+  <Card title="Crash reporting" href="/docs/expo-devtools/crash-reporting" description="Where the route and the breadcrumbs end up." />
+</Cards>

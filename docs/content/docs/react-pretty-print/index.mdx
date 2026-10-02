@@ -1,0 +1,38 @@
+---
+title: Overview
+description: Collapsible JSON and XML trees and a syntax highlighter, for React and React Native from one implementation.
+icon: House
+---
+
+You pass in the container, text and pressable components. The package owns everything else:
+expansion state, array chunking, collapsed-node previews, an XML parser, a 38-language tokenizer and
+130 palettes.
+
+```sh
+npm install @axonpack/react-pretty-print
+```
+
+<LatestRelease slug="react-pretty-print" />
+
+| Renderer                                                     | What it gives you                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------- |
+| **[JsonTree](/docs/react-pretty-print/json-tree)**             | A value as a tree, with a preview on every closed node        |
+| **[XmlTree](/docs/react-pretty-print/xml-tree)**               | A document as a tree, parsed in JS so it works off the DOM    |
+| **[CodeHighlight](/docs/react-pretty-print/code-highlight)**   | Highlighted source, one node per token, in 38 languages       |
+
+## What makes it different
+
+- **No dependencies, and no platform imports.** Nothing in it imports `react-native` or touches the
+  DOM. A web project installs nothing but React and aliases no bundler path, and a React Native
+  project hands over its own components with no adapter to write.
+- **You supply the primitives.** That single decision is what lets one implementation serve both
+  platforms. See [Primitives](/docs/react-pretty-print/primitives).
+- **No native module.** There is no `pod install` and no prebuild, so it runs in Expo Go.
+- **The palettes are a separate entry point.** 130 of them is about 52KB, and a project that only
+  wants a renderer should not pull them in to discover it did not need them.
+
+## Where to go next
+
+[Installation](/docs/react-pretty-print/installation) covers the peer dependency and both platforms.
+[Primitives](/docs/react-pretty-print/primitives) is the contract every renderer is built on, and is
+worth reading before the renderers themselves.

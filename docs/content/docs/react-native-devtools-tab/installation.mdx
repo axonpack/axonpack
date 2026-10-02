@@ -1,0 +1,47 @@
+---
+title: Installation
+description: The package, the Metro config line, and what the package expects of your project.
+icon: Download
+---
+
+<Tabs items={["npm", "yarn", "pnpm", "bun"]}>
+  <Tab value="npm">```sh npm install @axonpack/react-native-devtools-tab ```</Tab>
+  <Tab value="yarn">```sh yarn add @axonpack/react-native-devtools-tab ```</Tab>
+  <Tab value="pnpm">```sh pnpm add @axonpack/react-native-devtools-tab ```</Tab>
+  <Tab value="bun">```sh bun add @axonpack/react-native-devtools-tab ```</Tab>
+</Tabs>
+
+## Wrap your Metro config
+
+This is what serves the tab to the DevTools page. Without it the package is installed and nothing
+appears.
+
+```js title="metro.config.js"
+const { getDefaultConfig } = require("expo/metro-config");
+const {
+  withReactNativeDevtoolsTab,
+} = require("@axonpack/react-native-devtools-tab/metro");
+
+module.exports = withReactNativeDevtoolsTab(getDefaultConfig(__dirname));
+```
+
+A bare React Native app is the same line with its own default config, from
+`@react-native/metro-config`.
+
+<Callout type="warn">
+  Restart Metro afterwards. A running dev server does not pick up a config change, and a tab that
+  never appears is almost always this.
+</Callout>
+
+## What it expects
+
+React 19.2 or newer is the one declared peer, and the Metro side wants Node 20 or newer. The tab
+lives in React Native DevTools, so the app has to be one whose debugger is that rather than the old
+Chrome remote debugger.
+
+`@react-native/debugger-frontend` and `@react-native/dev-middleware` are not declared as
+dependencies. Both already arrive with `react-native` and are versioned in lockstep with it, so the
+Metro helper resolves them at run time from whatever is serving your project. The copy it uses is
+the copy your dev server uses.
+
+Next: [Quick start](/docs/react-native-devtools-tab/quick-start).

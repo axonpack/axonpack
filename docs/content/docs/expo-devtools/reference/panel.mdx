@@ -1,0 +1,70 @@
+---
+title: The panel
+description: The header row, the toolbar row, and the two gates that are easily confused.
+---
+
+`<DevtoolsProvider>` renders a draggable floating button beside your app. Tapping it opens a
+full-screen modal; the button itself never appears inside the modal. `showFloatingButton={false}`
+hides the button and leaves the panel working: open it from your own UI with
+[`useDevtoolsPanel()`](/docs/expo-devtools/reference/hooks#usedevtoolspanel).
+
+## Header row
+
+| Item         | What it does                                                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **[Navigation](/docs/expo-devtools/reference/navigation-tab)**, **Crashes**, **Debug**. Navigation shows only when a router is found or handed over. Scrolls horizontally on a narrow screen. |
+| Error badge  | A red count on the Console tab when it is not the active tab, showing captured errors and crashes. The Crashes tab carries the same badge for unread reports. |
+| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                      |
+| Close (✕)    | Dismisses the panel. Recording carries on while it is closed.                                                                                             |
+
+In a debug build whose bundle came from Metro, a strip under the header says **Metro server
+detected**. Its **Open DevTools** button opens [React Native
+DevTools](/docs/expo-devtools/react-native-devtools) on the Axonpack tab, the same window the dev
+menu opens. A release build, or a bundle built into the app, has no strip.
+
+The tab you last had open is remembered for the life of the app process, so reopening the panel returns
+you to it. Only the active tab is mounted, so switching tabs and back resets that tab's open detail
+sheet and its scroll position. Captured data and filters are untouched: they live in stores, not in the
+views, and the filters are shared with the Axonpack tab in React Native DevTools.
+
+A detail sheet slides up from the bottom and closes with its ✕, a tap outside it, or a drag of its
+handle or header down. With the keyboard up the sheet grows to make room, up to just short of the top
+of the panel, and its content scrolls in what is left.
+
+## Toolbar row
+
+On the tabs that record (Network, Console, Performance and Navigation) it opens with the same
+controls:
+
+| Control    | What it does                                                                        |
+| ---------- | ------------------------------------------------------------------------------------ |
+| Record (⏺) | Pauses and resumes **capture** for that tab. Red when recording, hollow when paused. |
+| Clear (⊘)  | Throws away everything that tab has collected. Not undoable.                         |
+
+Not every tab has one:
+
+- **Storage** has no record button, on purpose: it reads on demand rather than recording, so there is
+  no stream to pause, and a clear button there would mean wiping your storage rather than dropping a
+  log. It opens with Refresh instead.
+- **Crashes** has a clear button but no record button. A crash is not a stream you can afford to have
+  switched off.
+- **Debug** has no toolbar at all: nothing there records or collects.
+
+## The two gates
+
+Pausing and `enabled` are different switches, and the difference matters when you ship.
+
+| Gate      | Set by                         | What it does                                                                            |
+| --------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `enabled` | The provider's config, once    | With it off, nothing is patched, observed or recorded anywhere. There is no UI for it.  |
+| Record    | The record button in a toolbar | Pauses a tab that a started client already turned on.                                   |
+
+`disabledByDefault` in the config sets the **record** gate, not the `enabled` one, so a tab that starts
+paused can always be started from its own toolbar.
+
+`enabled` controls both **capture** and **access**: with it off the provider installs nothing and draws
+no button, so the mount can stay in a release build rather than being wrapped in a condition of its
+own.
+
+The one thing the provider keeps rendering is the crash report sheet, which is
+[meant to work in production](/docs/expo-devtools/crash-reporting).

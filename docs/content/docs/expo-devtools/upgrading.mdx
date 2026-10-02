@@ -1,0 +1,142 @@
+---
+title: Upgrading
+description: What moved where in 3.0, and the two lines most apps have to change.
+---
+
+## 2.x to 3.0
+
+The setup API is replaced. There is no client object any more, so nothing has to be created at module
+scope, exported, or passed to the components that need it. One provider starts the devtools and hosts
+the panel, and one flag in its config decides whether any of it runs.
+
+Nothing about the panel itself changed, and nothing inside `config` changed: `network`, `console`,
+`performance`, `storage` and `crash` take the same fields they always did, as do the storage adapters
+and custom themes. If your app does not open a `<WebView />` or call `mark`, this is a two-step
+upgrade.
+
+### 1. Replace the client, the init call and the overlay
+
+```tsx
+// before
+export const devtools = createDevtoolsClient({ defaultTheme: 'dark' });
+if (__DEV__) devtools.init();
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      {__DEV__ && <DevtoolsOverlay />}
+    </>
+  );
+}
+```
+
+```tsx
+// after
+export default function App() {
+  return (
+    <DevtoolsProvider config={{ enabled: __DEV__, defaultTheme: 'dark' }}>
+      <YourApp />
+    </DevtoolsProvider>
+  );
+}
+```
+
+The condition you used to guard the mount with becomes `enabled`. Whatever expression it was still
+works: `__DEV__`, an environment variable, a value you fetch for one user. See
+[Leaving it in production](/docs/expo-devtools/production).
+
+A long config is easier to keep in its own file, exactly as the client used to be:
+
+```ts title="devtools.ts"
+import type { DevtoolsConfig } from '@axonpack/expo-devtools';
+
+export const devtoolsConfig = {
+  enabled: __DEV__,
+  // ...everything you passed to createDevtoolsClient
+} satisfies DevtoolsConfig;
+```
+
+### 2. Move your in-app browser wiring to the hook
+
+```tsx
+// before
+<WebView
+  ref={devtools.getWebViewRef('checkout')}
+  userAgent={devtools.getWebViewUserAgent()}
+  injectedJavaScriptBeforeContentLoaded={devtools.getWebViewInjectedJavaScriptBeforeContentLoaded(
+    'checkout'
+  )}
+  onShouldStartLoadWithRequest={devtools.shouldAllowWebViewRequest}
+  onMessage={devtools.handleWebViewMessage}
+  source={{ uri }}
+/>
+```
+
+```tsx
+// after
+const devtoolsWebView = useDevtoolsWebView('checkout');
+
+<WebView {...devtoolsWebView} source={{ uri }} />;
+```
+
+Delete `webviewSources` from your config. A name is no longer declared anywhere: it is whatever you
+hand the hook, and it only labels that page's rows. See
+[In-app browsers](/docs/expo-devtools/in-app-browsers).
+
+### 3. Import `devtools` where you used the client
+
+`mark`, `measure`, `setCrashContext` and the stores kept their names and signatures. They come from
+the package now instead of from an instance you made:
+
+```ts
+// before
+import { devtools } from '../devtools';
+
+// after
+import { devtools } from '@axonpack/expo-devtools';
+```
+
+## Everything that moved
+
+| 2.x                                                        | 3.0                                                        |
+| ---------------------------------------------------------- | ---------------------------------------------------------- |
+| `createDevtoolsClient(config)`                             | `<DevtoolsProvider config={config}>`                       |
+| `devtools.init()`                                          | Gone. The provider starts as it renders                    |
+| `<DevtoolsOverlay {...props} />`                           | The same props, on `<DevtoolsProvider>`                    |
+| Guarding the overlay mount                                 | `config.enabled`                                           |
+| `config.webviewSources`                                    | Gone. Pass the name to `useDevtoolsWebView`                |
+| `devtools.getWebViewInjectedJavaScriptBeforeContentLoaded` | `useDevtoolsWebView(...).injectedJavaScriptBeforeContentLoaded` |
+| `devtools.handleWebViewMessage`                            | `useDevtoolsWebView(...).onMessage`                        |
+| `devtools.getWebViewRef`                                   | `useDevtoolsWebView(...).ref`                              |
+| `devtools.getWebViewUserAgent()`                           | `useDevtoolsWebView(...).userAgent`                        |
+| `devtools.shouldAllowWebViewRequest`                       | `useDevtoolsWebView(...).onShouldStartLoadWithRequest`     |
+| `devtools.mark` / `measure` / `clearMarks` / `clearMeasures` | The same, on the exported `devtools`                     |
+| `devtools.setCrashContext`                                 | The same, on the exported `devtools`                       |
+| `devtools.networkLogStore` and the other stores            | The same, on the exported `devtools`                       |
+| `DevtoolsClientConfig`                                     | `DevtoolsConfig`                                           |
+| `DevtoolsOverlayProps`                                     | `DevtoolsProviderProps`                                    |
+| `StartupTiming.initCalled`                                 | `StartupTiming.devtoolsStart`                              |
+
+## Two things that behave differently
+
+**Capture starts at the provider's first render**, not at module evaluation. It is still before any
+child mounts, so the first screen's requests are caught, but a request fired while modules are
+evaluating now happens too early to see. If you moved `init()` ahead of Expo Router's entry file to
+widen that window, that trick is gone: undo it and let the root layout hold the provider.
+
+**`crash.enableWhileDevtoolsDisabled` installs at that same first render**, rather than when a client
+was constructed. It still captures crashes with `enabled: false`, which is the whole point of the flag,
+and it still reports only the crashes that end the app.
+
+## New in 3.0
+
+- **[`useDevtoolsPanel()`](/docs/expo-devtools/reference/hooks)** opens and closes the panel from your own UI.
+- **`showFloatingButton={false}`** hides the launcher button and leaves the panel working.
+
+## Next step
+
+<Cards>
+  <Card title="Quick start" href="/docs/expo-devtools/quick-start" description="The new setup, from scratch." />
+  <Card title="Changelog" href="/docs/expo-devtools/changelog" description="Every release, with its breaking changes." />
+</Cards>

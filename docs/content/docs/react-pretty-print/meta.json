@@ -1,0 +1,25 @@
+{
+  "title": "React Pretty Print",
+  "description": "Collapsible JSON and XML trees, plus a syntax highlighter",
+  "root": true,
+  "icon": "Braces",
+  "pages": [
+    "---Get started---",
+    "index",
+    "installation",
+    "primitives",
+    "---Renderers---",
+    "json-tree",
+    "xml-tree",
+    "code-highlight",
+    "---Guides---",
+    "search",
+    "themes",
+    "context-menu",
+    "---Reference---",
+    "reference",
+    "---Releases---",
+    "changelog"
+  ],
+  "defaultOpen": true
+}

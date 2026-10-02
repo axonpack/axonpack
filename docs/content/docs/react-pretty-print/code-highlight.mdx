@@ -1,0 +1,65 @@
+---
+title: CodeHighlight
+description: Highlighted source, one node per token, in 38 languages.
+icon: Code
+---
+
+```tsx
+<CodeHighlight primitives={domPrimitives} code={src} language="typescript" />
+```
+
+## Props
+
+| Prop                 | Type               | Default                  | What it does                                     |
+| -------------------- | ------------------ | ------------------------ | ------------------------------------------------ |
+| `primitives`         | `Primitives`       | required                 | See [Primitives](/docs/react-pretty-print/primitives) |
+| `code`               | `string`           | required                 | The source                                       |
+| `language`           | `Language`         | required                 | One of the 38 below                              |
+| `theme`              | `PrettyPrintTheme` | `DARK_THEME`             | See [Themes](/docs/react-pretty-print/themes)    |
+| `format`             | `boolean`          | `true`                   | Re-indent minified source first                  |
+| `maxHighlightLength` | `number`           | `50_000`                 | Above this, render unstyled rather than block    |
+| `matcher`            | `Matcher`          | none                     | See [Search](/docs/react-pretty-print/search)    |
+
+Use `detectLanguage()` when you have a content type rather than a known language.
+
+## format
+
+It is a re-indenter, not a pretty-printer. It breaks lines on braces, brackets and statement
+terminators and spaces separators, but it will not insert a space after a keyword or invent a
+terminator the source left out. Turn it off for source you formatted yourself.
+
+## maxHighlightLength
+
+Above the cap the source renders as one unstyled block. Nothing is truncated, only the highlighting
+is skipped. Pass `Infinity` to remove it:
+
+```tsx
+<CodeHighlight primitives={domPrimitives} code={bundle} language="javascript" maxHighlightLength={Infinity} />
+```
+
+Tokenizing walks the string once per rule per position, so cost grows with length times the size of
+the language's rule table. A megabyte of minified source is enough to block the thread. That is the
+trade you are making when you raise it.
+
+## Languages
+
+38 of them, exported as `SUPPORTED_LANGUAGES`.
+
+| Group                     | Languages                                                                                                             | `format` re-indents |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| Braces, `//`, `/* */`     | `javascript` `typescript` `tsx` `java` `kotlin` `swift` `go` `rust` `c` `cpp` `csharp` `php` `dart` `scala` `protobuf` | yes                 |
+| `#` comments              | `python` `ruby` `bash` `dockerfile` `makefile` `graphql`                                                               | `graphql` only      |
+| Key and value             | `json` `json5` `yaml` `toml` `ini` `properties`                                                                        | `json` and `json5`  |
+| Angle brackets            | `html` `xml` `svg` `markdown`                                                                                          | no                  |
+| Stylesheets               | `css` `scss` `less`                                                                                                    | yes                 |
+| Line-oriented             | `sql` `diff` `log`                                                                                                     | `sql` only          |
+| Unstyled                  | `plain`                                                                                                                | no                  |
+
+Indentation-sensitive and line-oriented formats are left out of `format` on purpose. `python` and
+`yaml` carry meaning in the whitespace they already have, markup and markdown have their own shape,
+and a diff or a log is already one record per line.
+
+## Won't do
+
+- **Mount a scroller.** A long line needs one, and only you know whether the block is already inside
+  a `ScrollView` or a container with `overflow-x`.

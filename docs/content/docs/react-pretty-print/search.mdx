@@ -1,0 +1,39 @@
+---
+title: Search
+description: One matcher, shared by all three renderers, as plain data rather than a callback.
+icon: Search
+---
+
+```ts
+type Matcher = { pattern: RegExp | null; invalid: boolean };
+```
+
+That shape is the whole contract. If your app already compiles a matcher for its own filtering, pass
+it straight in: TypeScript matches structurally, so there is nothing to import and nothing to
+convert.
+
+```tsx
+import { buildMatcher, DEFAULT_SEARCH_MODES } from '@axonpack/react-pretty-print';
+
+const matcher = buildMatcher({ text: query, ...DEFAULT_SEARCH_MODES, matchCase: false });
+
+<JsonTree primitives={domPrimitives} value={data} matcher={matcher} />;
+```
+
+`SearchModes` are `matchCase`, `wholeWord` and `regex`. An empty query gives `null`, which the
+renderers take as no search.
+
+## Two behaviours worth knowing
+
+- **An uncompilable pattern is no search, not no results.** A half-typed regular expression gives
+  `{ pattern: null, invalid: true }`, and the tree keeps its normal expansion rather than collapsing
+  to nothing. Read `invalid` if you want to mark the input.
+- **A closed node still previews its contents.** The walk looks at the leaves underneath it, so a
+  branch with a match opens and a branch without one stays closed and shows its preview as usual.
+
+The band is the `matchHighlight` token, translucent so matched text keeps its syntax colour. In
+`CodeHighlight` a match that spans a token boundary is still painted: matching runs once over the
+whole string and the ranges are clipped per token.
+
+`findMatches`, `clipMatches`, `splitByMatches` and `testMatch` are exported for building your own
+row filters against the same matcher.

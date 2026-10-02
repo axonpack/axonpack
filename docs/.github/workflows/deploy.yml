@@ -1,0 +1,73 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Versions, download counts and changelogs come from npm at build time, so they go stale on
+  # their own with no commit to trigger a rebuild.
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A superseded deploy is only stale, so cancelling one costs nothing.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # Must run before the typecheck. src/generated/packages.json is gitignored because it is
+      # rebuilt from npm every time, so in a fresh clone it does not exist and packages.service.ts
+      # cannot resolve its import. Locally this passes only because a build already ran.
+      #
+      # This also refreshes the committed changelog page, which is what lets the nightly cron pick
+      # up a release published since the last commit.
+      - name: Generate the catalogue and changelogs from npm
+        run: bun run generate
+
+      - name: Typecheck
+        run: bun run check-types
+
+      # `generate` runs again here as part of the build script. It is cheap and keeps a local
+      # `bun run build` self-contained. No credentials: every source is public.
+      - name: Build
+        run: bun run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

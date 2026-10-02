@@ -1,0 +1,81 @@
+---
+title: Quick start
+description: Three steps and two files of your own.
+icon: Rocket
+---
+
+<Steps>
+
+<Step>
+
+### Wrap the Metro config
+
+```js title="metro.config.js"
+const { getDefaultConfig } = require("expo/metro-config");
+const {
+  withReactNativeDevtoolsTab,
+} = require("@axonpack/react-native-devtools-tab/metro");
+
+module.exports = withReactNativeDevtoolsTab(getDefaultConfig(__dirname));
+```
+
+</Step>
+
+<Step>
+
+### Write a tab and register it
+
+A tab is any React component, and `registerTab` takes it. One file does both:
+
+```tsx title="devtools.tsx"
+import { useState } from "react";
+import { ReactNativeDevtoolsPanel } from "@axonpack/react-native-devtools-tab";
+
+function Session() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div style={{ padding: 12 }}>
+      <p>pressed {count} times</p>
+      <button onClick={() => setCount(count + 1)}>press</button>
+    </div>
+  );
+}
+
+ReactNativeDevtoolsPanel.registerTab({
+  name: "Session",
+  icon: "\u269b",
+  component: Session,
+});
+```
+
+Call `registerTab` again in the same file for a second tab, and split the components out into their
+own files whenever the file stops being comfortable.
+
+</Step>
+
+<Step>
+
+### Pull that file in when the app starts
+
+`devtools.tsx` is pulled in for its side effect, so it needs no export. Put the line in
+`app/_layout.tsx` for Expo Router, or `App.tsx` otherwise:
+
+```tsx title="app/_layout.tsx"
+if (__DEV__) require("../devtools");
+
+export default function Layout() {
+  // your app, unchanged
+}
+```
+
+The `__DEV__` guard is what keeps the tabs out of a release bundle. See
+[Production](/docs/react-native-devtools-tab/production).
+
+</Step>
+
+</Steps>
+
+Restart Metro, open React Native DevTools, and the tab is in the strip beside Console and Sources.
+If it is not, [Troubleshooting](/docs/react-native-devtools-tab/troubleshooting) lists what each
+failure prints.

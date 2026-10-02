@@ -1,0 +1,42 @@
+---
+title: Production
+description: What a release build carries, which is nothing, and the one guard that does not work.
+icon: Ship
+---
+
+`registerTab` is safe to call unguarded. A release build installs no debugger dispatcher, so nothing
+connects, your component is never rendered, and its effects never run. All the call costs is an entry
+in an array.
+
+## Keeping the tabs out of the bundle
+
+Put the calls in a module of their own and pull it in behind `__DEV__`:
+
+```tsx title="app/_layout.tsx"
+if (__DEV__) require("../devtools");
+```
+
+Metro replaces `__DEV__` with `false` and folds the dead branch away *before* it collects
+dependencies, so that module and everything it imports is left out of the bundle entirely.
+
+<Callout type="warn">
+  It has to be a `require` rather than an `import`. An `import` is hoisted and runs whatever the
+  branch around it says.
+</Callout>
+
+## The Metro config
+
+The wrap costs a release bundle nothing either way. The only thing it adds to the config is
+`server.enhanceMiddleware`, which nothing but a dev server reads. It touches no transformer, no
+resolver and no serializer, so the bundle is the same with it as without.
+
+The config is also the one place that `__DEV__` guard does not work:
+
+```js title="metro.config.js"
+// This throws. `metro.config.js` runs in Node, where __DEV__ does not exist.
+if (!__DEV__) return config;
+```
+
+The global belongs to the app's bundle, while `metro.config.js` runs in Node. Metro reads the config
+when building for release too, so the package has to be installed then: keep it out of
+`devDependencies` if your release install skips those.

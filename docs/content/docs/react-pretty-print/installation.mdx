@@ -1,0 +1,53 @@
+---
+title: Installation
+description: One install, no native module, and the components you already have.
+icon: Download
+---
+
+```sh
+npm install @axonpack/react-pretty-print
+```
+
+React 18 or newer is the only peer dependency. There is no native module, so there is no
+`pod install` and no prebuild, and it runs in Expo Go.
+
+## On the web
+
+`domPrimitives` ships with the package, so there is nothing to write.
+
+```tsx
+import { CodeHighlight, JsonTree, XmlTree, domPrimitives } from '@axonpack/react-pretty-print';
+import { LIGHT_THEME } from '@axonpack/react-pretty-print/themes';
+
+const Example = () => (
+  <>
+    <JsonTree primitives={domPrimitives} value={response} theme={LIGHT_THEME} />
+    <XmlTree primitives={domPrimitives} source={feed} theme={LIGHT_THEME} />
+    <CodeHighlight primitives={domPrimitives} code={src} language="typescript" theme={LIGHT_THEME} />
+  </>
+);
+```
+
+## On React Native
+
+React Native's own components satisfy the contract as they are.
+
+```tsx
+import { Pressable, Text, View } from 'react-native';
+import { JsonTree } from '@axonpack/react-pretty-print';
+
+const Example = () => <JsonTree primitives={{ View, Text, Pressable }} value={response} />;
+```
+
+<Callout type="warn">
+  Every shipped palette asks for `monospace`, which is an Android family name. iOS finds no font by
+  it and falls back to the proportional system font without warning. See
+  [Themes](/docs/react-pretty-print/themes) for the one-line override.
+</Callout>
+
+## Entry points
+
+| Import                                    | Holds                                                      |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| `@axonpack/react-pretty-print`            | The three renderers, `domPrimitives`, and every utility    |
+| `@axonpack/react-pretty-print/themes`     | The 130 palettes and the `PrettyPrintTheme` type           |

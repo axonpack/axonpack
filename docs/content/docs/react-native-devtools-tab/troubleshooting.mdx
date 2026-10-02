@@ -1,0 +1,59 @@
+---
+title: Troubleshooting
+description: Every failure prints something. This is what each one means.
+icon: Wrench
+---
+
+Every failure says so, either in Metro's output or in the DevTools console.
+
+## React Native DevTools was not found
+
+```
+[devtools] React Native DevTools was not found, so no tab is served.
+```
+
+The helper could not resolve `@react-native/debugger-frontend` from your project. A monorepo that
+hoists oddly is the usual cause, and `frontendPath` is the way out.
+
+Ask your project for the path. The package's entry point exports it as a string, so this prints it:
+
+```sh
+node -p "require('@react-native/debugger-frontend')"
+```
+
+Run that from your app's directory, and hand the result over:
+
+```js title="metro.config.js"
+module.exports = withReactNativeDevtoolsTab(getDefaultConfig(__dirname), {
+  frontendPath:
+    "/your/app/node_modules/@react-native/debugger-frontend/dist/third-party/front_end",
+});
+```
+
+Note how deep it sits. It is the directory the files are actually in, several levels below the
+package root, not the package root itself. `ls` it and you should see `rn_fusebox.html`, which is the
+page DevTools opens. If the `node -p` fails too, the package is genuinely not installed where your
+app can see it, and the fix is the install rather than this option.
+
+## Could not point the debugger shortcut at the tab
+
+```
+[devtools] could not point the debugger shortcut at the tab.
+```
+
+The frontend was found but `@react-native/dev-middleware` was not, so DevTools opens on its own route
+with no tab script in it. Two copies of that package in one install is the usual reason.
+
+## The app never installed its devtools dispatcher
+
+```
+[devtools] the app never installed its devtools dispatcher
+```
+
+Printed in the DevTools console after ten seconds of asking. The panel is up and the app is not
+answering, so either the app's bundle never pulled this package in, or it did so behind a `__DEV__`
+guard in a build where that is false.
+
+## Nothing printed at all
+
+Metro was not restarted after the config changed.

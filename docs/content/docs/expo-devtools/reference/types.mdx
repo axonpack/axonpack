@@ -1,0 +1,52 @@
+---
+title: Exported types
+description: Everything the package root exports as a type.
+---
+
+```ts
+import type { DevtoolsConfig, Palette } from '@axonpack/expo-devtools';
+```
+
+## Configuration
+
+`DevtoolsConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
+`DevtoolsStorageConfig`, `DevtoolsNavigationConfig`, `DevtoolsCrashConfig`, `DevtoolsProviderProps`,
+`DevtoolsPanelControls`, `DevtoolsWebViewProps`, `DevtoolsErrorBoundaryProps`.
+
+## Theming
+
+`BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`, `StatusBarStyle`.
+
+## Network
+
+`NetworkEntry`, `NetworkLogEntry`, `NetworkLogStatus`, `WebSocketLogEntry`,
+`ResolvedNetworkConditions`, `ThrottlePresetId`, `ThrottleProfile`, `UserAgentPresetId`.
+
+## Console
+
+`ConsoleLogEntry`, `ConsoleLogLevel`.
+
+## Performance
+
+`LongTaskEntry`, `MemorySample`, `StartupTiming`, `UserTimingEntry`, `MarkOptions`, `MeasureOptions`.
+
+## Storage
+
+`StorageAdapter`, `StorageAdapterConfig`, `StorageAdapterDefinition`, `StorageAdapterKind`,
+`StorageKeyBlacklist`, `StorageAdapterState`, `StorageEntry`, `StorageReadResult`, `StorageValueType`,
+`StoredValueKind`, `AsyncStorageLikeDriver`, `MmkvLikeDriver`, `SecureStoreLikeDriver`.
+
+## Navigation
+
+`NavigationMove`, `NavigationRoute`, `NavigationRouterKind`, `NavigationState`,
+`NavigationContainerRefLike`, `NavigationContainerLike`.
+
+## Crash
+
+`CrashRecord`, `CrashKind`, `CrashBreadcrumb`, `CrashBreadcrumbCategory`, `CrashDeviceInfo`,
+`CrashNativeDetail`, `CrashPopupDetail`.
+
+## Values, not types
+
+Alongside the factories and components, the package root also exports `formatCrashReport` and
+`formatCrashJson` for turning a `CrashRecord` into Markdown or JSON yourself.

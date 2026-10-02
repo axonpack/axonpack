@@ -1,0 +1,922 @@
+/*
+ * One stylesheet, no build step — the page changes a few times a year and does not earn a
+ * toolchain. Copy lives in `assets/content.json` and is rendered by the module script at the
+ * bottom, so editing the page's words never means editing markup.
+ *
+ * Dark-first, because the hero carries the page and a near-black band is what gives it weight.
+ * The accent stays the docs site's accent on purpose: the two must not read as different
+ * products.
+ */
+:root {
+  color-scheme: dark light;
+
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --bg: #08090c;
+  --bg-subtle: #0c0e13;
+  --surface: #10131a;
+  --surface-2: #151922;
+  --border: #1e232d;
+  --border-strong: #2c333f;
+  --text: #f6f7f9;
+  --text-secondary: #a5adba;
+  --text-tertiary: #6f7683;
+
+  --accent: #8ab4f8;
+  --accent-2: #a78bfa;
+  --accent-contrast: #08090c;
+  --accent-soft: rgba(138, 180, 248, 0.12);
+
+  --code-kw: #c792ea;
+  --code-str: #9ece6a;
+  --code-fn: #7aa2f7;
+  --code-com: #5c6370;
+
+  --radius-control: 8px;
+  --radius-surface: 14px;
+
+  --gutter: 24px;
+  --max-width: 1120px;
+  --measure: 660px;
+  --section-y: 120px;
+  --nav-height: 64px;
+  --transition:
+    color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease,
+    transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #ffffff;
+    --bg-subtle: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #f2f4f8;
+    --border: #e6e8ec;
+    --border-strong: #cdd2da;
+    --text: #0c0e12;
+    --text-secondary: #565d6b;
+    --text-tertiary: #8a919d;
+
+    --accent: #1a73e8;
+    --accent-2: #7c3aed;
+    --accent-contrast: #ffffff;
+    --accent-soft: rgba(26, 115, 232, 0.08);
+
+    --code-kw: #8250df;
+    --code-str: #0a7d38;
+    --code-fn: #0550ae;
+    --code-com: #8a919d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+a {
+  color: var(--accent);
+}
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.measure {
+  max-width: var(--measure);
+  margin-inline: auto;
+  text-align: center;
+}
+.icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sprite {
+  display: none;
+}
+/* Content arrives from JSON one frame after paint; don't flash empty scaffolding. */
+body:not([data-ready]) main,
+body:not([data-ready]) .nav__inner > * {
+  opacity: 0;
+}
+main,
+.nav__inner > * {
+  transition: opacity 0.35s ease;
+}
+
+/* ---------- nav ---------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  /* Opaque rather than blurred: the mega-menu panel hangs off this bar, and a translucent bar
+     behind a solid panel reads as two unrelated surfaces. */
+  background: var(--bg);
+  border-bottom: 0.5px solid transparent;
+  transition: border-color 0.15s ease;
+}
+/* The rule only appears once the page has moved, so at rest the hero runs straight into the bar. */
+.nav[data-scrolled="true"] {
+  border-bottom-color: var(--border);
+}
+.nav__inner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: var(--nav-height);
+}
+.nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-decoration: none;
+}
+.nav__brand picture {
+  display: flex;
+  flex: none;
+}
+.nav__brand img {
+  width: 26px;
+  height: 26px;
+}
+
+.nav__menu {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.nav__item {
+  position: relative;
+}
+.nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.nav__link:hover,
+.nav__link[aria-expanded="true"] {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.nav__link .chev {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.2;
+  color: var(--text-tertiary);
+  transition: transform 0.18s ease;
+}
+.nav__link[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+.nav__ext {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+  color: var(--text-tertiary);
+}
+
+.nav__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 1.75rem;
+  padding: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  box-shadow: 0 26px 60px -28px rgba(0, 0, 0, 0.55);
+}
+/* A class-level `display` beats the UA sheet's [hidden] rule, so the attribute alone would never
+   close these. Must stay below .nav__panel's own display. */
+.nav__panel[hidden] {
+  display: none;
+}
+/* Bridges the 10px gap above the panel. Without it, dragging the cursor from the trigger down to
+   the panel crosses hero background, which fires pointerleave on .nav and shuts the menu. */
+.nav__panel::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+.nav__group {
+  min-width: 190px;
+}
+.nav__group h3 {
+  margin: 0 0 0.4rem 0.6rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.nav__entry {
+  display: block;
+  padding: 0.5rem 0.6rem;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: var(--transition);
+}
+.nav__entry:hover {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.nav__entry small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+.nav__badge {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+}
+
+.nav__end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.nav__star {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding-inline: 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  /* Solid inverted chip, the same trick .btn uses: near-white on the dark theme, near-black on
+     light. With no border to hold its edge, a fixed #fff would vanish on the light page. */
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.nav__star:hover {
+  opacity: 0.85;
+}
+.nav__star .icon {
+  width: 15px;
+  height: 15px;
+}
+.nav__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+/* A class-level display beats the UA sheet's [hidden] rule — same trap as .nav__panel. */
+.nav__stars[hidden] {
+  display: none;
+}
+.nav__count {
+  font-variant-numeric: tabular-nums;
+}
+/* Needs to outrank `.nav__star .icon` above, so it is scoped just as deeply. */
+.nav__star .nav__star-icon {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+.nav__burger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.nav__burger:hover {
+  color: var(--text);
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding-inline: 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.9375rem;
+  font-weight: 550;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.btn .icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+}
+.btn:active {
+  transform: translateY(0);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.btn--outline {
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.btn--outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- hero ---------- */
+
+.hero {
+  position: relative;
+  padding-block: clamp(72px, 10vw, 140px) clamp(56px, 7vw, 96px);
+  isolation: isolate;
+  text-align: center;
+}
+/* The glow and the grid are the whole visual budget of the hero: two pseudo-elements, no images. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -30% 0 auto;
+  height: 780px;
+  z-index: -2;
+  background:
+    radial-gradient(46% 52% at 50% 34%, var(--accent-soft), transparent 70%),
+    radial-gradient(
+      34% 40% at 72% 18%,
+      color-mix(in srgb, var(--accent-2) 14%, transparent),
+      transparent 70%
+    );
+  pointer-events: none;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 620px;
+  z-index: -1;
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(60% 60% at 50% 0%, #000 0%, transparent 75%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+.eyebrow .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.hero h1 {
+  margin: 1.75rem 0 0;
+  font-size: clamp(2.5rem, 1.1rem + 5.2vw, 4.25rem);
+  line-height: 1.03;
+  letter-spacing: -0.04em;
+  font-weight: 640;
+  text-wrap: balance;
+}
+.hero h1 .accent {
+  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hero__lead {
+  margin: 1.5rem auto 0;
+  max-width: 36rem;
+  font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.1875rem);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 2.5rem;
+}
+
+/* ---------- install / terminal ---------- */
+
+.install {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  max-width: 100%;
+}
+.install code {
+  white-space: nowrap;
+  overflow-x: auto;
+  color: var(--text);
+}
+.install .prompt {
+  color: var(--text-tertiary);
+}
+.copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.copy:hover {
+  color: var(--accent);
+}
+.copy[data-copied] {
+  color: var(--code-str);
+}
+.copy .icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---------- stats ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: clamp(48px, 6vw, 72px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  overflow: hidden;
+}
+.stats li {
+  padding: 1.5rem 1rem;
+  border-left: 1px solid var(--border);
+  text-align: center;
+}
+.stats li:first-child {
+  border-left: 0;
+}
+.stats b {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 620;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.stats span {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+/* ---------- sections ---------- */
+
+.section {
+  padding-block: var(--section-y);
+}
+.section--tint {
+  background: var(--bg-subtle);
+  border-block: 1px solid var(--border);
+}
+.section h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 620;
+  text-wrap: balance;
+}
+.section__body {
+  margin: 1rem auto 0;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+/* The one shared card treatment: hairline border, a breath of gradient, lift on hover. */
+.card {
+  display: block;
+  padding: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 60%, transparent), transparent),
+    var(--surface);
+  color: inherit;
+  text-decoration: none;
+  text-align: left;
+  transition: var(--transition);
+}
+a.card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.5);
+}
+.pkgs {
+  display: grid;
+  gap: 1.25rem;
+  max-width: var(--measure);
+  margin: 3rem auto 0;
+}
+.pkg__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.pkg__name {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.pkg__version {
+  margin-left: auto;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+.pkg p {
+  margin: 0.9rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+.pkg__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1.1rem;
+}
+.pkg__tags span {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* ---------- code block ---------- */
+
+.code {
+  max-width: 760px;
+  margin: 3rem auto 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.6);
+  text-align: left;
+}
+.code__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.code__bar .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--text-tertiary);
+}
+.code__file {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.code__bar .copy {
+  margin-left: auto;
+  background: transparent;
+}
+.code pre {
+  margin: 0;
+  padding: 1.4rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.75;
+  tab-size: 2;
+}
+.code i {
+  font-style: normal;
+}
+.c-kw {
+  color: var(--code-kw);
+}
+.c-str {
+  color: var(--code-str);
+}
+.c-fn {
+  color: var(--code-fn);
+}
+.c-com {
+  color: var(--code-com);
+}
+.code__note {
+  margin: 1.25rem auto 0;
+  max-width: 760px;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* ---------- principles ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 3.5rem;
+}
+.grid .icon {
+  color: var(--accent);
+}
+.grid strong {
+  display: block;
+  margin: 1rem 0 0.45rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.grid p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+/* ---------- showcase ---------- */
+
+.shot {
+  position: relative;
+  margin: clamp(48px, 7vw, 80px) auto 0;
+  width: min(320px, 78vw);
+  isolation: isolate;
+}
+.shot::before {
+  content: "";
+  position: absolute;
+  inset: -12% -30%;
+  z-index: -1;
+  background: radial-gradient(50% 50% at 50% 45%, var(--accent-soft), transparent 70%);
+  pointer-events: none;
+}
+.shot img {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: 0 50px 90px -45px rgba(0, 0, 0, 0.7);
+}
+.shot figcaption {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+/* ---------- footer ---------- */
+
+footer {
+  border-top: 1px solid var(--border);
+  padding-block: 3.5rem 2.5rem;
+}
+.footer__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  gap: 40px;
+}
+.footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  margin-bottom: 0.85rem;
+}
+.footer__brand picture {
+  display: flex;
+  flex: none;
+}
+.footer__brand img {
+  width: 24px;
+  height: 24px;
+}
+.footer__blurb {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.footer__col h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.footer__col a {
+  display: block;
+  padding: 0.2rem 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+.footer__col a:hover {
+  color: var(--accent);
+}
+.footer__legal {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 900px) {
+  :root {
+    --gutter: 20px;
+    --section-y: 84px;
+  }
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stats li:nth-child(3) {
+    border-left: 0;
+  }
+  .stats li:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .footer__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+  .nav__burger {
+    display: inline-flex;
+  }
+  .nav__menu {
+    position: fixed;
+    inset: var(--nav-height) 0 auto;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    max-height: calc(100dvh - var(--nav-height));
+    overflow-y: auto;
+    padding: 0.5rem var(--gutter) 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  body[data-nav-open] {
+    overflow: hidden;
+  }
+  body[data-nav-open] .nav__menu {
+    display: flex;
+  }
+  .nav__item {
+    position: static;
+  }
+  .nav__link {
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    font-size: 1rem;
+  }
+  .nav__link:hover,
+  .nav__link[aria-expanded="true"] {
+    background: transparent;
+  }
+  .nav__panel::before {
+    display: none;
+  }
+  .nav__panel {
+    position: static;
+    translate: none;
+    display: block;
+    padding: 0 0 0.5rem 0.5rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .nav__group + .nav__group {
+    margin-top: 0.75rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hero__actions .btn {
+    justify-content: center;
+  }
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+  .btn:hover,
+  a.card:hover {
+    transform: none;
+  }
+}

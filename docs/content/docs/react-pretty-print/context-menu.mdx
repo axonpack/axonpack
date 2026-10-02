@@ -1,0 +1,47 @@
+---
+title: The context menu
+description: The package decides which actions apply. You render the popover.
+icon: MousePointerClick
+---
+
+The package computes which actions apply to a node and what each one does to the expansion state.
+You render the menu itself.
+
+It cannot ship one. A floating menu has to escape its scroll container, which needs a `Modal` on
+React Native and a portal or `position: fixed` on the DOM. React Native has no portal and the DOM has
+no modal, so there is no shared subset to write against.
+
+```tsx
+const [menu, setMenu] = useState<{ items: MenuItem[]; x: number; y: number } | null>(null);
+
+<JsonTree
+  primitives={{ View, Text, Pressable }}
+  value={response}
+  onCopy={Clipboard.setStringAsync}
+  onRequestMenu={(items, event) => {
+    const { pageX, pageY } = (event as GestureResponderEvent).nativeEvent;
+    setMenu({ items, x: pageX, y: pageY });
+  }}
+/>;
+```
+
+`MenuItem` is `{ label: string; onSelect: () => void; copyText?: string }`. Render the labels and
+call `onSelect` on press.
+
+A copy item also carries `copyText`, the text it copies. It is for a host that has to do the copying
+itself, somewhere `onSelect` does not run: a browser drawing the menu for a tree that lives on a
+device, for example, where the browser's clipboard is the one that matters.
+
+## Which items appear
+
+| Item                                          | When                                         |
+| --------------------------------------------- | -------------------------------------------- |
+| Copy value, Copy object                       | `onCopy` is set                              |
+| Expand, Collapse                              | The node is a container with children        |
+| Expand recursively, Collapse recursively      | The node is a container with children        |
+
+`onRequestMenu` is what enables the gesture, which is long-press on React Native and right-click on
+the web. Without it, no menu is requested.
+
+`event` is `unknown` because the package never reads it. Cast it at this one call site:
+`nativeEvent.pageX` on React Native, `clientX` on a DOM mouse event.
