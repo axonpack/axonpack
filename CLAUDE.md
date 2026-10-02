@@ -69,7 +69,7 @@ The landing page and the docs in one Next app, documented in `docs/README.md` ra
 
 - **Run `bun install` inside `docs/`**, not at this root. It is not a workspace member, so the root install, `format`, `lint`, `build` and `check-types` all skip it. `turbo run` will not list it, and that is correct, not a misconfiguration.
 - `docs` is in `.prettierignore`. It has its own formatting, and the root `format` task would rewrite the whole site in one diff.
-- **Nothing deploys it from this repo yet.** `docs/.github/workflows/deploy.yml` came over with the merge, but GitHub only runs workflows from the repo root. The live site at `https://axonpack.github.io` is still the old repo's deploy, so a change here is not live until hosting moves to Cloudflare Pages at `axonpack.dev` (`notes/cloudflare-hosting-plan.md`).
+- **Cloudflare Pages deploys it** to `https://axonpack.dev`, building `docs/` on every push to `main` and giving a PR that touches `docs/` its own preview. `docs/.github/workflows/deploy.yml` came over with the merge but never runs, since GitHub only runs workflows from the repo root. `axonpack.github.io` is now only a redirect to the new domain, because old links on npm point there forever.
 - There is no `basePath`; `/docs` is a real route segment in the app. The landing page's prose lives in `src/content.json`.
 
 ### Example app (run from `packages/@axonpack/expo-devtools/example`)

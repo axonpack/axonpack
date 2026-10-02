@@ -20,13 +20,13 @@ import {
  * Styled by class, with the rules in `renderer/renderer.css`, so the bar follows the panel's light
  * and dark instead of carrying colours picked in the app.
  */
-const HOME = "https://axonpack.github.io";
-const GUIDE = "https://axonpack.github.io/docs/react-native-devtools-tab";
+const HOME = "https://axonpack.dev";
+const GUIDE = "https://axonpack.dev/docs/react-native-devtools-tab";
 
 const LINKS = [
   { label: "Read the docs", href: GUIDE },
   { label: "Changelog", href: `${GUIDE}/changelog` },
-  { label: "Other libraries", href: "https://axonpack.github.io/docs" },
+  { label: "Other libraries", href: "https://axonpack.dev/docs" },
   { label: "GitHub", href: "https://github.com/axonpack/axonpack" },
 ];
 

@@ -7,7 +7,7 @@
 Axonpack ends the guesswork when things break. Answers you and your agent can both read: every
 request, error, log and stored value, captured on the device and copied out as structured JSON.
 
-**[Documentation](https://axonpack.github.io/docs)** · [Board](https://github.com/orgs/axonpack/projects/1)
+**[Documentation](https://axonpack.dev/docs)** · [Board](https://github.com/orgs/axonpack/projects/1)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Conventional Commits](https://img.shields.io/badge/commits-conventional-fe5196.svg)](https://www.conventionalcommits.org)
@@ -37,11 +37,11 @@ request, error, log and stored value, captured on the device and copied out as s
 Each package is published to npm and versioned independently. Nothing here depends on anything else
 here, so you install only what you need.
 
-| Package                                                                                                                                                       | Description                                                                                                 | Version                                                                                                                                           | Downloads                                                                                                                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools)<br/>[Docs](https://axonpack.github.io/docs/expo-devtools)                                     | On-device network, console, performance, storage and crash devtools for React Native and Expo               | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)                         | [![downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)                         |
-| [`@axonpack/react-native-devtools-tab`](./packages/@axonpack/react-native-devtools-tab)<br/>[Docs](https://axonpack.github.io/docs/react-native-devtools-tab) | Your own tab in React Native DevTools, drawn from a component that runs in the app                          | [![npm](https://img.shields.io/npm/v/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) |
-| [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print)<br/>[Docs](https://axonpack.github.io/docs/react-pretty-print)                      | Collapsible JSON and XML trees and a syntax highlighter, for React and React Native from one implementation | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               |
+| Package                                                                                                                                                 | Description                                                                                                 | Version                                                                                                                                           | Downloads                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools)<br/>[Docs](https://axonpack.dev/docs/expo-devtools)                                     | On-device network, console, performance, storage and crash devtools for React Native and Expo               | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)                         | [![downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)                         |
+| [`@axonpack/react-native-devtools-tab`](./packages/@axonpack/react-native-devtools-tab)<br/>[Docs](https://axonpack.dev/docs/react-native-devtools-tab) | Your own tab in React Native DevTools, drawn from a component that runs in the app                          | [![npm](https://img.shields.io/npm/v/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) |
+| [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print)<br/>[Docs](https://axonpack.dev/docs/react-pretty-print)                      | Collapsible JSON and XML trees and a syntax highlighter, for React and React Native from one implementation | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               |
 
 ### @axonpack/expo-devtools
 
@@ -65,7 +65,7 @@ export default function App() {
 }
 ```
 
-[Installation](https://axonpack.github.io/docs/expo-devtools/installation) · [Quick start](https://axonpack.github.io/docs/expo-devtools/quick-start) · [Production](https://axonpack.github.io/docs/expo-devtools/production) · [Changelog](https://axonpack.github.io/docs/expo-devtools/changelog)
+[Installation](https://axonpack.dev/docs/expo-devtools/installation) · [Quick start](https://axonpack.dev/docs/expo-devtools/quick-start) · [Production](https://axonpack.dev/docs/expo-devtools/production) · [Changelog](https://axonpack.dev/docs/expo-devtools/changelog)
 
 ### @axonpack/react-native-devtools-tab
 
@@ -89,7 +89,7 @@ function Session() {
 ReactNativeDevtoolsPanel.registerTab({ name: "Session", component: Session });
 ```
 
-[Installation](https://axonpack.github.io/docs/react-native-devtools-tab/installation) · [Quick start](https://axonpack.github.io/docs/react-native-devtools-tab/quick-start) · [Production](https://axonpack.github.io/docs/react-native-devtools-tab/production) · [Changelog](https://axonpack.github.io/docs/react-native-devtools-tab/changelog)
+[Installation](https://axonpack.dev/docs/react-native-devtools-tab/installation) · [Quick start](https://axonpack.dev/docs/react-native-devtools-tab/quick-start) · [Production](https://axonpack.dev/docs/react-native-devtools-tab/production) · [Changelog](https://axonpack.dev/docs/react-native-devtools-tab/changelog)
 
 ### @axonpack/react-pretty-print
 
@@ -110,7 +110,7 @@ import { LIGHT_THEME } from "@axonpack/react-pretty-print/themes";
 <JsonTree primitives={domPrimitives} value={response} theme={LIGHT_THEME} />;
 ```
 
-[JSON tree](https://axonpack.github.io/docs/react-pretty-print/json-tree) · [Primitives](https://axonpack.github.io/docs/react-pretty-print/primitives) · [Reference](https://axonpack.github.io/docs/react-pretty-print/reference)
+[JSON tree](https://axonpack.dev/docs/react-pretty-print/json-tree) · [Primitives](https://axonpack.dev/docs/react-pretty-print/primitives) · [Reference](https://axonpack.dev/docs/react-pretty-print/reference)
 
 ## Repository layout
 

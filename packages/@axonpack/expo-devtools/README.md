@@ -11,7 +11,7 @@ throttling), **Console** (every log, plus a prompt that answers), **Performance*
 the moments the app froze), **Storage** (every key you've saved), **Crashes** and **Debug**. No desktop
 debugger, no cable, and nothing captured unless you switch it on.
 
-**[Documentation](https://axonpack.github.io/docs/expo-devtools)** · [Quick start](https://axonpack.github.io/docs/expo-devtools/quick-start) · [Reference](https://axonpack.github.io/docs/expo-devtools/reference) · [Upgrading](https://axonpack.github.io/docs/expo-devtools/upgrading) · [Changelog](https://axonpack.github.io/docs/expo-devtools/changelog)
+**[Documentation](https://axonpack.dev/docs/expo-devtools)** · [Quick start](https://axonpack.dev/docs/expo-devtools/quick-start) · [Reference](https://axonpack.dev/docs/expo-devtools/reference) · [Upgrading](https://axonpack.dev/docs/expo-devtools/upgrading) · [Changelog](https://axonpack.dev/docs/expo-devtools/changelog)
 
 [![npm version](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
 [![npm downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)
@@ -78,16 +78,16 @@ this package depends on no storage library and cannot discover one.
 
 Everything else is on the docs site.
 
-| Page                                                                                         | What is on it                                                          |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [Quick start](https://axonpack.github.io/docs/expo-devtools/quick-start)                     | Setup for Expo Router or your own entry point, and the launcher button |
-| [Guides](https://axonpack.github.io/docs/expo-devtools)                                      | One page per tab, each ending in what it cannot measure and why        |
-| [In-app browsers](https://axonpack.github.io/docs/expo-devtools/in-app-browsers)             | Capturing a `<WebView />`'s requests and logs                          |
-| [React Native DevTools](https://axonpack.github.io/docs/expo-devtools/react-native-devtools) | The Network tab on your computer, with the sandbox and code snippets   |
-| [Leaving it in production](https://axonpack.github.io/docs/expo-devtools/production)         | What `enabled: false` does, and the two things that still run          |
-| [Reference](https://axonpack.github.io/docs/expo-devtools/reference)                         | Every control, every config option, every exported type                |
-| [Upgrading](https://axonpack.github.io/docs/expo-devtools/upgrading)                         | What moved where in 3.0, coming from 2.x                               |
-| [Changelog](https://axonpack.github.io/docs/expo-devtools/changelog)                         | Every published release, also in [`CHANGELOG.md`](./CHANGELOG.md)      |
+| Page                                                                                   | What is on it                                                          |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [Quick start](https://axonpack.dev/docs/expo-devtools/quick-start)                     | Setup for Expo Router or your own entry point, and the launcher button |
+| [Guides](https://axonpack.dev/docs/expo-devtools)                                      | One page per tab, each ending in what it cannot measure and why        |
+| [In-app browsers](https://axonpack.dev/docs/expo-devtools/in-app-browsers)             | Capturing a `<WebView />`'s requests and logs                          |
+| [React Native DevTools](https://axonpack.dev/docs/expo-devtools/react-native-devtools) | The Network tab on your computer, with the sandbox and code snippets   |
+| [Leaving it in production](https://axonpack.dev/docs/expo-devtools/production)         | What `enabled: false` does, and the two things that still run          |
+| [Reference](https://axonpack.dev/docs/expo-devtools/reference)                         | Every control, every config option, every exported type                |
+| [Upgrading](https://axonpack.dev/docs/expo-devtools/upgrading)                         | What moved where in 3.0, coming from 2.x                               |
+| [Changelog](https://axonpack.dev/docs/expo-devtools/changelog)                         | Every published release, also in [`CHANGELOG.md`](./CHANGELOG.md)      |
 
 The same reference ships inside this package as [`REFERENCE.md`](./REFERENCE.md), for reading offline.
 
