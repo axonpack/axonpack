@@ -1,5 +1,15 @@
 # @axonpack/expo-devtools
 
+## 3.4.1
+
+### Patch Changes
+
+- 7b21efb: - **Docs on axonpack.dev**: the README, reference and npm homepage link to the docs at axonpack.dev
+- Updated dependencies [7b21efb]
+- Updated dependencies [7b21efb]
+  - @axonpack/react-native-devtools-tab@0.1.3
+  - @axonpack/react-pretty-print@0.1.2
+
 ## 3.4.0
 
 ### Minor Changes
