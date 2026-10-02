@@ -1,0 +1,382 @@
+---
+title: React Native DevTools tab
+description: "Every control in the Axonpack tab on your computer: the bar, and the Network, Console, Performance, Storage, Crashes and Debug panels."
+---
+
+The tab reads the same stores as the panel on the device, so a filter, a sort, a setting or a rule
+changed here is changed there too, and the other way round. Setting it up is on [React Native
+DevTools](/docs/expo-devtools/react-native-devtools).
+
+## The bar
+
+| Item                | What it does                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Axonpack** mark   | Hover it for what the tab is, with links to the docs, the changelog, the other libraries and GitHub.                  |
+| Tabs                | One per panel. Console carries its error and crash count, Crashes its unread count. Press and hold a tab to pick it up, then drag it to a new place. |
+| »                   | Appears when the tabs do not fit, and lists the ones that were left out.                                              |
+| Palette             | The app's themes. A theme picked here is the app's theme too.                                                          |
+| **Reload**          | Reloads the app, as `r` in Metro does.                                                                                 |
+| Refresh             | Draws the tab again without touching the app. It does not pick up code saved since; **Reload** does.                  |
+
+A tab with a dotted pattern across its top is one of this package's own. The order you drag them
+into lasts until the app reloads.
+
+## Network
+
+### Toolbar
+
+| Control          | What it does                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| Record           | Pauses and resumes capture. Red while recording.                                                              |
+| Clear            | Throws away the log.                                                                                          |
+| Sort arrow       | Flips the direction of the current sort. Its tooltip says what pressing it would give you.                    |
+| Filter           | Shows or hides the filter bar. Filled while any filter is on.                                                 |
+| Throttling       | `No throttling`, `Slow 3G`, `Fast 3G`, `Fast 4G`, `Offline`, `Custom`. The same profiles as the device's.     |
+| Export           | Downloads the rows the filters keep as JSON, the same file the device's Export shares.                        |
+| Settings (gear)  | Shows or hides the settings pane.                                                                             |
+
+### Filter bar
+
+| Control                | What it does                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Filter                 | Matches method, URL, status code and source. Match case, match whole word and regular expression sit inside the box, with a clear ✕. |
+| **Invert**             | Shows everything the search does not match.                                                                                          |
+| Clear all filters      | Resets every filter, and the window picked on the overview.                                                                          |
+| **More filters**       | Opens the menu below. A count on it says how many of those are on.                                                                   |
+| Types                  | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`. Fetch/XHR is every request sent through `fetch` or `XMLHttpRequest`; the others go by the response's MIME type. |
+
+#### More filters
+
+| Item                            | What it does                                                               |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| Hide data URLs                  | Drops requests whose URL starts with `data:`.                              |
+| Hide failed requests            | Drops requests that errored.                                               |
+| Only requests in flight         | Keeps the ones that have not finished.                                     |
+| Blocked or overridden requests  | Keeps the ones a rule of yours answered.                                   |
+| Status                          | An expression: `404`, `4xx`, `>= 400`, `200-299`, `failed`, `pending`.     |
+| Larger than, Smaller than       | A size, with a unit or without: `20kb`, `2mb`.                             |
+| Slower than, Faster than        | A duration: `500ms`, `2s`.                                                 |
+| Methods                         | One per method captured. More than one can be on.                          |
+| Sources                         | One per source seen. More than one can be on.                              |
+
+A field that cannot be read turns red and filters nothing.
+
+### Settings
+
+| Setting               | What it does                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| Big request rows      | Taller rows, each cell with its second line: the status text, what the app was handed, and the time to the first byte. The tab's own setting, apart from the device's. |
+| Group by fetch client | Groups the rows under a header per source, with a count.                                              |
+| Overview              | Shows the overview strip above the table.                                                              |
+| Stack header values   | In Headers, puts each value under its name. The tab's own setting, apart from the device's.           |
+| Sort by               | Time, size, duration or status, and the direction.                                                    |
+| User agent            | `Default`, `iPhone Safari`, `Android Chrome`, `Chrome (macOS)`, `Chrome (Windows)`, `Googlebot`, `Custom`. |
+| Custom throttling     | Download (kbps), Upload (kbps) and Latency (ms): what the `Custom` throttle means.                     |
+
+### Overview
+
+Each request is a bar across time, green while it waits for the first byte and blue while the body
+comes in. Drag across it to keep only the requests that started in that window, drag a handle to move
+one edge, and double-click to let go. The window is the same one the device's overview picks.
+
+### The table
+
+| Column | What it shows                                                                      |
+| ------ | ---------------------------------------------------------------------------------- |
+| Name   | The last part of the path and the query, with an icon for the kind of response.   |
+| Method | The HTTP method.                                                                   |
+| Status | The code, with big rows its text under it, or `(pending)`, `(canceled)` or `(failed)`. |
+| Source | The client that sent it: `fetch`, `xhr`, `expo/fetch`, a WebView and so on.       |
+| Size   | What crossed the wire, and with big rows, what the app was handed under it.       |
+| Time   | How long it took, and with big rows, the time to the first byte under it.         |
+
+Click **Status**, **Size** or **Time** to sort by it, and again to flip the direction. Drag the line
+between two headers to resize a column. A failed request is drawn in red. Hovering a cell shows both
+of its lines, whatever the row size.
+
+Under the table, the status line counts the requests, what was transferred and when the last one
+finished. While a filter is on, each figure reads *shown / all*.
+
+Click a row to open it in the request pane. Right-click a row for its menu.
+
+### Request pane
+
+It opens beside the table, and the table narrows to its Name column. Drag the line between them to
+change the split. ✕ closes it.
+
+| Tab         | What it shows                                                                          |
+| ----------- | -------------------------------------------------------------------------------------- |
+| Headers     | Network conditions when any were on, then General, Response Headers and Request Headers. |
+| Payload     | The request body as fields, or as a JSON tree. Uploaded files by name and size.        |
+| Preview     | An image, a page, an SVG, JSON or XML as a tree, or the code, highlighted.             |
+| Response    | The body as it came. A binary body as a hex dump.                                      |
+| EventStream | A server-sent event stream's events, in place of Preview and Response.                 |
+| Timing      | The phases the platform measured, or the wait and the download.                        |
+| Cookies     | The cookies the request sent and the ones the response set.                            |
+| Initiator   | The code that made the request, with the source around the line.                       |
+| Messages    | For a socket, every message in both directions, in place of the others.                |
+
+The ⋮ at the end of the tab bar opens the request's menu.
+
+### The request menu
+
+Right-click on a row, or ⋮ in the request pane.
+
+| Item                         | What it does                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| **Try in sandbox**           | Opens the request in the sandbox, below.                                            |
+| Copy URL                     | To your computer's clipboard.                                                       |
+| Copy as cURL, fetch, Node.js | The request as a command, to your computer's clipboard.                             |
+| Copy request payload         | When the request had a body.                                                        |
+| Copy response                | When the response has a text body.                                                  |
+| **Save response body**       | Downloads the body as a file, named after the request.                              |
+| **Block this URL**           | Makes the app's requests to it fail. Once blocked, it reads **Stop blocking this URL**. |
+| **Override response…**       | Opens the override editor, below.                                                   |
+
+A copy shows **Copied**, or why it could not copy, at the foot of the tab.
+
+### Override editor
+
+Opens in the request pane, with ✕ to go back to the request.
+
+| Field        | What it is                                                                    |
+| ------------ | ----------------------------------------------------------------------------- |
+| Status       | The code to answer with. Anything that is not a status from 100 to 599 is 200. |
+| Content type | Sent as the response's `Content-Type`. Empty means `application/json`.        |
+| Body         | What the app gets back.                                                       |
+
+It starts from the rule the URL already has, or from what the server really answered. **Save**
+applies it to every request to that exact URL, **Remove** drops it, **Cancel** goes back. While a rule
+is on the request is not sent at all, so the endpoint does not have to exist.
+
+### Sandbox
+
+Opens in the request pane, with ✕ to go back to the request. The request is on the left and its
+response on the right; in a narrow pane they stack.
+
+| Part               | What it holds                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Address bar        | The method, coloured by verb, the URL without its query, a copy button, and **Send**.                                |
+| Authentication     | `none`, `bearer` (a token) or `api key` (a header name and a value). A secret is hidden until the eye shows it.       |
+| Network Conditions | Throttling, custom speeds and the user agent. The whole app's, not this request's.                                    |
+| Cookies            | Key and value rows, sent together as one `Cookie` header.                                                             |
+| Headers            | Key and value rows.                                                                                                   |
+| Query Parameters   | Key and value rows, added to the URL.                                                                                 |
+| Body               | The request body, with **Format JSON** when it is JSON that is not laid out yet. A GET or HEAD is sent without one.   |
+| Code Snippet       | The request as cURL, HTTPie, JavaScript fetch, axios, Node.js fetch, Python requests, Swift URLSession, Kotlin OkHttp or Go net/http, with a copy button. Folded to start with. |
+
+A table always ends with a blank row that becomes the next one as you type. A row's checkbox leaves it
+out of the request without deleting it.
+
+**Send** sends the request from the device, through the app's own `fetch`. The response then shows:
+
+| Part             | What it holds                                                                    |
+| ---------------- | -------------------------------------------------------------------------------- |
+| Head             | The time, the size and the status.                                               |
+| Cookies          | The cookies the response set.                                                    |
+| Request Headers  | The headers the request actually went with, auth and cookies included.          |
+| Response Headers | Every header that came back.                                                     |
+| Body             | Its content type, **Preview** as a JSON tree or **Raw** with line numbers, a copy button, and **Download**. |
+
+The sent request is also a row in the log, on both surfaces.
+
+## Console
+
+### Toolbar
+
+| Control | What it does                                                                     |
+| ------- | -------------------------------------------------------------------------------- |
+| Record  | Pauses and resumes capture. Red while recording. The same switch as the device's. |
+| Clear   | Throws away the log.                                                             |
+| Filter  | Shows or hides the filter bar. Filled while any filter is on.                    |
+| Counts  | At the far end: how many warnings, errors and crashes, when there are any.       |
+
+### Filter bar
+
+| Control | What it does                                                                                              |
+| ------- | --------------------------------------------------------------------------------------------------------- |
+| Filter  | Matches the text of each row. Match case, match whole word and regular expression sit inside the box, with a clear ✕. |
+| Level   | `All`, `Logs`, `Info`, `Warnings`, `Errors`, `Debug`, `Crashes`, each with its count. One at a time.        |
+| Source  | `All`, then one per source seen, such as a WebView. Shown once rows come from more than one source.       |
+
+### Rows
+
+Each row has its level's glyph, one cell per argument, then where it was logged as `file:line`, its
+source, a ×count when it repeated, the time and a copy button. An object or array is a tree, folded to
+start with. A command you ran is a row too: click it to put it back in the prompt.
+
+A crash is a card with its name, message, kind, **Previous launch** when it was read back at launch,
+its breadcrumb count and the time. **Open report** switches to Crashes with that report open.
+
+### Prompt
+
+The `>` field at the foot runs what you type in the app when you press Enter or ▶. Suggestions for
+the name you are typing sit above it; click one to use it. ✕ clears the field. The draft is the same
+one the device's prompt holds. It is there when `console.repl` is on.
+
+## Performance
+
+### Toolbar
+
+| Control  | What it does                                                                                    |
+| -------- | ----------------------------------------------------------------------------------------------- |
+| Record   | Starts and stops measuring. Red while recording. Off until you press it, as on the device.       |
+| Clear    | Throws away what was recorded.                                                                  |
+| Sections | `Statistics`, `User timing`, `Interactions`, `Long tasks`. A count follows each list that has entries. |
+
+### Statistics
+
+| Part              | What it shows                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| Frames per second | The JS and main thread rates now, and a chart of both over time.                           |
+| Interactions      | The slowest event to next paint, and the average.                                          |
+| Memory            | JS heap and app memory, each with its latest reading, peak and a chart, then device memory. |
+| Storage           | The device's disk: used, total and free. Android only.                                     |
+| Startup           | Process start to first render, in phases. Below it, or in its place, what the platform reported. |
+
+While nothing has been recorded and recording is off, the resources are replaced by what the tab
+collects and a **Start recording** button. Startup stays, since it is read at launch.
+
+### Lists
+
+| Section      | Columns                                                     |
+| ------------ | ----------------------------------------------------------- |
+| User timing  | Mark or measure, the name, its `detail`, the time and the duration. |
+| Interactions | The event, how long its handler ran, and the whole duration. |
+| Long tasks   | The task, when it happened and how long it took.            |
+
+Long tasks and interactions are coloured by how long they took, as on the device.
+
+## Storage
+
+### Toolbar
+
+| Control     | What it does                                                                                  |
+| ----------- | --------------------------------------------------------------------------------------------- |
+| Store       | The store on screen. A picker with each store's key count when more than one is registered.    |
+| Kind, Read  | Whether the store is sync or async, and when it was last read.                                 |
+| **Refresh** | Reads the store again.                                                                         |
+| **Add key** | Opens the add pane.                                                                            |
+| **Sync**    | Writes every pending change to the store, and says how many there are. **Discard** drops them. |
+| Filter      | Shows or hides the filter bar. Filled while any filter is on.                                  |
+| Export      | Downloads the keys the filters keep as a snapshot file.                                        |
+| **Import**  | Opens the import pane.                                                                         |
+
+Add key, Sync, Discard and Import are there only when the store was registered with a way to write.
+When some changes could not be written, the toolbar says how many, and their rows are marked.
+
+### Filter bar
+
+| Control           | What it does                                                                    |
+| ----------------- | ------------------------------------------------------------------------------- |
+| Filter            | Search, with match case, match whole word and regular expression.              |
+| **Invert**        | Inverts the search and the type filter.                                        |
+| Clear all filters | Resets every filter.                                                           |
+| Search in         | `Keys + values`, `Keys` or `Values`.                                           |
+| **More filters**  | Group by namespace, Hide empty values, JSON values only. A count says how many are on. |
+| Types             | `All`, then one per value type present, each with its count. Shown once there is more than one type. |
+
+### The table
+
+| Column | What it shows                                              |
+| ------ | ---------------------------------------------------------- |
+| Key    | The key, with an icon for its value type.                  |
+| Type   | What the value reads as: text, a number, JSON and so on.  |
+| Value  | The first line of the value.                               |
+| Size   | How big the value is.                                      |
+
+Click **Key**, **Type** or **Size** to sort, and again to flip the direction. Drag the line between two
+headers to resize a column. Right-click a row for Copy key, Copy value, Copy as JSON and, for JSON,
+Copy value (formatted).
+
+Double-click a value to edit it in place. Enter keeps the edit as a pending change, Escape drops it. A
+value with line breaks opens the Edit tab instead. The last row is empty: type a key, pick its type,
+give it a value and press **Add** or Enter to add it as a pending key. A pending key's × removes it.
+
+Under the table, the status line counts the keys, their total size, and names the largest.
+
+### Key pane
+
+Click a key to open it beside the table. ✕ closes it, and ⋮ has the copy items, plus **Delete key**
+for a store that can delete. Delete asks first, inside the pane.
+
+| Tab   | What it shows                                                                  |
+| ----- | ------------------------------------------------------------------------------ |
+| Value | JSON as a tree, anything else as text, with a copy button.                     |
+| Raw   | The value exactly as stored.                                                  |
+| Edit  | The value in a text box, with **Revert** and **Save**. Save writes straight away. |
+| Info  | The key, the store, how it is shown and stored, its size, when it was read, and whether it can be edited or deleted. |
+
+Value and Raw have a search box of their own that marks the matches.
+
+### Add and import
+
+**Add key** takes a name, a type the store can hold, and a value, then writes it when you press **Add
+key**.
+
+**Import** takes a snapshot pasted into its field, the same file Export writes. Before anything is
+written it counts what would be new, overwritten, already the same, and skipped. **Write** applies it, and carries the count of keys it will write.
+
+## Crashes
+
+### Toolbar
+
+| Control       | What it does                                                          |
+| ------------- | --------------------------------------------------------------------- |
+| Clear         | Throws away every report.                                             |
+| Mark all read | Clears the unread dots, here and on the device.                       |
+| Filter        | Shows or hides the filter bar. Filled while any filter is on.         |
+| Count         | How many reports, or *shown / all* while a filter is on.              |
+
+There is no record button: crashes are always kept.
+
+### Filter bar
+
+| Control | What it does                                                                                          |
+| ------- | ----------------------------------------------------------------------------------------------------- |
+| Filter  | Matches the name, message and stack. Match case, match whole word and regular expression sit inside the box. |
+| Kinds   | `Fatal JS error`, `JS error`, `Unhandled rejection`, `Render error`, `Native exception`, each shown once one has happened. More than one can be on. |
+
+### Rows
+
+Each report shows its name over its message, its kind, **Previous launch** when it was read back at
+launch, its breadcrumb count and the time. A dot marks one not yet read. Click it to open the report;
+that marks it read on both sides.
+
+### Report pane
+
+It opens beside the list. Drag the line between them to change the split. ✕ closes it. The report's
+title sits at the top with a copy button.
+
+| Tab         | What it shows                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| Summary     | The kind, name and message. Then when it was captured, the native exception and thread, the route, and the crash context. Then the source around the top frames, the stack, the component stack, the native frames, and the device, folded. |
+| Breadcrumbs | The console lines, requests and screen changes leading up to the crash, with their times.        |
+
+The stack is symbolicated through the dev server when the report opens.
+
+### The report menu
+
+⋮ at the end of the pane's tab bar.
+
+| Item                   | What it does                                    |
+| ---------------------- | ----------------------------------------------- |
+| Copy message           | The report's title, to your computer's clipboard. |
+| Copy stack             | When the report has one.                        |
+| Copy report (Markdown) | The whole report.                               |
+| Copy report (JSON)     | The whole record.                               |
+| Save report (Markdown) | Downloads it as a `.md` file.                   |
+| Save report (JSON)     | Downloads it as a `.json` file.                 |
+
+## Debug
+
+| Control    | What it does                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------ |
+| Thread     | `JavaScript` or `Main (UI)`. The same choice as the device's.                                    |
+| Duration   | `100ms`, `250ms`, `500ms`, `1s`, `3s`, or a custom number of milliseconds.                       |
+| **Block for** | Blocks the chosen thread for that long. The button names the duration.                       |
+| **Crash**  | Crashes the chosen thread. The first click arms it and reads **Click again to crash**.          |
+
+Blocking the JS thread freezes this panel as well, since the app's JavaScript draws it. The main thread
+needs a [development build](/docs/expo-devtools/reference/development-build); without one its buttons
+are off.

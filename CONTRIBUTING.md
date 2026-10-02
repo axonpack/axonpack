@@ -10,9 +10,6 @@ own tab in React Native DevTools. The devtools
 [notes](./packages/@axonpack/expo-devtools/notes/README.md) record what is built, area by area, and
 what is still open.
 
-The documentation site is its own repository, [`axonpack/axonpack.github.io`](https://github.com/axonpack/axonpack.github.io),
-mounted here as a submodule at `docs/`. A docs change is a commit there and a pointer bump here.
-
 Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
 
 ## Prerequisites

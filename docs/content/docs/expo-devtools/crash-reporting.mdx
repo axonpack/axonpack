@@ -1,0 +1,154 @@
+---
+title: Crash reporting
+description: JS errors, unhandled rejections, render errors and native exceptions, turned into a report you can read on the device.
+---
+
+The Crashes tab turns the errors that end a session, or nearly do, into a report you can read on the
+device. It is also the one subsystem here meant to survive into a release build.
+
+A report carries the message, the stack, the component stack where there is one, the route on screen
+when it broke, breadcrumbs and device details. You can copy it as Markdown or JSON, or share the whole
+thing. Past reports stay in a history with an unread count on the tab, and you can search them and
+filter them by kind.
+
+Every crash is also written into the [Console](/docs/expo-devtools/console) as a card, and tapping it
+opens the report. The same reports are on the Crashes panel of the Axonpack tab in
+[React Native DevTools](/docs/expo-devtools/react-native-devtools#crashes), where you can copy one or download
+it as a file.
+
+## The four tiers
+
+Which tier caught a crash decides how much it can say.
+
+| Tier                            | Where it comes from                                                                                             |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **JS errors**                   | The global `ErrorUtils` handler, *wrapped* rather than replaced, so LogBox, fatality and every other reporter live |
+| **Unhandled promise rejections** | The Hermes rejection tracker. React Native registers its own only in development                                |
+| **React render errors**         | The exported `<DevtoolsErrorBoundary />`. The only tier that produces a component stack                         |
+| **Uncaught native exceptions**  | The platform's uncaught-exception handler on each side, chained to whatever was installed before it              |
+
+## Reporting from a release build
+
+Crash capture has the only gate that is not `enabled`. Setting one flag installs the handlers even
+with the devtools off, so an app can keep its usual `enabled: __DEV__` and still report crashes from
+release:
+
+```ts title="devtools.ts"
+export const devtoolsConfig = {
+  enabled: __DEV__,
+  crash: { enableWhileDevtoolsDisabled: true },
+} satisfies DevtoolsConfig;
+```
+
+With the devtools off that captures **native exceptions only**, which are the crashes that end the
+app, and reports them in the compact sheet. With them on, the JS tiers install too and the full sheet takes
+over. It brings nothing else with it either way: no panel, no REPL, no console capture, no request
+bodies.
+
+The JS tiers are held back on purpose. They report errors the app survived, which is a developer's
+concern, and the sheet there is in front of somebody using the app. A fatal JS error still arrives,
+because React Native turns it into a native exception on its way to killing the process.
+
+<Callout type="info" title="Two sheets, and the wrong one in release is a real problem">
+  `popupDetail` defaults to `'auto'`, which picks between two sheets. With the devtools enabled you get
+  the full developer sheet: Summary and Breadcrumbs tabs, the stack, copy options and this package's
+  branding. With them disabled you get a compact notice: what broke, when, and Share report / Close.
+  Nothing on it names this package, and Share still sends the full record. Set it explicitly
+  for an internal build that ships the crash sheet but not the panel and still wants the stack on
+  screen.
+</Callout>
+
+If you ship crash reporting without the panel, mount the sheet yourself:
+
+```tsx
+import { CrashReportOverlay } from '@axonpack/expo-devtools';
+```
+
+`<DevtoolsProvider>` already mounts one, with the devtools on or off, and mounting both is harmless:
+whichever mounted first owns the sheet and the other draws nothing.
+
+## Catching render errors
+
+`<DevtoolsErrorBoundary />` is the only tier that produces a component stack, and it turns a white
+screen into a Try again button. That is why it is worth mounting even in a release build:
+
+```tsx
+import { DevtoolsErrorBoundary } from '@axonpack/expo-devtools';
+
+<DevtoolsErrorBoundary
+  fallback={(error, reset) => <MyErrorScreen error={error} onRetry={reset} />}
+  onError={(error, info) => report(error, info)}
+>
+  <Checkout />
+</DevtoolsErrorBoundary>;
+```
+
+`fallback` replaces the built-in screen and `reset` remounts the subtree that threw. A boundary around
+a subtree is the stronger tool wherever it fits, because unmounting that subtree actually discards the
+broken state rather than stepping over it.
+
+## The route and the breadcrumbs
+
+When the [Navigation tab](/docs/expo-devtools/navigation) has a navigator attached, a report caught
+in JavaScript carries the route on screen when it broke: its name, and its path when it has one. It
+shows on the Summary tab and in the copied report. A crash that ended the app has no route, because
+the native side writes that one down and it is read back at the next launch. A release build with the
+devtools off reports no route either, since nothing is watching the navigator there.
+
+Breadcrumbs are the recent console lines, requests and screen changes, newest first. A screen change
+in a nested container is prefixed with that container's name.
+
+## Attaching your own details
+
+```ts
+devtools.setCrashContext({ userId, flags });
+```
+
+Everything you pass is attached to every record from that point on. Each call replaces the last one
+rather than merging into it, and `null` clears it.
+
+To rewrite or drop a record before it is stored, handed to `onCrash` or written to disk, use `redact`:
+
+```tsx
+<DevtoolsProvider
+  config={{
+    crash: {
+      redact: (record) => (record.message.includes('token') ? null : record),
+      onCrash: (record) => myBackend.send(record),
+    },
+  }}>
+```
+
+## Decisions worth knowing
+
+- **A fatal JS error still ends the app.** The `ErrorUtils` handler is wrapped, not replaced: the
+  record is taken, then the error goes straight on to whatever was installed before it. React Native
+  then does what it always did. In a release build that means reporting it to the native side, which
+  is what ends the process, so the crash comes back at the next launch as the native exception it
+  became. In development the same handler draws the red box instead, and the app carries on. Every
+  other reporter you have installed, Sentry or Crashlytics or your own, sees the error too.
+- **What survives is the process, not necessarily the state.** The JavaScript thread was interrupted
+  part-way through, possibly mid-render, so component state, the native view tree and your own state
+  may afterwards disagree. This is why the report is put on screen rather than filed quietly.
+- **A crash that killed the app is reported at the next launch.** A dying process is written from
+  native, on the dying thread, into the app's own sandbox, and drained at the next launch. That is
+  also the proof the process died. Non-fatal records are not persisted: the app survived them, so
+  re-reporting one next launch would be a bug. `persistNonFatal` turns that on if you want it.
+- **Stacks are symbolicated by asking Metro**, the way LogBox does, and only when the trace itself came
+  from an http origin. A release build asks nobody.
+- **Breadcrumbs carry request URLs, screen changes and whatever the app logged**, which is a
+  different privacy proposition from a stack trace. They default to on; `crash: { breadcrumbs: false }`
+  turns them off.
+
+## Limits
+
+- **No backend.** Nothing is sent anywhere. `onCrash` is the hook if you want to send reports
+  yourself. Queueing and retry are yours to write.
+- **No grouping.** Duplicate crashes are one row each.
+
+## Next step
+
+<Cards>
+  <Card title="Provider reference" href="/docs/expo-devtools/reference/provider#crash" description="Every crash option and its default." />
+  <Card title="Leaving it in production" href="/docs/expo-devtools/production" description="What ships, and what stays dark." />
+</Cards>

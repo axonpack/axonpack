@@ -1,0 +1,69 @@
+---
+title: Themes
+description: 130 palettes, each a flat set of colour roles rather than a stylesheet.
+icon: Palette
+---
+
+```ts
+import { AZURE_DARK_VIVID_THEME, DARK_THEME } from '@axonpack/react-pretty-print/themes';
+import type { PrettyPrintTheme } from '@axonpack/react-pretty-print/themes';
+```
+
+A palette is never a stylesheet, so nothing has to be translated between platforms. They are a
+separate entry point on purpose: 130 palettes is about 52KB, and a project that only wants a
+renderer should not pull them into its module graph to find out it did not need them.
+
+## Tokens
+
+| Token                     | Paints                                                                      |
+| ------------------------- | --------------------------------------------------------------------------- |
+| `background`              | The surface the palette was designed against. No renderer draws it          |
+| `text`                    | Unclassified code text                                                      |
+| `key`                     | JSON keys, XML element names                                                |
+| `string`                  | Quoted strings, XML attribute values                                        |
+| `number`, `boolean`       | Literals. They share a colour in every shipped palette                      |
+| `null`                    | An absent value                                                             |
+| `punctuation`             | Braces, separators, collapsed-node previews                                 |
+| `toggle`                  | The expand arrow                                                            |
+| `keyword`                 | Language keywords                                                           |
+| `comment`                 | Comments                                                                    |
+| `accent`                  | Function names, CSS properties, attribute names                             |
+| `tag`                     | Markup tags, CSS selectors                                                  |
+| `matchHighlight`          | The band behind a search match, translucent so the text keeps its colour    |
+| `fontFamily`, `fontSize`  | Type. Monospace at 12 in every shipped palette                              |
+
+`background` is stated so you know what the palette was built against, but you own your container,
+so nothing draws it for you. Painting `2` and `true` differently is noise, which is why numbers and
+booleans share a colour.
+
+## The set
+
+`DARK_THEME` and `LIGHT_THEME` are the neutral pair the renderers default to, and the only two with
+no hue cast. The other 128 are named `<hue>_<mode>_<character>_THEME`: 16 hues, `dark` or `light`,
+and four characters, `muted`, `vivid`, `soft` and `crisp`.
+
+Every palette clears a WCAG contrast ratio against its own background: 4.5:1 for body text, 7:1 on
+`crisp`, and never below 3:1 for any token. Writing your own is a plain object.
+
+## The monospace font on React Native
+
+<Callout type="warn">
+  Every shipped palette says `fontFamily: 'monospace'`. That is right on the web and on Android and
+  wrong on iOS, which finds no font by that name and falls back to the proportional system font
+  with no warning. It stays invisible until something has to line up.
+</Callout>
+
+Nothing in the package can call `Platform.select`, because importing a platform is the one thing
+this design rules out. Override the token instead:
+
+```tsx
+import { Platform } from 'react-native';
+import { DARK_THEME } from '@axonpack/react-pretty-print/themes';
+
+const MONOSPACE = Platform.select({ ios: 'Menlo', default: 'monospace' });
+const theme = { ...DARK_THEME, fontFamily: MONOSPACE };
+```
+
+It has to be a single family name, not a CSS stack. React Native looks the string up verbatim, so
+`"Menlo, monospace"` matches nothing on either platform. `Menlo` ships with every iOS, and nothing
+on the DOM needs this.

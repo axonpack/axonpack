@@ -1,0 +1,63 @@
+---
+title: Themes
+description: The built-in theme ids, and all 25 palette tokens.
+---
+
+A theme patches a base rather than redefining everything:
+
+```tsx
+<DevtoolsProvider
+  config={{
+    defaultTheme: 'midnight',
+    themes: { midnight: { base: 'dark', colors: { accent: '#a78bfa' } } },
+  }}>
+```
+
+Built-in ids: `light`, `dark`, `dracula`, `nord`, `monokai`, `one-dark`, `solarized-light`. Reuse one as
+your own name and you replace it. A `defaultTheme` naming something unregistered is ignored rather than
+leaving the panel unstyled.
+
+The choice lives in memory for the session. Persisting it would mean taking a storage dependency for a
+colour scheme.
+
+## The 25 tokens of `Palette`
+
+| Group    | Tokens                                                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Surfaces | `background`, `toolbarBackground`, `toolbarOverlay`, `surface`, `sectionTint`, `border`                                      |
+| Chrome   | `toolbarText`, `toolbarTextActive`                                                                                           |
+| Text     | `textPrimary`, `textSecondary`                                                                                               |
+| Status   | `accent`, `pending`, `success`, `error`, `warning`, `errorSurface`, `warningSurface`                                         |
+| Search   | `matchHighlight`                                                                                                             |
+| Syntax   | `keyAccent`, `jsonKey`, `jsonString`, `jsonNumber`, `codeKeyword`, `codeComment`, `codeTag`                                  |
+
+Three of those are easy to mix up:
+
+- **`toolbarBackground`** is the panel's chrome, the header and tab bar, which also paint the area
+  behind the status bar. **`surface`** is anything raised off the panel *inside* a tab: a badge, a
+  card, a meter track, a code block, a group header. They are separate because several built-ins make
+  the chrome darker than the panel, and a badge filled with that colour reads as a hole rather than a
+  chip.
+- **`toolbarText`** and **`toolbarTextActive`** are the foreground on the chrome, the inactive and
+  active tab labels. They are not `textSecondary` and `accent`, because a theme is free to give the
+  header a different lightness from the panel and those two are picked for the panel. Leave them out
+  of a custom theme and they are worked out from `toolbarBackground`.
+
+## `statusBarStyle`
+
+A theme may also carry a `statusBarStyle` of `'light'` or `'dark'`, meaning the colour of the clock
+and icons, not of the bar itself:
+
+```ts
+themes: {
+  midnight: { base: 'dark', colors: { accent: '#a78bfa' }, statusBarStyle: 'light' },
+}
+```
+
+It is worked out from the theme's toolbar colour when you leave it out, and it is only read when the
+provider asks for it with [`statusBar="auto"`](/docs/expo-devtools/reference/provider#statusbar).
+
+<Callout type="info" title="Keep matchHighlight translucent">
+  It is the background painted behind text matching the current search. Every built-in palette sets it
+  to a translucent colour so syntax highlighting still reads through it.
+</Callout>

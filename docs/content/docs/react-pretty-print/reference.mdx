@@ -1,0 +1,49 @@
+---
+title: Reference
+description: Every export, so a caller that wants its own rendering can skip the components.
+icon: BookOpen
+---
+
+Everything the renderers use is exported. A caller that wants to render the parsed output itself can
+take it and leave the components alone.
+
+## Utilities
+
+| Export                   | Signature                                                      | Notes                                                          |
+| ------------------------ | -------------------------------------------------------------- | -------------------------------------------------------------- |
+| `detectLanguage`         | `(mimeType: string \| undefined, body: string) => Language`    | Reads the content type, then sniffs the body                   |
+| `tokenize`               | `(code: string, language: Language) => Token[]`                | Concatenating `text` returns the input unchanged               |
+| `formatCode`             | `(code: string, language: Language) => string`                 | Returns the input for a language it does not format            |
+| `parseXml`               | `(source: string) => { root } \| { error }`                    | Never throws                                                   |
+| `isExpandable`           | `(value: JsonValue) => boolean`                                | True for any object or array                                   |
+| `hasChildren`            | `(value: JsonValue) => boolean`                                | False for empty ones, which is why they get no toggle          |
+| `isPlainObject`          | `(value: JsonValue) => boolean`                                | `null` is not one                                              |
+| `buildPreview`           | `(value) => string`                                            | The summary a closed node shows                                |
+| `chunkArrayRange`        | `(length: number) => [number, number][]`                       | The bucket boundaries for a long array                         |
+| `collectExpandablePaths` | `(path: string, value: JsonValue) => string[]`                 | Every path under a node, for expanding a subtree               |
+| `collectMatchingPaths`   | `(path, value, matcher, rootLabel?) => Set<string>`            | The branches a search opens, and nothing else                  |
+| `collectMatchingXmlPaths` | `(root, path, matcher) => Set<string>`                        | The same for `XmlTree`                                         |
+| `formatCopyValue`        | `(value: JsonValue) => string`                                 | `JSON.stringify` at two spaces                                 |
+| `buildMatcher`           | `(query: SearchQuery) => Matcher \| null`                      | `null` for an empty query. See [Search](/docs/react-pretty-print/search) |
+| `findMatches`            | ranges over a string                                           | With `clipMatches`, `splitByMatches` and `testMatch`           |
+
+## Constants
+
+| Export                  | Value    | Meaning                                                        |
+| ----------------------- | -------- | -------------------------------------------------------------- |
+| `SUPPORTED_LANGUAGES`   | 38       | Sorted                                                         |
+| `MAX_HIGHLIGHT_LENGTH`  | `50_000` | Above this, `CodeHighlight` renders unhighlighted              |
+| `MAX_SEARCHABLE_LENGTH` | `50_000` | The point past which a string is not searched                  |
+| `ARRAY_CHUNK_SIZE`      | `10`     | Arrays longer than this are bucketed                           |
+| `DEFAULT_SEARCH_MODES`  | object   | `matchCase`, `wholeWord` and `regex`, all off                  |
+
+## Types
+
+From the root: `JsonValue`, `Language`, `Token`, `TokenType`, `MenuItem`, `Matcher`, `MatchRange`,
+`SearchModes`, `SearchQuery`, `TextSegment`, `Primitives`, `JsonTreeProps`, `XmlTreeProps`,
+`CodeHighlightProps`, `XmlNode`, `XmlElement`, `XmlText`, `XmlCData`, `XmlParseResult`.
+
+From `/themes`: `PrettyPrintTheme`.
+
+`TokenType` is one of `keyword`, `string`, `comment`, `number`, `function`, `tag`, `attr-name`,
+`attr-value`, `property`, `selector`, `punctuation`, `plain`.

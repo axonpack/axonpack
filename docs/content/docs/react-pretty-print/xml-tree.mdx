@@ -1,0 +1,32 @@
+---
+title: XmlTree
+description: A document as a tree, parsed in JavaScript so it works with no DOM.
+icon: FileCode
+---
+
+```tsx
+<XmlTree primitives={domPrimitives} source={feed} />
+```
+
+## Props
+
+| Prop         | Type               | Default      | What it does                                  |
+| ------------ | ------------------ | ------------ | --------------------------------------------- |
+| `primitives` | `Primitives`       | required     | See [Primitives](/docs/react-pretty-print/primitives) |
+| `source`     | `string`           | required     | The raw XML                                   |
+| `theme`      | `PrettyPrintTheme` | `DARK_THEME` | See [Themes](/docs/react-pretty-print/themes) |
+| `matcher`    | `Matcher`          | none         | See [Search](/docs/react-pretty-print/search) |
+
+Elements expand and collapse. Text and character data are leaves.
+
+## Things worth knowing
+
+- **It parses in JavaScript**, because React Native has no `DOMParser`.
+- **It never throws.** A document that will not parse renders a one-line reason instead, so keep the
+  raw text around to show beside it. `parseXml` returns either a root or an error for the same
+  reason.
+- **A match on an element's own name or attributes does not open it.** That says nothing about
+  whether its contents are worth unfolding, so it is painted where it sits. An element opens only
+  for a match inside it.
+
+Searching covers element names, attribute names, attribute values, text and character data.

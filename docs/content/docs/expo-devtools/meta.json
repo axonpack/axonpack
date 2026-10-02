@@ -1,0 +1,33 @@
+{
+  "title": "Expo Devtools",
+  "description": "On-device network, console, performance, storage, navigation and crash devtools",
+  "root": true,
+  "icon": "Bug",
+  "pages": [
+    "---Get started---",
+    "index",
+    "installation",
+    "compatibility",
+    "quick-start",
+    "---Guides---",
+    "network",
+    "console",
+    "performance",
+    "storage",
+    "navigation",
+    "crash-reporting",
+    "debug",
+    "themes",
+    "in-app-browsers",
+    "react-native-devtools",
+    "---Shipping---",
+    "production",
+    "example-app",
+    "---Reference---",
+    "reference",
+    "---Releases---",
+    "upgrading",
+    "changelog"
+  ],
+  "defaultOpen": true
+}

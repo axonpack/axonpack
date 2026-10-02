@@ -1,0 +1,256 @@
+---
+title: Network tab
+description: Toolbar, filters, settings, throttle profiles, the request row, sockets, overrides, the detail sheet and the sandbox.
+---
+
+Four capture paths feed one list:
+
+| Path                       | What it catches                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `fetch`                    | Including Expo's own native fetch, which does not route through `XMLHttpRequest`.                    |
+| `XMLHttpRequest`           | Which is what catches axios and most HTTP client libraries.                                          |
+| `react-native-nitro-fetch` | A JSI client no patch can reach. Read through the observer it publishes, so throttling never applies to it. |
+| A wired-up `<WebView />`   | A page runs in its own engine, invisible to the three above. See [In-app browsers](/docs/expo-devtools/in-app-browsers). |
+
+WebSocket connections and server-sent event streams share the same list. It holds the **1,000**
+most recent requests and, apart from them, the 1,000 most recent sockets. Older ones fall off the end. Request and response bodies are kept in full, never
+truncated, unless [redaction](/docs/expo-devtools/network#redaction) rewrites them first.
+
+## Toolbar
+
+| Control           | What it does                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Record / Clear    | As on [the panel](/docs/expo-devtools/reference/panel#toolbar-row).                                                                 |
+| Sort (↑ / ↓)      | Flips the direction of whatever **Sort by** is set to. Its label says what pressing it would give you.                |
+| Filter (⌕ list)   | Opens the filters panel below.                                                                                        |
+| Export (⤓)        | Opens the OS share sheet with the **currently filtered** list as JSON, named `network-log-<timestamp>.json`.          |
+| Settings (⚙)      | Opens the settings panel below.                                                                                       |
+
+## Filters panel
+
+| Field                        | What it does                                                                                                    |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Count                        | How many rows the filters leave, out of how many are captured.                                                  |
+| **Invert** chip              | Shows everything the filters would hide. See the note below the table.                                          |
+| **Clear**                    | Resets every filter at once. Dimmed while none is set.                                                          |
+| Search box                   | Matches method, URL, status code and source, not header or body text. Carries **match case**, **whole word** and **regex** switches. Clear it with the ✕ inside the box. |
+| **Type** chips               | `All`, `Fetch/XHR`, `JS`, `Img`, `Media`, `Other`. Fetch/XHR is every request sent through `fetch` or `XMLHttpRequest`, whatever came back; the others go by the response's MIME type. |
+| **Status** chips             | `All` plus one per band captured (`2xx`, `4xx`, `Failed`, `Pending`). Each one writes the field below.          |
+| Status expression            | `404`, `4xx`, `>= 400`, `200-299`, `failed`, `pending`. Unreadable text turns the field red and filters nothing. |
+| **Method** chips             | One per method actually captured (`GET`, `POST`, …), and more than one can be on at once. `All` clears them.    |
+| **Source** chips             | One per source seen (your app, or `WebView::[name]` per wired-up WebView), and again multi-select.           |
+| More filters ▸               | Reveals the rest, below.                                                                                        |
+| Size: at least / at most     | Bytes, or with a unit: `500`, `20kb`, `1.5mb`.                                                                  |
+| Duration: at least / at most | Milliseconds, or with a unit: `250`, `800ms`, `1.5s`, `2min`.                                                   |
+| Only requests in flight      | Keeps just the ones that have not finished.                                                                     |
+| Only overridden or blocked   | Keeps just the ones a rule of yours answered.                                                                   |
+| Hide data URLs               | Drops requests whose URL starts with `data:`.                                                                   |
+| Hide failed requests         | Drops requests that errored (network failures, not 4xx/5xx responses).                                          |
+
+Every filter combines with the search. **Invert** negates all of them together except the two `Hide`
+switches, which stay absolute. Inverting those would bring back the exact noise they suppress. A filter
+an entry has no figure for excludes it: a socket has no size or status code, and a request in flight has
+no duration yet. A type, status or **Only overridden or blocked** filter leaves sockets out for the same
+reason.
+
+## Settings panel
+
+| Setting               | Default        | What it does                                                                                              |
+| --------------------- | -------------- | ----------------------------------------------------------------------------------------------------------- |
+| Large request rows    | On             | Off gives compact rows: no short name, no badges, URL as the primary line.                                |
+| **Sort by**           | Time           | `Time`, `Size`, `Duration`, `Status`, plus the direction the toolbar's arrow also flips.                  |
+| Group by fetch client | Off            | Groups rows under a header per source, with a count per group.                                            |
+| Show overview         | Off            | Shows the traffic graph above the list.                                                                   |
+| Stack header values   | On below 768dp | In the detail sheet, puts each header's value under its name instead of beside it.                        |
+| **Throttling**        | No throttling  | `No throttling`, `Slow 3G`, `Fast 3G`, `Fast 4G`, `Offline`, `Custom`.                                    |
+| **User agent**        | Default        | `Default`, `iPhone Safari`, `Android Chrome`, `Chrome (macOS)`, `Chrome (Windows)`, `Googlebot`, `Custom`. |
+
+### Throttle profiles
+
+Applied to your app's own requests and to wired-up WebView pages.
+
+| Preset  | Download                 | Upload                 | Latency                   |
+| ------- | ------------------------ | ---------------------- | ------------------------- |
+| Slow 3G | 400 kbps                 | 400 kbps               | 2000 ms                   |
+| Fast 3G | 1638 kbps                | 768 kbps               | 563 ms                    |
+| Fast 4G | 9000 kbps                | 3000 kbps              | 85 ms                     |
+| Offline | none                     | none                   | requests fail immediately |
+| Custom  | your **Download (kbps)** | your **Upload (kbps)** | your **Latency (ms)**     |
+
+Custom starts at 750 kbps down, 375 kbps up and 500 ms.
+
+Picking **Custom** under User agent reveals a free-text field for the whole UA string. Every captured
+request records the conditions it ran under, so the detail sheet can show them later.
+
+## Overview strip
+
+Shown when **Show overview** is on, and only once at least one request is captured.
+
+- 36 buckets spanning the oldest to the newest captured request; bar height is request count.
+- A bucket containing a failed request is drawn in the error colour.
+- Tap a bucket to narrow the list to that slice of time; tap it again to clear.
+- The row underneath shows the first timestamp, the total span (or the selected range), and the last
+  timestamp.
+
+## A request row
+
+| Element         | Meaning                                                                                     |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| Method          | Colour-coded per verb.                                                                      |
+| Status          | The HTTP code, or the error text. In flight it shows in amber how far the body has got (`↓ 45%`, or bytes when no length was declared), **PENDING** before anything arrived, and **STREAM** for an open event stream. |
+| Duration · time | Total ms and the wall-clock start. A dash until it finishes.                                |
+| Type icon       | Per response kind; JSON gets its own glyph.                                                 |
+| Name            | Last path segment plus the query string (large rows only).                                  |
+| URL             | Full URL, one line on large rows, two on compact.                                           |
+| Badges          | Resource type · source (only when it came from a WebView) · response size, or the event count for a stream (large rows only). **Blocked here** or **Overridden here** when a rule answered it. |
+| ⋮               | The copy menu, also on long-press anywhere in the row.                                      |
+
+The row menu: **Try in sandbox**, then **Copy URL**, **Copy as cURL**, **Copy as fetch**, **Copy as fetch (Node.js)**, then
+**Copy request payload** and **Copy response** when those exist, **Share response body** when there is
+a body at all (the only way to get an image or a PDF out), then **Block this URL** and **Override
+response…**. The sheet's own menu is the same list without **Override response…**, since that editor
+opens from the list.
+
+## A socket row
+
+A WebSocket is a row in the same list, so the search, the grouping and the sort all reach it. It is
+not a request, and the row says so.
+
+| Element | Meaning                                                                                                              |
+| ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Method  | Always `WS`. A socket has no HTTP method, but the list and the method filter both read this field, so it carries one. |
+| Status  | `CONNECTING`, `OPEN`, `CLOSING`, `CLOSED` or `ERROR`, coloured by lifecycle. A socket has no status code for colour to carry. |
+| Time    | When the connection opened.                                                                                          |
+| Name    | Last path segment plus the query string, two lines on large rows, one on compact.                                    |
+| Badges  | Frame count, the close code once there is one, and the error text if it failed (large rows only).                    |
+
+Tapping one opens the **message log** rather than the request sheet: the URL, badges for status,
+frame count, negotiated subprotocols and close code or reason, then one row per frame. A socket
+keeps its last **1,000** frames, and the log shows all of them. Each frame
+shows its direction (▲ sent, ▼ received), its payload, `BIN` for a binary frame, and the time. It
+keeps filling while you read it, because the socket is still open.
+
+Turn socket capture off with `network: { websocket: false }`.
+
+## Overrides
+
+Two items on a row's ⋮ menu answer a request instead of the network.
+
+| Item                    | What it does                                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Block this URL**      | Every later request to that exact URL fails before it leaves. Becomes **Stop blocking this URL**.        |
+| **Override response…**  | Opens an editor for the status, content type and body that URL should answer with from now on.           |
+
+The editor is seeded from what was actually captured, so overriding a response means editing the real
+one rather than retyping it. Reopening it on a URL that already has a rule loads that rule instead. A
+status that is not a number between 100 and 599 is saved as 200.
+
+Rules are keyed by the **whole URL**, never a pattern: a rule that matched more than you meant is a
+request you cannot explain, and the row a rule is made from always knows its exact URL. A row a rule
+answered is badged **Blocked here** or **Overridden here** in the list, so it can never be mistaken
+for one of the server's own replies, and the filter panel's **Only overridden or blocked** narrows to
+exactly those.
+
+Rules live in memory for the session. There is no config option for them and nothing is persisted.
+
+## Detail sheet
+
+Tapping a row opens a sheet of tabs. It always opens on **Headers**. **Payload** is
+only offered when the request had a body, **Initiator** only when a call stack was captured, and a
+stream swaps **Preview** and **Response** for **Events**.
+
+On Payload, Preview (for text) and Response, a search box sits above the body, with the same match
+case, whole word and regex switches as the list's. A body over 50,000 characters is too large to
+search, and the sheet says so.
+
+### Headers
+
+| Section            | Fields                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Network Conditions | Throttling, User Agent, and Agent String when an override was active. Amber when throttled, red when offline. Shown when the request recorded its conditions. |
+| General            | Request URL, Request Method, Status Code, Source (only for WebView traffic), Size (transferred and decoded when the response was compressed). |
+| Request Headers    | Every header sent, with a per-value copy button. Count in the section header.                                |
+| Response Headers   | Every header received, same treatment.                                                                       |
+
+### The other seven
+
+- **Payload**: the request body. JSON is an explorable tree, with **View source** to see the raw
+  text; anything else is shown as text. A form upload lists each field, and each file by name, type
+  and size. Hidden entirely when the request had no body.
+- **Preview**: the response rendered: pretty-printed and syntax-coloured JSON, a real image for image
+  responses, HTML as HTML, XML as a collapsible tree. Falls back to `No preview available`.
+- **Response**: the raw response body, in full, with a copy button.
+- **Events**: a server-sent event stream's dispatched events, newest first, each with its type, its
+  `id` when the stream sent one, the time, and the data pretty-printed under its own copy button. The
+  last **200** are rendered and the count says so. It sits where **Response** and **Preview** do for
+  an ordinary request, since a stream's events are its body.
+- **Timing**: below.
+- **Cookies**: below.
+- **Initiator**: the call stack that made the request. Symbolicated on open rather than at capture,
+  because it is a round trip to the dev server and only the request you actually opened is worth
+  spending one on. Library frames are dimmed, and the failing source line is shown above the frames
+  when the dev server returned it. Without a dev server the frames stay as bundle positions and the
+  tab says so.
+
+### Timing
+
+Started At, then one of two things.
+
+When the platform's own networking stack reported on this request, a **waterfall**: a Total track
+with each measured phase laid out inside it.
+
+| Row                                | Meaning                                                            |
+| ---------------------------------- | ------------------------------------------------------------------- |
+| Queued                             | Waiting on the connection pool and the request queue.              |
+| DNS · TCP · TLS                    | Absent on a reused connection, and TLS on plain HTTP.              |
+| Sending · Waiting · Downloading    | The request out, the wait for the first byte, the body back.       |
+| Total                              | As the stack timed it, which is deliberately **not** the phases added up: time attributed to no phase shows as the gap it is. |
+
+Badges above it name which stack measured it (`URLSession` on iOS, `OkHttp` on Android, or the page's
+own engine for WebView traffic), the protocol that was negotiated, and whether the connection was
+reused. A Total marked `app clock` came from the patches instead, because the platform sent no total
+of its own.
+
+Otherwise, **Time to headers**, **Body download** and **Duration** (`(pending)` while in flight),
+measured from JavaScript, with a note saying whether phases were unavailable for this one request or
+unavailable in this build at all.
+
+<Callout type="info" title="Phase timing needs the native module">
+  It is read from `URLSessionTaskTransactionMetrics` and OkHttp's `EventListener`, so Expo Go keeps
+  the two JS-measured numbers. Only traffic through a stack this package hooks is timed this way:
+  `react-native-nitro-fetch` is not, and neither is anything else that opens its own sockets.
+</Callout>
+
+### Cookies
+
+Every cookie this request sent, every cookie the response set, each with its attributes (`Domain`,
+`Path`, `Expires`, `Max-Age`, `SameSite`, `Secure`, `HttpOnly`). For a wired-up WebView there is a
+third list, what the page itself could read, which is not the same set: a page cannot see an
+`HttpOnly` cookie.
+
+Read from this request's own `Cookie` and `Set-Cookie` headers and nothing else. A cookie the
+platform's own jar attached, without it appearing in those headers, is invisible here, and the tab
+says so rather than implying the list is complete.
+
+## Sandbox
+
+Opens the request as something editable, seeded from what was captured: URL, method, query parameters,
+headers, cookies, auth and body all split into their own fields.
+
+| Area             | What is in it                                                                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| URL bar          | The base URL, without the query string.                                                                                                                                    |
+| Method chips     | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`.                                                                                                                                   |
+| Send             | Fires the request and switches to the Response tab.                                                                                                                        |
+| **Request** tab  | Network Conditions · Authentication · Query Parameters · Headers · Cookies · Body · Code Snippet.                                                                           |
+| **Response** tab | Status code and text, colour-coded, with the round trip in ms; Response Headers (with count); Response Body. A failed request shows `Request failed` and the error instead. |
+
+Authentication offers `none`, `bearer` (a **Token** field) and `apikey` (a **Name** field for the
+header, for example `x-api-key`, and a **Value** field). Query parameters, headers and cookies are key/value tables
+that grow a blank row as you fill the last one. Cookies are recombined into one `Cookie` header on
+send. Network Conditions holds the same throttling and user agent pickers as the settings panel,
+and they are shared with the whole app, not just this request. Code Snippet is the request as a
+cURL command, kept in step with the fields.
+
+Sandbox requests go out through the same patched `fetch`, so they appear in the log like any other
+request.

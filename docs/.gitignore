@@ -1,0 +1,17 @@
+.DS_Store
+node_modules
+dist
+.astro
+*.tsbuildinfo
+# Regenerated from npm on every build — never hand-edited, so never committed.
+src/generated/packages.json
+
+# Next and fumadocs build output
+.next/
+out/
+.source
+next-env.d.ts
+.migration-keep
+
+# Turbo task cache, written when this is checked out inside the monorepo.
+.turbo/

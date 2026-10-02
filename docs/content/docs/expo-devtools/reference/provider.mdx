@@ -1,0 +1,191 @@
+---
+title: DevtoolsProvider
+description: The provider's props, and every configuration option underneath them.
+---
+
+```tsx
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
+
+<DevtoolsProvider config={config}>
+  <YourApp />
+</DevtoolsProvider>;
+```
+
+Wrap your app in it once, at the root. It starts the devtools as it renders, which is before any
+child's mount, and hosts the panel. There is no `init` to call.
+
+## Props
+
+| Prop                 | Type                                   | Default  | What it does                                                                    |
+| -------------------- | -------------------------------------- | -------- | --------------------------------------------------------------------------------- |
+| `config`             | `DevtoolsConfig`                       | `{}`     | Everything below. Read once, on the first render.                               |
+| `showFloatingButton` | `boolean`                              | `true`   | Draw the launcher button. Off leaves the panel reachable through [`useDevtoolsPanel`](/docs/expo-devtools/reference/hooks). |
+| `iconComponent`      | `ComponentType<{ size: number }>`      | none     | Renders in place of the built-in glyph. Given the resolved `size`.              |
+| `size`               | `number`                               | `44`     | Diameter of the button, in dp.                                                  |
+| `color`              | `string`                               | accent   | Button fill.                                                                    |
+| `iconColor`          | `string`                               | `'#ffffff'` | The built-in glyph only; an `iconComponent` colours itself.                  |
+| `statusBar`          | `'auto' \| 'app' \| 'light' \| 'dark'` | `'auto'` | What the status bar's clock and icons do while the panel is open.               |
+
+The provider is generic over your theme names, so `config.defaultTheme` accepts a built-in id or a key
+of `config.themes` and nothing else.
+
+The button is draggable, stays inside the screen, and keeps a 44dp touch area through `hitSlop` even at
+a smaller `size`. Rendering it is also what marks *first render* for the startup breakdown.
+
+## `statusBar`
+
+The panel never paints a status bar background of its own: the header extends behind it, so that
+area is already the toolbar's colour. What this prop decides is the *content*.
+
+| Value              | What happens                                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `'auto'`           | Follows the theme, each of which carries its own `statusBarStyle`. A dark theme gets light icons, a light one dark. |
+| `'app'`            | Untouched, for an app that manages the status bar itself.                                                     |
+| `'light'`/`'dark'` | That content style whatever the theme is on. `'light'` means light icons, for a dark background.              |
+
+Whatever the app had is restored when the panel closes. Without this, a light app's dark icons stay
+dark and become unreadable over a dark panel.
+
+<Callout type="warn" title="iOS needs one Info.plist key">
+  React Native's `StatusBar` cannot change the style unless `UIViewControllerBasedStatusBarAppearance`
+  is `false` in `Info.plist`. An Expo app's own template already sets it, so there is usually nothing
+  to do. If yours does not, `statusBar` has no effect on iOS and `'app'` is the honest setting.
+</Callout>
+
+## Top level
+
+| Option         | Type                          | Default     | What it does                                                  |
+| -------------- | ----------------------------- | ----------- | --------------------------------------------------------------- |
+| `enabled`      | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [Leaving it in production](/docs/expo-devtools/production). |
+| `defaultTheme` | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours. |
+| `themes`       | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override. |
+
+With `enabled: false` the provider renders its children and the crash sheet and nothing else: no
+patches, no button, no panel. The config is read on the first render and never again, because the
+patches are global and go in one time, so `enabled` cannot be flipped mid-session.
+
+## Network
+
+The switches name the **kind of traffic**, not the mechanism that carried it. A request is a request
+whether it went out through `fetch`, through `XMLHttpRequest`, from a JSI client or from inside a page.
+
+| Option                      | Type      | Default | What it does                                                                    |
+| --------------------------- | --------- | ------- | --------------------------------------------------------------------------------- |
+| `network.http`              | `boolean` | `true`  | Capture plain requests, by whatever transport they left on. Off also means no [phase timing](/docs/expo-devtools/reference/network-tab#timing). |
+| `network.websocket`         | `boolean` | `true`  | Capture [WebSocket connections](/docs/expo-devtools/reference/network-tab#a-socket-row) and their messages, the app's own and a page's. |
+| `network.sse`               | `boolean` | `true`  | Capture server-sent event streams and their events, whichever client opened them. |
+| `network.disabledByDefault` | `boolean` | `false` | Open the Network tab paused.                                                    |
+| `network.redactHeaders`     | `readonly string[]` | `[]` | Header names whose values are stored as `[redacted]`, matched without regard to case. Listing `cookie` also redacts a page's `document.cookie`. |
+| `network.redact`            | `(entry: NetworkEntry) => NetworkEntry \| null` | `undefined` | Runs after `redactHeaders`, each time an entry changes, before it is stored. An entry is an HTTP row (`NetworkLogEntry`) or a WebSocket row, told apart by `kind`. Return the entry, edited or not, or `null` to drop the row. If it throws, the row is dropped. |
+
+With `sse` off, the app's own stream is still recognised as one. Its endless body has to be, or it
+would be read as a response. So the row remains and only the events are dropped. A page's stream has no
+request underneath it that anything here can see, so that one disappears entirely.
+
+Redaction happens before a request is stored, so nothing downstream sees the real value: not the list,
+the detail panel, copy, export, the DevTools tab or crash breadcrumbs. Replaying a request from the panel
+sends the placeholder too. `redactHeaders` covers HTTP rows only, while `redact` sees WebSocket rows
+too. Socket frames and stream events pass through neither. See
+[Redaction](/docs/expo-devtools/network#redaction).
+
+```ts
+network: {
+  redactHeaders: ['authorization', 'cookie', 'set-cookie'],
+  redact: (entry) => ({ ...entry, url: entry.url.replace(/token=[^&]+/, 'token=[redacted]') }),
+}
+```
+
+## Console
+
+| Option                      | Type                      | Default     | What it does                                                              |
+| --------------------------- | ------------------------- | ----------- | --------------------------------------------------------------------------- |
+| `console.capture`           | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from WebViews wired with `useDevtoolsWebView`. |
+| `console.repl`              | `boolean`                 | `true`      | Show the `>` prompt.                                                      |
+| `console.context`           | `Record<string, unknown>` | `undefined` | Extra names an expression can use, for example `{ store, queryClient }`.  |
+| `console.disabledByDefault` | `boolean`                 | `false`     | Open the Console tab paused. The prompt still works.                      |
+
+<Callout type="warn" title="console.repl is not gated on __DEV__">
+  It defaults to `true` in every build. Wherever the devtools are on the prompt is there, including in
+  a release build, where it runs whatever is typed into it. Ship with `enabled: false`, or set
+  `console: { repl: false }`.
+</Callout>
+
+## Performance
+
+| Option                               | Type      | Default | What it does                                                                    |
+| ------------------------------------ | --------- | ------- | --------------------------------------------------------------------------------- |
+| `performance.sampleIntervalMs`       | `number`  | `1000`  | How often memory is sampled. Each read crosses into the engine, so keep it coarse. |
+| `performance.longTaskThresholdMs`    | `number`  | `150`   | Only keep tasks that blocked the JS thread at least this long.                  |
+| `performance.interactionThresholdMs` | `number`  | `100`   | Only keep interactions at least this long, event to next paint.                 |
+| `performance.historySize`            | `number`  | `120`   | How many memory samples, long tasks, user timings and interactions are kept.    |
+| `performance.disabledByDefault`      | `boolean` | `true`  | Open the Performance tab paused. **Defaults to on**, since measuring costs something. |
+
+## Storage
+
+| Option               | Type                         | Default     | What it does                                                          |
+| -------------------- | ---------------------------- | ----------- | ----------------------------------------------------------------------- |
+| `storage.adapters`   | `StorageAdapterDefinition[]` | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically. |
+| `storage.maxKeys`    | `number`                     | `1000`      | Keys read per store before the tab stops and says how many it skipped. |
+| `storage.readOnly`   | `boolean`                    | `false`     | Blanket read-only default; an individual adapter can still set its own. |
+
+See [Storage adapters](/docs/expo-devtools/reference/storage-adapters) for how to build one.
+
+## Navigation
+
+| Option                         | Type                                                 | Default     | What it does                                                                 |
+| ------------------------------ | ---------------------------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `navigation.disabledByDefault` | `boolean`                                            | `false`     | Open the Navigation tab paused. The route on screen is still shown.          |
+| `navigation.redact`            | `(move: NavigationMove) => NavigationMove \| null` | `undefined` | Runs on every move before it is stored, including the route shown as current. Return the move, edited or not, or `null` to drop it. If it throws, the move is dropped. |
+
+The tab is there only when a router is installed. Expo Router is found on its own. So is a React
+Navigation container the provider sits inside. A container mounted inside the provider is handed over
+with [`useDevtoolsNavigation`](/docs/expo-devtools/reference/hooks#usedevtoolsnavigationref-name).
+
+What `redact` returns is all anything downstream sees: the history, the tree, copy, export and crash
+reports.
+
+```ts
+navigation: {
+  redact: (move) =>
+    move.to?.params && 'token' in move.to.params
+      ? { ...move, to: { ...move.to, params: { ...move.to.params, token: '[redacted]' } } }
+      : move,
+}
+```
+
+See [Navigation](/docs/expo-devtools/navigation) and the [Navigation tab](/docs/expo-devtools/reference/navigation-tab).
+
+## Crash
+
+Crash capture is the only part of this package that runs with the devtools off.
+
+| Option                              | Type                                       | Default  | What it does                                                                                     |
+| ----------------------------------- | ------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------- |
+| `crash.enabled`                     | `boolean`                                  | `true`   | Capture at all.                                                                                  |
+| `crash.enableWhileDevtoolsDisabled` | `boolean`                                  | `false`  | Install the handlers even with `enabled: false`, so a release build still reports crashes.        |
+| `crash.handlers.jsErrors`           | `boolean`                                  | `true`   | The `ErrorUtils` global handler, for fatal and non-fatal JS errors.                               |
+| `crash.handlers.unhandledRejections` | `boolean`                                 | `true`   | Unhandled promise rejections, via the Hermes rejection tracker.                                  |
+| `crash.handlers.nativeExceptions`   | `boolean`                                  | `true`   | Uncaught Java/Kotlin and Objective-C exceptions, via the native module.                          |
+| `crash.popupDetail`                 | `'auto' \| 'full' \| 'compact'`            | `'auto'` | Which sheet a crash opens. `'auto'` is the full sheet when the devtools are enabled, compact when not. |
+| `crash.disableDefaultLogBox`        | `boolean`                                  | `false`  | Uninstall React Native's LogBox, so a JS error is reported here and nowhere else.                |
+| `crash.breadcrumbs`                 | `boolean`                                  | `true`   | Attach the recent console, network and navigation entries to each record.                                    |
+| `crash.maxRecords`                  | `number`                                   | `25`     | Reports kept in memory.                                                                          |
+| `crash.persistNonFatal`             | `boolean`                                  | `false`  | Also write non-fatal records to disk.                                                            |
+| `crash.redact`                      | `(record: CrashRecord) => CrashRecord \| null` | `undefined` | Runs before the record reaches the store, the disk or `onCrash`. Return `null` to drop it.  |
+| `crash.onCrash`                     | `(record: CrashRecord) => void`            | `undefined` | Your own handler, after `redact`.                                                             |
+
+With the devtools off, an app relying on `enableWhileDevtoolsDisabled` alone installs `nativeExceptions`
+only, whatever the other two say: the JS tiers report errors the app survived, which is a developer's
+concern, and the sheet there is in front of a user. A fatal JS error still arrives, because React Native turns it
+into a native exception on the way to killing the process.
+
+`disableDefaultLogBox` uninstalls LogBox rather than muting it, which takes the **yellow warning toasts
+with it**. LogBox is one component and the two cannot be separated. Warnings are still captured by the
+Console tab. It only does anything in development; LogBox is already an empty stub in a release build.
+
+## Related components
+
+| Component                   | What it is for                                                                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<CrashReportOverlay />`    | The crash sheet on its own, for a build that ships crash reporting but not the panel. The provider mounts one itself, with the devtools on or off; mounting both is harmless. |
+| `<DevtoolsErrorBoundary />` | Catches render errors, the only tier that produces a component stack. Props: `children`, `fallback(error, reset)`, `onError(error, info)`.               |

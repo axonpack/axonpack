@@ -1,0 +1,191 @@
+{
+  "brand": {
+    "name": "Axonpack",
+    "logo": "/assets/logo.png",
+    "logoDark": "/assets/logo-dark.png",
+    "url": "/"
+  },
+  "nav": {
+    "links": [
+      {
+        "label": "Docs",
+        "href": "/docs/",
+        "external": true
+      },
+      {
+        "label": "Community",
+        "menu": [
+          {
+            "title": "Project",
+            "items": [
+              {
+                "label": "GitHub",
+                "href": "https://github.com/axonpack/axonpack"
+              },
+              {
+                "label": "npm",
+                "href": "https://www.npmjs.com/package/@axonpack/expo-devtools"
+              },
+              {
+                "label": "Issues",
+                "href": "https://github.com/axonpack/axonpack/issues"
+              }
+            ]
+          },
+          {
+            "title": "Take part",
+            "items": [
+              {
+                "label": "Contributing",
+                "href": "https://github.com/axonpack/axonpack/blob/main/CONTRIBUTING.md"
+              },
+              {
+                "label": "Code of conduct",
+                "href": "https://github.com/axonpack/axonpack/blob/main/CODE_OF_CONDUCT.md"
+              },
+              {
+                "label": "Facebook",
+                "href": "https://www.facebook.com/axonpack"
+              },
+              {
+                "label": "YouTube",
+                "href": "https://www.youtube.com/@axonpack"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "github": {
+      "href": "https://github.com/axonpack/axonpack",
+      "repo": "axonpack/axonpack",
+      "label": "Star"
+    }
+  },
+  "hero": {
+    "title": "Axonpack ends the guesswork",
+    "titleAccent": "when things break.",
+    "lead": "Answers you and your agent can both read. Every request, error, log and stored value, captured on the device and copied out as structured JSON.",
+    "actions": [
+      {
+        "label": "Read the docs",
+        "href": "/docs/",
+        "variant": "primary",
+        "icon": "arrow-right"
+      },
+      {
+        "label": "View on GitHub",
+        "href": "https://github.com/axonpack/axonpack",
+        "variant": "outline",
+        "icon": "arrow-up-right",
+        "external": true
+      }
+    ],
+    "install": "npx expo install @axonpack/expo-devtools"
+  },
+  "stats": [
+    {
+      "value": "6",
+      "label": "devtools tabs"
+    },
+    {
+      "value": "7",
+      "label": "built-in themes"
+    },
+    {
+      "value": "MIT",
+      "label": "licensed, no tiers"
+    }
+  ],
+  "usage": {
+    "title": "One provider, one flag",
+    "body": "No client to create and pass around, and no init call to place correctly. Wrap the app once, configure it inline or from a file, and one flag decides whether any of it runs.",
+    "filename": "App.tsx",
+    "code": "import { DevtoolsProvider } from '@axonpack/expo-devtools';\n\nexport default function App() {\n  return (\n    <DevtoolsProvider\n      config={{\n        // The whole production gate. Off means nothing is patched at all.\n        enabled: __DEV__,\n        defaultTheme: 'dark',\n        network: { http: true, websocket: true, sse: true },\n        console: { capture: true, repl: true },\n      }}>\n      <YourApp />\n    </DevtoolsProvider>\n  );\n}",
+    "note": "The patches go in as the provider renders, so the first screen is already covered, and nothing records anywhere unless enabled says so."
+  },
+  "principles": {
+    "title": "How they are built",
+    "body": "The point of a foundation library is that you stop thinking about it. These are what keep them that way.",
+    "items": [
+      {
+        "icon": "target",
+        "title": "Small and focused",
+        "body": "One package solves one problem. Nothing here grows into a framework that wants to own your app's structure."
+      },
+      {
+        "icon": "feather",
+        "title": "Dependency-light",
+        "body": "Adding a package should not add a supply chain. Where one needs a library you may already have, you hand it over rather than having it installed for you."
+      },
+      {
+        "icon": "layers",
+        "title": "Independently published",
+        "body": "Each package versions and ships on its own, with its own documentation. Installing one never drags in another."
+      },
+      {
+        "icon": "eye",
+        "title": "Honest about limits",
+        "body": "Every guide ends with what the thing cannot do, and why. A number that cannot be measured is not shown rather than invented."
+      }
+    ]
+  },
+  "showcase": {
+    "title": "It runs on the device",
+    "body": "This is not a socket to a desktop window. The panel is part of the app, so it works on a real phone, over a tunnel, and in a release build you deliberately left it in.",
+    "imageLight": "/assets/network-light.webp",
+    "imageDark": "/assets/network-dark.webp",
+    "width": 640,
+    "height": 1385,
+    "alt": "A captured network request, opened inside the app",
+    "caption": "@axonpack/expo-devtools, running on the device"
+  },
+  "footer": {
+    "blurb": "Free, open source tools and libraries for React and React Native. MIT licensed.",
+    "columns": [
+      {
+        "title": "Project",
+        "links": [
+          {
+            "label": "GitHub",
+            "href": "https://github.com/axonpack/axonpack"
+          },
+          {
+            "label": "npm",
+            "href": "https://www.npmjs.com/package/@axonpack/expo-devtools"
+          },
+          {
+            "label": "Contributing",
+            "href": "https://github.com/axonpack/axonpack/blob/main/CONTRIBUTING.md"
+          },
+          {
+            "label": "Issues",
+            "href": "https://github.com/axonpack/axonpack/issues"
+          }
+        ]
+      },
+      {
+        "title": "Community",
+        "links": [
+          {
+            "label": "Facebook",
+            "href": "https://www.facebook.com/axonpack"
+          },
+          {
+            "label": "YouTube",
+            "href": "https://www.youtube.com/@axonpack"
+          },
+          {
+            "label": "Code of conduct",
+            "href": "https://github.com/axonpack/axonpack/blob/main/CODE_OF_CONDUCT.md"
+          },
+          {
+            "label": "License",
+            "href": "https://github.com/axonpack/axonpack/blob/main/LICENSE"
+          }
+        ]
+      }
+    ],
+    "legal": "© Axonpack Open Source · MIT licensed"
+  }
+}

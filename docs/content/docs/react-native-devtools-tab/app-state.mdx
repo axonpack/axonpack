@@ -1,0 +1,78 @@
+---
+title: Reading the app
+description: A tab runs in the app, so reading its state is an import rather than a protocol.
+icon: Radio
+---
+
+A tab's component runs in the app, so most of this is not communication at all.
+
+- **Tab to app:** call it. `onClick={() => auth.signOut()}` is a function call, not a message.
+- **App to tab:** whatever the app already uses to hold state. A tab is real React, so `useState`,
+  an emitter, Zustand, Jotai and MobX all work as they do anywhere else.
+
+## A store is a store
+
+This one is plain React, with no library:
+
+```ts title="store.ts"
+import { useSyncExternalStore } from "react";
+
+let value = { user: "nobody", requests: 0 };
+const listeners = new Set<() => void>();
+
+export const session = {
+  get: () => value,
+
+  set(next: typeof value) {
+    value = next;
+    for (const listener of listeners) listener();
+  },
+
+  use: () =>
+    useSyncExternalStore(
+      (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      () => value,
+    ),
+};
+```
+
+The tab imports it like any other file, because it is running in the app where that file already
+lives:
+
+```tsx title="devtools.tsx"
+import { session } from "./store";
+
+export default function Session() {
+  const { user, requests } = session.use();
+
+  return (
+    <div style={{ padding: 12 }}>
+      <p>
+        {user}, {requests} requests
+      </p>
+      <button onClick={() => session.set({ user: "nobody", requests })}>
+        sign out
+      </button>
+    </div>
+  );
+}
+```
+
+`session.use()` is the same hook your screens call, on the same object. Press a button on a screen
+and the tab follows, because there is one value and not a copy of one.
+
+<Callout type="warn">
+  **React context does not reach a tab.** Each tab is its own root, so the app's providers are in a
+  different tree. Read from a module-level store instead, or pass what the tab needs through one.
+</Callout>
+
+## Several tabs
+
+Call `registerTab` once per tab. Each gets its own React root, so one tab re-rendering does not
+touch another, and a tab nobody has opened still runs: it is the app rendering, not the panel.
+
+Tabs identify themselves. An id is built from `name` at startup, numbered if two tabs share a name,
+and every message is stamped and filtered with it, so two tabs never see each other's traffic.

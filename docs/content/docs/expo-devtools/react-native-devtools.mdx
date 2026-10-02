@@ -1,0 +1,147 @@
+---
+title: React Native DevTools
+description: The panel on your computer, in its own Axonpack tab beside Console and Sources.
+---
+
+The package puts an **Axonpack** tab in React Native DevTools, the debugger that opens when you press
+`j` in Metro. It holds the device's Network, Console, Performance, Storage, Crashes and Debug tabs,
+laid out like Chrome's own panels, and it reads the app's own stores: a request made on the phone is a
+row on the desktop the moment it starts, and a filter set on one side is set on the other.
+
+## Set it up
+
+One line in `metro.config.js`:
+
+```js
+const { getDefaultConfig } = require('expo/metro-config');
+const { withDevtools } = require('@axonpack/expo-devtools/metro');
+
+module.exports = withDevtools(getDefaultConfig(__dirname));
+```
+
+Restart Metro after changing it; a reload of the app is not enough, because Metro reads its config
+once when it starts. Nothing is set up on the device: the tab registers itself in a debug build,
+behind `__DEV__`, and a release build carries none of it.
+
+## Open it
+
+- Press `j` in the terminal running Metro, or pick **Open DevTools** in the app's dev menu.
+- Or open the panel on the device. In a debug build whose bundle came from Metro, a strip under the
+  panel's header says **Metro server detected**, and its **Open DevTools** button opens React
+  Native DevTools on the Axonpack tab.
+
+The tab takes a second to appear after DevTools opens: it is added once DevTools has connected to
+the app and asked which tabs it has.
+
+## Network
+
+Everything the device's Network tab has:
+
+- The request table, with sortable, resizable columns, grouping by client and big or dense rows.
+- The filter bar: search with regex, match case and whole word, invert, the request types, and
+  More filters for methods, sources, status, size and duration.
+- The overview strip across the top of the log. Drag across it to keep only the requests that started
+  in that window.
+- The request pane: Headers, Payload, Preview, Response, EventStream, Timing, Cookies and
+  Initiator, and Messages for a socket. A binary response shows a hex dump.
+- The row menu, on a right-click or the ⋮ in the request pane: the copy items, **Save response
+  body**, **Block this URL**, **Override response…** and **Try in sandbox**.
+- Throttling in the toolbar, and custom speeds, the user agent and stacked header values under the
+  gear.
+
+## The sandbox
+
+**Try in sandbox** opens a captured request in the request pane, laid out like a web API client: the
+method and URL across the top, the request and its response side by side.
+
+- **Authentication**, **Network Conditions**, **Cookies**, **Headers**, **Query Parameters** and
+  **Body** are sections of their own. A bearer token or API key is hidden until you show it.
+- **Send** sends the request from the device, through the app's own `fetch`, so it goes out with the
+  device's network, cookies and conditions, and shows up as a row in the log as well.
+- The response shows its time, size and status, then its cookies, the headers that were sent and
+  the ones that came back, and the body as a JSON tree or as raw text.
+- **Code Snippet** writes the request as cURL, HTTPie, JavaScript fetch, axios, Node.js fetch, Python
+  requests, Swift URLSession, Kotlin OkHttp or Go net/http.
+
+## Copying and saving
+
+Copies land on **your computer's** clipboard, not the device's, and **Save response body**
+downloads the body as a file. Both are done by the browser DevTools runs in. The same goes for every
+Copy and Save in the other panels.
+
+## Console
+
+- Every log as the app writes it, with the app's levels. Record and Clear sit in the toolbar, with the
+  count of warnings, errors and crashes at its far end.
+- The filter bar: search with regex, match case and whole word, one level, and one source.
+- Each row shows where it was logged, as `file:line`, named by the dev server. An object is a tree,
+  folded to start with.
+- The `>` prompt at the foot runs code in the app, with suggestions as you type. It holds the same
+  draft as the prompt on the device. Click a command you ran to put it back in the prompt. The prompt
+  is there when `console.repl` is on.
+- A crash is a card. **Open report** switches to Crashes with that report open.
+
+## Performance
+
+- Record and Clear, then the sections: **Statistics**, **User timing**, **Interactions** and **Long
+  tasks**, each with its count.
+- Statistics holds frames per second for the JS and main threads, interactions, memory, the device's
+  storage and the startup breakdown.
+- It starts paused, as on the device. Recording in either place records for both.
+
+## Storage
+
+- The store, its kind and when it was last read sit in the toolbar, with **Refresh**. With more than
+  one store registered, the name is a picker.
+- The table has Key, Type, Value and Size columns. Click Key, Type or Size to sort.
+- The filter bar: search with its modes, **Invert**, where to search (keys, values or both), **More
+  filters** and the value types.
+- Double-click a value to edit it, and type in the empty row at the bottom to add a key. Nothing is
+  written until **Sync**, which carries the count and writes every pending change together. **Discard** drops them.
+- Click a key for its pane: Value, Raw, Edit and Info. Its ⋮ has the copy items and **Delete key**.
+- Export downloads the keys the filters keep as a snapshot. **Import** takes a pasted snapshot, says
+  what it would create and overwrite, and writes only when you press **Write**, which carries the count too.
+
+Editing, adding, deleting and importing are there only for a store registered with a way to write.
+
+## Crashes
+
+- Every recorded report, with a dot on the ones not yet read. **Clear**, **Mark all read**, and a
+  filter by text and by kind.
+- Click a report for its pane. **Summary** has the kind, message, time, route and context, then the
+  stack with the source around each line, the component stack, native frames and the device.
+  **Breadcrumbs** has the console lines, requests and screen changes that led up to it.
+- Its ⋮ copies the message, the stack, or the whole report as Markdown or JSON, and saves the report
+  as a Markdown or JSON file.
+
+Opening a report marks it read on the device too.
+
+## Debug
+
+Pick the JavaScript or Main (UI) thread and a duration, then **Block** it or **Crash** it. Crash asks
+for a second click first. Blocking the JS thread freezes the tab as well, since the app's JavaScript
+draws it. The main thread needs a [development build](/docs/expo-devtools/reference/development-build).
+
+## The bar
+
+- **Axonpack** and its mark, on the left. Hover the mark for what the tab is and links to the docs,
+  the changelog, the other libraries and GitHub.
+- A button per panel. Console carries its error and crash count and Crashes its unread count. Press and hold one
+  to drag it to a new place. Panels that do not fit go under **»**.
+- The theme picker: the app's own themes, and a choice made here is the app's choice too.
+- **Reload** reloads the app, as `r` in Metro does.
+- The refresh icon draws the tab again without touching the app. It does not pick up code you have
+  saved since; use **Reload** for that.
+
+Every control is listed in the [DevTools tab reference](/docs/expo-devtools/reference/devtools-tab).
+
+## When the tab does not appear
+
+Restart Metro first: it reads `metro.config.js` only when it starts. If the tab is still missing, the
+DevTools console says why, and [Troubleshooting](/docs/react-native-devtools-tab/troubleshooting)
+lists each message and what to do about it.
+
+<Callout type="info" title="The log keeps the 1,000 most recent requests">
+  The same limit as on the device, and for the same reason: every body is kept whole. The desktop
+  table draws every row, which stays quick at that size.
+</Callout>

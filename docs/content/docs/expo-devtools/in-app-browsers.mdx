@@ -1,0 +1,71 @@
+---
+title: In-app browsers
+description: One hook on the WebView, and the page's requests and logs join your app's.
+---
+
+A `<WebView />` runs its own separate JavaScript, in a separate engine, invisible to everything that
+patches `fetch` and `console` in your app. So it needs wiring of its own, and one hook returns every
+prop it takes:
+
+```tsx
+import { useDevtoolsWebView } from '@axonpack/expo-devtools';
+import { WebView } from 'react-native-webview';
+
+export function Checkout() {
+  const devtoolsWebView = useDevtoolsWebView('checkout');
+
+  return <WebView {...devtoolsWebView} source={{ uri: 'https://example.com' }} />;
+}
+```
+
+That covers both the page's **requests and its console output**. Rows show up tagged
+`WebView::[checkout]` in either tab, and the Source chips can filter them apart from your app's own.
+
+The name is yours to pick and it is only a label. Name each WebView when the app has more than one;
+a single WebView can call the hook with no argument, which labels it `webview`.
+
+<Callout type="warn" title="Leave injectedJavaScriptBeforeContentLoaded to the hook">
+  Setting your own replaces the instrumentation, and the page's early requests escape. Your own script
+  belongs in `injectedJavaScript`, which runs later.
+</Callout>
+
+## What the props do
+
+| Prop                                    | What it buys                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------- |
+| `injectedJavaScriptBeforeContentLoaded` | The page's `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource` and `console` |
+| `onMessage`                             | Receives what the page reports. Without it nothing arrives                   |
+| `ref`                                   | A conditions change reaches an already-open page                             |
+| `userAgent`                             | The browser override in Network conditions applies for real                  |
+| `onShouldStartLoadWithRequest`          | Navigation is blocked while Offline is on                                    |
+
+Everything the hook returns is inert until the devtools are running: the injected script is empty, and
+with no `onMessage` behind it `react-native-webview` does not install the page bridge at all.
+
+Each page request also records what the page's `document.cookie` held, shown in the Cookies tab.
+Listing `cookie` in `network.redactHeaders` redacts that too. See
+[Redaction](/docs/expo-devtools/network#redaction).
+
+A page can never be *fully* throttled: images, stylesheets and scripts the browser loads by itself
+still go out at full speed.
+
+## If the page uses postMessage for your own purposes
+
+Take the handler out and call it first. It returns `true` when the message was one of this package's:
+
+```tsx
+<WebView
+  {...devtoolsWebView}
+  onMessage={(event) => {
+    if (devtoolsWebView.onMessage(event)) return;
+    handleMyOwnMessage(event);
+  }}
+/>
+```
+
+## Next step
+
+<Cards>
+  <Card title="Network" href="/docs/expo-devtools/network" description="Where the page's requests land." />
+  <Card title="Hooks reference" href="/docs/expo-devtools/reference/hooks" description="The hooks and the devtools object." />
+</Cards>

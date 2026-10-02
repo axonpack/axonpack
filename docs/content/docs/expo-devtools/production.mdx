@@ -1,0 +1,75 @@
+---
+title: Leaving it in production
+description: Shipping the code is safe. One switch decides whether anything runs.
+---
+
+Shipping the code is safe. There is one switch, `config.enabled`, and with it off nothing is patched
+and nothing is recorded, so the cost of leaving the package in a production bundle is the bundle size
+and nothing else.
+
+```tsx
+<DevtoolsProvider config={{ enabled: process.env.EXPO_PUBLIC_APP_ENV !== 'prod' }}>
+  <YourApp />
+</DevtoolsProvider>
+```
+
+The mount can stay exactly where it is. With `enabled: false` the provider renders its children and
+the crash sheet and nothing else:
+
+- **No capture.** The `fetch`, `XMLHttpRequest`, `WebSocket` and `console` patches are never
+  installed, no store is ever read, and no navigator is watched.
+- **No access.** There is no launcher button, and `useDevtoolsPanel().show()` opens nothing. That hook
+  reports `enabled` so your own trigger can hide itself rather than open an empty panel.
+
+`enabled` is whatever condition you want, evaluated at runtime.
+`process.env.EXPO_PUBLIC_APP_ENV !== 'prod'` from the [Quick start](/docs/expo-devtools/quick-start) and
+`__DEV__` are the two usual choices; anything else works too, including a value you fetch for a
+specific user.
+
+<Callout type="info" title="Read once, on the first render">
+  The patches are global and go in one time, so the config that first render saw is the one that
+  applies. `enabled` cannot be flipped mid-session, and rebuilding the config object later changes
+  nothing.
+</Callout>
+
+That also settles the [Debug tab](/docs/expo-devtools/debug), whose buttons call straight into the native
+module and are **not** restricted to development builds. They live behind the panel, and the panel is
+unreachable with the devtools off.
+
+## The two things that do run in production
+
+- **Crash reporting**, if you asked for it. `crash: { enableWhileDevtoolsDisabled: true }` installs the
+  handlers even with `enabled: false`. It is the one subsystem meant to survive into a release build.
+  See [Crash reporting](/docs/expo-devtools/crash-reporting).
+- **The `>` prompt**, in any build where the devtools are on. `console.repl` defaults to `true` and is
+  not gated on `__DEV__`, so a build with `enabled: true` gets a prompt that runs whatever is typed
+  into it. Set `console: { repl: false }` for any build where that is not what you want.
+
+## Keeping secrets out of a build that records
+
+A build with `enabled: true`, such as one for testers, keeps every request whole: headers, query
+strings and bodies. Two options strip what should not be kept before a request is stored:
+
+- `network.redactHeaders` lists header names whose values are stored as `[redacted]`.
+- `network.redact(entry)` rewrites a request before it is stored, or returns `null` to drop it.
+
+Both are on [Network](/docs/expo-devtools/network). `navigation.redact` does the same for a screen's
+params, on [Navigation](/docs/expo-devtools/navigation), and `crash.redact` for a crash report, on
+[Crash reporting](/docs/expo-devtools/crash-reporting).
+
+## The Metro line
+
+`withDevtools` in `metro.config.js` costs a release build nothing. All it adds to the config is
+dev-server middleware, which nothing but a dev server reads, so the bundle is the same with it as
+without. The tab itself registers only when `__DEV__` is true, so a release bundle carries none of it.
+
+Metro reads the config when it builds for release too, so keep `@axonpack/expo-devtools` in
+`dependencies`, not `devDependencies`, if your release install skips dev dependencies. A `__DEV__`
+check cannot guard the line: `metro.config.js` runs in Node, where `__DEV__` does not exist.
+
+## Next step
+
+<Cards>
+  <Card title="Crash reporting" href="/docs/expo-devtools/crash-reporting" description="The subsystem that is meant to run in release." />
+  <Card title="Example app" href="/docs/expo-devtools/example-app" description="A worked configuration you can run." />
+</Cards>

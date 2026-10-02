@@ -1,0 +1,89 @@
+---
+title: Compatibility
+description: The versions this is built against, what it requires you to have installed, and which platforms it runs on.
+---
+
+## Versions
+
+<LatestRelease slug="expo-devtools" />
+
+| `@axonpack/expo-devtools` | Expo SDK | React Native | React |
+| ------------------------- | -------- | ------------ | ----- |
+| <VersionRange slug="expo-devtools" /> | 57 | 0.86 | 19.2 |
+
+That row is what the package is **built and tested against**: the versions in its own dev
+dependencies and in the example app that exercises every tab.
+
+The [React Native DevTools tab](/docs/expo-devtools/react-native-devtools) comes from
+`@axonpack/react-native-devtools-tab`, which this package depends on. It needs React 19.2 or later,
+and a React Native with React Native DevTools, the debugger `j` opens. It is built and tested against
+the same row.
+
+<Callout type="info" title="Nothing here pins you to one SDK">
+  Every Expo package this needs is a peer dependency, so each resolves to the version your own SDK
+  ships. The row above is what the package is built and tested against, not a range it refuses to run
+  outside.
+</Callout>
+
+## What you have to install
+
+| Package                          | Why                                                          |
+| -------------------------------- | ------------------------------------------------------------ |
+| `react-native-safe-area-context` | The overlay and panel lay themselves out inside the safe area |
+| `react-native-webview`           | HTML and image response previews in the Network tab          |
+| `expo-clipboard`                 | Every Copy button, in every tab                              |
+
+All three are peer dependencies, so they come from your app rather than from this package:
+
+```sh
+npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview expo-clipboard
+```
+
+Every peer range is `*`. That is deliberate: the point of a peer is that your SDK decides the
+version, and a narrower range here would fight it. It does mean npm will not warn you when you are
+outside what has been tested, so treat the table above, not the peer range, as the answer.
+
+`expo-clipboard` is a peer rather than a dependency for that reason. As a dependency it would have
+to name a version, and any version it named would tie the package to one SDK line. React Native does
+still ship a built-in `Clipboard`, but it is deprecated, slated for removal, and warns through
+`console.warn`, which this package patches. Its own deprecation notice would then appear in its own
+Console tab.
+
+## Platforms
+
+| Platform    | State                                                                     |
+| ----------- | ------------------------------------------------------------------------- |
+| **iOS**     | Full support, native module included                                      |
+| **Android** | Full support, native module included                                      |
+
+The native module is written once per platform and is loaded **optionally**, so the panel itself is
+plain JavaScript and never depends on it existing. That is what makes Expo Go work. See
+[What needs a development build](/docs/expo-devtools/reference/development-build) for the handful of
+readings that go quiet there.
+
+## Navigation libraries
+
+The [Navigation tab](/docs/expo-devtools/navigation) depends on neither router. It looks for each one
+when the devtools start, and uses what it finds.
+
+| Library                  | How the tab finds it                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `expo-router`            | On its own. Nothing to wire                                                                       |
+| `@react-navigation/native` | On its own when the provider sits inside the container, otherwise through `useDevtoolsNavigation` |
+
+The example app is built against React Navigation 7.
+
+## Storage libraries
+
+The Storage tab reads whatever you register, so its compatibility is really the adapters'. Versions
+the example app is built against:
+
+| Library                                       | Versions handled                                                     |
+| --------------------------------------------- | --------------------------------------------------------------------- |
+| `@react-native-async-storage/async-storage`   | v1, v2 and v3: `getMany` and `multiGet` are both accepted            |
+| `react-native-mmkv`                           | v3 and v4: `delete` and `remove` are both accepted                   |
+| `expo-secure-store`                           | SDK 57                                                               |
+| anything else                                 | via `defineStorageAdapter`, which duck-types nothing                 |
+
+MMKV and SecureStore carry native code of their own, so a store that needs a development build to
+exist also needs one to be inspectable. An adapter over an in-memory `Map` works in Expo Go.

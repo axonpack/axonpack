@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "import", "nextjs", "unicorn"],
+  "env": { "builtin": true, "es2022": true },
+  "settings": { "react": { "version": "19.2" } },
+  "rules": {
+    "eqeqeq": ["warn", "smart"],
+    "no-debugger": "warn",
+    "no-var": "warn",
+    "prefer-const": "warn",
+    "import/no-duplicates": "error",
+    "typescript/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
+  },
+  "ignorePatterns": [".next", ".source", "out", "next-env.d.ts", "node_modules"]
+}

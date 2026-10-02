@@ -1,0 +1,36 @@
+---
+title: JsonTree
+description: A value as a tree that expands and collapses, with a preview on every closed node.
+icon: Braces
+---
+
+```tsx
+<JsonTree primitives={domPrimitives} value={response} rootLabel="response" />
+```
+
+## Props
+
+| Prop              | Type                                     | Default       | What it does                                                          |
+| ----------------- | ---------------------------------------- | ------------- | --------------------------------------------------------------------- |
+| `primitives`      | `Primitives`                             | required      | See [Primitives](/docs/react-pretty-print/primitives)                 |
+| `value`           | `JsonValue`                              | required      | The value itself, already parsed                                      |
+| `rootLabel`       | `string`                                 | none          | A label for the root row. Without it the root is its own preview      |
+| `theme`           | `PrettyPrintTheme`                       | `DARK_THEME`  | See [Themes](/docs/react-pretty-print/themes)                         |
+| `defaultExpanded` | `boolean`                                | `true`        | Whether the root starts open                                          |
+| `onCopy`          | `(text: string) => void`                 | none          | Enables the copy actions                                              |
+| `onRequestMenu`   | `(items: MenuItem[], event: unknown)`    | none          | Enables the long-press and right-click menu                           |
+| `matcher`         | `Matcher`                                | none          | See [Search](/docs/react-pretty-print/search)                         |
+
+`value` takes a parsed value, not text. Parse a response body before handing it over.
+
+## Things worth knowing
+
+- **Only the root starts open.** Its children always start closed, whatever `defaultExpanded` says.
+  A hundred-entry payload opened all the way is a wall, not a tree.
+- **`onCopy` is what offers the copy actions.** The clipboard is platform-specific, so the package
+  takes a function rather than reaching for one. Without it those actions are not offered at all.
+  Pass `Clipboard.setStringAsync` or `navigator.clipboard.writeText`.
+- **A `matcher` drives expansion as well as painting.** Branches holding a match open, and everything
+  else collapses.
+- **Long arrays are bucketed** in groups of `ARRAY_CHUNK_SIZE`, which is 10.
+- **`{}` and `[]` get no toggle**, because `hasChildren` is false for them.

@@ -1,0 +1,23 @@
+{
+  "title": "React Native Devtools Tab",
+  "description": "Your own tab in React Native DevTools, drawn from a component that runs in the app",
+  "root": true,
+  "icon": "PanelTop",
+  "pages": [
+    "---Get started---",
+    "index",
+    "installation",
+    "quick-start",
+    "---Guides---",
+    "app-state",
+    "components",
+    "troubleshooting",
+    "---Shipping---",
+    "production",
+    "---Reference---",
+    "reference",
+    "---Releases---",
+    "changelog"
+  ],
+  "defaultOpen": true
+}
