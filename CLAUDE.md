@@ -42,7 +42,7 @@ Turborepo + bun workspaces monorepo intended to hold `@axonpack/*`, the free OSS
 - `bun run build` / `bun run lint` / `bun run check-types` / `bun run test`: `turbo run <task>`; only runs for workspaces that define that script, others are silently skipped.
 - `bun run format`: `prettier --write "**/*.{ts,tsx,md}"` across the whole repo.
 - `bun run dev:docs`: `cd docs && bun run dev`. The one root script that reaches into `docs/`, and it only runs its dev server; nothing here builds or lints it.
-- `bun run changeset` / `bun run version-packages` / `bun run release`: Changesets. `version-packages` also refreshes `bun.lock`, which records each workspace's version and would otherwise fail the frozen-lockfile install in CI, and runs `sync:docs-changelog`, which regenerates the docs site's changelog pages from each package's `CHANGELOG.md`.
+- `bun run changeset` / `bun run version-packages` / `bun run release`: Changesets. `version-packages` also refreshes `bun.lock`, which records each workspace's version and would otherwise fail the frozen-lockfile install in CI. The docs changelog pages are not committed; every docs build and `bun run dev` regenerates them from each package's `CHANGELOG.md`.
 
 ### Releases (`.github/workflows/release.yml`)
 

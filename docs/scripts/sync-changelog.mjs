@@ -2,8 +2,8 @@
  * Rebuilds each package's `content/docs/<slug>/changelog.mdx` from its own CHANGELOG.md.
  *
  * The changelogs are written by Changesets in `packages/`, beside this folder, so they are read from
- * disk. It runs on every build and from the monorepo's `version-packages`, which puts the refreshed
- * pages in the same Version Packages PR as the bump they describe.
+ * disk. The pages are gitignored and rebuilt by every `build` and `dev`, so they can never lag a
+ * release. It has to run before `fetch-packages`, which checks whether each page exists.
  *
  * Release dates come from the npm registry: Changesets does not record them, and the git tags that
  * would carry them are not reliably pushed.
@@ -74,7 +74,7 @@ async function readChangelog(name, registry) {
 
   const tarball = registry?.versions?.[registry?.["dist-tags"]?.latest]?.dist?.tarball;
   if (!tarball) {
-    console.warn(`${name}: no tarball listed on npm — leaving the committed changelog alone`);
+    console.warn(`${name}: no tarball listed on npm — leaving the page on disk alone`);
     return null;
   }
 
@@ -86,9 +86,9 @@ async function readChangelog(name, registry) {
       console.log(`${name}: npm tarball`);
       return changelog;
     }
-    console.warn(`${name}: the tarball ships no CHANGELOG.md — leaving the committed page alone`);
+    console.warn(`${name}: the tarball ships no CHANGELOG.md — leaving the page on disk alone`);
   } catch (error) {
-    console.warn(`${name}: could not read the tarball (${error.message}) — leaving the committed page alone`);
+    console.warn(`${name}: could not read the tarball (${error.message}) — leaving the page on disk alone`);
   }
   return null;
 }
@@ -210,8 +210,8 @@ async function sync({ name, slug }) {
 
   const latest = registry?.['dist-tags']?.latest;
 
-  // Nothing to regenerate from. The page on disk is committed, so it stays as it was rather than
-  // being emptied, and the version still reaches releases.generated.ts if npm answered.
+  // Nothing to regenerate from. Whatever page is on disk stays as it was rather than being
+  // emptied, and the version still reaches releases.generated.ts if npm answered.
   if (markdown === null) {
     return { slug, latest, date: latest ? fmtDate(latest) : null };
   }

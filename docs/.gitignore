@@ -5,6 +5,8 @@ dist
 *.tsbuildinfo
 # Regenerated from npm on every build — never hand-edited, so never committed.
 src/generated/packages.json
+src/lib/releases.generated.ts
+content/docs/*/changelog.mdx
 
 # Next and fumadocs build output
 .next/

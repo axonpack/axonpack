@@ -5,8 +5,8 @@
   "description": "Documentation site for the @axonpack/* libraries",
   "license": "MIT",
   "scripts": {
-    "dev": "next dev",
-    "generate": "node scripts/fetch-packages.mjs && node scripts/sync-changelog.mjs",
+    "dev": "bun run generate; next dev",
+    "generate": "node scripts/sync-changelog.mjs && node scripts/fetch-packages.mjs",
     "build": "bun run generate && next build",
     "start": "serve out",
     "lint": "oxlint src",

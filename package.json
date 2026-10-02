@@ -11,8 +11,7 @@
     "check-types": "turbo run check-types",
     "prepare": "husky",
     "changeset": "changeset",
-    "version-packages": "changeset version && bun install --lockfile-only && bun run sync:docs-changelog",
-    "sync:docs-changelog": "test -f docs/scripts/sync-changelog.mjs && node docs/scripts/sync-changelog.mjs || echo \"docs/ not checked out, skipping changelog sync\"",
+    "version-packages": "changeset version && bun install --lockfile-only",
     "release": "turbo run prepare && changeset publish"
   },
   "devDependencies": {
