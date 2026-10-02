@@ -131,12 +131,14 @@ docs                   the documentation site and landing page, with its own ins
 Bun only, pinned via `devEngines.packageManager` (Bun 1.3.14, Node >= 24).
 
 ```sh
-git clone --recurse-submodules https://github.com/axonpack/axonpack.git
+git clone https://github.com/axonpack/axonpack.git
 cd axonpack
 bun install
 ```
 
-Already cloned without `--recurse-submodules`? `git submodule update --init` fills in `marketing/`.
+`marketing/` is a private submodule set to `update = none`, so clones and the Cloudflare build skip
+it. With access, fetch it with
+`git -c submodule.marketing.update=checkout submodule update --init marketing`.
 
 | Command               | What it does                                             |
 | --------------------- | -------------------------------------------------------- |
