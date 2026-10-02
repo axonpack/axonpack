@@ -1,5 +1,11 @@
 # @axonpack/react-native-devtools-tab
 
+## 0.1.3
+
+### Patch Changes
+
+- 7b21efb: - **Docs on axonpack.dev**: the links in the DevTools tab and the npm homepage go to axonpack.dev
+
 ## 0.1.2
 
 ### Patch Changes

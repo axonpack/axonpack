@@ -1,5 +1,11 @@
 # @axonpack/react-pretty-print
 
+## 0.1.2
+
+### Patch Changes
+
+- 7b21efb: - **Docs on axonpack.dev**: the npm homepage links to the docs at axonpack.dev
+
 ## 0.1.1
 
 ### Patch Changes
