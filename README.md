@@ -120,11 +120,10 @@ monorepo.
 ```
 packages/@axonpack/*   published libraries, one folder each
 packages/linter        shared oxlint base config, internal and deliberately unscoped
-docs                   the documentation site, a git submodule with its own install
+docs                   the documentation site and landing page, with its own install
 ```
 
-`docs` is a submodule of [`axonpack/axonpack.github.io`](https://github.com/axonpack/axonpack.github.io),
-and it builds and deploys itself. It is not a workspace member, so the root `install`, `build`,
+`docs` is not a workspace member, so the root `install`, `build`,
 `lint` and `check-types` all skip it by design. Run `bun install` inside `docs/` to work on it.
 
 ## Development
@@ -137,7 +136,7 @@ cd axonpack
 bun install
 ```
 
-Already cloned without `--recurse-submodules`? `git submodule update --init` fills in `docs/`.
+Already cloned without `--recurse-submodules`? `git submodule update --init` fills in `marketing/`.
 
 | Command               | What it does                                             |
 | --------------------- | -------------------------------------------------------- |
