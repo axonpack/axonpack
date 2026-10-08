@@ -10,6 +10,8 @@ import android.os.Looper
 import android.os.Process
 import android.os.StatFs
 import android.os.SystemClock
+import android.system.Os
+import android.system.OsConstants
 import android.view.Choreographer
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -143,6 +145,13 @@ class AxonpackDevtoolsModule : Module() {
 
   private val uiFps = UiFpsTracker()
 
+  private fun readTaskStat(tid: Int): String? =
+    try {
+      File("/proc/self/task/$tid/stat").readText()
+    } catch (_: Exception) {
+      null
+    }
+
   private var crashHandlerInstalled = false
 
   private fun crashFile(): File? =
@@ -203,6 +212,27 @@ class AxonpackDevtoolsModule : Module() {
         "appBytes" to debugInfo.totalPss.toDouble() * 1024,
         "totalBytes" to if (activityManager != null) info.totalMem.toDouble() else null,
         "availableToAppBytes" to if (activityManager != null) info.availMem.toDouble() else null,
+      )
+    }
+
+    /**
+     * Raw readings only; JS does the arithmetic so it can be tested. Total is utime + stime for the
+     * whole process. The JS thread is whichever thread this runs on: a sync Function is called straight
+     * from JSI, so no thread name has to be matched, and those names differ between architectures
+     * (`mqt_js`, `mqt_v_js`). The main thread's tid is the pid. Per-thread times come back as the raw
+     * `/proc` line because a thread name can hold spaces and brackets, and parsing that belongs where
+     * it can be tested. All of it has 10 ms clock-tick resolution. The core count is what JS divides the
+     * whole-app figure by, so 100% means every core busy.
+     */
+    Function("getCpuMetrics") {
+      val jsThreadId = Process.myTid()
+      mapOf(
+        "cpuTimeMs" to Process.getElapsedCpuTime().toDouble(),
+        "coreCount" to Runtime.getRuntime().availableProcessors().toDouble(),
+        "clockTicksPerSecond" to Os.sysconf(OsConstants._SC_CLK_TCK).toDouble(),
+        "jsThreadId" to jsThreadId.toDouble(),
+        "jsThreadStat" to readTaskStat(jsThreadId),
+        "mainThreadStat" to readTaskStat(Process.myPid()),
       )
     }
 

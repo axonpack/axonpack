@@ -1,3 +1,4 @@
+import { CpuPlot } from './cpu-plot.component';
 import { MemoryPlot } from './memory-plot.component';
 import { UsageMeter } from './usage-meter.component';
 import { formatSize } from '../../../core/utils/format-bytes.util';
@@ -32,7 +33,7 @@ export function MemoryCard() {
 
   return (
     <section className="axonpack-perf-card" data-wide>
-      <h3>Memory</h3>
+      <h3>Memory and CPU</h3>
 
       <MemoryPlot
         title="JS Heap"
@@ -83,6 +84,9 @@ export function MemoryCard() {
           />
         </>
       )}
+
+      <hr />
+      <CpuPlot />
     </section>
   );
 }

@@ -14,3 +14,16 @@ export function diffMs(from: number | undefined, to: number | undefined): number
   if (from === undefined || to === undefined) return undefined;
   return to - from;
 }
+
+export function formatPercent(value: number): string {
+  return `${Math.round(value)}%`;
+}
+
+/**
+ * One CPU line's latest reading. Before the first sample it is a dash; after it, a thread that could
+ * not be read says so, because charting it as 0 would claim the thread was idle.
+ */
+export function formatCpuReading(sampled: boolean, value: number | undefined): string {
+  if (value !== undefined) return formatPercent(value);
+  return sampled ? 'not measured' : '–';
+}

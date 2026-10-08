@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { performanceStore, usePerformanceStore } from '../stores/performance.store';
 import { formatSize } from '../../../core/utils/format-bytes.util';
 import { ageAxisLabels } from '../utils/age-labels.util';
+import { CpuPlot } from './cpu-plot.component';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
 import { LineChart } from '../../../core/components/ui/line-chart.ui';
 import { UsageMeter } from '../../../core/components/ui/usage-meter.ui';
@@ -35,7 +36,7 @@ export function MemoryChartCard() {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>Memory</Text>
+      <Text style={styles.label}>Memory and CPU</Text>
 
       <Plot
         title="JS Heap"
@@ -87,6 +88,10 @@ export function MemoryChartCard() {
           />
         </>
       )}
+
+      <View style={styles.divider} />
+
+      <CpuPlot />
     </View>
   );
 }

@@ -79,6 +79,17 @@ export type Palette = {
   codeComment: string;
   /** Syntax highlighting: HTML/XML tags. */
   codeTag: string;
+
+  // ── Charts ──────────────────────────────────────────────────────────────────────────────────────
+  // Their own tokens because the chart needs three lines that stay apart in every theme: `accent` is
+  // purple in one built-in and whatever a custom theme says in the rest. Each is at least 3:1 against
+  // `background`, the floor for a line on a chart.
+  /** CPU chart: the Total line, the whole app. A neutral grey. */
+  cpuApp: string;
+  /** CPU chart: the JavaScript thread. Amber. */
+  cpuJs: string;
+  /** CPU chart: the UI (main) thread. Blue. */
+  cpuUi: string;
 };
 
 /** Chrome DevTools' light Network tab */
@@ -115,6 +126,10 @@ export const LIGHT_PALETTE: Palette = {
   codeKeyword: '#0000ff',
   codeComment: '#008000',
   codeTag: '#800000',
+  // Charts
+  cpuApp: '#5f6368',
+  cpuJs: '#b45309',
+  cpuUi: '#1a73e8',
 };
 
 /** Chrome DevTools' dark theme */
@@ -151,6 +166,10 @@ export const DARK_PALETTE: Palette = {
   codeKeyword: '#569cd6',
   codeComment: '#6a9955',
   codeTag: '#d16969',
+  // Charts
+  cpuApp: '#9aa0a6',
+  cpuJs: '#fbbc04',
+  cpuUi: '#8ab4f8',
 };
 
 /**
@@ -229,6 +248,10 @@ export const DRACULA_PALETTE: Palette = {
   codeKeyword: '#ff79c6',
   codeComment: '#6272a4',
   codeTag: '#ff5555',
+  // Charts
+  cpuApp: '#b6b8c3',
+  cpuJs: '#ffb86c',
+  cpuUi: '#79a7ff',
 };
 
 /** https://www.nordtheme.com */
@@ -265,6 +288,10 @@ export const NORD_PALETTE: Palette = {
   codeKeyword: '#81a1c1',
   codeComment: '#616e88',
   codeTag: '#5e81ac',
+  // Charts
+  cpuApp: '#aeb3bb',
+  cpuJs: '#ebcb8b',
+  cpuUi: '#81a1c1',
 };
 
 /** Monokai, as shipped with TextMate and Sublime Text */
@@ -301,6 +328,10 @@ export const MONOKAI_PALETTE: Palette = {
   codeKeyword: '#f92672',
   codeComment: '#75715e',
   codeTag: '#a6e22e',
+  // Charts
+  cpuApp: '#a8a48f',
+  cpuJs: '#f4bf4f',
+  cpuUi: '#66d9ef',
 };
 
 /** One Dark, from Atom */
@@ -337,6 +368,10 @@ export const ONE_DARK_PALETTE: Palette = {
   codeKeyword: '#c678dd',
   codeComment: '#5c6370',
   codeTag: '#e06c75',
+  // Charts
+  cpuApp: '#9da5b4',
+  cpuJs: '#e5c07b',
+  cpuUi: '#61afef',
 };
 
 /** https://ethanschoonover.com/solarized */
@@ -373,6 +408,10 @@ export const SOLARIZED_LIGHT_PALETTE: Palette = {
   codeKeyword: '#859900',
   codeComment: '#93a1a1',
   codeTag: '#268bd2',
+  // Charts
+  cpuApp: '#657b83',
+  cpuJs: '#a07800',
+  cpuUi: '#268bd2',
 };
 
 /**

@@ -314,15 +314,16 @@ line is an app that feels frozen while every JS metric says it's fine.
 **Interactions** (card): the slowest event-to-next-paint seen, with the average and the count as the
 hint. Before anything is captured it reads `Slowest event to next paint`.
 
-**Memory**
+**Memory and CPU**
 
-| Field               | Meaning                                                                                                                                                                                 |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| JS Heap plot        | `performance.memory` used heap, captioned `of <total> allocated`. Reads `This JS engine doesn't report it` on JSC/V8.                                                                   |
-| App memory plot     | Whole-process footprint, what the OS holds against you. Needs a dev build.                                                                                                              |
-| Device memory meter | Used against total RAM, captioned with what is still available to this app. On Android that's system-wide free memory; on iOS it's what the process can still claim. Needs a dev build. |
+| Field                     | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JS Heap plot              | `performance.memory` used heap, captioned `of <total> allocated`. Reads `This JS engine doesn't report it` on JSC/V8.                                                                                                                                                                                                                                                                                                                                                   |
+| App memory plot           | Whole-process footprint, what the OS holds against you. Needs a dev build.                                                                                                                                                                                                                                                                                                                                                                                              |
+| Device memory meter       | Used against total RAM, captioned with what is still available to this app. On Android that's system-wide free memory; on iOS it's what the process can still claim. Needs a dev build.                                                                                                                                                                                                                                                                                 |
+| CPU usage (this app) plot | Three lines on a fixed 0 to 100% axis. Total is a share of every core the phone has, so 100% means all of them busy; the core count shows beside the title. JavaScript (the JS thread) and UI thread (the main thread) are each a share of one core, since a thread runs on one core at a time, so 100% means that thread never stopped. A thread that could not be read shows `not measured` and is not drawn. Says `CPU usage needs a development build` without one. |
 
-Both plots are sampled on `performance.sampleIntervalMs` (default 1 s) and span `historySize`
+The plots are sampled on `performance.sampleIntervalMs` (default 1 s) and span `historySize`
 samples, two minutes at the defaults. Each carries its own peak marker.
 
 **Storage**: disk space, not the [Storage tab](#storage-tab)'s contents — a Used meter against the data
@@ -927,7 +928,7 @@ as your own name and you replace it. A `defaultTheme` naming something unregiste
 than leaving the panel unstyled. The choice lives in memory for the session. Persisting it would
 mean taking a storage dependency for a colour scheme.
 
-The 25 tokens of `Palette`:
+The 28 tokens of `Palette`:
 
 | Group    | Tokens                                                                                      |
 | -------- | ------------------------------------------------------------------------------------------- |
@@ -937,6 +938,7 @@ The 25 tokens of `Palette`:
 | Status   | `accent`, `pending`, `success`, `error`, `warning`, `errorSurface`, `warningSurface`        |
 | Search   | `matchHighlight`                                                                            |
 | Syntax   | `keyAccent`, `jsonKey`, `jsonString`, `jsonNumber`, `codeKeyword`, `codeComment`, `codeTag` |
+| Charts   | `cpuApp`, `cpuJs`, `cpuUi` (the CPU plot's Total, JavaScript and UI thread lines)           |
 
 `matchHighlight` is the background painted behind text matching the current search. Every built-in
 palette sets it to a translucent colour so syntax highlighting still reads through it — keep that
@@ -968,6 +970,7 @@ control instead of breaking the panel.
 | --------------------------- | ---------------------------------------------------------- |
 | Main-thread frame rate      | Reads `dev build`; the JS line still plots.                |
 | App memory · Device memory  | Card says `Needs a dev build`.                             |
+| CPU usage                   | Plot says `CPU usage needs a development build`.           |
 | Storage card (disk space)   | Card says `Needs a dev build`; Android only regardless.    |
 | Startup, measured block     | Falls back to the platform block, which may be all dashes. |
 | Debug tab, Main (UI) thread | Block and crash buttons disabled with a note.              |
