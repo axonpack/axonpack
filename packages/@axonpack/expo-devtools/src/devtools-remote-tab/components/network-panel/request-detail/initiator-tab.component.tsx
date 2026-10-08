@@ -6,29 +6,41 @@ import {
 } from '../../../../core/services/symbolicate-stack.service';
 import { isMarkedCodeFrameLine } from '../../../../core/utils/code-frame.util';
 import { formatFrameLocation } from '../../../../core/utils/frame-location.util';
-import type { NetworkLogEntry } from '../../../../features/network/stores/network-log.store';
+import type { StackFrame } from '../../../../core/utils/parse-stack.util';
 
 type State =
   { phase: 'loading' } | { phase: 'raw' } | { phase: 'symbolicated'; result: SymbolicatedStack };
 
+// One empty list for every row with no stack, so the effect below does not see a new one each render.
+const NO_FRAMES: StackFrame[] = [];
+
 /**
  * Chrome's request call stack. Symbolicated on opening, as in the app, through the same service, so
- * a stack opened on either side is looked up once.
+ * a stack opened on either side is looked up once. The Navigation panel shows a move's origin with
+ * it too, which is the same question about a different row.
  */
-export function InitiatorTab({ entry }: { entry: NetworkLogEntry }) {
-  const captured = entry.initiator ?? [];
+export function InitiatorTab({
+  id,
+  frames: captured = NO_FRAMES,
+  title = 'Request call stack',
+}: {
+  /** What the symbolication cache is keyed by: the row the stack belongs to. */
+  id: string;
+  frames?: StackFrame[];
+  title?: string;
+}) {
   const [state, setState] = useState<State>({ phase: 'loading' });
 
   useEffect(() => {
     let active = true;
     setState({ phase: 'loading' });
-    symbolicateStack(entry.id, captured).then((result) => {
+    symbolicateStack(id, captured).then((result) => {
       if (active) setState(result ? { phase: 'symbolicated', result } : { phase: 'raw' });
     });
     return () => {
       active = false;
     };
-  }, [entry.id, captured]);
+  }, [id, captured]);
 
   const frames = state.phase === 'symbolicated' ? state.result.frames : captured;
   const codeFrame = state.phase === 'symbolicated' ? state.result.codeFrames[0] : undefined;
@@ -52,7 +64,7 @@ export function InitiatorTab({ entry }: { entry: NetworkLogEntry }) {
         </div>
       )}
       <details open className="axonpack-net-section">
-        <summary>Request call stack</summary>
+        <summary>{title}</summary>
         <div className="axonpack-net-stack">
           {frames.map((frame, index) => (
             <div key={`${index}-${frame.location}`} data-vendor={frame.vendor || undefined}>

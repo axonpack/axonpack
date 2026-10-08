@@ -1,5 +1,10 @@
 import type { NavigationContainerInfo } from '../../stores/navigation.store';
-import { flattenNavigator, hostedContainers, resolveOnScreen } from '../flatten-navigator.util';
+import {
+  flattenNavigator,
+  hostedContainers,
+  resolveOnScreen,
+  topContainers,
+} from '../flatten-navigator.util';
 
 const state = {
   type: 'stack',
@@ -199,5 +204,30 @@ describe('a host coming back on screen', () => {
 
     expect(rows.find((row) => row.label === 'Checkout')?.open).toBe(true);
     expect(rows.find((row) => row.label === 'Cart')?.onScreen).toBe(true);
+  });
+});
+
+describe('topContainers', () => {
+  const root: NavigationContainerInfo = {
+    name: 'root',
+    via: 'context',
+    route: { key: 'checkout-1', name: 'Checkout' },
+    state: { index: 0, routes: [{ key: 'checkout-1', name: 'Checkout' }] },
+  };
+  const checkout: NavigationContainerInfo = {
+    name: 'checkout',
+    via: 'hook',
+    hostRouteKey: 'checkout-1',
+    route: null,
+    state: null,
+  };
+
+  it('leaves out a container whose host screen is attached', () => {
+    expect(topContainers([root, checkout])).toEqual([root]);
+  });
+
+  it('keeps one whose host screen is not among the attached ones', () => {
+    const orphan = { ...checkout, hostRouteKey: 'gone-1' };
+    expect(topContainers([root, orphan])).toEqual([root, orphan]);
   });
 });

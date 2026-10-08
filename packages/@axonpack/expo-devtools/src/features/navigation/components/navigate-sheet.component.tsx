@@ -9,20 +9,7 @@ import { TextField } from '../../../core/components/ui/text-field.ui';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { navigateTo, openLink } from '../services/attach-navigation.service';
-
-function parseParams(text: string): { params?: Record<string, unknown>; error?: string } {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return {};
-  try {
-    const parsed: unknown = JSON.parse(trimmed);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      return { error: 'Params must be a JSON object.' };
-    }
-    return { params: parsed as Record<string, unknown> };
-  } catch {
-    return { error: 'Params are not valid JSON.' };
-  }
-}
+import { parseParams } from '../utils/parse-params.util';
 
 /**
  * Move the app from the panel: a route by name with params, or a deep link handed to the OS. Both
