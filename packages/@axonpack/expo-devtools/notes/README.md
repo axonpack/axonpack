@@ -10,6 +10,7 @@ only disagree with these.
 | [network.md](./network.md)                                             | Requests from fetch, XHR and a WebView                     |
 | [console.md](./console.md)                                             | Captured logs, and the prompt                              |
 | [storage.md](./storage.md)                                             | Keys and values in the stores you register                 |
+| [query.md](./query.md)                                                 | Queries and mutations in the app's TanStack Query cache    |
 | [performance.md](./performance.md)                                     | Frame rate, memory, startup, stalls                        |
 | [crash.md](./crash.md)                                                 | The four capture tiers and the report sheets               |
 | [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose                  |

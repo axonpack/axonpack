@@ -6,6 +6,7 @@ import {
   secureStoreAdapter,
   type DevtoolsConfig,
 } from '@axonpack/expo-devtools';
+import { QueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
 import { createMMKV } from 'react-native-mmkv';
 
@@ -27,6 +28,9 @@ export const mmkv = openMmkv();
 export const memoryStore = new Map<string, string>();
 
 export const SECURE_KEYS = ['session', 'pin'];
+
+/** The one client the Query demo provides to its screen and the Query tab reads. */
+export const queryClient = new QueryClient();
 
 export const devtoolsConfig = {
   defaultTheme: 'empathika',
@@ -124,6 +128,7 @@ export const devtoolsConfig = {
       }),
     ],
   },
+  query: { client: queryClient },
   // `satisfies` rather than a plain object: it is what checks `defaultTheme` against the themes
   // declared above, which is the job the old factory call used to do.
 } satisfies DevtoolsConfig<'midnight' | 'empathika'>;

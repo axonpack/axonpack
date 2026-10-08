@@ -9,6 +9,7 @@ import { ConsoleDemo } from './components/ConsoleDemo';
 import { CrashDemo } from './components/CrashDemo';
 import { NavigationDemo } from './components/NavigationDemo';
 import { PerformanceDemo } from './components/PerformanceDemo';
+import { QueryDemo } from './components/QueryDemo';
 import { RequestsScreen } from './components/RequestsScreen';
 import { StorageDemo } from './components/StorageDemo';
 import { TabBar } from './components/TabBar';
@@ -19,13 +20,14 @@ const TABS = [
   { key: 'console' as const, label: 'Console' },
   { key: 'performance' as const, label: 'Performance' },
   { key: 'storage' as const, label: 'Storage' },
+  { key: 'query' as const, label: 'Query' },
   { key: 'navigation' as const, label: 'Navigation' },
   { key: 'crash' as const, label: 'Crash' },
 ];
 
 export default function App() {
   const [tab, setTab] = useState<
-    'requests' | 'console' | 'performance' | 'storage' | 'navigation' | 'crash'
+    'requests' | 'console' | 'performance' | 'storage' | 'query' | 'navigation' | 'crash'
   >('requests');
 
   return (
@@ -46,6 +48,7 @@ export default function App() {
             {tab === 'console' ? <ConsoleDemo /> : null}
             {tab === 'performance' ? <PerformanceDemo /> : null}
             {tab === 'storage' ? <StorageDemo /> : null}
+            {tab === 'query' ? <QueryDemo /> : null}
             {tab === 'navigation' ? <NavigationDemo /> : null}
             {tab === 'crash' ? <CrashDemo /> : null}
             <StatusBar style="auto" />
