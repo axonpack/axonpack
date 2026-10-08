@@ -34,6 +34,11 @@ the desktop.
 - **Device memory**: how much RAM the phone has, and how much this app may still allocate, as a meter
   directly under the app's own footprint. On Android the available side is system-wide free memory; on
   iOS it is what the process can still claim before being killed. Needs a development build.
+- **CPU usage (this app)**: how busy the app kept the CPU over each sample, as three lines from 0 to
+  100%. Total is a share of all the phone's cores, so 100% means every core busy. JavaScript and
+  UI thread are each a share of one core, so 100% means that thread never stopped: JavaScript there
+  means your JS is the bottleneck, a busy UI thread points at native layout or rendering. Needs a
+  development build.
 - **Storage**: total, used and free space on the data partition. Android only, for the App Store
   reason below. Needs a development build.
 - **Startup**: process start to first render, split into native startup, bundle eval, app setup and

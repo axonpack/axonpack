@@ -118,6 +118,22 @@ export type SystemMemorySample = {
   availableToAppBytes?: number;
 };
 
+/**
+ * The app's CPU use over one sampling interval, from the native module. Absent without it.
+ */
+export type CpuSample = {
+  /** When the reading was taken, as `Date.now()` milliseconds. */
+  timestamp: number;
+  /** How many cores the phone has, which `total` is a share of. */
+  cores?: number;
+  /** The whole app, as a percent of all cores: 100 means every core busy. Absent without `cores`. */
+  total?: number;
+  /** The JS thread, as a percent of one core: 100 means that thread never stopped. */
+  js?: number;
+  /** The main (UI) thread, as a percent of one core. Absent when it could not be read. */
+  main?: number;
+};
+
 /** Device disk space, from the native module. Read once when recording begins. */
 export type StorageInfo = {
   /** Total size of the volume in bytes. */
@@ -146,6 +162,8 @@ export type PerformanceSupport = {
   memory: boolean;
   /** The native module is present, so real device memory can be read. */
   systemMemory: boolean;
+  /** The native module can report CPU time. False in Expo Go and on a dev build older than this. */
+  cpu: boolean;
   /** `PerformanceObserver` supports `'longtask'` on this platform and RN version. */
   longTasks: boolean;
   /** `PerformanceObserver` supports `'event'` on this platform and RN version. */
@@ -162,6 +180,8 @@ export type PerformanceSnapshot = {
   memory: MemorySample[];
   /** Device memory readings, oldest first. */
   systemMemory: SystemMemorySample[];
+  /** App CPU readings, oldest first. */
+  cpu: CpuSample[];
   /** Disk space, read once. Absent without the native module. */
   storage?: StorageInfo;
   /** Recorded long tasks, newest first. */
@@ -187,6 +207,7 @@ const DEFAULT_HISTORY_SIZE = 120;
 let historySize = DEFAULT_HISTORY_SIZE;
 let memory: MemorySample[] = [];
 let systemMemory: SystemMemorySample[] = [];
+let cpu: CpuSample[] = [];
 let storage: StorageInfo | undefined;
 let longTasks: LongTaskEntry[] = [];
 let userTiming: UserTimingEntry[] = [];
@@ -250,6 +271,7 @@ let sampleIntervalMs = 1000;
 let support: PerformanceSupport = {
   memory: false,
   systemMemory: false,
+  cpu: false,
   longTasks: false,
   interactions: false,
 };
@@ -262,6 +284,7 @@ const emitter = new EventEmitter<PerformanceEvents>();
 let snapshot: PerformanceSnapshot = {
   memory,
   systemMemory,
+  cpu,
   storage,
   longTasks,
   userTiming,
@@ -344,6 +367,7 @@ export const performanceStore = {
       snapshot = {
         memory,
         systemMemory,
+        cpu,
         storage,
         longTasks,
         userTiming,
@@ -448,6 +472,11 @@ export const performanceStore = {
     }
     publish();
   },
+  addCpuSample(sample: CpuSample) {
+    if (!enabled || paused) return;
+    cpu = [...cpu, sample].slice(-historySize);
+    publish();
+  },
   addMemorySample(sample: MemorySample) {
     if (!enabled || paused) return;
     memory = [...memory, sample].slice(-historySize);
@@ -521,6 +550,7 @@ export const performanceStore = {
   clear() {
     memory = [];
     systemMemory = [];
+    cpu = [];
     longTasks = [];
     userTiming = [];
     interactions = [];

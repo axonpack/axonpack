@@ -1,6 +1,6 @@
 ---
 title: Themes
-description: The built-in theme ids, and all 25 palette tokens.
+description: The built-in theme ids, and all 28 palette tokens.
 ---
 
 A theme patches a base rather than redefining everything:
@@ -20,7 +20,7 @@ leaving the panel unstyled.
 The choice lives in memory for the session. Persisting it would mean taking a storage dependency for a
 colour scheme.
 
-## The 25 tokens of `Palette`
+## The 28 tokens of `Palette`
 
 | Group    | Tokens                                                                                                                       |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -30,6 +30,7 @@ colour scheme.
 | Status   | `accent`, `pending`, `success`, `error`, `warning`, `errorSurface`, `warningSurface`                                         |
 | Search   | `matchHighlight`                                                                                                             |
 | Syntax   | `keyAccent`, `jsonKey`, `jsonString`, `jsonNumber`, `codeKeyword`, `codeComment`, `codeTag`                                  |
+| Charts   | `cpuApp`, `cpuJs`, `cpuUi` (the CPU plot's Total, JavaScript and UI thread lines) |
 
 Three of those are easy to mix up:
 

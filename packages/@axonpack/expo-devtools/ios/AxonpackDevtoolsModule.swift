@@ -80,6 +80,22 @@ private func appMemoryFootprintBytes() -> Double? {
 }
 
 
+/** User plus system time one thread has run, in milliseconds. Nil if the thread is gone. */
+private func threadCpuMs(_ thread: thread_act_t) -> Double? {
+  var info = thread_basic_info_data_t()
+  var count = mach_msg_type_number_t(
+    MemoryLayout<thread_basic_info_data_t>.size / MemoryLayout<integer_t>.size)
+  let result = withUnsafeMutablePointer(to: &info) {
+    $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+      thread_info(thread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
+    }
+  }
+  guard result == KERN_SUCCESS else { return nil }
+  let seconds = Double(info.user_time.seconds + info.system_time.seconds)
+  let micros = Double(info.user_time.microseconds + info.system_time.microseconds)
+  return seconds * 1000 + micros / 1000
+}
+
 /**
  Crash persistence.
 
@@ -319,8 +335,25 @@ public class AxonpackDevtoolsModule: Module {
 
   private let uiFps = UiFpsTracker()
 
+  /// Taken once on the main queue and held for the module's life, so `getCpuMetrics` can read the main
+  /// thread from the JS thread. Released in `OnDestroy`.
+  private var mainThreadPort = mach_port_t(MACH_PORT_NULL)
+
   public func definition() -> ModuleDefinition {
     Name("AxonpackDevtools")
+
+    OnCreate {
+      DispatchQueue.main.async { [weak self] in
+        self?.mainThreadPort = mach_thread_self()
+      }
+    }
+
+    OnDestroy {
+      if self.mainThreadPort != MACH_PORT_NULL {
+        mach_port_deallocate(mach_task_self_, self.mainThreadPort)
+        self.mainThreadPort = mach_port_t(MACH_PORT_NULL)
+      }
+    }
 
     Events("onNetworkPhases")
 
@@ -375,6 +408,38 @@ public class AxonpackDevtoolsModule: Module {
         "appBytes": appMemoryFootprintBytes(),
         "totalBytes": Double(ProcessInfo.processInfo.physicalMemory),
         "availableToAppBytes": Double(os_proc_available_memory()),
+      ]
+    }
+
+    /**
+     Raw readings only; JS does the arithmetic. Total is `getrusage`, which counts every thread the
+     process has run, finished ones included. The JS thread is whichever thread this runs on: a sync
+     Function is called straight from JSI, so its name never has to be matched, and that name differs
+     between architectures. Per-thread times are user plus system time from `thread_info`, not the
+     kernel's decayed `cpu_usage` estimate.
+     */
+    Function("getCpuMetrics") { () -> [String: Double?] in
+      var usage = rusage()
+      getrusage(RUSAGE_SELF, &usage)
+      let totalSeconds =
+        Double(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec)
+        + Double(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1_000_000
+
+      // `mach_thread_self` hands out a port reference every call, so it goes straight back.
+      let jsPort = mach_thread_self()
+      let jsThreadCpuMs = threadCpuMs(jsPort)
+      mach_port_deallocate(mach_task_self_, jsPort)
+
+      var jsThreadId: UInt64 = 0
+      pthread_threadid_np(nil, &jsThreadId)
+
+      return [
+        "cpuTimeMs": totalSeconds * 1000,
+        "coreCount": Double(ProcessInfo.processInfo.activeProcessorCount),
+        "jsThreadId": Double(jsThreadId),
+        "jsThreadCpuMs": jsThreadCpuMs,
+        "mainThreadCpuMs": self.mainThreadPort == MACH_PORT_NULL
+          ? nil : threadCpuMs(self.mainThreadPort),
       ]
     }
 

@@ -42,15 +42,16 @@ is an app that feels frozen while every JS metric says it is fine.
 The slowest event-to-next-paint seen, with the average and the count as the hint. Before anything is
 captured it reads `Slowest event to next paint`.
 
-### Memory
+### Memory and CPU
 
 | Field               | Meaning                                                                                                                                                                                |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | JS Heap plot        | `performance.memory` used heap, captioned `of <total> allocated`. Reads `This JS engine doesn't report it` on JSC/V8.                                                                   |
 | App memory plot     | Whole-process footprint, what the OS holds against you. Needs a dev build.                                                                                                             |
 | Device memory meter | Used against total RAM, captioned with what is still available to this app. On Android that is system-wide free memory; on iOS it is what the process can still claim. Needs a dev build. |
+| CPU usage (this app) plot | Three lines on a fixed 0 to 100% axis. Total is a share of every core the phone has, so 100% means all of them busy; the core count shows beside the title. JavaScript (the JS thread) and UI thread (the main thread) are each a share of one core, since a thread runs on one core at a time, so 100% means that thread never stopped. A thread that could not be read shows `not measured` and is not drawn. Says `CPU usage needs a development build` without one. |
 
-Both plots are sampled on `performance.sampleIntervalMs` (default 1 s) and span `historySize` samples,
+The plots are sampled on `performance.sampleIntervalMs` (default 1 s) and span `historySize` samples,
 two minutes at the defaults. Each carries its own peak marker.
 
 ### Storage
