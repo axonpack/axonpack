@@ -5,18 +5,20 @@ import {
   navigationStore,
   useNavigationStore,
 } from '../../../features/navigation/stores/navigation.store';
+import { queryStore, useQueryStore } from '../../../features/query/stores/query.store';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
 export type DevtoolsTab =
-  'network' | 'console' | 'performance' | 'storage' | 'navigation' | 'crashes' | 'debug';
+  'network' | 'console' | 'performance' | 'storage' | 'query' | 'navigation' | 'crashes' | 'debug';
 
 const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'network', label: 'Network', icon: 'swap-vert' },
   { key: 'console', label: 'Console', icon: 'terminal' },
   { key: 'performance', label: 'Performance', icon: 'speed' },
   { key: 'storage', label: 'Storage', icon: 'storage' },
+  { key: 'query', label: 'Query', icon: 'cached' },
   { key: 'navigation', label: 'Navigation', icon: 'alt-route' },
   { key: 'crashes', label: 'Crashes', icon: 'bug-report' },
   { key: 'debug', label: 'Debug', icon: 'construction' },
@@ -34,9 +36,15 @@ export function DevtoolsTabBar({
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  // The one tab that is not always there: an app with no router has nothing it could ever show.
+  // The tabs that are not always there: an app with no router, or one that handed over no
+  // TanStack Query client, has nothing they could ever show.
   const routerKind = useNavigationStore(navigationStore.getRouterKind);
-  const tabs = routerKind === null ? TABS.filter((entry) => entry.key !== 'navigation') : TABS;
+  const hasQueryClient = useQueryStore(queryStore.hasClient);
+  const tabs = TABS.filter(
+    (entry) =>
+      (entry.key !== 'navigation' || routerKind !== null) &&
+      (entry.key !== 'query' || hasQueryClient)
+  );
   return (
     <ScrollView
       horizontal

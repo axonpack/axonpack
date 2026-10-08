@@ -17,7 +17,9 @@ export type {
   DevtoolsStorageConfig,
   DevtoolsCrashConfig,
   DevtoolsNavigationConfig,
+  DevtoolsQueryConfig,
 } from './client/start-devtools.client';
+export type { QueryClientLike } from './features/query/stores/query.store';
 export { DevtoolsProvider } from './core/components/devtools-provider.component';
 export type { DevtoolsProviderProps } from './core/components/devtools-provider.component';
 export { useDevtoolsPanel } from './core/services/use-devtools-panel.service';

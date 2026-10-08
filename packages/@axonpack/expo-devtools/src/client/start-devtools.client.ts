@@ -44,6 +44,7 @@ import {
   type MeasureOptions,
 } from '../features/performance/services/user-timing.service';
 import { performanceStore } from '../features/performance/stores/performance.store';
+import { queryStore, type QueryClientLike } from '../features/query/stores/query.store';
 import {
   resolveStorageAdapters,
   type StorageAdapterDefinition,
@@ -351,6 +352,25 @@ export type DevtoolsStorageConfig = {
 };
 
 /**
+ * The Query tab. TanStack Query is not a dependency of this package, so the tab sees only the
+ * client handed to it here, the same way the Storage tab sees only the stores it was given.
+ */
+export type DevtoolsQueryConfig = {
+  /**
+   * Your app's TanStack Query v5 `QueryClient`, the same instance passed to `QueryClientProvider`.
+   * The tab lists its queries and mutations as they change, and can refetch, invalidate, reset or
+   * remove a query, or hold it in a loading or error state to see how a screen handles it.
+   *
+   * ```ts
+   * query: { client: queryClient }
+   * ```
+   *
+   * Unset by default, which leaves the Query tab out of the panel.
+   */
+  client?: QueryClientLike;
+};
+
+/**
  * The Navigation tab: the moves the navigator made, and a hook to strip what they carry. The tab is
  * only there when a router is installed, and it finds Expo Router on its own; a React Navigation app
  * hands its container over with `useDevtoolsNavigation`.
@@ -429,6 +449,8 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   performance?: DevtoolsPerformanceConfig;
   /** The Storage tab: which stores it can see. Nothing is inspected until you register one here. */
   storage?: DevtoolsStorageConfig;
+  /** The Query tab: the TanStack Query client it reads. Nothing is shown until you pass one. */
+  query?: DevtoolsQueryConfig;
   /** The Navigation tab: whether it starts recording, and what it strips from a move. */
   navigation?: DevtoolsNavigationConfig;
   /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
@@ -605,6 +627,8 @@ export function startDevtools<TThemeName extends string = never>(
     );
   }
   storageStore.setEnabled(true);
+
+  if (config?.query?.client) queryStore.setClient(config.query.client);
 
   navigationStore.setRedaction(redactNavigation);
   navigationStore.setEnabled(true);

@@ -17,6 +17,7 @@ import { DebugView } from '../../../features/debug/components/debug-view.compone
 import { NavigationView } from '../../../features/navigation/components/navigation-view.component';
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
+import { QueryView } from '../../../features/query/components/query-view.component';
 import { StorageView } from '../../../features/storage/components/storage-view.component';
 import { HIT_SLOP } from '../../constants/metrics.const';
 import { devtoolsTabStore } from '../../stores/devtools-tab.store';
@@ -56,6 +57,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         return <PerformanceView />;
       case 'storage':
         return <StorageView />;
+      case 'query':
+        return <QueryView />;
       case 'navigation':
         return <NavigationView />;
       case 'crashes':
