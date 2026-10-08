@@ -14,11 +14,14 @@ export type StorageEntry = {
   adapterId: string;
   /** The key, as the store reported it. */
   key: string;
-  /** `null` is an absent key. `''` is a value. */
+  /** `null` is an absent key, or one whose value is not read yet. `''` is a value. */
   text: string | null;
   /** What the driver typed the value as. Drives how an edit is written back. */
   valueType: StorageValueType;
-  /** Classified once at read time — see `classifyStoredValue`, which parses JSON to get here. */
+  /**
+   * Classified once at read time — see `classifyStoredValue`, which parses JSON to get here.
+   * `'unread'` is a key that was listed but whose value has not been read yet.
+   */
   kind: StoredValueKind;
   /** UTF-8 bytes of `text` — what the store is actually billed for, not `text.length`. */
   size: number;
@@ -36,15 +39,16 @@ export type StorageAdapterStatus = 'idle' | 'reading' | 'ready' | 'error';
 export type StorageAdapterState = {
   /** The store itself — name, id, and what it is allowed to do. */
   adapter: StorageAdapter;
-  /** The keys read, sorted by key. Empty until the first read. */
+  /**
+   * Every key the store listed, sorted by key. Empty until the first read. Each arrives as
+   * `'unread'`, and its value is read when its row is on screen.
+   */
   entries: StorageEntry[];
   /** Where that read got to. */
   status: StorageAdapterStatus;
   /** Why the read failed, when it did. */
   error?: string;
-  /** The read stopped at the key cap. `totalKeys` is how many the store really holds. */
-  truncated: boolean;
-  /** How many keys the store holds, even when only `storage.maxKeys` of them were read. */
+  /** How many keys the store holds. */
   totalKeys: number;
   /** When the last read finished, as `Date.now()` milliseconds. Absent before the first one. */
   readAt?: number;
@@ -110,7 +114,6 @@ export const storageStore = {
         adapter,
         entries: [],
         status: 'idle',
-        truncated: false,
         totalKeys: 0,
       }))
     );
@@ -128,14 +131,13 @@ export const storageStore = {
   setEntries(
     adapterId: string,
     entries: StorageEntry[],
-    meta: { truncated: boolean; totalKeys: number; readAt: number }
+    meta: { totalKeys: number; readAt: number }
   ) {
     if (!enabled) return;
     patchState(adapterId, {
       entries,
       status: 'ready',
       error: undefined,
-      truncated: meta.truncated,
       totalKeys: meta.totalKeys,
       readAt: meta.readAt,
     });
@@ -164,7 +166,20 @@ export const storageStore = {
       totalKeys: index === -1 ? state.totalKeys + 1 : state.totalKeys,
     });
   },
-  /** A key not on screen is a no-op, so a delete reported twice doesn't take the total down twice. */
+  /**
+   * Values read after the list, swapped in by key. A key the list no longer holds stays gone: it was
+   * deleted or refreshed away while its value was being read.
+   */
+  fillEntries(adapterId: string, filled: readonly StorageEntry[]) {
+    const state = snapshot.adapters.find((current) => current.adapter.id === adapterId);
+    if (!state || filled.length === 0) return;
+
+    const byKey = new Map(filled.map((entry) => [entry.key, entry]));
+    patchState(adapterId, {
+      entries: state.entries.map((entry) => byKey.get(entry.key) ?? entry),
+    });
+  },
+  /** A key the list doesn't hold is a no-op, so a delete reported twice doesn't take the total down twice. */
   removeEntry(adapterId: string, key: string) {
     const state = snapshot.adapters.find((current) => current.adapter.id === adapterId);
     if (!state?.entries.some((entry) => entry.key === key)) return;

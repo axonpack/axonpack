@@ -61,7 +61,8 @@ The summary names the store, whether it is `Async` or `Sync`, when it was last r
 total bytes and largest key. Under that it adds a note when one applies:
 
 - The store cannot list its own keys (SecureStore), so it shows only the keys you declared.
-- The read stopped at the `storage.maxKeys` cap, with how many keys it read out of the total.
+- How many values have been read so far. A value is read when its row is on screen, so sizes,
+  types and value search cover only those.
 - The store is read-only, so values cannot be edited or deleted.
 - A blacklist is set, so any key it matches was never read.
 

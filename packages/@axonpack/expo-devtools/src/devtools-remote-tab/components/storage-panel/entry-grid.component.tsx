@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { DraftRow } from './draft-row.component';
 import { EntryRow } from './entry-row.component';
@@ -6,6 +6,7 @@ import { NewEntryRow } from './new-entry-row.component';
 import { themeStore, useThemeStore } from '../../../core/stores/theme.store';
 import type { Matcher } from '../../../core/utils/text-search.util';
 import { isEditableValueType } from '../../../features/storage/services/define-adapter.service';
+import { readUnreadEntries } from '../../../features/storage/services/read-storage.service';
 import {
   EMPTY_DRAFTS,
   storageDraftsStore,
@@ -36,12 +37,14 @@ const COLUMNS: { label: string; width: number; sortKey?: StorageSortField }[] = 
 ];
 const VALUE_COLUMN = 2;
 const VALUE_MIN = 120;
+/** About one screen of rows. */
+const PAGE_SIZE = 50;
 
 /**
  * Chrome's Local Storage table over the same filters and sort as the app's list.
  *
- * Every row is drawn, with no windowing: a read stops at `storage.maxKeys`, 1,000 by default, which
- * the Network grid already draws at.
+ * No scroll position reaches the app, so it cannot tell which rows are in view. It draws about a
+ * screen of rows instead, and more on request, and a drawn row counts as shown: its value is read.
  */
 export function EntryGrid({
   state,
@@ -70,9 +73,15 @@ export function EntryGrid({
   );
   const canEdit = adapter?.canEdit === true;
 
-  const groups = groupByNamespace
-    ? groupEntriesByNamespace(visible)
-    : [{ title: null, data: visible }];
+  const [drawnCount, setDrawnCount] = useState(PAGE_SIZE);
+  const drawn = useMemo(() => visible.slice(0, drawnCount), [visible, drawnCount]);
+  const hiddenCount = visible.length - drawn.length;
+
+  useEffect(() => {
+    readUnreadEntries(drawn);
+  }, [drawn]);
+
+  const groups = groupByNamespace ? groupEntriesByNamespace(drawn) : [{ title: null, data: drawn }];
 
   function pressHeader(key: StorageSortField) {
     if (sort === key) storageViewStore.toggleDescending();
@@ -142,6 +151,16 @@ export function EntryGrid({
           ))}
         </div>
       ))}
+      {hiddenCount > 0 && (
+        <p className="axonpack-net-empty">
+          {`${hiddenCount} more keys. Search to narrow them down, or `}
+          <button
+            className="axonpack-sto-text-button"
+            onClick={() => setDrawnCount((count) => count + PAGE_SIZE)}>
+            {`show ${Math.min(hiddenCount, PAGE_SIZE)} more`}
+          </button>
+        </p>
+      )}
       {drafts.added.map((row) => (
         <DraftRow
           key={row.id}

@@ -73,6 +73,42 @@ export function hasActiveFilters(filters: StorageFilters): boolean {
 
 export type StorageSortField = 'key' | 'size' | 'type';
 
+// ponytail: holds every key the tab has ever sorted. A dev tool's key set is small enough; clear
+// it on refresh if a store with churning keys ever makes it matter.
+const lowered = new Map<string, string>();
+
+/** Each key is lowercased once, ever, rather than twice per comparison. */
+function lowerKey(key: string): string {
+  let lower = lowered.get(key);
+  if (lower === undefined) {
+    lower = key.toLowerCase();
+    lowered.set(key, lower);
+  }
+  return lower;
+}
+
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+type SortableKey = { key: string; lower: string };
+
+/**
+ * Case-insensitive, with the original key breaking a tie so `A` and `a` always land the same way.
+ * Not `localeCompare`: on Android, Hermes hands each call to the platform, and sorting 10,000 keys
+ * that way held the JS thread for most of a second, on listing and again on every render.
+ */
+function compareSortableKeys(a: SortableKey, b: SortableKey): number {
+  return compareText(a.lower, b.lower) || compareText(a.key, b.key);
+}
+
+export function sortKeys(keys: readonly string[]): string[] {
+  return keys
+    .map((key) => ({ key, lower: lowerKey(key) }))
+    .sort(compareSortableKeys)
+    .map(({ key }) => key);
+}
+
 const KIND_ORDER: StoredValueKind[] = [
   'json-object',
   'json-array',
@@ -84,7 +120,10 @@ const KIND_ORDER: StoredValueKind[] = [
   'absent',
 ];
 
-/** Sorted by key within a type, so switching to Type sort doesn't scramble the order inside a group. */
+/**
+ * Sorted by key within a type, so switching to Type sort doesn't scramble the order inside a group.
+ * An unread row has no size or type yet, so those two sorts put it last whichever way they run.
+ */
 export function sortEntries(
   entries: StorageEntry[],
   field: StorageSortField,
@@ -92,14 +131,22 @@ export function sortEntries(
 ): StorageEntry[] {
   const direction = descending ? -1 : 1;
 
-  return [...entries].sort((a, b) => {
-    if (field === 'size') return (a.size - b.size) * direction || a.key.localeCompare(b.key);
-    if (field === 'type') {
-      const byKind = KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind);
-      return byKind * direction || a.key.localeCompare(b.key);
-    }
-    return a.key.localeCompare(b.key) * direction;
-  });
+  return entries
+    .map((entry) => ({ entry, key: entry.key, lower: lowerKey(entry.key) }))
+    .sort((a, b) => {
+      const unreadLast =
+        field === 'key' ? 0 : Number(a.entry.kind === 'unread') - Number(b.entry.kind === 'unread');
+      if (unreadLast !== 0) return unreadLast;
+      if (field === 'size') {
+        return (a.entry.size - b.entry.size) * direction || compareSortableKeys(a, b);
+      }
+      if (field === 'type') {
+        const byKind = KIND_ORDER.indexOf(a.entry.kind) - KIND_ORDER.indexOf(b.entry.kind);
+        return byKind * direction || compareSortableKeys(a, b);
+      }
+      return compareSortableKeys(a, b) * direction;
+    })
+    .map(({ entry }) => entry);
 }
 
 export function countByKind(
@@ -121,7 +168,8 @@ export function groupByNamespace(
     group.push(entry);
     byNamespace.set(title, group);
   }
-  return Array.from(byNamespace.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([title, data]) => ({ title, data }));
+  return sortKeys([...byNamespace.keys()]).map((title) => ({
+    title,
+    data: byNamespace.get(title) ?? [],
+  }));
 }

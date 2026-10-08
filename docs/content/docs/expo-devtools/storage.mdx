@@ -111,8 +111,10 @@ behaviour is unchanged. The tab only calls what it was handed.
 
 ## Limits
 
-- **1,000 keys per store** by default, then it stops and reports how many it skipped. Raise it with
-  `storage.maxKeys`.
+- **A value is read only when its row is on screen.** Every key is listed when the tab opens, and
+  no value is read until then. An unread row shows a placeholder for type and size, so sorting by
+  size or type, the type filter, the totals and a search on values cover the values read so far. A
+  search on key names covers every key. Export reads every value it needs.
 - **No SQLite.** A table needs schema, queries and paging, not a key list.
 - **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
   their length is reported.

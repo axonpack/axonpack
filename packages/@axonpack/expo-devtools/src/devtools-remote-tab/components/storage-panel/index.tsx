@@ -13,6 +13,7 @@ import { StorageToolbar } from './toolbar.component';
 import { buildMatcher } from '../../../core/utils/text-search.util';
 import {
   readAllAdapters,
+  readUnreadEntries,
   watchStorageAdapters,
 } from '../../../features/storage/services/read-storage.service';
 import { useStorageViewStore } from '../../../features/storage/stores/storage-view.store';
@@ -137,7 +138,10 @@ export function StoragePanel() {
             visible={visible}
             matcher={matcher}
             selectedKey={selected ? selected.key : null}
-            onSelect={(key, tab) => setPane({ kind: 'key', key, tab })}
+            onSelect={(key, tab) => {
+              if (state) readUnreadEntries([{ adapterId: state.adapter.id, key }]);
+              setPane({ kind: 'key', key, tab });
+            }}
           />
         </div>
         {paneOpen && state && (

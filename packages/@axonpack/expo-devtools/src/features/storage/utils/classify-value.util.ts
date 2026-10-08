@@ -6,12 +6,21 @@ import { isExpandable, type JsonValue } from '../../../core/utils/json-tree.util
  * What a row shows, as opposed to `StorageValueType` (what the driver typed the value as). A store
  * holds strings, so most of this is discovered by looking at the text: a value that parses as JSON
  * becomes `'json-object'` / `'json-array'`, `''` becomes `'empty'`, and a key with no value at all
- * becomes `'absent'`.
+ * becomes `'absent'`. `'unread'` is never classified: it marks a listed key whose value is not
+ * read yet.
  *
  * It is what the tab's type filter matches on, and it is classified once at read time.
  */
 export type StoredValueKind =
-  'json-object' | 'json-array' | 'string' | 'number' | 'boolean' | 'buffer' | 'empty' | 'absent';
+  | 'json-object'
+  | 'json-array'
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'buffer'
+  | 'empty'
+  | 'absent'
+  | 'unread';
 
 /**
  * Classified once at read time, not per render: this parses JSON, and re-running it for a thousand

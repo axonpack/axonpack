@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   readAdapterById,
   readAllAdapters,
+  readUnreadEntries,
 } from '../../../features/storage/services/read-storage.service';
 import { storageViewStore } from '../../../features/storage/stores/storage-view.store';
 import {
@@ -62,10 +63,14 @@ export function StorageToolbar({
 
   // A download has to be a link the page follows itself, since a click cannot wait on the app.
   // ponytail: built on hover, so a key read between hover and click is left out of the file.
-  function buildExport() {
+  // With values still unread there is no file yet: the first click reads them and builds it, and
+  // the second downloads it. Hovering reads nothing.
+  const unreadCount = visible.filter((entry) => entry.kind === 'unread').length;
+  async function buildExport() {
     if (!state) return;
+    const entries = await readUnreadEntries(visible);
     const text = JSON.stringify(
-      buildStorageExport(state.adapter, visible, new Date().toISOString()),
+      buildStorageExport(state.adapter, entries, new Date().toISOString()),
       null,
       2
     );
@@ -152,10 +157,15 @@ export function StorageToolbar({
       <a
         className="axonpack-net-button"
         data-icon="download"
-        title="Export a snapshot (the keys the filters keep)"
-        href={exportFile?.href}
+        title={
+          unreadCount > 0
+            ? `Export: click to read ${unreadCount} values first, then click again to download`
+            : 'Export a snapshot (the keys the filters keep)'
+        }
+        href={unreadCount > 0 ? undefined : exportFile?.href}
         download={exportFile?.name}
-        onMouseEnter={buildExport}
+        onMouseEnter={unreadCount > 0 ? undefined : buildExport}
+        onClick={unreadCount > 0 ? buildExport : undefined}
       />
       {canEdit && (
         <button className="axonpack-sto-text-button" title="Import a snapshot" onClick={onImport}>

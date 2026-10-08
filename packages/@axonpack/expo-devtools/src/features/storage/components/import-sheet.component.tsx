@@ -1,5 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
@@ -9,6 +9,7 @@ import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import type { StorageAdapter } from '../services/define-adapter.service';
 import { applyStorageImport, type StorageImportResult } from '../services/import-storage.service';
+import { readUnreadEntries } from '../services/read-storage.service';
 import type { StorageEntry } from '../stores/storage.store';
 import { readStorageImport, STORAGE_IMPORT_SKIP_REASONS } from '../utils/build-storage-export.util';
 
@@ -45,6 +46,12 @@ export function ImportSheet({
     [text, adapter, entries]
   );
   const plan = reading.state === 'read' ? reading.plan : null;
+
+  // An unread key looks like one the file would change, so read the keys it would overwrite. Any it
+  // already holds then move to "unchanged" and are not written.
+  useEffect(() => {
+    if (plan) readUnreadEntries(plan.overwrite.map(({ key }) => ({ adapterId: adapter.id, key })));
+  }, [plan, adapter.id]);
   const writeCount = plan === null ? 0 : plan.create.length + plan.overwrite.length;
 
   async function paste() {

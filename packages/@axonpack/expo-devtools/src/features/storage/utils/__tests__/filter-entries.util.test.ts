@@ -8,6 +8,7 @@ import {
   hasActiveFilters,
   matchesFilters,
   sortEntries,
+  sortKeys,
   type StorageFilters,
 } from '../filter-entries.util';
 
@@ -52,6 +53,21 @@ describe('matchesFilters search scope', () => {
 
   it('matches everything when the query is empty', () => {
     expect(matchesFilters(token, filters(), null)).toBe(true);
+  });
+});
+
+describe('matchesFilters on an unread key', () => {
+  const unread = entry('flood:key-09999', null, 'unread');
+
+  it('finds it by key name, with no value read', () => {
+    expect(matchesFilters(unread, filters(), matcherFor('09999'))).toBe(true);
+    expect(matchesFilters(unread, filters({ scope: 'keys' }), matcherFor('09999'))).toBe(true);
+  });
+
+  it('is not hidden as empty, and matches no value search or type', () => {
+    expect(matchesFilters(unread, filters({ hideEmpty: true }), null)).toBe(true);
+    expect(matchesFilters(unread, filters({ scope: 'values' }), matcherFor('09999'))).toBe(false);
+    expect(matchesFilters(unread, filters({ kind: 'string' }), null)).toBe(false);
   });
 });
 
@@ -117,6 +133,40 @@ describe('sortEntries', () => {
     const original = [...entries];
     sortEntries(entries, 'size', true);
     expect(entries).toEqual(original);
+  });
+});
+
+describe('sortEntries by key', () => {
+  it('ignores case, and puts the capital first when two keys differ only in case', () => {
+    const rows = ['zeta', 'Beta', 'Zeta', 'alpha'].map((key) => entry(key, 'x'));
+    expect(sortEntries(rows, 'key', false).map((it) => it.key)).toEqual([
+      'alpha',
+      'Beta',
+      'Zeta',
+      'zeta',
+    ]);
+  });
+});
+
+describe('sortKeys', () => {
+  it('orders the listed keys the same way', () => {
+    expect(sortKeys(['zeta', 'Beta', 'Zeta', 'alpha'])).toEqual(['alpha', 'Beta', 'Zeta', 'zeta']);
+  });
+});
+
+describe('sortEntries with unread rows', () => {
+  const rows = [entry('a', null, 'unread'), entry('b', 'xx'), entry('c', 'x', 'number')];
+
+  it('puts unread rows last by size and by type, whichever way', () => {
+    for (const field of ['size', 'type'] as const) {
+      for (const descending of [false, true]) {
+        expect(sortEntries(rows, field, descending).at(-1)?.key).toBe('a');
+      }
+    }
+  });
+
+  it('keeps them in place by key', () => {
+    expect(sortEntries(rows, 'key', false).map((it) => it.key)).toEqual(['a', 'b', 'c']);
   });
 });
 

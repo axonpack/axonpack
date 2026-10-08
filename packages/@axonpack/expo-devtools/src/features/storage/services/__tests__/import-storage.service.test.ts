@@ -4,9 +4,13 @@ import {
   planStorageImport,
   type StorageImportPlan,
 } from '../../utils/build-storage-export.util';
-import { defineStorageAdapter, resolveStorageAdapters } from '../define-adapter.service';
+import {
+  defineStorageAdapter,
+  resolveStorageAdapters,
+  type StorageAdapter,
+} from '../define-adapter.service';
 import { applyStorageImport } from '../import-storage.service';
-import { readAdapter } from '../read-storage.service';
+import { readAdapter, readUnreadEntries } from '../read-storage.service';
 
 function setup(values: Record<string, string>, options: { failOn?: string } = {}) {
   const map = new Map(Object.entries(values));
@@ -24,6 +28,12 @@ function setup(values: Record<string, string>, options: { failOn?: string } = {}
   ]);
   storageStore.setAdapters([adapter]);
   return { map, adapter };
+}
+
+/** Opening a store reads no values, so read them all the way rows on screen would. */
+async function readWhole(adapter: StorageAdapter) {
+  await readAdapter(adapter);
+  await readUnreadEntries(storageStore.getSnapshot().adapters.flatMap((state) => state.entries));
 }
 
 function planFor(entries: Record<string, string>): StorageImportPlan {
@@ -52,23 +62,23 @@ beforeEach(() => {
 });
 
 describe('applyStorageImport', () => {
-  it('writes the accepted keys and re-reads the store afterwards', async () => {
+  it('writes the accepted keys and lists the store again afterwards', async () => {
     const { map, adapter } = setup({ existing: 'old' });
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     const result = await applyStorageImport('memory', planFor({ existing: 'new', fresh: 'value' }));
 
     expect(result).toEqual({ written: 2, failures: [], error: null });
     expect(map.get('existing')).toBe('new');
-    expect(storageStore.getSnapshot().adapters[0].entries.map((it) => [it.key, it.text])).toEqual([
-      ['existing', 'new'],
-      ['fresh', 'value'],
+    expect(storageStore.getSnapshot().adapters[0].entries.map((it) => [it.key, it.kind])).toEqual([
+      ['existing', 'unread'],
+      ['fresh', 'unread'],
     ]);
   });
 
   it('attributes a failure to the key that caused it and keeps going', async () => {
     const { map, adapter } = setup({}, { failOn: 'bad' });
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     const result = await applyStorageImport('memory', planFor({ bad: 'x', good: 'y' }));
 
@@ -93,7 +103,7 @@ describe('applyStorageImport', () => {
       { readOnly: true }
     );
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     const result = await applyStorageImport('memory', planFor({ a: '1' }));
 

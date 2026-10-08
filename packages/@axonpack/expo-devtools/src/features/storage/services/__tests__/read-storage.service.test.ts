@@ -5,9 +5,11 @@ import {
   type StorageAdapterDefinition,
 } from '../define-adapter.service';
 import {
-  configureStorageReads,
   readAdapter,
   readAllAdapters,
+  readUnreadEntries,
+  SHOWN_FOR_MS,
+  showStorageRows,
   readStorageKey,
   watchStorageAdapters,
 } from '../read-storage.service';
@@ -35,24 +37,63 @@ function mapDefinition(values: Record<string, string>): StorageAdapterDefinition
   });
 }
 
+/** A store of `count` keys that counts its reads, batched or not. */
+function bigStore(count: number) {
+  const keys = Array.from({ length: count }, (_, index) => `key-${String(index).padStart(5, '0')}`);
+  const getItem = jest.fn((key: string) => `value of ${key}`);
+  const getMany = jest.fn((batch: readonly string[]) => {
+    return new Map(
+      batch.map((key) => [key, { text: `value of ${key}`, valueType: 'string' as const }])
+    );
+  });
+  const adapter = register(
+    defineStorageAdapter({ name: 'Big', getAllKeys: () => keys, getItem, getMany })
+  );
+  return { adapter, getItem, getMany };
+}
+
+async function readWhole(adapter: StorageAdapter) {
+  await readAdapter(adapter);
+  await readUnreadEntries(stateOf(adapter.id).entries);
+}
+
 beforeEach(() => {
   storageStore.reset();
   storageStore.setEnabled(true);
-  configureStorageReads({ maxKeys: 1000 });
+  showStorageRows([]);
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('readAdapter', () => {
-  it('reads every key, sorted, and sizes the values in bytes', async () => {
-    const adapter = register(mapDefinition({ b: 'two', a: 'é' }));
+  it('lists every key, sorted, and reads no value', async () => {
+    const getItem = jest.fn(() => 'x');
+    const adapter = register(
+      defineStorageAdapter({ name: 'Lazy', getAllKeys: () => ['b', 'a'], getItem })
+    );
 
     await readAdapter(adapter);
     const state = stateOf(adapter.id);
 
     expect(state.status).toBe('ready');
-    expect(state.entries.map((entry) => entry.key)).toEqual(['a', 'b']);
-    expect(state.entries[0].size).toBe(2);
+    expect(state.entries.map((entry) => [entry.key, entry.kind, entry.text])).toEqual([
+      ['a', 'unread', null],
+      ['b', 'unread', null],
+    ]);
     expect(state.totalKeys).toBe(2);
-    expect(state.truncated).toBe(false);
+    expect(getItem).not.toHaveBeenCalled();
+  });
+
+  it('opens a 10,000-key store without reading a single value', async () => {
+    const { adapter, getItem, getMany } = bigStore(10000);
+
+    await readAdapter(adapter);
+
+    expect(stateOf(adapter.id).entries).toHaveLength(10000);
+    expect(getItem).not.toHaveBeenCalled();
+    expect(getMany).not.toHaveBeenCalled();
   });
 
   it('reads nothing at all until the store is enabled', async () => {
@@ -65,18 +106,6 @@ describe('readAdapter', () => {
     await readAdapter(adapter);
 
     expect(getAllKeys).not.toHaveBeenCalled();
-  });
-
-  it('stops at the key cap and reports the real total rather than truncating silently', async () => {
-    configureStorageReads({ maxKeys: 2 });
-    const adapter = register(mapDefinition({ a: '1', b: '2', c: '3', d: '4' }));
-
-    await readAdapter(adapter);
-    const state = stateOf(adapter.id);
-
-    expect(state.entries).toHaveLength(2);
-    expect(state.truncated).toBe(true);
-    expect(state.totalKeys).toBe(4);
   });
 
   it('surfaces a failure to list the keys as the adapter failing', async () => {
@@ -96,6 +125,55 @@ describe('readAdapter', () => {
     expect(stateOf(adapter.id).error).toBe('store not ready');
   });
 
+  it('re-reads the rows on screen after a refresh, and nothing else', async () => {
+    jest.useFakeTimers();
+    const { adapter, getMany } = bigStore(100);
+    await readAdapter(adapter);
+    const shown = stateOf(adapter.id).entries.slice(0, 3);
+    showStorageRows(shown);
+    jest.advanceTimersByTime(SHOWN_FOR_MS);
+    await readUnreadEntries(shown);
+    getMany.mockClear();
+
+    await readAdapter(adapter);
+
+    expect(getMany.mock.calls).toEqual([[shown.map((entry) => entry.key)]]);
+    expect(stateOf(adapter.id).entries.filter((entry) => entry.kind !== 'unread')).toHaveLength(3);
+  });
+});
+
+describe('readUnreadEntries', () => {
+  it('sizes the values it reads in bytes', async () => {
+    const adapter = register(mapDefinition({ b: 'two', a: 'é' }));
+
+    await readWhole(adapter);
+
+    expect(stateOf(adapter.id).entries.map((entry) => [entry.key, entry.size])).toEqual([
+      ['a', 2],
+      ['b', 3],
+    ]);
+  });
+
+  it('reads each unread key once, even when two callers ask at the same time', async () => {
+    const { adapter, getMany } = bigStore(3);
+    await readAdapter(adapter);
+    const wanted = stateOf(adapter.id).entries.slice(0, 2);
+
+    const [first, second] = await Promise.all([
+      readUnreadEntries(wanted),
+      readUnreadEntries(wanted),
+    ]);
+
+    expect(getMany.mock.calls).toEqual([[['key-00000', 'key-00001']]]);
+    expect(first.map((entry) => entry.text)).toEqual(['value of key-00000', 'value of key-00001']);
+    expect(second).toEqual(first);
+    expect(stateOf(adapter.id).entries.map((entry) => entry.kind)).toEqual([
+      'string',
+      'string',
+      'unread',
+    ]);
+  });
+
   it('keeps the other keys when one key throws, and records why', async () => {
     const adapter = register(
       defineStorageAdapter({
@@ -108,7 +186,7 @@ describe('readAdapter', () => {
       })
     );
 
-    await readAdapter(adapter);
+    await readWhole(adapter);
     const [bad, good] = stateOf(adapter.id).entries;
 
     expect(stateOf(adapter.id).status).toBe('ready');
@@ -126,14 +204,14 @@ describe('readAdapter', () => {
       defineStorageAdapter({ name: 'Batched', getAllKeys: () => ['a', 'b'], getItem, getMany })
     );
 
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     expect(getMany).toHaveBeenCalledTimes(1);
     expect(getItem).toHaveBeenCalledTimes(2);
     expect(stateOf(adapter.id).entries.map((entry) => entry.text)).toEqual(['value-a', 'value-b']);
   });
 
-  it('treats a key the batch left out as unset', async () => {
+  it('drops a listed key the batch says is gone', async () => {
     const adapter = register(
       defineStorageAdapter({
         name: 'Sparse',
@@ -143,14 +221,51 @@ describe('readAdapter', () => {
       })
     );
 
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
-    expect(stateOf(adapter.id).entries.map((entry) => entry.text)).toEqual(['only a', null]);
+    expect(stateOf(adapter.id).entries.map((entry) => entry.text)).toEqual(['only a']);
+    expect(stateOf(adapter.id).totalKeys).toBe(1);
+  });
+});
+
+describe('showStorageRows', () => {
+  it('reads a screen of rows in one batch once they have stayed on screen', async () => {
+    jest.useFakeTimers();
+    const { adapter, getItem, getMany } = bigStore(10000);
+    await readAdapter(adapter);
+    const screen = stateOf(adapter.id).entries.slice(500, 515);
+
+    showStorageRows(screen);
+    expect(getMany).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(SHOWN_FOR_MS);
+    await readUnreadEntries(screen);
+
+    expect(getMany.mock.calls).toEqual([[screen.map((entry) => entry.key)]]);
+    expect(getItem).not.toHaveBeenCalled();
+    expect(stateOf(adapter.id).entries.filter((entry) => entry.kind !== 'unread')).toHaveLength(15);
+  });
+
+  it('never reads rows a scroll moved past before their read was due', async () => {
+    jest.useFakeTimers();
+    const { adapter, getMany } = bigStore(1000);
+    await readAdapter(adapter);
+    const entries = stateOf(adapter.id).entries;
+
+    showStorageRows(entries.slice(0, 15));
+    jest.advanceTimersByTime(SHOWN_FOR_MS / 3);
+    showStorageRows(entries.slice(100, 115));
+    jest.advanceTimersByTime(SHOWN_FOR_MS / 3);
+    const resting = entries.slice(200, 215);
+    showStorageRows(resting);
+    jest.advanceTimersByTime(SHOWN_FOR_MS);
+    await readUnreadEntries(resting);
+
+    expect(getMany.mock.calls).toEqual([[resting.map((entry) => entry.key)]]);
   });
 });
 
 describe('readAllAdapters', () => {
-  it('reads every registered store', async () => {
+  it('lists every registered store', async () => {
     storageStore.setAdapters(
       resolveStorageAdapters([mapDefinition({ a: '1' }), mapDefinition({ b: '2' })])
     );
@@ -188,10 +303,10 @@ describe('live updates', () => {
 
   const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-  it('re-reads only the key that changed, and adds and removes keys', async () => {
+  it('re-reads a changed key it has read, lists a new one unread, and drops a deleted one', async () => {
     const { definition, getItem, write } = liveMap({ a: '1', b: '2' });
     const adapter = register(definition);
-    await readAdapter(adapter);
+    await readWhole(adapter);
     const stop = watchStorageAdapters();
     getItem.mockClear();
 
@@ -202,12 +317,12 @@ describe('live updates', () => {
     stop();
 
     const state = stateOf(adapter.id);
-    expect(state.entries.map((entry) => [entry.key, entry.text])).toEqual([
-      ['a', 'changed'],
-      ['c', '3'],
+    expect(state.entries.map((entry) => [entry.key, entry.kind, entry.text])).toEqual([
+      ['a', 'string', 'changed'],
+      ['c', 'unread', null],
     ]);
     expect(state.totalKeys).toBe(2);
-    expect(getItem).toHaveBeenCalledTimes(3);
+    expect(getItem.mock.calls).toEqual([['a'], ['b']]);
   });
 
   it('stops listening when the tab closes', async () => {
@@ -229,15 +344,34 @@ describe('live updates', () => {
     expect(stateOf(adapter.id).entries).toHaveLength(0);
   });
 
-  it('skips a key past the cap, which the total may already count', async () => {
-    configureStorageReads({ maxKeys: 1 });
-    const { definition } = liveMap({ a: '1', b: '2' });
+  it('reads nothing for a change to an unread key that is off screen', async () => {
+    const { definition, getItem, write } = liveMap({ a: '1', b: '2' });
     const adapter = register(definition);
     await readAdapter(adapter);
+    const stop = watchStorageAdapters();
+
+    write('b', 'changed');
+    write('b', null);
+    await flush();
+    stop();
+
+    expect(getItem).not.toHaveBeenCalled();
+    expect(stateOf(adapter.id).entries.map((entry) => entry.kind)).toEqual(['unread', 'unread']);
+  });
+
+  it('reads a change to an unread key whose row is on screen', async () => {
+    jest.useFakeTimers();
+    const { definition, getItem } = liveMap({ a: '1', b: '2' });
+    const adapter = register(definition);
+    await readAdapter(adapter);
+    showStorageRows(stateOf(adapter.id).entries.slice(1));
 
     await readStorageKey(adapter, 'b');
 
-    expect(stateOf(adapter.id).entries.map((entry) => entry.key)).toEqual(['a']);
-    expect(stateOf(adapter.id).totalKeys).toBe(2);
+    expect(getItem.mock.calls).toEqual([['b']]);
+    expect(stateOf(adapter.id).entries.map((entry) => [entry.key, entry.text])).toEqual([
+      ['a', null],
+      ['b', '2'],
+    ]);
   });
 });

@@ -125,7 +125,7 @@ network: {
 | Option               | Type                         | Default     | What it does                                                          |
 | -------------------- | ---------------------------- | ----------- | ----------------------------------------------------------------------- |
 | `storage.adapters`   | `StorageAdapterDefinition[]` | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically. |
-| `storage.maxKeys`    | `number`                     | `1000`      | Keys read per store before the tab stops and says how many it skipped. |
+| `storage.maxKeys`    | `number`                     | `undefined` | Deprecated and ignored. Every key is listed, and a value is read when its row is on screen. |
 | `storage.readOnly`   | `boolean`                    | `false`     | Blanket read-only default; an individual adapter can still set its own. |
 
 See [Storage adapters](/docs/expo-devtools/reference/storage-adapters) for how to build one.

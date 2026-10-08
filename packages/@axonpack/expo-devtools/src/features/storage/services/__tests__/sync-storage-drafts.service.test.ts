@@ -1,5 +1,5 @@
 import { defineStorageAdapter, resolveStorageAdapters } from '../define-adapter.service';
-import { readAllAdapters } from '../read-storage.service';
+import { readAllAdapters, readUnreadEntries } from '../read-storage.service';
 import { syncStorageDrafts } from '../sync-storage-drafts.service';
 import { storageDraftsStore } from '../../stores/storage-drafts.store';
 import { storageStore } from '../../stores/storage.store';
@@ -34,6 +34,7 @@ describe('syncStorageDrafts', () => {
   it('writes edits and new keys, and clears what it wrote', async () => {
     const { id, map } = register({ a: '1' });
     await readAllAdapters();
+    await readUnreadEntries(storageStore.getSnapshot().adapters[0].entries);
     storageDraftsStore.setEdit(id, 'a', '2');
     storageDraftsStore.addRow(id, { key: 'b', valueType: 'string', text: 'new' });
 
@@ -51,6 +52,7 @@ describe('syncStorageDrafts', () => {
   it('keeps what failed, with its reason', async () => {
     const { id, map } = register({ a: '1' });
     await readAllAdapters();
+    await readUnreadEntries(storageStore.getSnapshot().adapters[0].entries);
     storageDraftsStore.addRow(id, { key: 'a', valueType: 'string', text: 'clash' });
     storageDraftsStore.setEdit(id, 'gone', 'x');
 
