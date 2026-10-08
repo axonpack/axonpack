@@ -15,6 +15,9 @@ export async function setStorageValue(entry: StorageEntry, text: string): Promis
 
   const { setItem } = adapter;
   if (!setItem || !adapter.canEdit) return `${adapter.name} is read-only.`;
+  // Its `valueType` is a placeholder until the read, and writing through it could turn a number
+  // into a string.
+  if (entry.kind === 'unread') return `"${entry.key}" has not been read yet.`;
 
   try {
     await setItem(entry.key, text, entry.valueType);

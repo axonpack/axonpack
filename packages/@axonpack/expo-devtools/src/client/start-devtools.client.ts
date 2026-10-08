@@ -48,7 +48,6 @@ import {
   resolveStorageAdapters,
   type StorageAdapterDefinition,
 } from '../features/storage/services/define-adapter.service';
-import { configureStorageReads } from '../features/storage/services/read-storage.service';
 import { storageStore } from '../features/storage/stores/storage.store';
 
 /**
@@ -339,8 +338,9 @@ export type DevtoolsStorageConfig = {
    */
   adapters?: readonly StorageAdapterDefinition[];
   /**
-   * How many keys are read per store before the tab stops and reports how many it skipped. Defaults
-   * to `1000`. Raise it for a store with more keys than that, at the cost of a slower refresh.
+   * @deprecated Ignored. The Storage tab lists every key and reads a value only when its row is on
+   * screen, so there is no cap left to set. Kept so a config that sets it still typechecks; it goes
+   * in the next major.
    */
   maxKeys?: number;
   /**
@@ -474,11 +474,7 @@ export function startDevtools<TThemeName extends string = never>(
     historySize = 120,
     disabledByDefault: performanceStartsPaused = true,
   } = config?.performance ?? {};
-  const {
-    adapters: storageAdapters,
-    maxKeys: storageMaxKeys,
-    readOnly: storageReadOnly,
-  } = config?.storage ?? {};
+  const { adapters: storageAdapters, readOnly: storageReadOnly } = config?.storage ?? {};
   const { disabledByDefault: navigationStartsPaused = false, redact: redactNavigation } =
     config?.navigation ?? {};
   const {
@@ -603,7 +599,6 @@ export function startDevtools<TThemeName extends string = never>(
     interactionThresholdMs,
   });
 
-  configureStorageReads({ maxKeys: storageMaxKeys });
   if (storageAdapters?.length) {
     storageStore.setAdapters(
       resolveStorageAdapters(storageAdapters, { readOnly: storageReadOnly })

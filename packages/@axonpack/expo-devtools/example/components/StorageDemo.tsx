@@ -61,8 +61,8 @@ async function seedSecureStore() {
 }
 
 async function floodAsyncStorage() {
-  for (let index = 0; index < 1200; index += 1) {
-    await AsyncStorage.setItem(`flood:key-${String(index).padStart(4, '0')}`, `value ${index}`);
+  for (let index = 0; index < 10000; index += 1) {
+    await AsyncStorage.setItem(`flood:key-${String(index).padStart(5, '0')}`, `value ${index}`);
   }
 }
 
@@ -164,15 +164,15 @@ export function StorageDemo() {
         />
       </View>
 
-      <Text style={styles.heading}>Past the cap</Text>
+      <Text style={styles.heading}>Ten thousand keys</Text>
       <Text style={styles.hint}>
-        Writes 1,200 keys — more than the 1,000-key read cap, so the tab says how many it skipped
-        instead of quietly showing a short list.
+        Writes 10,000 keys. The tab lists every one of them, and reads a value only once its row is
+        on screen.
       </Text>
       <View style={styles.row}>
         <ActionButton
-          label="Write 1,200 keys"
-          onPress={() => run('Write 1,200 keys', floodAsyncStorage)}
+          label="Write 10,000 keys"
+          onPress={() => run('Write 10,000 keys', floodAsyncStorage)}
         />
         <ActionButton
           label="Clear AsyncStorage"

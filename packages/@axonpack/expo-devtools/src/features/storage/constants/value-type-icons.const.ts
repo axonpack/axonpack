@@ -1,6 +1,7 @@
 import type { MaterialIconName } from '../../../core/components/ui/icon-button.ui';
 import type { StoredValueKind } from '../utils/classify-value.util';
 
+/** The type filter's chips. `'unread'` is not a type, so it gets none. */
 export const STORED_VALUE_KINDS: StoredValueKind[] = [
   'json-object',
   'json-array',
@@ -21,6 +22,7 @@ export const STORED_VALUE_ICONS: Record<StoredValueKind, MaterialIconName> = {
   buffer: 'memory',
   empty: 'remove',
   absent: 'help-outline',
+  unread: 'more-horiz',
 };
 
 export const STORED_VALUE_LABELS: Record<StoredValueKind, string> = {
@@ -32,4 +34,5 @@ export const STORED_VALUE_LABELS: Record<StoredValueKind, string> = {
   buffer: 'Binary',
   empty: 'Empty',
   absent: 'Missing',
+  unread: '…',
 };

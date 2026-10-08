@@ -420,7 +420,10 @@ enumerate holds keys the list never had.
 
 There is **no record button** — storage is a pull, not a stream, so there is no stream to pause. And
 no clear button: that icon means "clear the log" in the other three tabs, and it must never come to
-mean "wipe your storage". The tab reads on open and on Refresh; nothing polls.
+mean "wipe your storage". The tab lists the keys on open and on Refresh; nothing polls. A value is
+read only when its row is on screen, when you open the key, or when you export, and an unread row
+shows `…` for its type and size. A search on key names covers every key; value search, the type
+filter, the totals and the size and type sorts cover the values read so far.
 
 ### Import
 
@@ -447,7 +450,7 @@ The summary names the store, whether it is `Async` or `Sync`, when it was last r
 total bytes and largest key — plus whatever needs saying honestly:
 
 - `SecureStore can't list its own keys — showing the 2 you declared.`
-- `Read 1,000 of 4,312 keys — the rest are past the cap.`
+- `13 of 4312 values read. A value is read when its row is on screen, and sizes, types and value search cover only those.`
 - `Read-only — values here cannot be edited or deleted.`
 
 ### Filters panel
@@ -754,7 +757,7 @@ a key of `config.themes`.
 | `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.          |
 | `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something. |
 | `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.              |
-| `storage.maxKeys`                    | `number`                      | `1000`      | Keys read per store before the tab stops and says how many it skipped.                |
+| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.   |
 | `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.               |
 
 `crash` is documented on its own, under
@@ -811,7 +814,8 @@ in the UI without a flag. Sync functions are fine everywhere: they're awaited, n
 `kind` only decides the badge the tab shows.
 
 `subscribe(listener)` is how the open tab hears about a write: call `listener` with the key that
-changed, and return a function that stops. The tab re-reads only that key. `mmkvAdapter` builds it from
+changed, and return a function that stops. The tab re-reads only that key, and only if its value
+was already read or its row is on screen. A key it hasn't read just joins the list, unread. `mmkvAdapter` builds it from
 MMKV's `addOnValueChangedListener`; AsyncStorage and SecureStore have no listener and show changes on
 Refresh.
 

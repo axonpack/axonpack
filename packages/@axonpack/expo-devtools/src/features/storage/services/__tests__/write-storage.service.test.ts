@@ -2,9 +2,10 @@ import { storageStore, type StorageEntry } from '../../stores/storage.store';
 import {
   defineStorageAdapter,
   resolveStorageAdapters,
+  type StorageAdapter,
   type StorageAdapterDefinition,
 } from '../define-adapter.service';
-import { readAdapter } from '../read-storage.service';
+import { readAdapter, readUnreadEntries } from '../read-storage.service';
 import { createStorageKey, removeStorageKey, setStorageValue } from '../write-storage.service';
 
 function mapDefinition(
@@ -27,6 +28,12 @@ function mapDefinition(
   return { map, definition: { ...definition, ...overrides } };
 }
 
+/** Opening a store reads no values, so read them all the way rows on screen would. */
+async function readWhole(adapter: StorageAdapter) {
+  await readAdapter(adapter);
+  await readUnreadEntries(storageStore.getSnapshot().adapters.flatMap((state) => state.entries));
+}
+
 function entriesOf(adapterId: string): StorageEntry[] {
   return (
     storageStore.getSnapshot().adapters.find((it) => it.adapter.id === adapterId)?.entries ?? []
@@ -40,7 +47,7 @@ async function setup(
   const { map, definition } = mapDefinition(values, overrides);
   const [adapter] = resolveStorageAdapters([definition]);
   storageStore.setAdapters([adapter]);
-  await readAdapter(adapter);
+  await readWhole(adapter);
   return { map, adapter };
 }
 
@@ -81,16 +88,24 @@ describe('setStorageValue', () => {
       },
     ]);
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     await expect(setStorageValue(entriesOf('memory')[0], 'x')).resolves.toBe('disk full');
+  });
+
+  it('refuses to write a key whose value is not read yet', async () => {
+    const { map } = await setup({ a: '1' });
+    const unread: StorageEntry = { ...entriesOf('memory')[0], kind: 'unread', text: null };
+
+    await expect(setStorageValue(unread, 'x')).resolves.toMatch(/not been read/);
+    expect(map.get('a')).toBe('1');
   });
 
   it('refuses to write to a store registered read-only', async () => {
     const { map, definition } = mapDefinition({ a: '1' });
     const [adapter] = resolveStorageAdapters([definition], { readOnly: true });
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     await expect(setStorageValue(entriesOf('memory')[0], 'x')).resolves.toMatch(/read-only/);
     expect(map.get('a')).toBe('1');
@@ -119,7 +134,7 @@ describe('removeStorageKey', () => {
       },
     ]);
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     await expect(removeStorageKey(entriesOf('memory')[0])).resolves.toBe('locked');
     expect(entriesOf('memory')).toHaveLength(1);
@@ -129,7 +144,7 @@ describe('removeStorageKey', () => {
     const { map, definition } = mapDefinition({ a: '1' });
     const [adapter] = resolveStorageAdapters([definition], { readOnly: true });
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     await expect(removeStorageKey(entriesOf('memory')[0])).resolves.toMatch(/read-only/);
     expect(map.has('a')).toBe(true);
@@ -171,7 +186,7 @@ describe('createStorageKey', () => {
     const { map, definition } = mapDefinition({});
     const [adapter] = resolveStorageAdapters([{ ...definition, supportedTypes: ['string'] }]);
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     await expect(createStorageKey('memory', 'count', '7', 'number')).resolves.toMatch(
       /does not hold number/
@@ -205,7 +220,7 @@ describe('createStorageKey', () => {
       }),
     ]);
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     await expect(createStorageKey('memory', 'auth.token', 'x', 'string')).resolves.toMatch(
       /blacklist/
@@ -224,7 +239,7 @@ describe('createStorageKey', () => {
       },
     ]);
     storageStore.setAdapters([adapter]);
-    await readAdapter(adapter);
+    await readWhole(adapter);
 
     await expect(createStorageKey('memory', 'b', '2', 'string')).resolves.toBe('disk full');
     expect(entriesOf('memory')).toHaveLength(0);

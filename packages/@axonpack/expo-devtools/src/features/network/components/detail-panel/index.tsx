@@ -51,7 +51,6 @@ function DetailPanelBase({
   onClose: () => void;
   stackedHeaders: boolean;
 }) {
-  console.log('DetailPanel', { entry, stackedHeaders });
   const styles = useStyles();
   const COLORS = useThemeColors();
   const [tab, setTab] = useState<Tab>('headers');

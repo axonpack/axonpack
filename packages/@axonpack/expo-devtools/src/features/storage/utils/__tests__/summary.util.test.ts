@@ -19,7 +19,7 @@ function stateWith(patch: Partial<StorageAdapterState>, keys?: string[]): Storag
       getItem: () => null,
     }),
   ]);
-  return { adapter, entries: [], status: 'ready', truncated: false, totalKeys: 0, ...patch };
+  return { adapter, entries: [], status: 'ready', totalKeys: 0, ...patch };
 }
 
 describe('summarizeStorage', () => {
@@ -29,17 +29,18 @@ describe('summarizeStorage', () => {
     expect(summary.largest?.key).toBe('b');
   });
 
-  it('says when the read was capped, and when the store is read-only', () => {
+  it('says how many values are read, and when the store is read-only', () => {
     const readOnly = stateWith({}).adapter;
     const { notes } = summarizeStorage(
       stateWith({
         adapter: { ...readOnly, readOnly: true },
-        entries: [entry('a', 1)],
-        truncated: true,
-        totalKeys: 5,
+        entries: [entry('a', 1), { ...entry('b', 0), kind: 'unread' }],
+        totalKeys: 2,
       })
     );
-    expect(notes).toContain('Read 1 of 5 keys — the rest are past the cap.');
+    expect(notes).toContain(
+      '1 of 2 values read. A value is read when its row is on screen, and sizes, types and value search cover only those.'
+    );
     expect(notes.some((note) => note.startsWith('Read-only'))).toBe(true);
   });
 

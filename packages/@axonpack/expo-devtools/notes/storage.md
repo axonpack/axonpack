@@ -22,7 +22,7 @@ one key at a time.
 - [x] Import a snapshot, saying what it would add, overwrite, skip or leave alone before it writes
 - [x] A fixed key list can be a function, resolved on each read
 - [x] Live updates from a store that publishes a change listener, as MMKV does
-- [ ] Page past the read cap, or list keys first and fetch values on demand
+- [x] Lists every key and reads a value only once its row is on screen
 - [ ] Show binary values as hex, and edit them there
 - [ ] History of writes, with revert
 
@@ -31,11 +31,7 @@ one key at a time.
 The open list above is a menu, not an order. What is worth doing next, and why, roughly in that
 order:
 
-1. **Paging past the cap.** We read the whole store to `maxKeys` and hold every value; past that we
-   say how many were skipped, which is honest but still leaves a 10,000-key store showing 1,000. The
-   in-process argument that makes fetch-on-demand pointless for network bodies does not apply — this
-   is memory and read time, not a bridge.
-2. **Hex.** Costs more than it looks, and the view comes before the editor: the adapter would have
+1. **Hex.** Costs more than it looks, and the view comes before the editor: the adapter would have
    to carry the bytes through the read path, where today it returns the string
    `"${byteLength} bytes"`. The primitive itself already exists in `core/` — nothing in this tab has
    bytes to hand it.
@@ -82,6 +78,27 @@ common libraries, and one escape hatch takes any object with get/set/remove.
 - **A value's type is classified once, at read time**, and kept on the entry. Classification parses
   JSON, and re-running it for a thousand keys on every filter keystroke would be the slowest thing
   in the tab.
+- **Every key is listed, and no value is read until its row is on screen.** Listing is one call;
+  a value costs a read, a type probe, a JSON parse and a byte count, and none of that is spent on a
+  row nobody looks at. Each key arrives as `'unread'`. The in-app list reports its viewable rows,
+  and a report is read after 150ms, keeping only the rows still on screen by then, so one batched
+  read covers a screen and a fast scroll reads nothing it flew past. A refresh lists every key
+  unread again and re-reads the rows on screen, since the same rows in view report no change.
+  Opening a key reads it, export reads every value it holds, and an import reads the keys it would
+  overwrite so an unchanged one is not written again. Size and type sorts put unread rows last,
+  and the totals, type filter and value search cover read values only, which the summary says.
+  `storage.maxKeys` lost its job and is deprecated and ignored rather than removed, so a config that
+  sets it still typechecks.
+- **A live change reads no more than a row on screen would.** A change to a key whose value is
+  already read re-reads that one key, on screen or not. A key the list doesn't hold joins it
+  unread. A change to an unread key is read only if its row is on screen; otherwise nothing is
+  read, so a delete there isn't seen until the row is shown, and the read that finds it gone drops
+  it from the list.
+- **The DevTools tab draws 50 rows a page.** No scroll position reaches the app, so it cannot tell
+  which rows are in view; a drawn row counts as shown and is read. Its export cannot wait on the
+  app either, so with values unread the first click reads them and the second downloads.
+- **An unread row refuses an edit.** Its value type is a placeholder, and writing through it could
+  turn an MMKV number into a string.
 - **The tab reads on mount, not at startup.** A store the panel is never opened on shouldn't be read
   at all.
 - **An edit re-reads the one key it touched** rather than trusting what it wrote, since a store may

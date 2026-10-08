@@ -51,7 +51,7 @@ function EntryRowBase({
           numberOfLines={1}
           selectable={false}
         />
-        <Text style={styles.size}>{formatSize(entry.size)}</Text>
+        <Text style={styles.size}>{entry.kind === 'unread' ? '…' : formatSize(entry.size)}</Text>
       </View>
 
       <View style={styles.valueRow}>

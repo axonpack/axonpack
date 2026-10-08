@@ -123,7 +123,6 @@ export const devtoolsConfig = {
         },
       }),
     ],
-    maxKeys: 1000,
   },
   // `satisfies` rather than a plain object: it is what checks `defaultTheme` against the themes
   // declared above, which is the job the old factory call used to do.

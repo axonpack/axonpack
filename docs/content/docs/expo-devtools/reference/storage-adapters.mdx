@@ -78,7 +78,8 @@ back through.
 
 Optional, on `defineStorageAdapter`. Give it a function that calls the listener with a key whenever your
 store changes that key, and returns a function that stops listening. The tab listens only while it is
-open, and re-reads just the key it was told about. `mmkvAdapter` wires this up from MMKV's
+open, and re-reads just the key it was told about, and only if that value was already read or its row
+is on screen. A key it hasn't read just joins the list, unread. `mmkvAdapter` wires this up from MMKV's
 `addOnValueChangedListener` for you. AsyncStorage and SecureStore have no listener, so their changes
 show when you press Refresh.
 

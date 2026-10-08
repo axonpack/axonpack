@@ -37,7 +37,7 @@ bun run ios     # or: bun run android (full native build)
   deliberately slow tap handler, records `mark` and `measure` pairs with and without `detail`, and
   allocates memory you can retain or release to make the heap chart move.
 - **Storage** seeds AsyncStorage, MMKV, SecureStore and an in-memory `Map` with a spread of value
-  shapes, and can write past the 1,000-key read cap.
+  shapes, and can write 10,000 keys to show that a value is read only when its row is on screen.
 - **Navigation** is a React Navigation stack. It pushes, replaces, resets and goes back, sets params,
   pushes a screen with a `token` param for the redact hook to strip, and opens a checkout flow in a
   container of its own.

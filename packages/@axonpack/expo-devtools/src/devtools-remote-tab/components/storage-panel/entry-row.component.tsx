@@ -125,7 +125,7 @@ function EntryRowBase({
                 <HighlightedText text={preview} ranges={findMatches(preview, matcher)} />
               </span>
             )}
-            <span onClick={open}>{formatSize(entry.size)}</span>
+            <span onClick={open}>{entry.kind === 'unread' ? '…' : formatSize(entry.size)}</span>
           </>
         )}
       </div>

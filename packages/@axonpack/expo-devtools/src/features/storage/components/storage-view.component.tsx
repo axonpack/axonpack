@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, SectionList, Text, View } from 'react-native';
+import { FlatList, SectionList, Text, View, type ViewToken } from 'react-native';
 
 import { AdapterSelector } from './adapter-selector.component';
 import { AddKeySheet } from './add-key-sheet.component';
@@ -21,6 +21,8 @@ import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-sty
 import {
   readAdapterById,
   readAllAdapters,
+  readUnreadEntries,
+  showStorageRows,
   watchStorageAdapters,
 } from '../services/read-storage.service';
 import { storageViewStore, useStorageViewStore } from '../stores/storage-view.store';
@@ -36,6 +38,14 @@ import { emptyListLabel } from '../utils/summary.util';
 
 function keyExtractor(entry: StorageEntry): string {
   return `${entry.adapterId}:${entry.key}`;
+}
+
+/**
+ * Module level because a list throws if this prop changes after mount. A section header comes
+ * through as its section, which has no `kind`.
+ */
+function reportRowsOnScreen({ viewableItems }: { viewableItems: ViewToken<StorageEntry>[] }) {
+  showStorageRows(viewableItems.flatMap((token) => (token.item?.kind ? [token.item] : [])));
 }
 
 export function StorageView() {
@@ -117,7 +127,10 @@ export function StorageView() {
     if (opening) scrollToTop();
   }
 
-  const selectEntry = useCallback((entry: StorageEntry) => setSelectedKey(entry.key), []);
+  const selectEntry = useCallback((entry: StorageEntry) => {
+    readUnreadEntries([entry]);
+    setSelectedKey(entry.key);
+  }, []);
 
   const renderRow = useCallback(
     ({ item }: { item: StorageEntry }) => (
@@ -208,7 +221,9 @@ export function StorageView() {
         <IconButton
           name="file-download"
           color={COLORS.textSecondary}
-          onPress={() => state && exportStorageSnapshot(state.adapter, visibleEntries)}
+          onPress={async () =>
+            state && exportStorageSnapshot(state.adapter, await readUnreadEntries(visibleEntries))
+          }
           label="Export"
         />
         {state?.adapter.canEdit === true && (
@@ -227,6 +242,7 @@ export function StorageView() {
           sections={sections}
           keyExtractor={keyExtractor}
           renderItem={renderRow}
+          onViewableItemsChanged={reportRowsOnScreen}
           renderSectionHeader={({ section }) => (
             <Text style={styles.sectionHeader} selectable>
               {section.title} ({section.data.length})
@@ -247,6 +263,7 @@ export function StorageView() {
           data={visibleEntries}
           keyExtractor={keyExtractor}
           renderItem={renderRow}
+          onViewableItemsChanged={reportRowsOnScreen}
           initialNumToRender={15}
           maxToRenderPerBatch={10}
           windowSize={9}

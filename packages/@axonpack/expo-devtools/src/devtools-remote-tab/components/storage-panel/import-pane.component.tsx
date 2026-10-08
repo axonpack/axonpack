@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { StorageAdapter } from '../../../features/storage/services/define-adapter.service';
 import {
   applyStorageImport,
   type StorageImportResult,
 } from '../../../features/storage/services/import-storage.service';
+import { readUnreadEntries } from '../../../features/storage/services/read-storage.service';
 import type { StorageEntry } from '../../../features/storage/stores/storage.store';
 import {
   readStorageImport,
@@ -35,6 +36,12 @@ export function ImportPane({
     [text, adapter, entries]
   );
   const plan = reading.state === 'read' ? reading.plan : null;
+
+  // An unread key looks like one the file would change, so read the keys it would overwrite. Any it
+  // already holds then move to "unchanged" and are not written.
+  useEffect(() => {
+    if (plan) readUnreadEntries(plan.overwrite.map(({ key }) => ({ adapterId: adapter.id, key })));
+  }, [plan, adapter.id]);
   const writeCount = plan === null ? 0 : plan.create.length + plan.overwrite.length;
   const clean = result !== null && result.failures.length === 0 && result.error === null;
 

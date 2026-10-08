@@ -48,7 +48,6 @@ describe('storageStore enabled gate', () => {
   it('accepts no entries until enabled', () => {
     storageStore.setEnabled(false);
     storageStore.setEntries('one', [entry('a', '1')], {
-      truncated: false,
       totalKeys: 1,
       readAt: 0,
     });
@@ -72,7 +71,6 @@ describe('storageStore snapshot identity', () => {
   it('leaves the untouched store holding the same array when another is updated', () => {
     const untouched = stateOf('two').entries;
     storageStore.setEntries('one', [entry('a', '1')], {
-      truncated: false,
       totalKeys: 1,
       readAt: 0,
     });
@@ -84,10 +82,16 @@ describe('storageStore snapshot identity', () => {
 describe('storageStore per-key updates', () => {
   beforeEach(() => {
     storageStore.setEntries('one', [entry('a', '1'), entry('b', '2')], {
-      truncated: false,
       totalKeys: 2,
       readAt: 0,
     });
+  });
+
+  it('fills read values in by key, and never brings back a key the list dropped', () => {
+    storageStore.removeEntry('one', 'b');
+    storageStore.fillEntries('one', [entry('a', 'read'), entry('b', 'late')]);
+
+    expect(stateOf('one').entries.map((it) => it.text)).toEqual(['read']);
   });
 
   it('replaces an existing key in place', () => {
