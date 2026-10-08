@@ -89,7 +89,11 @@ export function createRemoteReceiver(): RemoteReceiver {
           case "append": {
             const parent = nodes.get(op.parent);
             const child = nodes.get(op.child);
-            if (parent && child) parent.children.push(child);
+            if (!parent || !child) break;
+            // Same as insert: React sends a node it moves to the end as an append.
+            const from = parent.children.indexOf(child);
+            if (from >= 0) parent.children.splice(from, 1);
+            parent.children.push(child);
             break;
           }
 

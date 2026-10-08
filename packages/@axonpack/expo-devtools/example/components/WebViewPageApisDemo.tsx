@@ -36,12 +36,19 @@ const PAGE_HARNESS = `
       }],
     ];
 
+    // postman-echo's JSON page has no viewport tag, so the WebView lays it out at desktop width and
+    // scales it down until the controls are unreadable.
+    var viewport = document.querySelector('meta[name="viewport"]') || document.createElement('meta');
+    viewport.setAttribute('name', 'viewport');
+    viewport.setAttribute('content', 'width=device-width, initial-scale=1');
+    document.head.appendChild(viewport);
+
     document.body.innerHTML =
-      '<h3 style="font:600 17px -apple-system,system-ui;margin:16px 12px 4px">Page APIs</h3>' +
-      '<p style="font:13px -apple-system,system-ui;color:#555;margin:0 12px 12px">' +
+      '<h3 style="font:600 20px -apple-system,system-ui;margin:16px 12px 4px">Page APIs</h3>' +
+      '<p style="font:15px -apple-system,system-ui;color:#555;margin:0 12px 12px">' +
       'Each button is traffic only the page can make. Open the devtools Network tab to see it.</p>' +
       '<div id="demo-actions" style="display:flex;flex-direction:column;gap:8px;padding:0 12px"></div>' +
-      '<pre id="demo-log" style="font:11px ui-monospace;color:#666;padding:8px 12px;white-space:pre-wrap"></pre>';
+      '<pre id="demo-log" style="font:13px ui-monospace;color:#666;padding:8px 12px;white-space:pre-wrap"></pre>';
 
     var host = document.getElementById('demo-actions');
     var log = document.getElementById('demo-log');
@@ -55,7 +62,7 @@ const PAGE_HARNESS = `
       button.textContent = action[0];
       button.setAttribute(
         'style',
-        'font:600 14px -apple-system,system-ui;color:#0a7ea4;background:#e6f4fe;' +
+        'font:600 16px -apple-system,system-ui;color:#0a7ea4;background:#e6f4fe;' +
           'border:1px solid #0a7ea4;border-radius:8px;padding:10px 12px;text-align:left'
       );
       button.onclick = function () {

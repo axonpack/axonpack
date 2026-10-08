@@ -17,7 +17,7 @@ type WebViewNetworkPayload = Partial<NetworkLogEntry> & Pick<NetworkLogEntry, 'i
  * in exactly the way it is for the page's fetch and XHR.
  */
 type WebViewSocketPayload = {
-  /** The page's own counter for the socket, which is all that ties its events together. */
+  /** The page's own counter for the socket. It restarts with every page, so it only means anything next to the page token. */
   socketId: number;
   event: 'connect' | 'open' | 'message' | 'close' | 'error';
   url?: string;
@@ -44,11 +44,16 @@ type WebViewStreamPayload = {
   duration?: number;
 };
 
-type WebViewMessage =
-  | { [MESSAGE_MARKER]: true; type: 'network'; source: string; payload: WebViewNetworkPayload }
-  | { [MESSAGE_MARKER]: true; type: 'eventsource'; source: string; payload: WebViewStreamPayload }
-  | { [MESSAGE_MARKER]: true; type: 'websocket'; source: string; payload: WebViewSocketPayload }
-  | { [MESSAGE_MARKER]: true; type: 'navigation'; source: string };
+/** `pageId` is minted once per document, so it changes on every reload and navigation. */
+type Envelope = { [MESSAGE_MARKER]: true; source: string; pageId: string };
+
+type WebViewMessage = Envelope &
+  (
+    | { type: 'network'; payload: WebViewNetworkPayload }
+    | { type: 'eventsource'; payload: WebViewStreamPayload }
+    | { type: 'websocket'; payload: WebViewSocketPayload }
+    | { type: 'navigation' }
+  );
 
 /**
  * Off when the consumer turned sockets off, since a page's socket is a socket: the same switch that
@@ -157,11 +162,17 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
       }, 25);
     }
 
+    // Every counter here starts again at zero when the page reloads or navigates, and two WebViews
+    // can share a name. This token keeps their ids apart, and tells React Native which page a row
+    // belongs to, so the rows of a page that went away can be closed.
+    var PAGE_ID = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
     function envelope(type, payload) {
       var message = {};
       message[${markerLiteral}] = true;
       message.type = type;
       message.source = WEBVIEW_NAME;
+      message.pageId = PAGE_ID;
       if (payload) message.payload = payload;
       return message;
     }
@@ -174,7 +185,7 @@ export function getWebViewInjectedJavaScriptBeforeContentLoaded(webviewName: str
 
     function nextId() {
       counter += 1;
-      return WEBVIEW_NAME + '-' + Date.now() + '-' + counter;
+      return WEBVIEW_NAME + '-' + PAGE_ID + '-' + counter;
     }
 
     function previewBody(body) {
@@ -622,7 +633,7 @@ function buildEventSourcePatch(): string {
         config === undefined ? new OriginalEventSource(url) : new OriginalEventSource(url, config);
 
       streamCounter += 1;
-      var id = WEBVIEW_NAME + '-es-' + streamCounter;
+      var id = WEBVIEW_NAME + '-es-' + PAGE_ID + '-' + streamCounter;
       var startedAt = Date.now();
       var resolved = resolveUrl(url);
 
@@ -788,13 +799,14 @@ let socketMessageCounter = 0;
  * One relayed socket event, applied to the same store the app's own sockets write to — a page's
  * socket is a row in the same list, told apart only by its source.
  *
- * The entry id is built from the page's counter rather than sent, so every event of one socket lands
- * on one row without the page having to be trusted with an id of ours.
+ * The entry id is built from the page's token and counter rather than sent, so every event of one
+ * socket lands on one row without the page having to be trusted with an id of ours.
  */
-function applySocketEvent(source: string, payload: WebViewSocketPayload) {
-  const id = `ws-${source}-${payload.socketId}`;
+function applySocketEvent(source: string, pageId: string, payload: WebViewSocketPayload) {
+  const id = `ws-${source}-${pageId}-${payload.socketId}`;
 
   if (payload.event === 'connect') {
+    trackRow(pageId, id);
     networkLogStore.addWebSocket({
       id,
       socketId: payload.socketId,
@@ -842,11 +854,12 @@ function applySocketEvent(source: string, payload: WebViewSocketPayload) {
  * A stream from a page, kept in the same shape as one from the app: an HTTP entry marked as a stream,
  * with its events beside it. So the row, the Events tab and the filters all work on it unchanged.
  */
-function applyStreamEvent(source: string, payload: WebViewStreamPayload) {
+function applyStreamEvent(source: string, pageId: string, payload: WebViewStreamPayload) {
   // A page injected before the switch was flipped keeps relaying, so the answer is checked here too.
   if (!captureStreams) return;
 
   if (payload.event === 'connect') {
+    trackRow(pageId, payload.id);
     networkLogStore.add({
       id: payload.id,
       method: 'GET',
@@ -883,7 +896,70 @@ function applyStreamEvent(source: string, payload: WebViewStreamPayload) {
   }
 }
 
-export function handleWebViewNetworkMessage(event: WebViewMessageEventLike): boolean {
+/**
+ * Rows a page opened, by its token. A page that goes away sends nothing more, so a socket, stream or
+ * request it left open would read as open for ever unless it is closed from this side.
+ */
+// ponytail: holds every row id a page opened until the page goes, finished ones too. Prune on the
+// terminal events if a long-lived page ever makes this big enough to matter.
+const rowsByPage = new Map<string, string[]>();
+
+/** The page each WebView is showing now, keyed by the WebView, since two can share a name. */
+const pageByWebView = new Map<unknown, string>();
+
+function trackRow(pageId: string, id: string) {
+  const rows = rowsByPage.get(pageId);
+  if (rows) rows.push(id);
+  else rowsByPage.set(pageId, [id]);
+}
+
+/**
+ * Closed the way the page's engine closes them on unload: a socket with 1001 (going away), a stream
+ * the way a stream ends, and a request as canceled. None of it is an error; the page just left.
+ */
+function closePage(pageId: string) {
+  const rows = rowsByPage.get(pageId);
+  rowsByPage.delete(pageId);
+  if (!rows) return;
+  const ids = new Set(rows);
+  const now = Date.now();
+
+  for (const entry of networkLogStore.getWebSocketSnapshot()) {
+    if (!ids.has(entry.id) || (entry.status !== 'connecting' && entry.status !== 'open')) continue;
+    networkLogStore.updateWebSocket(entry.id, {
+      status: 'closed',
+      closeCode: 1001,
+      closeReason: 'Page closed',
+      duration: now - entry.startedAt,
+    });
+  }
+
+  for (const entry of networkLogStore.getSnapshot()) {
+    if (!ids.has(entry.id) || entry.status !== 'pending') continue;
+    networkLogStore.update(
+      entry.id,
+      entry.eventStream
+        ? { status: 'success', duration: now - entry.startedAt }
+        : { status: 'error', canceled: true, error: 'Canceled', duration: now - entry.startedAt }
+    );
+  }
+}
+
+/** For when the WebView itself is gone. Its page went with it. */
+export function closeWebViewPage(webview: unknown) {
+  const pageId = pageByWebView.get(webview);
+  pageByWebView.delete(webview);
+  if (pageId) closePage(pageId);
+}
+
+/**
+ * `webview` identifies the WebView the message came from. It defaults to the name, which is only
+ * enough while no two WebViews share one.
+ */
+export function handleWebViewNetworkMessage(
+  event: WebViewMessageEventLike,
+  webview?: unknown
+): boolean {
   if (!networkLogStore.isEnabled()) return false;
 
   let parsed: unknown;
@@ -904,24 +980,30 @@ export function handleWebViewNetworkMessage(event: WebViewMessageEventLike): boo
   const message = parsed as WebViewMessage;
 
   if (message.type === 'navigation') {
+    // Sent once, as a page starts. Anything still open from the page before it is now dead.
+    const owner = webview ?? message.source;
+    const previous = pageByWebView.get(owner);
+    if (previous !== undefined && previous !== message.pageId) closePage(previous);
+    pageByWebView.set(owner, message.pageId);
     pushConditionsToWebView(message.source);
     networkLogStore.notifyNavigation();
     return true;
   }
 
   if (message.type === 'websocket') {
-    applySocketEvent(message.source, message.payload);
+    applySocketEvent(message.source, message.pageId, message.payload);
     return true;
   }
 
   if (message.type === 'eventsource') {
-    applyStreamEvent(message.source, message.payload);
+    applyStreamEvent(message.source, message.pageId, message.payload);
     return true;
   }
 
   const { source, payload } = message;
 
   if (payload.status === 'pending') {
+    trackRow(message.pageId, payload.id);
     networkLogStore.add({ ...payload, source } as NetworkLogEntry);
   } else {
     networkLogStore.update(payload.id, { ...payload, source });
