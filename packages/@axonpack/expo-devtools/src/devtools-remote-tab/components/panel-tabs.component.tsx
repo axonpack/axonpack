@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { PanelIcon } from './panel-icon.component';
 import { PanelTabMenu } from './panel-tab-menu.component';
-import { PANELS } from '../constants/panels.const';
+import type { AxonpackPanel } from '../constants/panels.const';
 import { useTabOrder } from '../services/use-tab-order.service';
 
 /**
@@ -20,19 +20,21 @@ const DRAG_SPOTS = 24;
  * seen row shows the active tab always, and each other tab only while its copy fits. So the active
  * tab keeps its place when everything before it fits, and sits last in view when it does not.
  *
- * Both rows keep their buttons in `PANELS` order and take the chosen order from CSS `order`, so a
+ * Both rows keep their buttons in `panels` order and take the chosen order from CSS `order`, so a
  * drag never moves a node. The tab package's page adds a node React moves to the end without taking
  * it out of where it was, which put a dragged tab on screen twice and left the dragged copy behind.
  */
 export function PanelTabs({
+  panels,
   activeId,
   onSelect,
 }: {
+  panels: AxonpackPanel[];
   activeId: string | undefined;
   onSelect: (id: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { ordered, draggingId, endDrag, tabProps } = useTabOrder(PANELS);
+  const { ordered, draggingId, endDrag, tabProps } = useTabOrder(panels);
   const active = ordered.find((panel) => panel.id === activeId);
   const others = ordered.filter((panel) => panel !== active);
   const dragged = ordered.find((panel) => panel.id === draggingId);
@@ -42,18 +44,20 @@ export function PanelTabs({
     <div className="axonpack-panel-tabs">
       <div className="axonpack-panel-measure" aria-hidden>
         <div className="axonpack-panel-measure-row">
-          {PANELS.filter((panel) => panel.id !== activeId).map((panel) => (
-            <button
-              key={panel.id}
-              tabIndex={-1}
-              data-id={panel.id}
-              className="axonpack-panel-measure-tab"
-              style={position(panel.id)}>
-              <PanelIcon icon={panel.icon} />
-              {panel.title}
-              {panel.Badge && <panel.Badge />}
-            </button>
-          ))}
+          {panels
+            .filter((panel) => panel.id !== activeId)
+            .map((panel) => (
+              <button
+                key={panel.id}
+                tabIndex={-1}
+                data-id={panel.id}
+                className="axonpack-panel-measure-tab"
+                style={position(panel.id)}>
+                <PanelIcon icon={panel.icon} />
+                {panel.title}
+                {panel.Badge && <panel.Badge />}
+              </button>
+            ))}
           <span className="axonpack-panel-tab-spacer" />
         </div>
         {active && (
@@ -68,7 +72,7 @@ export function PanelTabs({
         className="axonpack-panel-tab-row"
         data-dragging={dragged ? true : undefined}
         onMouseLeave={endDrag}>
-        {PANELS.map((panel) => (
+        {panels.map((panel) => (
           <button
             key={panel.id}
             role="tab"

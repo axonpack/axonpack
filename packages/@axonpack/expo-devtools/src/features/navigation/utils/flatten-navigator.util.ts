@@ -40,6 +40,37 @@ export function hostedContainers(
 }
 
 /**
+ * The containers that start a track of their own: every one no attached screen hosts. A container
+ * whose host screen is not among the attached ones starts its own track too.
+ */
+export function topContainers(
+  containers: readonly NavigationContainerInfo[]
+): NavigationContainerInfo[] {
+  return containers.filter(
+    (container) =>
+      !container.hostRouteKey ||
+      !containers.some((other) => other !== container && isHostOf(other, container))
+  );
+}
+
+/** Whether `host`'s navigator holds the route `child` was handed over from. */
+function isHostOf(
+  host: { state: { routes: readonly { key?: string; state?: unknown }[] } | null },
+  child: { hostRouteKey?: string }
+): boolean {
+  if (!host.state || !child.hostRouteKey) return false;
+  const stack = [host.state as { routes: readonly { key?: string; state?: unknown }[] }];
+  while (stack.length > 0) {
+    const state = stack.pop()!;
+    for (const route of state.routes) {
+      if (route.key === child.hostRouteKey) return true;
+      if (route.state) stack.push(route.state as (typeof stack)[number]);
+    }
+  }
+  return false;
+}
+
+/**
  * Follows the screen the person sees down through containers: a route hosting another container
  * is not the screen, that container's own route on top is, and so on down.
  */

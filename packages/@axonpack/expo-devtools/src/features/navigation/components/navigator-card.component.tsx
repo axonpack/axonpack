@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { NavigatorOutline } from './navigator-outline.component';
 import { makeThemedStyles } from '../../../core/utils/themed-styles.util';
 import { navigationStore, useNavigationStore } from '../stores/navigation.store';
-import { hostedContainers } from '../utils/flatten-navigator.util';
+import { hostedContainers, topContainers } from '../utils/flatten-navigator.util';
 
 /**
  * Every container drawn as one tree: a container started inside a screen of another hangs under
@@ -17,12 +17,7 @@ export function NavigatorCard() {
   if (containers.length === 0) return null;
 
   const hosted = hostedContainers(containers);
-  // A container whose host screen is not among the attached ones starts its own track.
-  const tops = containers.filter(
-    (container) =>
-      !container.hostRouteKey ||
-      !containers.some((other) => other !== container && isHostOf(other, container))
-  );
+  const tops = topContainers(containers);
 
   return (
     <View style={styles.card}>
@@ -43,23 +38,6 @@ export function NavigatorCard() {
       )}
     </View>
   );
-}
-
-/** Whether `host`'s navigator holds the route `child` was handed over from. */
-function isHostOf(
-  host: { state: { routes: readonly { key?: string; state?: unknown }[] } | null },
-  child: { hostRouteKey?: string }
-): boolean {
-  if (!host.state || !child.hostRouteKey) return false;
-  const stack = [host.state as { routes: readonly { key?: string; state?: unknown }[] }];
-  while (stack.length > 0) {
-    const state = stack.pop()!;
-    for (const route of state.routes) {
-      if (route.key === child.hostRouteKey) return true;
-      if (route.state) stack.push(route.state as (typeof stack)[number]);
-    }
-  }
-  return false;
 }
 
 const useStyles = makeThemedStyles((COLORS) => ({

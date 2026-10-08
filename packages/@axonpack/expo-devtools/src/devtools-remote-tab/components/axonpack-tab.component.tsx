@@ -4,7 +4,7 @@ import { PanelTabs } from './panel-tabs.component';
 import { ThemeSwitcher } from './theme-switcher.component';
 import { themeStore, useThemeStore } from '../../core/stores/theme.store';
 import { BAR_LAYOUT_CSS } from '../constants/bar-layout.const';
-import { PANELS } from '../constants/panels.const';
+import { useShownPanels } from '../services/use-shown-panels.service';
 import { axonpackTabStore, useAxonpackTabStore } from '../stores/axonpack-tab.store';
 import { themeCss } from '../utils/theme-css.util';
 
@@ -18,14 +18,15 @@ import { themeCss } from '../utils/theme-css.util';
  */
 export function AxonpackTab() {
   const activeId = useAxonpackTabStore((state) => state.activeId);
-  const active = PANELS.find((panel) => panel.id === activeId);
+  const panels = useShownPanels();
+  const active = panels.find((panel) => panel.id === activeId);
   const palette = useThemeStore(themeStore.getPalette);
 
   return (
     <>
       <style>{BAR_LAYOUT_CSS}</style>
       <style>{themeCss(palette)}</style>
-      <PanelTabs activeId={activeId} onSelect={axonpackTabStore.select} />
+      <PanelTabs panels={panels} activeId={activeId} onSelect={axonpackTabStore.select} />
       <ThemeSwitcher />
       <button
         className="axonpack-reload"

@@ -166,7 +166,9 @@ export function RequestDetail({
         {tab === 'events' && entry.kind === 'http' && <EventsTab entry={entry} />}
         {tab === 'timing' && entry.kind === 'http' && <TimingTab entry={entry} />}
         {tab === 'cookies' && entry.kind === 'http' && <CookiesTab entry={entry} />}
-        {tab === 'initiator' && entry.kind === 'http' && <InitiatorTab entry={entry} />}
+        {tab === 'initiator' && entry.kind === 'http' && (
+          <InitiatorTab id={entry.id} frames={entry.initiator} />
+        )}
       </div>
     </div>
   );

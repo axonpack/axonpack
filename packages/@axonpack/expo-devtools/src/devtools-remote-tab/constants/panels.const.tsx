@@ -4,6 +4,7 @@ import type { MaterialIcon } from './material-icons.const';
 import { ConsolePanel } from '../components/console-panel';
 import { CrashesPanel } from '../components/crashes-panel';
 import { DebugPanel } from '../components/debug-panel';
+import { NavigationPanel } from '../components/navigation-panel';
 import { NetworkPanel } from '../components/network-panel';
 import { ConsoleBadge, CrashesBadge } from '../components/panel-badges.component';
 import { PerformancePanel } from '../components/performance-panel';
@@ -45,6 +46,12 @@ const BUILT_IN: AxonpackPanel[] = [
     title: 'Storage',
     icon: 'storage',
     component: StoragePanel,
+  },
+  {
+    id: 'navigation',
+    title: 'Navigation',
+    icon: 'alt-route',
+    component: NavigationPanel,
   },
   {
     id: 'crashes',

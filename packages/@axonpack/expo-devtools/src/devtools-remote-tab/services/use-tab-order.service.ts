@@ -15,6 +15,14 @@ const HOLD_MS = 200;
  * `preventDefault`, and it has to be called there and then, in the browser. These handlers run in
  * the app, after the event has crossed, so that call would always be too late.
  */
+/**
+ * The saved order with any panel it has not seen put last. Navigation turns up after the first
+ * render when the router is found late, and it has to have a place before it can be dragged.
+ */
+export function withLateComers(order: string[], panels: AxonpackPanel[]): string[] {
+  return [...order, ...panels.map((panel) => panel.id).filter((id) => !order.includes(id))];
+}
+
 export function useTabOrder(panels: AxonpackPanel[]) {
   const [order, setOrder] = useState(() => panels.map((panel) => panel.id));
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -57,7 +65,8 @@ export function useTabOrder(panels: AxonpackPanel[]) {
       if (id === lastSwapped.current) return;
       lastSwapped.current = id;
 
-      setOrder((current) => {
+      setOrder((saved) => {
+        const current = withLateComers(saved, panels);
         const next = current.filter((other) => other !== from);
         next.splice(current.indexOf(id), 0, from);
         return next;
@@ -66,7 +75,9 @@ export function useTabOrder(panels: AxonpackPanel[]) {
   });
 
   return {
-    ordered: order.flatMap((id) => panels.find((panel) => panel.id === id) ?? []),
+    ordered: withLateComers(order, panels).flatMap(
+      (id) => panels.find((panel) => panel.id === id) ?? []
+    ),
     draggingId,
     endDrag,
     tabProps,
