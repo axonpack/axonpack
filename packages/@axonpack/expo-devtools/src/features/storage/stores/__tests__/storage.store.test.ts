@@ -111,6 +111,11 @@ describe('storageStore per-key updates', () => {
     expect(stateOf('one').totalKeys).toBe(1);
   });
 
+  it('leaves the total alone when removing a key it does not have', () => {
+    storageStore.removeEntry('one', 'zzz');
+    expect(stateOf('one').totalKeys).toBe(2);
+  });
+
   it('ignores an update aimed at a store that is not registered', () => {
     storageStore.patchEntry('nope', entry('a', 'x'));
     expect(stateOf('one').entries).toHaveLength(2);

@@ -798,17 +798,22 @@ const config = {
 | Factory                                | For                                                                                                                                               |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `asyncStorageAdapter({ driver })`      | `@react-native-async-storage/async-storage` and anything copying its API. Uses `getMany` (v3) or `multiGet` (v1/v2) for batch reads when present. |
-| `mmkvAdapter({ driver })`              | `react-native-mmkv`, both majors — v4's `remove` and v3's `delete` are both accepted.                                                             |
+| `mmkvAdapter({ driver })`              | `react-native-mmkv`, both majors — v4's `remove` and v3's `delete` are both accepted. Changes show live.                                          |
 | `secureStoreAdapter({ driver, keys })` | `expo-secure-store`. Takes `keys` because the keychain cannot be listed, and an optional `options` passed through to every call.                  |
 | `defineStorageAdapter({ ... })`        | Anything else. Duck-types nothing; takes exactly what you hand it.                                                                                |
 
 All four accept `name` (defaulted from the library), `readOnly`, `supportedTypes` and `blacklist`. `defineStorageAdapter` needs either
 `getAllKeys` or a fixed `keys` list — passing `keys` is what turns enumeration off, and it may be a
 function, resolved on every read, for an app that keeps its own list of what it stored — and any of
-`getItem` (required), `getMany`, `setItem`, `removeItem`. **Whether the tab can edit or delete is
+`getItem` (required), `getMany`, `setItem`, `removeItem`, `subscribe`. **Whether the tab can edit or delete is
 derived from which of those you provided**, so a store you registered read-only in effect is read-only
 in the UI without a flag. Sync functions are fine everywhere: they're awaited, not branched on, and
 `kind` only decides the badge the tab shows.
+
+`subscribe(listener)` is how the open tab hears about a write: call `listener` with the key that
+changed, and return a function that stops. The tab re-reads only that key. `mmkvAdapter` builds it from
+MMKV's `addOnValueChangedListener`; AsyncStorage and SecureStore have no listener and show changes on
+Refresh.
 
 `getItem` may return a bare `string | null`, or a `{ text, valueType }` when the type matters — that
 second form is how `mmkvAdapter` keeps a stored `1` from rendering as `"1"`, and what an edit is written

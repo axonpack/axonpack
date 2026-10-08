@@ -102,7 +102,8 @@ import work from there too. Filters, sorting and grouping set on either side sho
 ## Why there is no record button
 
 Storage is a pull, not a stream, so there is nothing to pause. The toolbar carries Refresh where the
-other tabs carry a record button. There is no clear button either: that icon means "clear the log" in
+other tabs carry a record button. A store that can report its own changes, as MMKV can, updates the open tab
+as the app writes, one key at a time. The others show a change when you press Refresh. There is no clear button either: that icon means "clear the log" in
 three tabs, and it must never come to mean "wipe your storage".
 
 Nothing patches the store instance you hand over, so there is no mutation history and your app's

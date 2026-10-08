@@ -18,7 +18,11 @@ import { InsetPadding } from '../../../core/components/ui/inset-padding.ui';
 import { animateNextLayout } from '../../../core/utils/layout-animation.util';
 import { buildMatcher } from '../../../core/utils/text-search.util';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import { readAdapterById, readAllAdapters } from '../services/read-storage.service';
+import {
+  readAdapterById,
+  readAllAdapters,
+  watchStorageAdapters,
+} from '../services/read-storage.service';
 import { storageViewStore, useStorageViewStore } from '../stores/storage-view.store';
 import { storageStore, type StorageEntry, useStorageStore } from '../stores/storage.store';
 import { exportStorageSnapshot } from '../utils/export-storage-snapshot.util';
@@ -69,6 +73,7 @@ export function StorageView() {
   // all, and a store read at launch would be stale by the time anyone looked.
   useEffect(() => {
     readAllAdapters();
+    return watchStorageAdapters();
   }, []);
 
   const state = adapters.find((current) => current.adapter.id === activeId) ?? adapters[0];

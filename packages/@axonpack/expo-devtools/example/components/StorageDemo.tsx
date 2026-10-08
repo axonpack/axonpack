@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ActionButton } from './ActionButton';
@@ -34,6 +34,11 @@ function requireMmkv() {
   return mmkv;
 }
 
+function bumpMmkvCounter() {
+  const store = requireMmkv();
+  store.set('counter', (store.getNumber('counter') ?? 0) + 1);
+}
+
 function seedMmkv() {
   const store = requireMmkv();
   for (const [key, value] of Object.entries(SEED)) store.set(key, value);
@@ -63,12 +68,22 @@ async function floodAsyncStorage() {
 
 export function StorageDemo() {
   const [status, setStatus] = useState('Nothing written yet.');
+  const [ticking, setTicking] = useState(false);
+
+  // The panel covers this screen, so a button can't write while you watch. A timer can.
+  useEffect(() => {
+    if (!ticking) return;
+    const timer = setInterval(bumpMmkvCounter, 2000);
+    return () => clearInterval(timer);
+  }, [ticking]);
 
   async function run(label: string, action: () => void | Promise<void>) {
     setStatus(`${label}…`);
     try {
       await action();
-      setStatus(`${label} — done. Open the panel's Storage tab and refresh.`);
+      setStatus(
+        `${label} — done. Open the panel's Storage tab: MMKV shows it live, the rest on Refresh.`
+      );
     } catch (error) {
       setStatus(`${label} — failed: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -97,15 +112,20 @@ export function StorageDemo() {
       <Text style={styles.heading}>Typed values</Text>
       <Text style={styles.hint}>
         MMKV stores numbers and booleans natively. The tab reads each key's type by probing, so a
-        stored 0 shows as a number and not as an empty value.
+        stored 0 shows as a number and not as an empty value. MMKV reports its writes, so the open
+        tab updates by itself; turn on the 2 s counter and watch it count up.
       </Text>
       <View style={styles.row}>
         <ActionButton
           label="Bump MMKV counter"
+          onPress={() => run('Bump counter', bumpMmkvCounter)}
+        />
+        <ActionButton
+          label={ticking ? 'Stop the 2 s counter' : 'Bump counter every 2 s'}
           onPress={() =>
-            run('Bump counter', () => {
-              const store = requireMmkv();
-              store.set('counter', (store.getNumber('counter') ?? 0) + 1);
+            run(ticking ? 'Stop the 2 s counter' : 'Bump counter every 2 s', () => {
+              requireMmkv();
+              setTicking(!ticking);
             })
           }
         />

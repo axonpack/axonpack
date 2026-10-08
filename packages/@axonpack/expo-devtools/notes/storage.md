@@ -21,7 +21,7 @@ one key at a time.
 - [x] Blacklist keys per store, enforced at read time so they never leave the device
 - [x] Import a snapshot, saying what it would add, overwrite, skip or leave alone before it writes
 - [x] A fixed key list can be a function, resolved on each read
-- [ ] Live updates from a store that publishes a change listener, as MMKV does
+- [x] Live updates from a store that publishes a change listener, as MMKV does
 - [ ] Page past the read cap, or list keys first and fetch values on demand
 - [ ] Show binary values as hex, and edit them there
 - [ ] History of writes, with revert
@@ -31,13 +31,11 @@ one key at a time.
 The open list above is a menu, not an order. What is worth doing next, and why, roughly in that
 order:
 
-1. **Live updates.** Only where the store publishes a listener — MMKV does. Needs the echo from our
-   own writes suppressed, or an edit re-reads itself.
-2. **Paging past the cap.** We read the whole store to `maxKeys` and hold every value; past that we
+1. **Paging past the cap.** We read the whole store to `maxKeys` and hold every value; past that we
    say how many were skipped, which is honest but still leaves a 10,000-key store showing 1,000. The
    in-process argument that makes fetch-on-demand pointless for network bodies does not apply — this
    is memory and read time, not a bridge.
-3. **Hex.** Costs more than it looks, and the view comes before the editor: the adapter would have
+2. **Hex.** Costs more than it looks, and the view comes before the editor: the adapter would have
    to carry the bytes through the read path, where today it returns the string
    `"${byteLength} bytes"`. The primitive itself already exists in `core/` — nothing in this tab has
    bytes to hand it.

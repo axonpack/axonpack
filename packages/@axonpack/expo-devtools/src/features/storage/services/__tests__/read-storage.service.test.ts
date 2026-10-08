@@ -4,7 +4,13 @@ import {
   type StorageAdapter,
   type StorageAdapterDefinition,
 } from '../define-adapter.service';
-import { configureStorageReads, readAdapter, readAllAdapters } from '../read-storage.service';
+import {
+  configureStorageReads,
+  readAdapter,
+  readAllAdapters,
+  readStorageKey,
+  watchStorageAdapters,
+} from '../read-storage.service';
 import { storageStore } from '../../stores/storage.store';
 
 function register(definition: StorageAdapterDefinition): StorageAdapter {
@@ -155,5 +161,83 @@ describe('readAllAdapters', () => {
       'ready',
       'ready',
     ]);
+  });
+});
+
+describe('live updates', () => {
+  function liveMap(values: Record<string, string>) {
+    const map = new Map(Object.entries(values));
+    const listeners = new Set<(key: string) => void>();
+    const getItem = jest.fn((key: string) => map.get(key) ?? null);
+    const definition = defineStorageAdapter({
+      name: 'Live',
+      getAllKeys: () => [...map.keys()],
+      getItem,
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    });
+    function write(key: string, value: string | null) {
+      if (value === null) map.delete(key);
+      else map.set(key, value);
+      listeners.forEach((listener) => listener(key));
+    }
+    return { definition, getItem, listeners, write };
+  }
+
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('re-reads only the key that changed, and adds and removes keys', async () => {
+    const { definition, getItem, write } = liveMap({ a: '1', b: '2' });
+    const adapter = register(definition);
+    await readAdapter(adapter);
+    const stop = watchStorageAdapters();
+    getItem.mockClear();
+
+    write('a', 'changed');
+    write('c', '3');
+    write('b', null);
+    await flush();
+    stop();
+
+    const state = stateOf(adapter.id);
+    expect(state.entries.map((entry) => [entry.key, entry.text])).toEqual([
+      ['a', 'changed'],
+      ['c', '3'],
+    ]);
+    expect(state.totalKeys).toBe(2);
+    expect(getItem).toHaveBeenCalledTimes(3);
+  });
+
+  it('stops listening when the tab closes', async () => {
+    const { definition, listeners } = liveMap({ a: '1' });
+    register(definition);
+
+    const stop = watchStorageAdapters();
+    expect(listeners.size).toBe(1);
+    stop();
+    expect(listeners.size).toBe(0);
+  });
+
+  it('leaves a store alone until its first read is in', async () => {
+    const { definition } = liveMap({ a: '1' });
+    const adapter = register(definition);
+
+    await readStorageKey(adapter, 'a');
+
+    expect(stateOf(adapter.id).entries).toHaveLength(0);
+  });
+
+  it('skips a key past the cap, which the total may already count', async () => {
+    configureStorageReads({ maxKeys: 1 });
+    const { definition } = liveMap({ a: '1', b: '2' });
+    const adapter = register(definition);
+    await readAdapter(adapter);
+
+    await readStorageKey(adapter, 'b');
+
+    expect(stateOf(adapter.id).entries.map((entry) => entry.key)).toEqual(['a']);
+    expect(stateOf(adapter.id).totalKeys).toBe(2);
   });
 });

@@ -426,3 +426,55 @@ describe('blacklist', () => {
     expect(definition.isHidden('anything')).toBe(false);
   });
 });
+
+describe('subscribe', () => {
+  it("passes MMKV's change listener through, and stops it on unsubscribe", () => {
+    const remove = jest.fn();
+    let fire: (key: string) => void = () => {};
+    const definition = mmkvAdapter({
+      driver: {
+        getAllKeys: () => [],
+        getString: () => undefined,
+        addOnValueChangedListener: (listener) => {
+          fire = listener;
+          return { remove };
+        },
+      },
+    });
+
+    const listener = jest.fn();
+    const stop = definition.subscribe?.(listener);
+    fire('a');
+    stop?.();
+
+    expect(listener).toHaveBeenCalledWith('a');
+    expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  it('is absent for a driver with no listener', () => {
+    expect(
+      mmkvAdapter({ driver: { getAllKeys: () => [], getString: () => undefined } }).subscribe
+    ).toBeUndefined();
+  });
+
+  it('never reports a blacklisted key', () => {
+    let fire: (key: string) => void = () => {};
+    const definition = defineStorageAdapter({
+      name: 'Live',
+      getAllKeys: () => [],
+      getItem: () => null,
+      blacklist: /^secret/,
+      subscribe: (listener) => {
+        fire = listener;
+        return () => {};
+      },
+    });
+
+    const listener = jest.fn();
+    definition.subscribe?.(listener);
+    fire('secret.token');
+    fire('open');
+
+    expect(listener.mock.calls).toEqual([['open']]);
+  });
+});
