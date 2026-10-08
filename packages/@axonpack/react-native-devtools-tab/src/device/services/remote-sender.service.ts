@@ -101,7 +101,15 @@ export function createRemoteSender(
   // One reconciler per sender, not one shared. React commits long after `render` returns, when an
   // effect or a `setState` fires, so a shared one would have to be told which tab it was working for
   // at a moment nothing is in a position to tell it.
+  // React moves a node by placing it again, so a child already here is taken out first. Left in, it
+  // stays in the tree twice and a replay draws it twice.
+  const detach = (parent: Instance, child: Instance): void => {
+    const at = parent.children.indexOf(child);
+    if (at >= 0) parent.children.splice(at, 1);
+  };
+
   const append = (parent: Instance, child: Instance): void => {
+    detach(parent, child);
     parent.children.push(child);
     pending.push({ op: "append", parent: parent.id, child: child.id });
   };
@@ -111,6 +119,7 @@ export function createRemoteSender(
     child: Instance,
     before: Instance,
   ): void => {
+    detach(parent, child);
     const at = parent.children.indexOf(before);
     parent.children.splice(at < 0 ? parent.children.length : at, 0, child);
     pending.push({

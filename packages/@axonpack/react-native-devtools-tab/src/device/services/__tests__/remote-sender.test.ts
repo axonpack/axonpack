@@ -466,3 +466,29 @@ test("a ref answers the methods React Native calls on a host instance", async ()
   // Zeroes rather than a refusal, because a layout reading a measurement wants a number.
   expect(measured).toEqual([0, 0, 0, 0, 0, 0]);
 });
+
+// React moves a keyed node by placing it again: `insertBefore`, or `appendChild` when it goes last.
+// Keeping the old position as well drew one node twice, so both copies updated and were selected
+// together.
+test("a row React moves is moved, not copied, live and in a replay", async () => {
+  const { container, sender } = mount();
+  const list = (keys: string[]) =>
+    createElement(
+      "ul",
+      null,
+      ...keys.map((key) => createElement("li", { key }, key)),
+    );
+
+  sender.render(list(["a", "b", "c"]));
+  await settle();
+  sender.render(list(["b", "c", "a"]));
+  await settle();
+  sender.render(list(["c", "a", "b", "d"]));
+  await settle();
+  expect(container.textContent).toBe("cabd");
+
+  const second = mount();
+  second.receiver.apply(sender.replay());
+  await settle();
+  expect(second.container.textContent).toBe("cabd");
+});

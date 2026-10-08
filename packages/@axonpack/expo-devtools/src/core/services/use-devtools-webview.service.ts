@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useState } from 'react';
+
 import {
   getWebViewConsoleInjectedJavaScript,
   handleWebViewConsoleMessage,
@@ -8,6 +10,7 @@ import {
   shouldAllowWebViewRequest,
 } from '../../features/network/services/webview-conditions.service';
 import {
+  closeWebViewPage,
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../../features/network/services/webview-network-logger.service';
@@ -52,11 +55,6 @@ export type DevtoolsWebViewProps = {
   onMessage: (event: WebViewMessageEventLike) => boolean;
 };
 
-function handleWebViewMessage(event: WebViewMessageEventLike): boolean {
-  if (handleWebViewNetworkMessage(event)) return true;
-  return handleWebViewConsoleMessage(event);
-}
-
 /**
  * Makes one `<WebView>`'s requests, sockets, streams and console output visible to the panel. A page
  * runs in its own JS engine, so it has to be instrumented from the inside, and this is the wiring
@@ -82,6 +80,22 @@ export function useDevtoolsWebView(source: string = 'webview'): DevtoolsWebViewP
    */
   useDevtoolsReadyStore((state) => state.ready);
   const userAgent = useNetworkConditionsStore(getWebViewUserAgent);
+  // One per mounted WebView, not per name: two WebViews may share a name, and one changing page or
+  // unmounting must not close the other's rows.
+  const [webview] = useState<{ closeTimer?: ReturnType<typeof setTimeout> }>(() => ({}));
+  useEffect(() => {
+    // Fast Refresh and Strict Mode run the cleanup and then this again on a WebView that is still
+    // showing its page. Only a cleanup with no re-run straight after it means the WebView is gone.
+    clearTimeout(webview.closeTimer);
+    return () => {
+      webview.closeTimer = setTimeout(() => closeWebViewPage(webview), 0);
+    };
+  }, [webview]);
+  const onMessage = useCallback(
+    (event: WebViewMessageEventLike) =>
+      handleWebViewNetworkMessage(event, webview) || handleWebViewConsoleMessage(event),
+    [webview]
+  );
 
   return {
     ref: getWebViewConditionsRef(source),
@@ -91,6 +105,6 @@ export function useDevtoolsWebView(source: string = 'webview'): DevtoolsWebViewP
     ].join('\n'),
     userAgent,
     onShouldStartLoadWithRequest: shouldAllowWebViewRequest,
-    onMessage: handleWebViewMessage,
+    onMessage,
   };
 }

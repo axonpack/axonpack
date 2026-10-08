@@ -1,9 +1,9 @@
+import { networkLogStore } from '../../stores/network-log.store';
 import {
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
   setWebViewStreamCapture,
 } from '../webview-network-logger.service';
-import { networkLogStore } from '../../stores/network-log.store';
 
 const MARKER = '__bruinDevtoolsNetwork';
 
@@ -180,6 +180,18 @@ describe('a stream opened by a WebView page', () => {
 
     const last = posted.filter((message) => message.type === 'eventsource').at(-1);
     expect(last?.payload).toMatchObject({ event: 'message', type: 'price', data: '42' });
+  });
+
+  // A reload, a navigation, or a second WebView with the same name each start the counter again.
+  it('gives each page’s streams their own ids', () => {
+    const pages = [runInFakePage(), runInFakePage()];
+    pages.forEach(({ EventSourceCtor }) => new EventSourceCtor('/live'));
+    const ids = pages.map(
+      ({ posted }) => posted.find((message) => message.type === 'eventsource')?.payload.id
+    );
+
+    expect(ids[0]).toEqual(expect.any(String));
+    expect(ids[0]).not.toBe(ids[1]);
   });
 
   it('still closes the page’s own stream', () => {

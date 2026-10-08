@@ -1,4 +1,5 @@
 import {
+  closeWebViewPage,
   getWebViewInjectedJavaScriptBeforeContentLoaded,
   handleWebViewNetworkMessage,
 } from '../webview-network-logger.service';
@@ -7,12 +8,17 @@ import { networkLogStore } from '../../stores/network-log.store';
 /** The wire marker, spelled out here because the contract is with a page rather than with a module. */
 const MARKER = '__bruinDevtoolsNetwork';
 
-function socketEvent(payload: Record<string, unknown>) {
+function pageMessage(type: string, pageId: string, payload?: Record<string, unknown>) {
   return {
     nativeEvent: {
-      data: JSON.stringify({ [MARKER]: true, type: 'websocket', source: 'shop', payload }),
+      data: JSON.stringify({ [MARKER]: true, type, source: 'shop', pageId, payload }),
     },
   };
+}
+
+/** A socket event from page `p1` unless the payload names another page. */
+function socketEvent({ pageId = 'p1', ...payload }: Record<string, unknown>) {
+  return pageMessage('websocket', pageId as string, payload);
 }
 
 describe('a socket opened inside a WebView', () => {
@@ -99,6 +105,41 @@ describe('a socket opened inside a WebView', () => {
       'wss://echo.test/two',
       'wss://echo.test/socket',
     ]);
+  });
+
+  // A reload starts the page's counter again, so the new socket comes back as socket 1 while the old
+  // row is still in the list. Only the page token tells the two apart.
+  it('keeps a reloaded page’s socket on a row of its own', () => {
+    connect();
+    handleWebViewNetworkMessage(
+      socketEvent({ pageId: 'p2', socketId: 1, event: 'connect', url: 'wss://echo.test/again' })
+    );
+    handleWebViewNetworkMessage(socketEvent({ pageId: 'p2', socketId: 1, event: 'open' }));
+
+    const [reloaded, old] = networkLogStore.getWebSocketSnapshot();
+    expect(reloaded?.id).not.toBe(old?.id);
+    expect(reloaded).toMatchObject({ url: 'wss://echo.test/again', status: 'open' });
+    expect(old).toMatchObject({ url: 'wss://echo.test/socket', status: 'connecting' });
+  });
+
+  it('sends a reloaded page’s messages and close to its own row only', () => {
+    const oldId = connect()!.id;
+    handleWebViewNetworkMessage(
+      socketEvent({ pageId: 'p2', socketId: 1, event: 'connect', url: 'wss://echo.test/socket' })
+    );
+    const newId = networkLogStore.getWebSocketSnapshot()[0]!.id;
+
+    handleWebViewNetworkMessage(
+      socketEvent({ pageId: 'p2', socketId: 1, event: 'message', direction: 'received', data: 'x' })
+    );
+    handleWebViewNetworkMessage(socketEvent({ pageId: 'p2', socketId: 1, event: 'close' }));
+
+    expect(networkLogStore.getWebSocketMessages(newId)).toHaveLength(1);
+    expect(networkLogStore.getWebSocketMessages(oldId)).toHaveLength(0);
+    const statuses = Object.fromEntries(
+      networkLogStore.getWebSocketSnapshot().map((entry) => [entry.id, entry.status])
+    );
+    expect(statuses).toEqual({ [oldId]: 'connecting', [newId]: 'closed' });
   });
 
   it('says a socket failed when the page reports an error', () => {
@@ -188,6 +229,24 @@ describe('the injected script, run against a page', () => {
     return { posted, WebSocketCtor: win.WebSocket as typeof FakeWebSocket };
   }
 
+  // Each run is a fresh document: what a reload, a navigation, or a second WebView with the same
+  // name all look like from here.
+  it('gives every page’s sockets their own rows', () => {
+    networkLogStore.clear();
+    const pages = [runInFakePage(), runInFakePage()];
+
+    pages.forEach(({ WebSocketCtor }) => new WebSocketCtor('wss://echo.test/socket'));
+    for (const { posted } of pages) {
+      for (const message of posted) {
+        handleWebViewNetworkMessage({ nativeEvent: { data: JSON.stringify(message) } });
+      }
+    }
+
+    const ids = networkLogStore.getWebSocketSnapshot().map((entry) => entry.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
   it('replaces the page’s WebSocket, and keeps its constants', () => {
     const { WebSocketCtor } = runInFakePage();
 
@@ -248,5 +307,104 @@ describe('the injected script, run against a page', () => {
 
     const frame = posted.filter((message) => message.type === 'websocket').at(-1);
     expect(frame?.payload).toMatchObject({ messageType: 'binary', data: '[binary 4 bytes]' });
+  });
+});
+
+describe('rows of a page that went away', () => {
+  beforeAll(() => networkLogStore.setEnabled(true));
+  beforeEach(() => networkLogStore.clear());
+
+  const webviewA = {};
+  const webviewB = {};
+
+  function startPage(webview: object, pageId: string) {
+    handleWebViewNetworkMessage(pageMessage('navigation', pageId), webview);
+  }
+
+  function openSocket(webview: object, pageId: string, socketId = 1) {
+    handleWebViewNetworkMessage(
+      pageMessage('websocket', pageId, { socketId, event: 'connect', url: 'wss://echo.test' }),
+      webview
+    );
+    handleWebViewNetworkMessage(
+      pageMessage('websocket', pageId, { socketId, event: 'open' }),
+      webview
+    );
+    return networkLogStore.getWebSocketSnapshot()[0]!.id;
+  }
+
+  function socket(id: string) {
+    return networkLogStore.getWebSocketSnapshot().find((entry) => entry.id === id);
+  }
+
+  function request(id: string) {
+    return networkLogStore.getSnapshot().find((entry) => entry.id === id);
+  }
+
+  it('are closed when the WebView moves to another page, and only that page’s', () => {
+    startPage(webviewA, 'p1');
+    const oldSocket = openSocket(webviewA, 'p1');
+    handleWebViewNetworkMessage(
+      pageMessage('eventsource', 'p1', { id: 'shop-es-p1-1', event: 'connect', url: 'x' }),
+      webviewA
+    );
+    handleWebViewNetworkMessage(
+      pageMessage('network', 'p1', {
+        id: 'shop-p1-1',
+        status: 'pending',
+        url: 'x',
+        method: 'GET',
+        startedAt: 1,
+      }),
+      webviewA
+    );
+
+    startPage(webviewA, 'p2');
+    const newSocket = openSocket(webviewA, 'p2');
+
+    // What the engine sends on unload, and not an error: the page just left.
+    expect(socket(oldSocket)).toMatchObject({
+      status: 'closed',
+      closeCode: 1001,
+      closeReason: 'Page closed',
+    });
+    expect(request('shop-es-p1-1')).toMatchObject({ status: 'success' });
+    expect(request('shop-es-p1-1')?.error).toBeUndefined();
+    expect(request('shop-p1-1')).toMatchObject({ canceled: true, error: 'Canceled' });
+    expect(socket(newSocket)?.status).toBe('open');
+  });
+
+  it('keep the close a socket really had', () => {
+    startPage(webviewA, 'p1');
+    const id = openSocket(webviewA, 'p1');
+    handleWebViewNetworkMessage(
+      pageMessage('websocket', 'p1', { socketId: 1, event: 'close', code: 1000, reason: 'done' }),
+      webviewA
+    );
+
+    startPage(webviewA, 'p2');
+
+    expect(socket(id)).toMatchObject({ status: 'closed', closeCode: 1000, closeReason: 'done' });
+  });
+
+  it('are closed when the WebView unmounts', () => {
+    startPage(webviewA, 'p1');
+    const id = openSocket(webviewA, 'p1');
+
+    closeWebViewPage(webviewA);
+
+    expect(socket(id)).toMatchObject({ status: 'closed', closeReason: 'Page closed' });
+  });
+
+  it('are left alone by a second WebView with the same name', () => {
+    startPage(webviewA, 'p1');
+    const mine = openSocket(webviewA, 'p1');
+    startPage(webviewB, 'p2');
+    openSocket(webviewB, 'p2');
+
+    startPage(webviewB, 'p3');
+    closeWebViewPage(webviewB);
+
+    expect(socket(mine)?.status).toBe('open');
   });
 });
