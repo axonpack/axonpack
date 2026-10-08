@@ -98,6 +98,41 @@ export async function readAllAdapters(): Promise<void> {
   await Promise.all(storageStore.getAdapters().map((adapter) => readAdapter(adapter)));
 }
 
+/**
+ * Re-reads one key the store said it changed. A store mid-read or not read yet is left alone, since
+ * that read brings the key with it. Past the key cap, a key not on screen is skipped, because the
+ * store may already count it in the total.
+ */
+export async function readStorageKey(adapter: StorageAdapter, key: string): Promise<void> {
+  if (!storageStore.isEnabled()) return;
+
+  const state = storageStore.getSnapshot().adapters.find((it) => it.adapter.id === adapter.id);
+  if (state?.status !== 'ready') return;
+  if (state.truncated && !state.entries.some((entry) => entry.key === key)) return;
+
+  try {
+    const result = await adapter.getItem(key);
+    // A store that can't list its keys shows a fixed list, so a removed key stays on it as unset.
+    if (result.text === null && adapter.canEnumerate) storageStore.removeEntry(adapter.id, key);
+    else storageStore.patchEntry(adapter.id, buildStorageEntry(adapter.id, key, result));
+  } catch (error) {
+    storageStore.patchEntry(
+      adapter.id,
+      buildStorageEntry(adapter.id, key, ABSENT, messageOf(error))
+    );
+  }
+}
+
+/** Listens to every store that can report its changes. Returns the function that stops. */
+export function watchStorageAdapters(): () => void {
+  const stops = storageStore.getAdapters().map((adapter) =>
+    adapter.subscribe?.((key) => {
+      readStorageKey(adapter, key);
+    })
+  );
+  return () => stops.forEach((stop) => stop?.());
+}
+
 export async function readAdapterById(adapterId: string): Promise<void> {
   const adapter = storageStore.findAdapter(adapterId);
   if (adapter) await readAdapter(adapter);

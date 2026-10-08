@@ -1,8 +1,8 @@
 import { EventEmitter } from 'expo';
 
+import { createStoreHook } from '../../../core/stores/axon.store';
 import type { StorageAdapter, StorageValueType } from '../services/define-adapter.service';
 import type { StoredValueKind } from '../utils/classify-value.util';
-import { createStoreHook } from '../../../core/stores/axon.store';
 
 /**
  * One key and value read from a registered store — a row in the Storage tab. Read them from
@@ -164,9 +164,10 @@ export const storageStore = {
       totalKeys: index === -1 ? state.totalKeys + 1 : state.totalKeys,
     });
   },
+  /** A key not on screen is a no-op, so a delete reported twice doesn't take the total down twice. */
   removeEntry(adapterId: string, key: string) {
     const state = snapshot.adapters.find((current) => current.adapter.id === adapterId);
-    if (!state) return;
+    if (!state?.entries.some((entry) => entry.key === key)) return;
 
     patchState(adapterId, {
       entries: state.entries.filter((entry) => entry.key !== key),

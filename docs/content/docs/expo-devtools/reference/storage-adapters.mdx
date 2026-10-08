@@ -39,7 +39,7 @@ const devtoolsConfig = {
 | Factory                                | For                                                                                                                                              |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `asyncStorageAdapter({ driver })`      | `@react-native-async-storage/async-storage` and anything copying its API. Uses `getMany` (v3) or `multiGet` (v1/v2) for batch reads when present. |
-| `mmkvAdapter({ driver })`              | `react-native-mmkv`, both majors. v4's `remove` and v3's `delete` are both accepted.                                                              |
+| `mmkvAdapter({ driver })`              | `react-native-mmkv`, both majors. v4's `remove` and v3's `delete` are both accepted. Changes show live through `addOnValueChangedListener`.       |
 | `secureStoreAdapter({ driver, keys })` | `expo-secure-store`. Takes `keys` because the keychain cannot be listed, and an optional `options` passed through to every call.                  |
 | `defineStorageAdapter({ ... })`        | Anything else. Duck-types nothing; takes exactly what you hand it.                                                                                |
 
@@ -73,6 +73,23 @@ everywhere: they are awaited, not branched on.
 `getItem` may return a bare `string | null`, or a `{ text, valueType }` when the type matters. That
 second form is how `mmkvAdapter` keeps a stored `1` from rendering as `"1"`, and what an edit is written
 back through.
+
+## `subscribe`
+
+Optional, on `defineStorageAdapter`. Give it a function that calls the listener with a key whenever your
+store changes that key, and returns a function that stops listening. The tab listens only while it is
+open, and re-reads just the key it was told about. `mmkvAdapter` wires this up from MMKV's
+`addOnValueChangedListener` for you. AsyncStorage and SecureStore have no listener, so their changes
+show when you press Refresh.
+
+```ts
+defineStorageAdapter({
+  name: 'Memory',
+  getAllKeys: () => [...cache.keys()],
+  getItem: (key) => cache.get(key) ?? null,
+  subscribe: (listener) => cache.onChange(listener),
+});
+```
 
 ## `blacklist`
 

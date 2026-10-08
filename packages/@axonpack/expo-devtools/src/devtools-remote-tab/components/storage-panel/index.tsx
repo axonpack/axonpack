@@ -11,7 +11,10 @@ import { STORAGE_PANEL_CSS } from './storage-panel-css.const';
 import { StorageSummary } from './summary.component';
 import { StorageToolbar } from './toolbar.component';
 import { buildMatcher } from '../../../core/utils/text-search.util';
-import { readAllAdapters } from '../../../features/storage/services/read-storage.service';
+import {
+  readAllAdapters,
+  watchStorageAdapters,
+} from '../../../features/storage/services/read-storage.service';
 import { useStorageViewStore } from '../../../features/storage/stores/storage-view.store';
 import { storageStore, useStorageStore } from '../../../features/storage/stores/storage.store';
 import {
@@ -57,6 +60,7 @@ export function StoragePanel() {
   // Read on open, as the app does: a store nobody looks at shouldn't be read at all.
   useEffect(() => {
     readAllAdapters();
+    return watchStorageAdapters();
   }, []);
 
   const state = adapters.find((current) => current.adapter.id === activeId) ?? adapters[0];

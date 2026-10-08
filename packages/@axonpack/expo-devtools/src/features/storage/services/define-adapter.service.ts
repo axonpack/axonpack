@@ -102,6 +102,12 @@ export type StorageAdapterConfig = {
   setItem?: (key: string, text: string, valueType: StorageValueType) => MaybePromise<unknown>;
   /** Deletes one key. Omit and the tab offers no delete for this store. */
   removeItem?: (key: string) => MaybePromise<unknown>;
+  /**
+   * Calls `listener` with a key whenever the store changes it, and returns a function that stops.
+   * The tab listens only while it is open and re-reads just that key. Leave it out and the tab
+   * shows changes when Refresh is pressed.
+   */
+  subscribe?: (listener: (key: string) => void) => () => void;
 };
 
 /**
@@ -137,6 +143,8 @@ export type StorageAdapterDefinition = {
   setItem?: (key: string, text: string, valueType: StorageValueType) => Promise<void>;
   /** Deletes one key. Absent when the driver cannot delete. */
   removeItem?: (key: string) => Promise<void>;
+  /** Reports changed keys, blacklisted ones left out. Absent when the store cannot report them. */
+  subscribe?: (listener: (key: string) => void) => () => void;
 };
 
 /**
@@ -194,7 +202,7 @@ function toReadResult(value: StorageReadValue): StorageReadResult {
  * promises.
  */
 export function defineStorageAdapter(config: StorageAdapterConfig): StorageAdapterDefinition {
-  const { keys: fixedKeys, getAllKeys, getItem, getMany, setItem, removeItem } = config;
+  const { keys: fixedKeys, getAllKeys, getItem, getMany, setItem, removeItem, subscribe } = config;
   const isHidden = toHiddenPredicate(config.blacklist);
 
   // Filtered here rather than in the view, and here rather than in `readAdapter`, so no path that
@@ -235,6 +243,12 @@ export function defineStorageAdapter(config: StorageAdapterConfig): StorageAdapt
         if (isHidden(key)) throw new Error(`"${key}" is hidden by this store's blacklist.`);
         await removeItem(key);
       }),
+    subscribe:
+      subscribe &&
+      ((listener) =>
+        subscribe((key) => {
+          if (!isHidden(key)) listener(key);
+        })),
   };
 }
 
@@ -351,6 +365,8 @@ export type MmkvLikeDriver = {
   delete?: (key: string) => unknown;
   /** MMKV 4's delete. Either this or `delete` enables deleting. */
   remove?: (key: string) => unknown;
+  /** Lets the tab show a write as it happens. Without it, changes show on Refresh. */
+  addOnValueChangedListener?: (listener: (key: string) => void) => { remove: () => void };
 };
 
 /**
@@ -385,6 +401,12 @@ export function mmkvAdapter(config: {
       : undefined,
     removeItem: hasRemove
       ? (key) => (driver.remove ? driver.remove(key) : driver.delete?.(key))
+      : undefined,
+    subscribe: driver.addOnValueChangedListener
+      ? (listener) => {
+          const subscription = driver.addOnValueChangedListener?.(listener);
+          return () => subscription?.remove();
+        }
       : undefined,
   });
 }

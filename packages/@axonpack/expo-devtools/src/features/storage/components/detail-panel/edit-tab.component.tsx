@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { useDetailStyles } from './shared.styles';
+import { TextArea } from '../../../../core/components/ui/text-area.ui';
 import { TOUCH_TARGET } from '../../../../core/constants/metrics.const';
+import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
 import { isEditableValueType, type StorageAdapter } from '../../services/define-adapter.service';
 import { setStorageValue } from '../../services/write-storage.service';
 import type { StorageEntry } from '../../stores/storage.store';
 import { parseStoredJson } from '../../utils/classify-value.util';
-import { makeThemedStyles } from '../../../../core/utils/themed-styles.util';
-import { TextArea } from '../../../../core/components/ui/text-area.ui';
 
 export function EditTab({ entry, adapter }: { entry: StorageEntry; adapter: StorageAdapter }) {
   const detailStyles = useDetailStyles();
@@ -20,10 +20,11 @@ export function EditTab({ entry, adapter }: { entry: StorageEntry; adapter: Stor
   const [error, setError] = useState<string | null>(null);
 
   // The store re-reads the key after a save, so the entry arriving with new text is the signal that
-  // the write landed — that's what resets the draft, rather than an effect chasing the prop.
+  // the write landed — that's what resets the draft, rather than an effect chasing the prop. The app
+  // can also write the key while it is open here, and that must not throw away what was typed.
   if (entry.text !== savedText) {
     setSavedText(entry.text);
-    setDraft(entry.text ?? '');
+    if (saving || draft === (savedText ?? '')) setDraft(entry.text ?? '');
     setError(null);
   }
 
