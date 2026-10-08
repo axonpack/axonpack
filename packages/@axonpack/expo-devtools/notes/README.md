@@ -15,6 +15,7 @@ only disagree with these.
 | [crash.md](./crash.md)                                                 | The four capture tiers and the report sheets               |
 | [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose                  |
 | [navigation.md](./navigation.md)                                       | The screens the app moved through, and moving it from here |
+| [redux.md](./redux.md)                                                 | The actions a Redux store reduced, and dispatching one     |
 | [react-native-devtools.md](./react-native-devtools.md)                 | The panel again, inside React Native DevTools              |
 | [devtools-console-plan.md](./devtools-console-plan.md)                 | Console in the DevTools tab, built, not yet walked         |
 | [devtools-tab-storage-plan.md](./devtools-tab-storage-plan.md)         | Storage in the DevTools tab, built, not yet walked         |

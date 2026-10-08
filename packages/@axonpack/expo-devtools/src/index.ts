@@ -18,6 +18,7 @@ export type {
   DevtoolsCrashConfig,
   DevtoolsNavigationConfig,
   DevtoolsQueryConfig,
+  DevtoolsReduxConfig,
 } from './client/start-devtools.client';
 export type { QueryClientLike } from './features/query/stores/query.store';
 export { DevtoolsProvider } from './core/components/devtools-provider.component';
@@ -37,6 +38,9 @@ export type {
   NavigationRouterKind,
   NavigationState,
 } from './features/navigation/stores/navigation.store';
+export { devtoolsReduxEnhancer } from './features/redux/services/redux-enhancer.service';
+export type { ReduxAction, ReduxActionEntry } from './features/redux/stores/redux.store';
+export type { ActionTypeMatcher } from './features/redux/utils/action-type-lists.util';
 export { CrashReportOverlay } from './features/crash/components/crash-report-overlay.component';
 export type { CrashPopupDetail } from './features/crash/services/crash-popup.service';
 export { DevtoolsErrorBoundary } from './features/crash/components/devtools-error-boundary.component';

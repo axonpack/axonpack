@@ -6,12 +6,21 @@ import {
   useNavigationStore,
 } from '../../../features/navigation/stores/navigation.store';
 import { queryStore, useQueryStore } from '../../../features/query/stores/query.store';
+import { reduxStore, useReduxStore } from '../../../features/redux/stores/redux.store';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
 export type DevtoolsTab =
-  'network' | 'console' | 'performance' | 'storage' | 'query' | 'navigation' | 'crashes' | 'debug';
+  | 'network'
+  | 'console'
+  | 'performance'
+  | 'storage'
+  | 'query'
+  | 'navigation'
+  | 'redux'
+  | 'crashes'
+  | 'debug';
 
 const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'network', label: 'Network', icon: 'swap-vert' },
@@ -20,6 +29,7 @@ const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'storage', label: 'Storage', icon: 'storage' },
   { key: 'query', label: 'Query', icon: 'cached' },
   { key: 'navigation', label: 'Navigation', icon: 'alt-route' },
+  { key: 'redux', label: 'Redux', icon: 'data-object' },
   { key: 'crashes', label: 'Crashes', icon: 'bug-report' },
   { key: 'debug', label: 'Debug', icon: 'construction' },
 ];
@@ -36,14 +46,16 @@ export function DevtoolsTabBar({
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
-  // The tabs that are not always there: an app with no router, or one that handed over no
-  // TanStack Query client, has nothing they could ever show.
+  // Tabs that are not always there: an app with no router, one that handed over no TanStack
+  // Query client, or one with no store using the Redux enhancer has nothing they could ever show.
   const routerKind = useNavigationStore(navigationStore.getRouterKind);
   const hasQueryClient = useQueryStore(queryStore.hasClient);
+  const reduxAttached = useReduxStore(reduxStore.isAttached);
   const tabs = TABS.filter(
     (entry) =>
       (entry.key !== 'navigation' || routerKind !== null) &&
-      (entry.key !== 'query' || hasQueryClient)
+      (entry.key !== 'query' || hasQueryClient) &&
+      (entry.key !== 'redux' || reduxAttached)
   );
   return (
     <ScrollView
