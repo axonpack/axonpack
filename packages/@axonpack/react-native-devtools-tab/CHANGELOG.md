@@ -1,5 +1,11 @@
 # @axonpack/react-native-devtools-tab
 
+## 0.1.4
+
+### Patch Changes
+
+- c1a6496: - **Reordered rows**: a row that moves in a list now shows once in DevTools, not twice
+
 ## 0.1.3
 
 ### Patch Changes

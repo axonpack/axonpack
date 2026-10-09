@@ -1,5 +1,39 @@
 # @axonpack/expo-devtools
 
+## 3.5.0
+
+### Minor Changes
+
+- 571efac: - **CPU usage in the Performance tab**: the Memory card now plots how busy the app keeps the CPU, as Total, JavaScript and UI thread lines from 0 to 100%. Total is a share of all the phone's cores; each thread is a share of one core, so 100% means that thread never stopped. Needs a development build, and an existing one has to be rebuilt to pick it up. Expo Go shows it as unavailable
+  - **Three new palette tokens**: `cpuApp`, `cpuJs` and `cpuUi` colour the CPU plot's lines. Every built-in theme sets them, and a custom theme inherits them from its base
+- 5102d34: - **Navigation panel in React Native DevTools**: the Axonpack tab gets the Navigation tab, shown only when the app has a router
+  - **Current route and navigator tree**: the route on screen with its path and params, and every container as one tree
+  - **History as a table**: time, action, from, to, time on screen and where each move was dispatched from
+  - **Open a move** to read its params, the state after it and the source around the line that dispatched it
+  - **Search, pause and clear** the history, shared with the panel on the phone
+  - **Move the app from DevTools**: Back, open a screen by name with params, open a deep link, or go to a past screen again
+  - **Copy the history as Markdown** onto the computer's clipboard, or **download it as JSON**
+- f7f9daa: - **Every storage key is listed, and a value is read only when you look at it**: opening a store lists all of its keys and reads none of their values. A value is read once its row is on screen, when you open the key, or when you export. A fast scroll reads nothing it passes. Until then the row shows a placeholder for type and size.
+  - **Search on key names covers every key.** Value search, the type filter, size and type sorting and the totals cover the values read so far, and the summary says how many that is. Size and type sorts put unread rows last.
+  - **Live MMKV changes follow the same rule**: a changed key is read again only if its value was already read or its row is on screen, and a new key joins the list unread.
+  - **The React Native DevTools tab draws 50 rows at a time**, with a button for more, and reads the values of the rows it draws. With values still unread, the first click on Export reads them and the second downloads the file.
+  - **Keys sort without regard to case**, with `A` before `a` when two keys differ only in case. The sort no longer goes through `localeCompare`, which held the JS thread for most of a second on a 10,000-key store on Android.
+  - **`storage.maxKeys` is deprecated and ignored**, since nothing is capped any more. **`StorageAdapterState.truncated` is gone**, and keys not read yet have the new `'unread'` kind.
+  - **No more debug logging**: opening a request in the Network tab no longer prints `DetailPanel` to the app's console on every render.
+- b8a31de: - **Redux tab**: every action your store reduced, with its time and payload. Tap one to see the state after it and what it changed. Add `devtoolsReduxEnhancer()` to your store; it works with Redux Toolkit and plain `createStore`, and the package still does not depend on redux
+  - **Dispatch from the panel**: type an action as JSON and send it to your store, or send a recorded one again
+  - **`redux.allow` and `redux.deny`**: which action types are kept, by exact name or pattern. A noisy type can also be dropped from the panel while the app runs. `redux.disabledByDefault` opens the tab paused
+- c3718f9: - The Storage tab shows MMKV writes as they happen, without pressing Refresh.
+  - Storage adapters take an optional `subscribe`, so a store of your own can do the same.
+- 630d05c: - **Query tab**: pass your TanStack Query v5 client as `query: { client }` and the panel lists every query and mutation as it changes, with its key, status, observers and last update. Open one to see its data or error. Refetch, invalidate, reset or remove a query, or hold it in loading or error to check how a screen handles it. Nothing new to install, and the tab stays hidden until a client is passed
+
+### Patch Changes
+
+- c1a6496: - **WebView sockets after a reload**: every WebSocket and EventSource a page opens gets its own row, across reloads, navigations and WebViews that share a name
+  - **WebView page changes**: when a WebView reloads, navigates or unmounts, the old page's open sockets and streams show as closed and its pending requests as canceled
+- Updated dependencies [c1a6496]
+  - @axonpack/react-native-devtools-tab@0.1.4
+
 ## 3.4.1
 
 ### Patch Changes
