@@ -45,6 +45,8 @@ import {
 } from '../features/performance/services/user-timing.service';
 import { performanceStore } from '../features/performance/stores/performance.store';
 import { queryStore, type QueryClientLike } from '../features/query/stores/query.store';
+import { reduxStore } from '../features/redux/stores/redux.store';
+import type { ActionTypeMatcher } from '../features/redux/utils/action-type-lists.util';
 import {
   resolveStorageAdapters,
   type StorageAdapterDefinition,
@@ -399,6 +401,36 @@ export type DevtoolsNavigationConfig = {
 };
 
 /**
+ * The Redux tab: which action types it keeps, and whether it starts recording. The tab is only there
+ * once a store was created with `devtoolsReduxEnhancer()`.
+ */
+export type DevtoolsReduxConfig = {
+  /**
+   * Open the Redux tab with recording paused, so no action is kept until the record button in its
+   * toolbar is pressed. Defaults to `false`. The current state is still shown while paused.
+   */
+  disabledByDefault?: boolean;
+  /**
+   * Record only these action types. A string matches one type exactly, a RegExp is tested against
+   * it. Empty or left out, every type is recorded.
+   *
+   * ```ts
+   * allow: [/^cart\//, 'auth/signedIn']
+   * ```
+   */
+  allow?: ActionTypeMatcher[];
+  /**
+   * Never record these action types, for the action an app fires dozens of times a second. Wins
+   * over `allow`. More can be added from the panel while the app runs.
+   *
+   * ```ts
+   * deny: ['timer/tick', /^analytics\//]
+   * ```
+   */
+  deny?: ActionTypeMatcher[];
+};
+
+/**
  * Everything `<DevtoolsProvider config={...} />` accepts. Every field is optional and the defaults
  * suit most apps — a provider with no config at all captures requests, console output and crashes.
  *
@@ -453,6 +485,8 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   query?: DevtoolsQueryConfig;
   /** The Navigation tab: whether it starts recording, and what it strips from a move. */
   navigation?: DevtoolsNavigationConfig;
+  /** The Redux tab: which action types it keeps, and whether it starts recording. */
+  redux?: DevtoolsReduxConfig;
   /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
   crash?: DevtoolsCrashConfig;
 };
@@ -499,6 +533,11 @@ export function startDevtools<TThemeName extends string = never>(
   const { adapters: storageAdapters, readOnly: storageReadOnly } = config?.storage ?? {};
   const { disabledByDefault: navigationStartsPaused = false, redact: redactNavigation } =
     config?.navigation ?? {};
+  const {
+    disabledByDefault: reduxStartsPaused = false,
+    allow: reduxAllow,
+    deny: reduxDeny,
+  } = config?.redux ?? {};
   const {
     enabled: crashEnabled = true,
     enableWhileDevtoolsDisabled: crashSurvivesDisabled = false,
@@ -653,6 +692,10 @@ export function startDevtools<TThemeName extends string = never>(
     }
   }
 
+  reduxStore.setActionLists({ allow: reduxAllow, deny: reduxDeny });
+  reduxStore.setEnabled(true);
+  if (reduxStartsPaused) reduxStore.setPaused(true);
+
   // Last, so the launcher button appears only once there is a working panel behind it. Anything
   // above throwing leaves the overlay hidden, which is the honest outcome.
   devtoolsReadyStore.markReady();
@@ -733,6 +776,8 @@ export const devtools = {
   storageStore,
   /** The moves the navigator made and the route on screen, for reading or clearing them from code. */
   navigationStore,
+  /** The actions the Redux store reduced, for reading or clearing them from code. */
+  reduxStore,
   /** The crash records held in memory, for reporting or clearing them from code. */
   crashStore,
 };

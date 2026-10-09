@@ -104,6 +104,10 @@ export const devtoolsConfig = {
         ? { ...move, to: { ...move.to, params: { ...move.to.params, token: '[redacted]' } } }
         : move,
   },
+  // `analytics/*` never reaches the Redux tab; the Redux demo dispatches one to show it.
+  redux: {
+    deny: [/^analytics\//],
+  },
   storage: {
     adapters: [
       asyncStorageAdapter({ driver: AsyncStorage }),
