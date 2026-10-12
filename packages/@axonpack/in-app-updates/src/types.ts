@@ -18,7 +18,10 @@ export type ProviderResult = {
   releaseDate?: string;
   /** Oldest version still allowed to run. Anything below it is a forced update. */
   minimumVersion?: string;
-  /** Compared only when `version` equals the installed version. */
+  /**
+   * The build number of that release: on Android the versionCode, on iOS the CFBundleVersion.
+   * Compared only when `version` equals the installed version.
+   */
   buildNumber?: number | string;
   /** The provider says this update is mandatory, e.g. a flag in remote config. */
   required?: boolean;
@@ -115,6 +118,9 @@ export type NeedUpdateResult = {
   latestVersion: string;
   isForced: boolean;
   isSkipped: boolean;
+  /** Set when the update is a newer build of the same version. */
+  currentBuildNumber?: number;
+  latestBuildNumber?: number;
   /** False when the update is forced or `canSkip` is false. */
   canSkip: boolean;
   updateType: UpdateType;

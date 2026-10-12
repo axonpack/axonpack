@@ -44,17 +44,19 @@ export const evaluateUpdate = (
   // Same version: a higher build number still counts, for providers that report one.
   // Only the same version with a newer build counts, so the device is asked for its build only then.
   const latestBuild = toNumber(option.latestBuildNumber ?? latest.buildNumber);
+  let currentBuild: number | undefined;
   if (
     !isUpdate &&
     latestBuild !== undefined &&
     compare(latest.version, currentVersion) === 0
   ) {
-    const currentBuild = toNumber(
+    const installed = toNumber(
       option.currentBuildNumber ?? getVersionInfo().getCurrentBuildNumber(),
     );
-    if (currentBuild !== undefined && latestBuild > currentBuild) {
+    if (installed !== undefined && latestBuild > installed) {
       isUpdate = true;
       updateType = "build";
+      currentBuild = installed;
     }
   }
 
@@ -82,6 +84,9 @@ export const evaluateUpdate = (
       latestVersion: latest.version,
       isForced: forced,
       isSkipped,
+      // Shown only for a new build of the same version, where the version alone says nothing.
+      currentBuildNumber: updateType === "build" ? currentBuild : undefined,
+      latestBuildNumber: updateType === "build" ? latestBuild : undefined,
       canSkip,
       updateType,
       minimumVersion,
