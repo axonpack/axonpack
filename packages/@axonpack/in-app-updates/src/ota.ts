@@ -1,5 +1,4 @@
 import { VersionInfoUnavailableError } from "./errors";
-import { optionalRequire } from "./runtime";
 
 type ExpoUpdates = {
   isEnabled: boolean;
@@ -8,8 +7,16 @@ type ExpoUpdates = {
   reloadAsync: () => Promise<void>;
 };
 
+const load = (): ExpoUpdates | undefined => {
+  try {
+    return require("expo-updates") as ExpoUpdates;
+  } catch {
+    return undefined;
+  }
+};
+
 const updates = (): ExpoUpdates => {
-  const mod = optionalRequire(() => require("expo-updates") as ExpoUpdates);
+  const mod = load();
   if (!mod)
     throw new VersionInfoUnavailableError("expo-updates is not installed.");
   return mod;
@@ -17,7 +24,7 @@ const updates = (): ExpoUpdates => {
 
 /** Is there an over-the-air bundle waiting? False when expo-updates is missing or off (dev builds). */
 export const checkOtaUpdate = async (): Promise<boolean> => {
-  const mod = optionalRequire(() => require("expo-updates") as ExpoUpdates);
+  const mod = load();
   if (!mod?.isEnabled) return false;
   return (await mod.checkForUpdateAsync()).isAvailable;
 };

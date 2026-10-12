@@ -1,5 +1,3 @@
-import { optionalRequire } from "./runtime";
-
 /** What Google Play knows about the app. Values are Play Core's own. */
 export type NativeUpdateInfo = {
   available: boolean;
@@ -40,12 +38,13 @@ type NativeModule = {
 
 /** Undefined on iOS, in Expo Go, and in any build that did not link the module. */
 const nativeModule = (): NativeModule | undefined => {
-  const expo = optionalRequire(
-    () =>
-      require("expo") as {
-        requireOptionalNativeModule?: <T>(name: string) => T | null;
-      },
-  );
+  let expo:
+    { requireOptionalNativeModule?: <T>(name: string) => T | null } | undefined;
+  try {
+    expo = require("expo");
+  } catch {
+    expo = undefined;
+  }
   return (
     expo?.requireOptionalNativeModule?.<NativeModule>("AxonpackInAppUpdates") ??
     undefined

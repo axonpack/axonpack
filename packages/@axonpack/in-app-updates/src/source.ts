@@ -1,5 +1,5 @@
 import { VersionInfoUnavailableError } from "./errors";
-import { currentPlatform, optionalRequire } from "./runtime";
+import { currentPlatform } from "./runtime";
 import type { VersionInfoSource } from "./types";
 
 type ExpoApplication = {
@@ -12,6 +12,23 @@ type ExpoLocalization = {
   /** Removed in expo-localization 58, still there on old SDKs. */
   region?: string | null;
   country?: string | null;
+};
+
+// Each require is literal and directly inside a try, so Metro treats it as optional.
+const loadLocalization = (): ExpoLocalization | undefined => {
+  try {
+    return require("expo-localization") as ExpoLocalization;
+  } catch {
+    return undefined;
+  }
+};
+
+const loadApplication = (): ExpoApplication | undefined => {
+  try {
+    return require("expo-application") as ExpoApplication;
+  } catch {
+    return undefined;
+  }
 };
 
 const regionFromIntl = (): string | undefined => {
@@ -29,9 +46,7 @@ const regionFromIntl = (): string | undefined => {
 export const detectCountry = (): string | undefined => {
   let region: string | null | undefined;
   try {
-    const localization = optionalRequire(
-      () => require("expo-localization") as ExpoLocalization,
-    );
+    const localization = loadLocalization();
     // A future release may change these. Whatever it does, the country is a nice-to-have, so
     // any failure here falls through to Intl.
     region =
@@ -57,9 +72,7 @@ const buildNumber = (
 };
 
 const fromExpoApplication = (): VersionInfoSource | undefined => {
-  const app = optionalRequire(
-    () => require("expo-application") as ExpoApplication,
-  );
+  const app = loadApplication();
   if (!app) return undefined;
   return {
     getCountry: detectCountry,

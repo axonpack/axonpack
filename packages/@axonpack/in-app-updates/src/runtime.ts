@@ -1,17 +1,5 @@
 import type { Platform } from "./types";
 
-/**
- * Optional modules are required inside a function and a try block, so Metro treats them as
- * optional and a project without them still bundles.
- */
-export const optionalRequire = <T>(load: () => T): T | undefined => {
-  try {
-    return load();
-  } catch {
-    return undefined;
-  }
-};
-
 // Typed by hand so the package needs no react-native types to compile.
 type ReactNative = {
   Platform: { OS: string };
@@ -24,8 +12,15 @@ type ReactNative = {
   };
 };
 
-export const reactNative = (): ReactNative | undefined =>
-  optionalRequire(() => require("react-native") as ReactNative);
+// The literal require sits directly inside a try, which is the only shape Metro treats as an
+// optional dependency. Wrapping it in a helper makes the bundle fail when the module is absent.
+export const reactNative = (): ReactNative | undefined => {
+  try {
+    return require("react-native") as ReactNative;
+  } catch {
+    return undefined;
+  }
+};
 
 export const currentPlatform = (): string =>
   reactNative()?.Platform.OS ?? "unknown";
