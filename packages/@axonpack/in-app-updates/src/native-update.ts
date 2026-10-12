@@ -78,6 +78,16 @@ export const getNativeUpdateInfo = async (): Promise<
 
 let subscription: { remove: () => void } | undefined;
 let running: Promise<NativeUpdateOutcome> | undefined;
+// Play marks a running flexible download as "in progress" too, so a download this session started
+// must not be mistaken for an immediate update the user left.
+let flexibleInFlight = false;
+
+/** For tests: forgets what this session knows. Not exported from the package. */
+export const resetNativeUpdateState = () => {
+  stopListening();
+  running = undefined;
+  flexibleInFlight = false;
+};
 
 const stopListening = () => {
   subscription?.remove();
@@ -113,26 +123,41 @@ const run = async (
   // Play cannot answer on a sideloaded build, an old Play Store, or a device without Play at all.
   const info = await native.getUpdateInfo().catch(() => undefined);
   if (!info) return "unavailable";
+  const resuming = kind === "immediate" && info.inProgress;
   const allowed =
     kind === "immediate" ? info.immediateAllowed : info.flexibleAllowed;
-  if (!(info.available || info.inProgress) || !allowed) return "unavailable";
+  if (!(info.available || info.inProgress)) return "unavailable";
+  // An update that is already running reports itself as not allowed, and Google's guide resumes it
+  // anyway, so only a fresh start is checked.
+  if (!resuming && !allowed) return "unavailable";
 
   stopListening();
-  if (onStatus) {
-    subscription = native.addListener("onInstallStatus", (status) => {
-      onStatus(status);
-      // The last word on a flexible update. Nothing more will arrive, so stop listening.
-      if (FINISHED.includes(status.status)) stopListening();
-    });
-  }
+  // Always listening, so the end of a flexible update is noticed even when the caller does not care.
+  subscription = native.addListener("onInstallStatus", (status) => {
+    onStatus?.(status);
+    if (
+      status.status === INSTALL_STATUS_DOWNLOADED ||
+      FINISHED.includes(status.status)
+    ) {
+      flexibleInFlight = false;
+    }
+    // The last word on a flexible update. Nothing more will arrive, so stop listening.
+    if (FINISHED.includes(status.status)) stopListening();
+  });
   try {
     const code = await native.startUpdate(kind === "immediate");
-    if (code === 0) return "declined";
-    return code === -1 ? "accepted" : "failed";
+    if (code !== -1) {
+      // Declined or failed: no download follows, so nothing is left to listen for.
+      stopListening();
+      return code === 0 ? "declined" : "failed";
+    }
+    flexibleInFlight = kind === "flexible";
+    return "accepted";
   } catch {
+    stopListening();
     return "failed";
   } finally {
-    // Declined or failed: no download follows. An immediate update owns the screen until it ends.
+    // An immediate update owns the screen until it ends, so there is nothing to report on.
     if (kind === "immediate") stopListening();
   }
 };
@@ -153,8 +178,9 @@ export const getNativeUpdateState = async (): Promise<
   "in-progress" | "downloaded" | "none"
 > => {
   const info = await getNativeUpdateInfo().catch(() => undefined);
-  if (info?.inProgress) return "in-progress";
+  // Play also calls a downloaded flexible update "in progress", so a finished download comes first.
   if (info?.installStatus === INSTALL_STATUS_DOWNLOADED) return "downloaded";
+  if (info?.inProgress && !flexibleInFlight) return "in-progress";
   return "none";
 };
 

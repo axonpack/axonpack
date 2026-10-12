@@ -2,6 +2,7 @@ import { baseInfo, fake } from "./native-fake.test-helper";
 import {
   completeNativeUpdate,
   getNativeUpdateState,
+  resetNativeUpdateState,
   setNativeUpdateFake,
   startNativeUpdate,
 } from "./native-update";
@@ -9,6 +10,7 @@ import {
 const starts = () => fake.calls.filter((c) => c.startsWith("start"));
 
 beforeEach(() => {
+  resetNativeUpdateState();
   fake.reset();
   (globalThis as { __DEV__?: boolean }).__DEV__ = false;
 });
@@ -51,6 +53,27 @@ test("an immediate update that was left can be resumed", async () => {
   fake.info = { ...baseInfo, available: false, inProgress: true };
   expect(await startNativeUpdate("immediate")).toBe("accepted");
   expect(starts()).toEqual(["start:immediate"]);
+});
+
+test("an update that is already running is resumed even though Play says it is not allowed", async () => {
+  fake.info = {
+    ...baseInfo,
+    available: false,
+    inProgress: true,
+    immediateAllowed: false,
+    flexibleAllowed: false,
+  };
+  expect(await startNativeUpdate("immediate")).toBe("accepted");
+  expect(starts()).toEqual(["start:immediate"]);
+});
+
+test("a declined or failed flexible start leaves no listener behind", async () => {
+  fake.startCode = 0;
+  await startNativeUpdate("flexible", () => {});
+  expect(fake.listeners.size).toBe(0);
+  fake.startCode = 1;
+  await startNativeUpdate("flexible");
+  expect(fake.listeners.size).toBe(0);
 });
 
 test("status events reach onStatus, and the listener is removed when the update ends", async () => {
@@ -110,4 +133,19 @@ test("the fake only turns on when __DEV__ is true", async () => {
   await setNativeUpdateFake("flexibleAccepted");
   await setNativeUpdateFake(null);
   expect(fake.calls).toEqual(["fake:flexibleAccepted", "fake:null"]);
+});
+
+test("a finished download wins over in-progress, because Play reports both", async () => {
+  fake.info = { ...baseInfo, inProgress: true, installStatus: 11 };
+  expect(await getNativeUpdateState()).toBe("downloaded");
+});
+
+test("a flexible download this session started is not mistaken for an update that was left", async () => {
+  await startNativeUpdate("flexible");
+  fake.info = { ...baseInfo, inProgress: true, installStatus: 2 };
+  expect(await getNativeUpdateState()).toBe("none");
+  // The download finishes, so a later in-progress report is a real one again.
+  fake.emit(11);
+  fake.info = { ...baseInfo, inProgress: true, installStatus: 0 };
+  expect(await getNativeUpdateState()).toBe("in-progress");
 });

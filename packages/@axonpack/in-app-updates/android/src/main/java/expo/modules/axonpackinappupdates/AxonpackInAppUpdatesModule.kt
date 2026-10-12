@@ -109,6 +109,22 @@ class AxonpackInAppUpdatesModule : Module() {
       // Play allows one start per AppUpdateInfo, so a fresh one is asked for every time.
       manager.appUpdateInfo
         .addOnSuccessListener { info ->
+          val f = fake
+          if (f != null && info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+            // The fake refuses to start a flow while one runs, but real Play resumes it. So the
+            // fake plays a resume as the running flow finishing.
+            starting = false
+            promise.resolve(RESULT_OK)
+            main.postDelayed({
+              runCatching {
+                f.setBytesDownloaded(FAKE_TOTAL_BYTES)
+                f.downloadStarts()
+                f.downloadCompletes()
+                f.installCompletes()
+              }
+            }, 300)
+            return@addOnSuccessListener
+          }
           manager
             .startUpdateFlow(info, activity, AppUpdateOptions.newBuilder(type).build())
             .addOnSuccessListener { code ->
@@ -236,6 +252,7 @@ class AxonpackInAppUpdatesModule : Module() {
   }
 
   private companion object {
+    const val RESULT_OK = -1
     const val FAKE_VERSION_CODE = 9
     const val FAKE_TOTAL_BYTES = 40_000_000L
   }
