@@ -12,11 +12,23 @@ export const baseInfo: NativeUpdateInfo = {
   immediateAllowed: true,
 };
 
+// jest only lets a mock factory read variables whose names start with "mock".
+const mockFlags = { supported: true };
+
 export const fake = {
   calls: [] as string[],
   listeners: new Set<(s: NativeInstallStatus) => void>(),
   info: { ...baseInfo } as NativeUpdateInfo,
   infoError: false,
+  /** False behaves like iOS, Expo Go or a build without the module. */
+  get supported() {
+    return mockFlags.supported;
+  },
+  set supported(value: boolean) {
+    mockFlags.supported = value;
+  },
+  /** True makes getUpdateInfo never answer. */
+  infoHangs: false,
   startCode: -1,
   startError: false,
   reset() {
@@ -24,6 +36,8 @@ export const fake = {
     this.listeners.clear();
     this.info = { ...baseInfo };
     this.infoError = false;
+    this.supported = true;
+    this.infoHangs = false;
     this.startCode = -1;
     this.startError = false;
   },
@@ -41,6 +55,7 @@ export const fake = {
 const mockNative = {
   getUpdateInfo: async () => {
     fake.calls.push("info");
+    if (fake.infoHangs) return new Promise<never>(() => {});
     if (fake.infoError)
       throw new Error("The app is not owned by any user on this device.");
     return fake.info;
@@ -62,4 +77,6 @@ const mockNative = {
   },
 };
 
-jest.mock("expo", () => ({ requireOptionalNativeModule: () => mockNative }));
+jest.mock("expo", () => ({
+  requireOptionalNativeModule: () => (mockFlags.supported ? mockNative : null),
+}));
