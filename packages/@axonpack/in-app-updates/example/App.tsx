@@ -9,12 +9,13 @@ import {
   View,
 } from "react-native";
 import { AppUpdateSheet } from "./components/AppUpdateSheet";
+import { PlayFake } from "./components/PlayFake";
 import VersionCheck, {
   UpdatePrompt,
   getNativeUpdateInfo,
   isNativeUpdateSupported,
   setMockVersion,
-  startNativeUpdate,
+  type NativeFakeScenario,
 } from "@axonpack/in-app-updates";
 
 // Open with a link to switch what the prompt shows, e.g. inappupdatesexample://?s=forced
@@ -74,6 +75,10 @@ export default function App() {
     if (s) setScenario(s as Scenario);
   }, [url]);
 
+  // inappupdatesexample://?p=flexibleAccepted runs a fake Play scenario.
+  const fake = url?.match(/[?&]p=([A-Za-z]+)/)?.[1] as
+    NativeFakeScenario | undefined;
+
   const mock = scenario === "live" ? undefined : MOCKS[scenario];
 
   useEffect(() => {
@@ -119,7 +124,6 @@ export default function App() {
       add("native module", isNativeUpdateSupported());
       try {
         add("native info", await getNativeUpdateInfo());
-        add("native start", await startNativeUpdate("flexible"));
       } catch (e) {
         add("native error", String(e));
       }
@@ -130,10 +134,7 @@ export default function App() {
   const groups: [string, string[]][] = [
     ["App", ["platform", "package", "version", "build", "country"]],
     ["Store check", ["needUpdate", "getStoreUrl"]],
-    [
-      "Play in-app update",
-      ["native module", "native info", "native start", "native error"],
-    ],
+    ["Play in-app update", ["native module", "native info", "native error"]],
   ];
   const value = (k: string) => rows.find(([key]) => key === k)?.[1];
 
@@ -181,6 +182,7 @@ export default function App() {
                 ))}
             </View>
           ))}
+          <PlayFake autoRun={fake} />
         </ScrollView>
       )}
       <UpdatePrompt
