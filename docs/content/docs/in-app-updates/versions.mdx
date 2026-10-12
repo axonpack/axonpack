@@ -1,0 +1,100 @@
+---
+title: Version formats
+description: How versions are compared, and what to do with a format the package cannot read.
+icon: Hash
+---
+
+Most apps never need this page. Read it if your version looks different from `1.2.3`, for example a
+date, or a beta or canary tag.
+
+The comparison does not need strict semver (the `1.2.3` style).
+
+| Format                         | Example                                              |
+| ------------------------------ | ---------------------------------------------------- |
+| One to many numbers            | `1`, `1.2`, `1.2.3.4`                                |
+| A leading `v`, or a label      | `v1.2.3`, `canary-1.2.3`                             |
+| Calendar versions              | `2024.10.1`                                          |
+| Plain dates                    | `2024-10-12`                                         |
+| Release tags                   | `1.2.3-beta.2`, `1.2.3-rc1`, `1.2.3beta`             |
+| Tags with build info           | `1.2.3-canary.5+sha.abc` (the part after `+` is ignored) |
+
+Missing parts count as zero, so `1.2` and `1.2.0` are the same. Numbers are compared as numbers, so
+`1.10` is newer than `1.9`.
+
+## Beta, canary and other tags
+
+A tag sorts below its release: `1.2.3-beta` is older than `1.2.3`. Tags on the same release go in the
+order they usually ship: `dev`, `nightly`, `canary`, `alpha`, `beta`, `preview`, `pre`, `rc`. Other
+words sort alphabetically. Numbers inside a tag are compared as numbers, so `rc2` comes before `rc10`.
+
+## A format the package cannot read
+
+A version with no number at all (`canary`), or odd text (`2.0 (build 5)`), is rejected with an
+`InvalidVersionError`. Give your own comparison instead:
+
+```tsx
+import { UpdatePrompt } from '@axonpack/in-app-updates';
+import { Text, View } from 'react-native';
+
+const digits = (v: string) => Number(v.replace(/\D/g, ''));
+
+export default function App() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text>My app</Text>
+      {/* Like Array.sort: negative, zero or positive */}
+      <UpdatePrompt compare={(a, b) => digits(a) - digits(b)} />
+    </View>
+  );
+}
+```
+
+`compare` is used for every decision: is there an update, the minimum version, and skip. `depth` is
+ignored while it is set. `updateType` falls back to `patch` for any newer version it cannot size.
+
+## Build numbers
+
+The same version can ship again. For example, a hotfix keeps `1.4.0` and only raises the build number.
+When the store and the app have the same version, a higher build number counts as an update of type
+`build`. The prompt then shows the build next to each version, such as `1.4.0 (10)` and `1.4.0 (20)`.
+
+The build number is a different number on each platform:
+
+| Platform | The build number is                                                                   | Where you set it                         |
+| -------- | ------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Android  | The `versionCode`. It is read as a number                                             | `android.versionCode` in `app.json`      |
+| iOS      | The `CFBundleVersion`, which Expo calls `buildNumber`                                  | `ios.buildNumber` in `app.json`          |
+
+Where the latest build number comes from:
+
+- **Android, Google Play.** The Play Store page shows only the version name. If the optional
+  [Play in-app update module](/docs/in-app-updates/play-in-app-updates) is installed and Play offers
+  the update to that user, Play's `availableVersionCode` is used. Play and your app both report the
+  `versionCode`, so they are compared as numbers. Without the module, or on a build you installed
+  yourself, there is no build number.
+- **iOS.** The App Store reports no build number. It needs a new version string for every release, so
+  the version alone is enough.
+- **Your own JSON endpoint**, on any platform: add `buildNumber` or `latestBuildNumber`.
+- **The `latestBuildNumber` option.** Give it to `needUpdate`, with no provider.
+
+To give both numbers by hand:
+
+```ts
+import { needUpdate } from '@axonpack/in-app-updates';
+
+const result = await needUpdate({
+  latestVersion: '1.4.0',
+  currentVersion: '1.4.0',
+  currentBuildNumber: 41,
+  latestBuildNumber: 42,
+  ignoreErrors: false,
+});
+// result.updateType === 'build'
+```
+
+## Helpers
+
+`compareVersions`, `isGreater`, `satisfiesMinimum`, `diffVersions`, `parseVersion` and
+`truncateVersion` are exported, so your own code compares versions the same way.
+
+**Next:** [Play in-app updates](/docs/in-app-updates/play-in-app-updates)

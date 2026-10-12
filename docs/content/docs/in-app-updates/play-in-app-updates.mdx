@@ -1,0 +1,121 @@
+---
+title: Play in-app updates
+description: On Android, let Google Play update your app through its own update screen, without sending the user to the store.
+icon: Smartphone
+---
+
+This is an optional extra for Android. Without it, **Update** opens the store page, and that works
+fine. With it, Google Play shows its own update screen over your app, so the user is not sent to the
+Play Store app.
+
+It is a small Android module in this package. It uses Google's own Play Core library.
+
+| Kind          | What it does                                                                  |
+| ------------- | ----------------------------------------------------------------------------- |
+| `'flexible'`  | Play asks for consent, then downloads in the background while the app runs    |
+| `'immediate'` | Play shows a full-screen update screen, installs the update and restarts the app |
+
+## What the user sees
+
+These screens belong to Google, not to your app.
+
+- **Flexible.** Play shows its own consent dialog over your app. After the user agrees, the update
+  downloads in the background and the app keeps running. Installing it restarts the app.
+- **Immediate.** Play shows its own full-screen update screen on top of your app, then restarts the
+  app. The user is not sent to the Play Store app, but they do leave your app's own screens for Google's.
+- **When it does not start.** Play only starts an update when it offers one to that user. It does not
+  for a build you installed yourself, a staged rollout the user is not in yet, or a release Play has
+  not noticed yet. Then the prompt opens the store link, which does take the user out of your app.
+
+This behaviour comes from Google Play Core. It has not been tested end to end here, because Play only
+answers for apps installed from Play.
+
+## What you need
+
+- The `expo` package. This was built and tested on Expo SDK 58.
+- A [development build](https://docs.expo.dev/develop/development-builds/introduction/). Expo Go does
+  not include the module.
+- An app installed from Google Play. See the warning below.
+
+## With the prompt
+
+Add `nativeUpdate`:
+
+```tsx
+import { UpdatePrompt } from '@axonpack/in-app-updates';
+import { Text, View } from 'react-native';
+
+export default function App() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text>My app</Text>
+      <UpdatePrompt nativeUpdate />
+    </View>
+  );
+}
+```
+
+**Update** now starts the Play flow: immediate for a forced update, flexible for a soft one.
+
+| What happens                                    | What the prompt does                                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------------- |
+| The user accepts a flexible update              | The prompt closes. The download runs in the background                    |
+| A flexible download finishes                    | It installs, and the app restarts. There is no second prompt             |
+| The user declines in Play's dialog              | Nothing else happens. The prompt stays                                    |
+| Play has nothing to start, or fails to start it | It opens the store link, which takes the user out of your app             |
+| The app opens, and an immediate update was left | The immediate flow resumes, as Google's guide asks                        |
+| The app opens, and a flexible update finished downloading while it was closed | **Update** installs it, with no new download |
+
+The app checks for a left or finished update when it starts and every time it returns to the
+foreground.
+
+## Without the prompt
+
+```ts
+import {
+  INSTALL_STATUS_DOWNLOADED,
+  completeNativeUpdate,
+  getNativeUpdateState,
+  startNativeUpdate,
+} from '@axonpack/in-app-updates';
+
+// Call this when the app starts and each time it comes back to the foreground.
+export async function updateInTheBackground() {
+  const state = await getNativeUpdateState();
+  if (state === 'in-progress') return startNativeUpdate('immediate'); // resume the one the user left
+  if (state === 'downloaded') return completeNativeUpdate(); // install the finished download
+
+  const outcome = await startNativeUpdate('flexible', (status) => {
+    if (status.status === INSTALL_STATUS_DOWNLOADED) completeNativeUpdate();
+  });
+  return outcome; // 'accepted', 'declined', 'failed' or 'unavailable'
+}
+```
+
+A second call while one is running returns the first call's result, so a double tap starts only one
+update. The status listener is removed when the update installs, fails or is canceled.
+
+`getNativeUpdateInfo()` tells you what Play knows before you start anything:
+
+| Field                                 | Meaning                                                        |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `available`                           | Play has a newer build for this user                           |
+| `inProgress`                          | An immediate update was started and left. Resume it            |
+| `availableVersionCode`                | The new build's version code                                   |
+| `updatePriority`                      | 0 to 5, set in the Play Developer API                          |
+| `stalenessDays`                       | Days since Play first knew about the update                    |
+| `installStatus`                       | Play's install status. `11` means a flexible update is downloaded and waiting |
+| `flexibleAllowed`, `immediateAllowed` | Which kinds Play allows right now                              |
+
+`isNativeUpdateSupported()` is false on iOS, in Expo Go, and in any build without the module.
+
+<Callout type="warn" title="Play only answers for apps installed from Play">
+On a build you installed yourself, Play refuses with "The app is not owned by any user on this
+device". `startNativeUpdate` turns that into `'unavailable'`, so the prompt falls back to the store
+link. To see the flow without Play, use the [fake Play](/docs/in-app-updates/testing#the-fake-play).
+To see Google's own screens, use [internal app sharing](/docs/in-app-updates/testing#test-it-for-real).
+</Callout>
+
+The module asks the user for no permission.
+
+**Next:** [Testing](/docs/in-app-updates/testing)

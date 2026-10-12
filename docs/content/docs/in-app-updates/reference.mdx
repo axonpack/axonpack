@@ -1,0 +1,124 @@
+---
+title: Reference
+description: Every function, option, result field, error and export.
+icon: BookOpen
+---
+
+Use this page to look up a name, an option or an error. If you are new, start with the
+[Quick start](/docs/in-app-updates/quick-start).
+
+## Functions
+
+All are named exports, and also on the default export (`VersionCheck`).
+
+| Function                          | Returns                                                       |
+| --------------------------------- | ------------------------------------------------------------- |
+| `needUpdate(options?)`            | The [result](#the-result)                                      |
+| `getLatestVersion(options?)`      | The newest version string                                      |
+| `getStoreUrl(options?)`           | The store link for the current platform                        |
+| `getAppStoreUrl(options?)`        | The App Store link. `appID` is optional: it is looked up       |
+| `getPlayStoreUrl(options?)`       | The Play Store link                                            |
+| `getCountry()`                    | The country from the version source                            |
+| `getPackageName()`                | The bundle id or application id                                |
+| `getCurrentVersion()`             | The installed version                                          |
+| `getCurrentBuildNumber()`         | The build number: the `versionCode` (a number) on Android, the `CFBundleVersion` (a string) on iOS |
+| `openStore(options?)`             | Opens the store page. Falls back to https on iOS               |
+| `clearCache()`                    | Forgets stored answers                                         |
+| `setVersionInfo(source)`          | Replaces where the app's version comes from                    |
+| `evaluateUpdate(version, provided, options?)` | The decision only, with no request                |
+
+With `ignoreErrors: false` each of these that can fail returns a value that is never `undefined`.
+
+## `needUpdate` options
+
+| Option                | Default     | What it does                                                          |
+| --------------------- | ----------- | --------------------------------------------------------------------- |
+| `provider`            | by platform | `'appStore'`, `'playStore'`, a provider, or a function                 |
+| `platform`            | the device  | `'ios'` or `'android'`                                                |
+| `country`             | the device  | Storefront for the App Store lookup                                    |
+| `fallbackCountry`     | `'us'`      | Tried when the app is not in `country`                                |
+| `packageName`         | the app's   | Bundle id or application id                                           |
+| `currentVersion`      | the app's   | Compare as if this were installed                                      |
+| `latestVersion`       | looked up   | Skip the lookup, and use this                                         |
+| `minimumVersion`      | provider's  | Versions below it are forced                                          |
+| `required`            | `false`     | `true`, `'major'`, `'minor'`, `'patch'`, or `(result) => boolean`      |
+| `canSkip`             | `true`      | `false` removes skip for soft updates                                  |
+| `skipVersion`         | none        | A soft update to exactly this version is muted                         |
+| `depth`               | all         | Compare only this many parts                                           |
+| `compare`             | built in    | Your own ordering. See [Version formats](/docs/in-app-updates/versions) |
+| `currentBuildNumber`, `latestBuildNumber` | | Build tiebreak when the versions match. See [Version formats](/docs/in-app-updates/versions#build-numbers) |
+| `storeUrl`            | none        | Used when `latestVersion` is given and no provider is asked            |
+| `mock`                | none        | Fake a release. Ignored unless `__DEV__`                               |
+| `ignoreErrors`        | `true`      | Warn and resolve `undefined`, instead of throwing                      |
+| `timeoutMs`, `retries`, `retryDelayMs`, `signal`, `cacheTtlMs`, `forceUpdate`, `fetch`, `fetchOptions` | | See [Providers](/docs/in-app-updates/providers#network-behaviour) |
+
+## The result
+
+| Field                          | Meaning                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| `isNeeded`                     | Show something: a forced update, or a soft one that is not skipped       |
+| `isForced`                     | Below `minimumVersion`, or caught by `required`                           |
+| `isSkipped`                    | A soft update the user skipped                                           |
+| `canSkip`                      | False when forced, or when `canSkip: false`                              |
+| `updateType`                   | `major`, `minor`, `patch`, `prerelease`, `build` or `none`               |
+| `currentVersion`, `latestVersion`, `minimumVersion` | The versions                                        |
+| `storeUrl`                     | Where to send the user                                                   |
+| `releaseNotes`, `releaseDate`  | From the store, when it has them                                         |
+| `currentBuildNumber`, `latestBuildNumber` | Set when `updateType` is `build`: the two build numbers        |
+
+## `useVersionCheck(options)`
+
+Takes every `needUpdate` option, plus `enabled`, `refreshOnForeground`, `skipStorage` and
+`skipStorageKey`. Returns:
+
+| Field                                              | Meaning                                         |
+| -------------------------------------------------- | ----------------------------------------------- |
+| `isLoading`, `error`                               | Check state                                     |
+| `result`                                           | The result, or `undefined` until it arrives     |
+| `isNeeded`, `isForced`                             | Shortcuts to the result                         |
+| `storeUrl`, `latestVersion`, `currentVersion`, `releaseNotes` | Shortcuts to the result              |
+| `refresh()`                                        | Check again now                                 |
+| `skipVersion()`                                    | Mute the current soft update                    |
+| `openStore()`                                      | Open the store                                  |
+
+## `<UpdatePrompt />` props
+
+Every hook option, plus:
+
+| Prop            | Meaning                                                                     |
+| --------------- | --------------------------------------------------------------------------- |
+| `component`     | Your own modal. See [Your own modal](/docs/in-app-updates/custom-modal)      |
+| `theme`         | Partial tokens. See [Theming](/docs/in-app-updates/theming)                  |
+| `labels`        | Partial strings                                                             |
+| `icon`          | Content of the round badge                                                  |
+| `notesExpanded` | Start with the release notes open                                           |
+| `nativeUpdate`  | On Android, update through Google's own update screen. Falls back to the store link |
+| `onUpdate`      | Replaces what **Update** does                                               |
+| `children`      | Rendered while there is nothing to show                                      |
+
+## Errors
+
+All extend `VersionCheckError`, which has a `code`.
+
+| Class                         | `code`                 | When                                                      |
+| ----------------------------- | ---------------------- | --------------------------------------------------------- |
+| `NetworkError`                | `NETWORK`              | The request failed                                        |
+| `TimeoutError`                | `TIMEOUT`              | It took longer than `timeoutMs`                           |
+| `AbortedError`                | `ABORTED`              | Your `signal` was aborted                                 |
+| `HttpError`                   | `HTTP`                 | A non-2xx answer. Has `status`                            |
+| `ParseError`                  | `PARSE`                | The page or JSON had no readable version                  |
+| `NotFoundError`               | `NOT_FOUND`            | The store has no listing for the app                      |
+| `InvalidVersionError`         | `INVALID_VERSION`      | A version the comparison cannot read                      |
+| `InvalidProviderError`        | `INVALID_PROVIDER`     | The `provider` option is not one                           |
+| `VersionInfoUnavailableError` | `UNAVAILABLE`          | No version source, or a missing optional module           |
+| `UnsupportedPlatformError`    | `UNSUPPORTED_PLATFORM` | No default provider for this platform (web)               |
+
+## Other exports
+
+`checkOtaUpdate` and `applyOtaUpdate` check for and apply an Expo over-the-air update (a new JavaScript bundle without a store release). They need `expo-updates`.
+
+`createVersionCheck`, `detectCountry`, `createDefaultSource`, `appStore`, `playStore`, `jsonProvider`,
+`chain`, `providers`, `setMockVersion`, `isDev`, `checkOtaUpdate`, `applyOtaUpdate`,
+`getNativeUpdateInfo`, `startNativeUpdate`, `completeNativeUpdate`, `isNativeUpdateSupported`,
+`UpdatePrompt`, `DefaultUpdateModal`, `LIGHT_THEME`, `DARK_THEME`, `DEFAULT_LABELS`,
+`resolveTheme`, the version helpers, and the types.

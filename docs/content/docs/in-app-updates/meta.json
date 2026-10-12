@@ -1,0 +1,28 @@
+{
+  "title": "In-app Updates",
+  "description": "Store version checks, force updates and a ready-made update modal",
+  "root": true,
+  "icon": "Download",
+  "pages": [
+    "---Get it working---",
+    "index",
+    "installation",
+    "quick-start",
+    "---Look and feel---",
+    "modal",
+    "theming",
+    "custom-modal",
+    "---Rules---",
+    "force-updates",
+    "---Advanced---",
+    "providers",
+    "versions",
+    "play-in-app-updates",
+    "---Testing and help---",
+    "testing",
+    "troubleshooting",
+    "---Reference---",
+    "reference"
+  ],
+  "defaultOpen": true
+}

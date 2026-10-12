@@ -1,0 +1,111 @@
+---
+title: Providers
+description: Choose where the latest version is read from, and add a backup.
+icon: Globe
+---
+
+Use this page when the default store lookup is not enough. For example, you want your own server to
+decide the minimum version, or you want a backup for Google Play.
+
+A **provider** answers one question: what is the newest version, and where do I get it? By default
+the package uses the App Store on iOS and the Play Store on Android.
+
+| Provider                         | Reads                    | Gives                                                           |
+| -------------------------------- | ------------------------ | --------------------------------------------------------------- |
+| `'appStore'` (iOS default)       | The App Store            | Version, store link, release notes, release date                |
+| `'playStore'` (Android default)  | The public Play Store page | Version and store link                                         |
+| `jsonProvider({ url })`          | A JSON file or API of yours | Whatever you put in it                                       |
+| `chain(a, b)`                    | Each, in order           | The first answer that works                                      |
+
+## A backup for Google Play
+
+Google Play has no official way to ask for a version, so the package reads the public store page.
+If Google changes the page, or your app shows "Varies with device", there is no version to read and
+the check fails with a `ParseError`. It never guesses.
+
+Add your own JSON as a backup:
+
+```tsx
+import { UpdatePrompt, chain, jsonProvider, playStore } from '@axonpack/in-app-updates';
+import { Platform, Text, View } from 'react-native';
+
+const provider = Platform.OS === 'android'
+  ? chain(playStore, jsonProvider({ url: 'https://example.com/version.json' }))
+  : 'appStore';
+
+export default function App() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text>My app</Text>
+      <UpdatePrompt provider={provider} />
+    </View>
+  );
+}
+```
+
+### New builds with the same version name
+
+The Play page shows only the version name. If you ship a hotfix with the same name and a higher
+`versionCode`, the page looks unchanged. When the optional
+[Play in-app update module](/docs/in-app-updates/play-in-app-updates) is installed, the provider also
+asks Play for its `availableVersionCode`, and uses it as the build number. Your installed
+`versionCode` is read from `expo-application`, and the two are compared as numbers. If Play does not
+answer in time, or the module is missing, the check works as before, from the page alone.
+
+## Your own JSON
+
+Host a file like this anywhere:
+
+```json
+{
+  "latestVersion": "2.1.0",
+  "minimumVersion": "2.0.0",
+  "storeUrl": "https://play.google.com/store/apps/details?id=com.example.app",
+  "releaseNotes": "Faster start. Bug fixes.",
+  "required": false
+}
+```
+
+Only `latestVersion` is needed. To give iOS and Android different values, nest them:
+
+```json
+{
+  "ios": { "latestVersion": "2.1.0" },
+  "android": { "latestVersion": "2.0.4", "minimumVersion": "2.0.0" }
+}
+```
+
+For any other shape, tell the package how to read it with `parse`:
+
+```ts
+import { jsonProvider } from '@axonpack/in-app-updates';
+
+export const provider = jsonProvider({
+  url: 'https://example.com/config',
+  headers: { Authorization: 'Bearer your-token' },
+  parse: (json) => ({
+    version: json.app.currentVersion,
+    minimumVersion: json.app.minimum,
+  }),
+});
+```
+
+## Network settings
+
+| Option         | Default  | What it does                                                         |
+| -------------- | -------- | -------------------------------------------------------------------- |
+| `timeoutMs`    | `10000`  | Fails with `TimeoutError` after this long. `0` turns it off          |
+| `retries`      | `1`      | Extra tries after a network error, a 429 or a 5xx. Not after a 4xx   |
+| `retryDelayMs` | `500`    | Wait before a retry. It doubles each time                             |
+| `signal`       | none     | An `AbortSignal` to cancel the check                                  |
+| `cacheTtlMs`   | `300000` | How long a store answer is remembered (5 minutes). `0` turns it off  |
+| `forceUpdate`  | `false`  | Ignore the remembered answer for this call                            |
+
+Answers from your own providers are never remembered, because the package cannot tell when they change.
+
+<Callout type="info" title="The store can be a few hours late">
+After you release, the App Store can keep returning the old version for a few hours. That is the
+store's own cache. See [Troubleshooting](/docs/in-app-updates/troubleshooting).
+</Callout>
+
+**Next:** [Version formats](/docs/in-app-updates/versions)
