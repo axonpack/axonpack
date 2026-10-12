@@ -1,0 +1,56 @@
+---
+title: Installation
+description: Install the package and tell it where your app's version comes from.
+icon: Download
+---
+
+You need this page once, when you add the package.
+
+```sh
+npx expo install @axonpack/in-app-updates expo-application expo-localization
+```
+
+That is all for an Expo app. It runs in Expo Go and needs no `pod install` of its own.
+
+## What each package does
+
+| Package             | Needed? | What it is for                                                         |
+| ------------------- | ------- | ---------------------------------------------------------------------- |
+| `react`, `react-native` | Yes | The prompt and the checks                                              |
+| `expo-application`  | Yes\*   | Reads the installed version, build number and bundle id                |
+| `expo-localization` | No      | Finds the user's country, so the App Store lookup uses the right one   |
+| `expo`              | No      | Only for the [Google Play in-app update](/docs/in-app-updates/play-in-app-updates) |
+| `expo-updates`      | No      | Only if you use Expo over-the-air updates with `checkOtaUpdate()`      |
+
+\* Or give your own values, as shown below.
+
+The optional packages are never installed for you. Your app keeps its own single copy of each, so
+there are no duplicate native modules.
+
+## The version source
+
+The package needs to know your installed version. It calls this the **version source**. By default
+it reads it from `expo-application`. If your app does not use `expo-application`, set your own values
+once, at the top of your entry file:
+
+```ts
+import { setVersionInfo } from '@axonpack/in-app-updates';
+
+setVersionInfo({
+  getCountry: () => 'US',
+  getPackageName: () => 'com.example.app',
+  getCurrentBuildNumber: () => 42,
+  getCurrentVersion: () => '1.4.0',
+});
+```
+
+If there is no version source at all, the first check fails with a `VersionInfoUnavailableError`
+that tells you to install `expo-application` or call `setVersionInfo`.
+
+## The country
+
+The App Store keeps a separate page for your app in each country. The package asks for the one that
+matches the user's country, taken from `expo-localization`. If your app is not on that page, it asks
+the US page instead. You can change that with `fallbackCountry`.
+
+**Next:** [Quick start](/docs/in-app-updates/quick-start)

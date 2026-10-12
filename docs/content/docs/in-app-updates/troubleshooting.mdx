@@ -1,0 +1,70 @@
+---
+title: Troubleshooting
+description: The most common problems, with the cause and the fix for each.
+icon: LifeBuoy
+---
+
+Start here if something does not work. Each item has the symptom, the cause and the fix.
+
+## The prompt never shows
+
+**Cause.** Several things look the same from the outside:
+
+- The app is already on the latest version.
+- The store has no page for your app in the user's country.
+- You are running a debug build whose bundle id is not published, for example `com.example.dev`.
+- The check failed, and the failure was hidden.
+
+**Fix.** Make the failure visible. Add `ignoreErrors: false`, and read the error:
+
+```ts
+import { needUpdate } from '@axonpack/in-app-updates';
+
+try {
+  console.log(await needUpdate({ ignoreErrors: false }));
+} catch (error) {
+  console.log(error); // for example NotFoundError: No App Store listing for com.example.dev
+}
+```
+
+If it says the app was not found, the bundle id is not published in that country. Test with a
+[mock](/docs/in-app-updates/testing) instead.
+
+## Android shows no "What's new"
+
+**Cause.** Google Play gives no release notes.
+**Fix.** None needed. The row only shows when notes exist. To show notes on Android, put them in your
+own JSON and use it as a [provider](/docs/in-app-updates/providers).
+
+## "The app is not owned by any user" on Android
+
+**Cause.** You are using Google Play's in-app update on a build you installed yourself. Play only
+answers for apps installed from Play.
+**Fix.** The prompt already falls back to the store link. To test the real flow, use Play's internal
+app sharing or an internal testing track.
+
+## The update appears a few hours late on iOS
+
+**Cause.** The App Store keeps its own cache after a release. It can return the old version for a
+few hours.
+**Fix.** Wait. Nothing in your app can speed it up. To test in the meantime, use a mock.
+
+## The prompt stays light when the phone is dark
+
+**Cause.** Your `app.json` has `"userInterfaceStyle": "light"`. Then the phone tells your app it is
+always light, and the prompt follows.
+**Fix.** Set `"userInterfaceStyle": "automatic"`, or pin the prompt with `theme={{ mode: 'dark' }}`.
+
+## A skipped version comes back after a restart
+
+**Cause.** Without storage, a skip only lasts until the app restarts.
+**Fix.** Give `<UpdatePrompt />` a `skipStorage`, such as AsyncStorage. See
+[Force and skip](/docs/in-app-updates/force-updates#skip-this-version).
+
+## "No version info source found"
+
+**Cause.** The package cannot read your installed version.
+**Fix.** Install `expo-application`, or call `setVersionInfo` once. See
+[Installation](/docs/in-app-updates/installation#the-version-source).
+
+**Next:** [Reference](/docs/in-app-updates/reference)

@@ -1,0 +1,71 @@
+---
+title: Testing
+description: Try the prompt before you publish a new version.
+icon: FlaskConical
+---
+
+You cannot publish a new release every time you want to see the prompt. Use a **mock** instead. A
+mock is a fake release you set up in code.
+
+## Fake a release
+
+Put this at the top of your entry file:
+
+```tsx
+import { setMockVersion } from '@axonpack/in-app-updates';
+
+if (__DEV__) {
+  setMockVersion({
+    latestVersion: '9.0.0',
+    releaseNotes: 'These are fake notes.',
+  });
+}
+```
+
+Now the prompt thinks version 9.0.0 is out. No request is made while a mock with `latestVersion` is
+on. To try a forced update, add `minimumVersion: '5.0.0'`.
+
+You can also mock one prompt, without touching anything else:
+
+```tsx
+import { UpdatePrompt } from '@axonpack/in-app-updates';
+
+<UpdatePrompt mock={{ latestVersion: '9.0.0', releaseNotes: 'These are fake notes.' }} />;
+```
+
+A mock can set `latestVersion`, `currentVersion`, `minimumVersion`, `releaseNotes`, `releaseDate`,
+`storeUrl` and `buildNumber`.
+
+<Callout type="info" title="A mock cannot reach your users">
+Mocks only work when `__DEV__` is true. In a release build they are ignored, so a `setMockVersion`
+call you forgot to remove cannot fake an update for your users.
+</Callout>
+
+## Test your rules without a phone
+
+`evaluateUpdate` is the decision part of the package, with no request and no phone needed. It is easy
+to use in unit tests:
+
+```ts
+import { evaluateUpdate } from '@axonpack/in-app-updates';
+
+const result = evaluateUpdate('1.0.0', { version: '2.0.0' }, { required: 'major' });
+// result.isForced === true
+```
+
+## The example app
+
+The repository has an example app, `packages/@axonpack/in-app-updates/example`. It shows the live
+store answer, and has buttons for each state of the prompt: `live`, `soft`, `expanded`, `forced`,
+`dark`, `brand`, `minimal`, `custom`, `none` and `native`.
+
+```sh
+bun install
+cd packages/@axonpack/in-app-updates/example
+APP_ID=com.example.app APP_VERSION=1.0.0 bun run ios
+```
+
+`APP_ID` and `APP_VERSION` make the example install as your own published app, so the stores answer
+for it. Without them, it uses neutral ids and the live check finds no listing.
+
+**Next:** [Troubleshooting](/docs/in-app-updates/troubleshooting)

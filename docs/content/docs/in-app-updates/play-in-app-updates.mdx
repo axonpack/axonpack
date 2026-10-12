@@ -1,0 +1,84 @@
+---
+title: Play in-app updates
+description: On Android, let Google Play download and install the update without leaving your app.
+icon: Smartphone
+---
+
+This is an optional extra for Android. Without it, **Update** opens the store page, and that works
+fine. With it, Google Play does the download inside your app.
+
+It is a small Android module in this package. It uses Google's own Play Core library.
+
+| Kind          | What the user sees                                                    |
+| ------------- | --------------------------------------------------------------------- |
+| `'flexible'`  | The update downloads in the background while the app keeps running    |
+| `'immediate'` | A full-screen Play screen installs the update and restarts the app    |
+
+## What you need
+
+- The `expo` package. This was built and tested on Expo SDK 58.
+- A [development build](https://docs.expo.dev/develop/development-builds/introduction/). Expo Go does
+  not include the module.
+- An app installed from Google Play. See the warning below.
+
+## With the prompt
+
+Add `nativeUpdate`:
+
+```tsx
+import { UpdatePrompt } from '@axonpack/in-app-updates';
+import { Text, View } from 'react-native';
+
+export default function App() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text>My app</Text>
+      <UpdatePrompt nativeUpdate />
+    </View>
+  );
+}
+```
+
+**Update** now starts the Play flow: immediate for a forced update, flexible for a soft one. If Play
+has nothing to start, it opens the store link instead. A finished flexible download installs without
+a second prompt.
+
+## Without the prompt
+
+```ts
+import {
+  INSTALL_STATUS_DOWNLOADED,
+  completeNativeUpdate,
+  startNativeUpdate,
+} from '@axonpack/in-app-updates';
+
+export async function updateInTheBackground() {
+  const outcome = await startNativeUpdate('flexible', (status) => {
+    if (status.status === INSTALL_STATUS_DOWNLOADED) completeNativeUpdate();
+  });
+  return outcome; // 'accepted', 'declined', 'failed' or 'unavailable'
+}
+```
+
+`getNativeUpdateInfo()` tells you what Play knows before you start anything:
+
+| Field                                 | Meaning                                                        |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `available`                           | Play has a newer build for this user                           |
+| `inProgress`                          | An immediate update was started and left. Resume it            |
+| `availableVersionCode`                | The new build's version code                                   |
+| `updatePriority`                      | 0 to 5, set in the Play Developer API                          |
+| `stalenessDays`                       | Days since Play first knew about the update                    |
+| `flexibleAllowed`, `immediateAllowed` | Which kinds Play allows right now                              |
+
+`isNativeUpdateSupported()` is false on iOS, in Expo Go, and in any build without the module.
+
+<Callout type="warn" title="Play only answers for apps installed from Play">
+On a build you installed yourself, Play refuses with "The app is not owned by any user on this
+device". `startNativeUpdate` turns that into `'unavailable'`, so the prompt falls back to the store
+link. To test the real flow, use Play's internal app sharing or an internal testing track.
+</Callout>
+
+The module asks the user for no permission.
+
+**Next:** [Testing](/docs/in-app-updates/testing)
