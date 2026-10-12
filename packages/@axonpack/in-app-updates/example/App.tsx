@@ -19,7 +19,7 @@ import VersionCheck, {
 } from "@axonpack/in-app-updates";
 
 // Open with a link to switch what the prompt shows, e.g. inappupdatesexample://?s=forced
-// live (default): the real store answer, no mock    soft | forced | none | custom | native: mocked
+// live (default): the real store answer, no mock    soft | forced | build | none | custom | native: mocked
 const SCENARIOS = [
   "live",
   "soft",
@@ -28,6 +28,7 @@ const SCENARIOS = [
   "dark",
   "brand",
   "minimal",
+  "build",
   "custom",
   "none",
   "native",
@@ -47,6 +48,11 @@ const MOCKS: Record<Exclude<Scenario, "live">, object> = {
   dark: { latestVersion: "9.0.0", releaseNotes: NOTES },
   brand: { latestVersion: "9.0.0", releaseNotes: NOTES },
   minimal: { latestVersion: "9.0.0" },
+  // The same version, shipped again with a higher build number (Android versionCode).
+  build: {
+    latestVersion: VersionCheck.getCurrentVersion() ?? "1.0.0",
+    buildNumber: 20,
+  },
   custom: { latestVersion: "9.0.0", releaseNotes: NOTES },
   none: { latestVersion: VersionCheck.getCurrentVersion() ?? "1.0.0" },
   native: { latestVersion: "9.0.0" },
@@ -169,6 +175,8 @@ export default function App() {
             ))}
           </View>
 
+          <PlayFake autoRun={fake} />
+
           {groups.map(([title, keys]) => (
             <View key={title} style={styles.card}>
               <Text style={styles.cardTitle}>{title}</Text>
@@ -182,7 +190,6 @@ export default function App() {
                 ))}
             </View>
           ))}
-          <PlayFake autoRun={fake} />
         </ScrollView>
       )}
       <UpdatePrompt
