@@ -8,6 +8,8 @@ packages/@axonpack/expo-devtools/example/ios
 packages/@axonpack/expo-devtools/example/android
 packages/@axonpack/react-pretty-print/example-native/ios
 packages/@axonpack/react-pretty-print/example-native/android
+packages/@axonpack/in-app-updates/example/ios
+packages/@axonpack/in-app-updates/example/android
 
 # Its own app with its own formatting. The root `format` task would rewrite the whole site in one diff.
 docs

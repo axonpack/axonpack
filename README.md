@@ -42,6 +42,7 @@ here, so you install only what you need.
 | [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools)<br/>[Docs](https://axonpack.dev/docs/expo-devtools)                                     | On-device network, console, performance, storage and crash devtools for React Native and Expo               | [![npm](https://img.shields.io/npm/v/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)                         | [![downloads](https://img.shields.io/npm/dm/@axonpack/expo-devtools.svg)](https://www.npmjs.com/package/@axonpack/expo-devtools)                         |
 | [`@axonpack/react-native-devtools-tab`](./packages/@axonpack/react-native-devtools-tab)<br/>[Docs](https://axonpack.dev/docs/react-native-devtools-tab) | Your own tab in React Native DevTools, drawn from a component that runs in the app                          | [![npm](https://img.shields.io/npm/v/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) |
 | [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print)<br/>[Docs](https://axonpack.dev/docs/react-pretty-print)                      | Collapsible JSON and XML trees and a syntax highlighter, for React and React Native from one implementation | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               |
+| [`@axonpack/in-app-updates`](./packages/@axonpack/in-app-updates)<br/>[Docs](https://axonpack.dev/docs/in-app-updates)                                  | Store version checks, force updates and a ready-made update modal for React Native and Expo                 | [![npm](https://img.shields.io/npm/v/@axonpack/in-app-updates.svg)](https://www.npmjs.com/package/@axonpack/in-app-updates)                       | [![downloads](https://img.shields.io/npm/dm/@axonpack/in-app-updates.svg)](https://www.npmjs.com/package/@axonpack/in-app-updates)                       |
 
 ### @axonpack/expo-devtools
 
@@ -111,6 +112,25 @@ import { LIGHT_THEME } from "@axonpack/react-pretty-print/themes";
 ```
 
 [JSON tree](https://axonpack.dev/docs/react-pretty-print/json-tree) · [Primitives](https://axonpack.dev/docs/react-pretty-print/primitives) · [Reference](https://axonpack.dev/docs/react-pretty-print/reference)
+
+### @axonpack/in-app-updates
+
+Find out when the App Store or Play Store has a newer version of your app, and ask people to update
+with a ready-made modal. It supports soft and forced updates, skipping a version, light and dark
+mode, your own modal, and faking a release in development builds. The checks are plain JavaScript
+and run in Expo Go.
+
+```sh
+npx expo install @axonpack/in-app-updates expo-application
+```
+
+```tsx
+import { UpdatePrompt } from "@axonpack/in-app-updates";
+
+<UpdatePrompt required="major" />;
+```
+
+[Installation](https://axonpack.dev/docs/in-app-updates/installation) · [Quick start](https://axonpack.dev/docs/in-app-updates/quick-start) · [The update modal](https://axonpack.dev/docs/in-app-updates/modal) · [Reference](https://axonpack.dev/docs/in-app-updates/reference)
 
 ## Repository layout
 
