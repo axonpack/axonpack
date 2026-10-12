@@ -41,6 +41,10 @@ thrown, typed error instead (and a return type without `undefined`).
 - **The App Store lookup** tries the device country, then `fallbackCountry` (default `us`).
 - **Network**: a 10 second timeout, one retry, and `AbortSignal` support. Results are cached for 5 minutes, and `forceUpdate: true` skips the cache.
 - **A `provider` function** returns a version string or a full result.
+- **The build number** is the Android `versionCode` (a number) and the iOS `CFBundleVersion` (a string).
+  The same version shipped again with a higher build counts as an update of type `build`. On Android,
+  Play's `availableVersionCode` is used when the Play in-app update module is installed. iOS needs a
+  new version string per release.
 
 ## Usage
 
