@@ -43,6 +43,15 @@ export default function App() {
 }
 ```
 
+### New builds with the same version name
+
+The Play page shows only the version name. If you ship a hotfix with the same name and a higher
+`versionCode`, the page looks unchanged. When the optional
+[Play in-app update module](/docs/in-app-updates/play-in-app-updates) is installed, the provider also
+asks Play for its `availableVersionCode`, and uses it as the build number. Your installed
+`versionCode` is read from `expo-application`, and the two are compared as numbers. If Play does not
+answer in time, or the module is missing, the check works as before, from the page alone.
+
 ## Your own JSON
 
 Host a file like this anywhere:

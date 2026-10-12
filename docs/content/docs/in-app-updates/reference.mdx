@@ -21,7 +21,7 @@ All are named exports, and also on the default export (`VersionCheck`).
 | `getCountry()`                    | The country from the version source                            |
 | `getPackageName()`                | The bundle id or application id                                |
 | `getCurrentVersion()`             | The installed version                                          |
-| `getCurrentBuildNumber()`         | The build number. A number on Android, a string on iOS         |
+| `getCurrentBuildNumber()`         | The build number: the `versionCode` (a number) on Android, the `CFBundleVersion` (a string) on iOS |
 | `openStore(options?)`             | Opens the store page. Falls back to https on iOS               |
 | `clearCache()`                    | Forgets stored answers                                         |
 | `setVersionInfo(source)`          | Replaces where the app's version comes from                    |
@@ -46,7 +46,7 @@ With `ignoreErrors: false` each of these that can fail returns a value that is n
 | `skipVersion`         | none        | A soft update to exactly this version is muted                         |
 | `depth`               | all         | Compare only this many parts                                           |
 | `compare`             | built in    | Your own ordering. See [Version formats](/docs/in-app-updates/versions) |
-| `currentBuildNumber`, `latestBuildNumber` | | Build tiebreak when the versions match                     |
+| `currentBuildNumber`, `latestBuildNumber` | | Build tiebreak when the versions match. See [Version formats](/docs/in-app-updates/versions#build-numbers) |
 | `storeUrl`            | none        | Used when `latestVersion` is given and no provider is asked            |
 | `mock`                | none        | Fake a release. Ignored unless `__DEV__`                               |
 | `ignoreErrors`        | `true`      | Warn and resolve `undefined`, instead of throwing                      |
@@ -64,6 +64,7 @@ With `ignoreErrors: false` each of these that can fail returns a value that is n
 | `currentVersion`, `latestVersion`, `minimumVersion` | The versions                                        |
 | `storeUrl`                     | Where to send the user                                                   |
 | `releaseNotes`, `releaseDate`  | From the store, when it has them                                         |
+| `currentBuildNumber`, `latestBuildNumber` | Set when `updateType` is `build`: the two build numbers        |
 
 ## `useVersionCheck(options)`
 

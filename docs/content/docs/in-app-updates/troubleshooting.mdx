@@ -61,6 +61,15 @@ always light, and the prompt follows.
 **Fix.** Give `<UpdatePrompt />` a `skipStorage`, such as AsyncStorage. See
 [Force and skip](/docs/in-app-updates/force-updates#skip-this-version).
 
+## A hotfix with the same version name is not offered
+
+**Cause.** You raised only the build number (`versionCode`). The Play page shows only the version
+name, and the App Store reports no build number.
+**Fix.** On Android, install the optional [Play in-app update module](/docs/in-app-updates/play-in-app-updates).
+Then Play's `availableVersionCode` is compared with your installed `versionCode`. It only works for an
+app installed from Play. On iOS, give every release a new version string. Or report `buildNumber` from
+[your own JSON](/docs/in-app-updates/providers#your-own-json).
+
 ## "No version info source found"
 
 **Cause.** The package cannot read your installed version.
