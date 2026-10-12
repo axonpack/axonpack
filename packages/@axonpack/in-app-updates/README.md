@@ -1,11 +1,17 @@
 # @axonpack/in-app-updates
 
-Find out whether the store has a newer build of your app, and ask the user to update. It does
-force updates, soft updates, a ready-made modal, your own modal, a hook, and dev-build mocking.
+Find out whether the store has a newer build of your app, and ask people to update. It supports soft
+and forced updates, a ready-made modal or your own, a hook, and mocking in development builds.
 
-Everything works in plain JavaScript and runs in Expo Go. The one exception is Google Play's
-in-app update (see below), a small Android-only Expo module that is skipped quietly when it is not
-linked. There is no iOS native code, so `pod install` is unchanged. It works with Expo SDK 58, React Native 0.88 (New Architecture) and React 19.
+The checks are plain JavaScript and run in Expo Go. The one exception is Google Play's in-app
+update, a small Android-only Expo module that does nothing when it is not linked. There is no iOS
+native code. It works with Expo SDK 58, React Native 0.88 (New Architecture) and React 19.
+
+<p align="center">
+  <img src="https://axonpack.dev/in-app-updates/screenshots/soft.png" alt="A soft update: Update, Later and Skip this version" width="220" />
+  <img src="https://axonpack.dev/in-app-updates/screenshots/forced.png" alt="A forced update: a red badge and only the Update button" width="220" />
+  <img src="https://axonpack.dev/in-app-updates/screenshots/brand.png" alt="The prompt with a green theme, larger corners and a serif font" width="220" />
+</p>
 
 ## Install
 
@@ -14,7 +20,7 @@ npm install @axonpack/in-app-updates
 # or: bun add @axonpack/in-app-updates
 ```
 
-Where the app's own version comes from is an optional peer. Install `expo-application`, or call
+The installed version, build number and bundle id come from `expo-application`. Install it, or call
 `setVersionInfo({...})` with your own values.
 
 `expo-localization` is optional too, and only used to pick the App Store country. Nothing is
@@ -75,6 +81,31 @@ an icon badge, the installed and latest versions, a collapsible "What's new" row
 width **Update** button, and **Later** and **Skip this version** underneath. A forced update has
 only **Update**, in the danger colour, and the Android back button does nothing. While the store
 is opening, the button shows a spinner.
+
+More states of the default modal:
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="https://axonpack.dev/in-app-updates/screenshots/expanded.png" alt="The What's new row, open" width="220" /><br />
+      The <b>What's new</b> row, open. It starts closed.
+    </td>
+    <td align="center">
+      <img src="https://axonpack.dev/in-app-updates/screenshots/dark.png" alt="The modal in dark mode" width="220" /><br />
+      Dark mode, which follows the phone.
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://axonpack.dev/in-app-updates/screenshots/minimal.png" alt="The modal with no release notes" width="220" /><br />
+      No release notes, so no <b>What's new</b> row.
+    </td>
+    <td align="center">
+      <img src="https://axonpack.dev/in-app-updates/screenshots/custom.png" alt="A bottom sheet the app drew itself" width="220" /><br />
+      Your own modal, drawn by the app.
+    </td>
+  </tr>
+</table>
 
 ```tsx
 import { UpdatePrompt } from "@axonpack/in-app-updates";
