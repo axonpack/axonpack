@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": true, "types": ["bun"] },
+  "compilerOptions": { "noEmit": true, "types": ["jest", "node"] },
   "exclude": []
 }

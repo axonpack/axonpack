@@ -1,5 +1,3 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
-
 import { clearCache } from "./cache";
 import { HttpError, NotFoundError, ParseError, TimeoutError } from "./errors";
 import { getLatestVersion } from "./get-latest-version";
@@ -38,7 +36,8 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
-  delete (globalThis as { __DEV__?: boolean }).__DEV__;
+  // jest-expo turns __DEV__ on, so tests that need it off say so.
+  (globalThis as { __DEV__?: boolean }).__DEV__ = false;
 });
 
 const base = { fetch: fakeFetch, retryDelayMs: 0 };
@@ -284,6 +283,7 @@ test("mock works only when __DEV__ is true", async () => {
     ...base,
   };
 
+  (globalThis as { __DEV__?: boolean }).__DEV__ = false;
   const off = await needUpdate(opt);
   expect(off.latestVersion).toBe("1.0.0");
 

@@ -1,19 +1,16 @@
-import { beforeEach, expect, test } from "bun:test";
-
 import { baseInfo, fake } from "./native-fake.test-helper";
-
-const {
+import {
   completeNativeUpdate,
   getNativeUpdateState,
   setNativeUpdateFake,
   startNativeUpdate,
-} = await import("./native-update");
+} from "./native-update";
 
 const starts = () => fake.calls.filter((c) => c.startsWith("start"));
 
 beforeEach(() => {
   fake.reset();
-  delete (globalThis as { __DEV__?: boolean }).__DEV__;
+  (globalThis as { __DEV__?: boolean }).__DEV__ = false;
 });
 
 test("accepted, declined and failed follow Play's result codes", async () => {

@@ -1,6 +1,11 @@
-import { beforeEach, expect, mock, test } from "bun:test";
 import { createElement as h } from "react";
 import { baseInfo, fake } from "../native-fake.test-helper";
+import {
+  DARK_THEME,
+  DefaultUpdateModal,
+  LIGHT_THEME,
+} from "./default-update-modal";
+import { UpdatePrompt } from "./update-prompt";
 import TestRenderer, { act, type ReactTestInstance } from "react-test-renderer";
 
 // The package loads react-native lazily, so a fake native layer stands in for it. Host elements
@@ -8,7 +13,7 @@ import TestRenderer, { act, type ReactTestInstance } from "react-test-renderer";
 const opened: string[] = [];
 let scheme: "light" | "dark" = "light";
 
-const fakeRn = {
+const mockFakeRn = {
   Platform: { OS: "ios" },
   useColorScheme: () => scheme,
   Linking: {
@@ -28,15 +33,11 @@ const fakeRn = {
     h("Pressable", { ...rest, style: undefined }, children as never),
 };
 
-mock.module("../runtime", () => ({
-  reactNative: () => fakeRn,
+jest.mock("../runtime", () => ({
+  reactNative: () => mockFakeRn,
   currentPlatform: () => "ios",
   isStorePlatform: (v: string) => v === "ios" || v === "android",
 }));
-
-const { UpdatePrompt } = await import("./update-prompt");
-const { DefaultUpdateModal, DARK_THEME, LIGHT_THEME } =
-  await import("./default-update-modal");
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }

@@ -1,5 +1,3 @@
-import { describe, expect, test } from "bun:test";
-
 import { InvalidVersionError } from "./errors";
 import { evaluateUpdate } from "./need-update";
 import { compareVersions } from "./semver";

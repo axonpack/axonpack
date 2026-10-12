@@ -1,5 +1,3 @@
-import { expect, test } from "bun:test";
-
 import { InvalidVersionError } from "./errors";
 import {
   compareVersions,

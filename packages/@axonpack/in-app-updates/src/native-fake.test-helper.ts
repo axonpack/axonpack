@@ -1,5 +1,3 @@
-import { mock } from "bun:test";
-
 import type { NativeInstallStatus, NativeUpdateInfo } from "./native-update";
 
 /** A stand-in for the Android module, shared by every test file so their mocks cannot disagree. */
@@ -40,7 +38,7 @@ export const fake = {
   },
 };
 
-const native = {
+const mockNative = {
   getUpdateInfo: async () => {
     fake.calls.push("info");
     if (fake.infoError)
@@ -64,4 +62,4 @@ const native = {
   },
 };
 
-mock.module("expo", () => ({ requireOptionalNativeModule: () => native }));
+jest.mock("expo", () => ({ requireOptionalNativeModule: () => mockNative }));
