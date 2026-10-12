@@ -86,6 +86,16 @@
       "outputs": [
         "build/**"
       ]
+    },
+    "@axonpack/in-app-updates#build": {
+      "outputs": [
+        "build/**"
+      ]
+    },
+    "@axonpack/in-app-updates#prepare": {
+      "outputs": [
+        "build/**"
+      ]
     }
   }
 }
