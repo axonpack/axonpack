@@ -103,7 +103,7 @@ export const useVersionCheck = (
 
   const skipVersion = useCallback(async () => {
     const version = state.result?.latestVersion;
-    if (!version) return;
+    if (!version || !state.result?.canSkip) return;
     skipped.current = version;
     const { skipStorage, skipStorageKey = "axonpack.in-app-updates.skip" } =
       latest.current;

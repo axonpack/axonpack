@@ -15,6 +15,9 @@ const toNumber = (value: number | string | undefined): number | undefined => {
   return n === undefined || Number.isNaN(n) ? undefined : n;
 };
 
+// How big an update is, for the `required` rule. Prerelease and build updates are never "big".
+const SIZE: Record<string, number> = { patch: 1, minor: 2, major: 3 };
+
 /** The pure part of needUpdate: no network, no source. */
 export const evaluateUpdate = (
   currentVersion: string,
@@ -55,27 +58,43 @@ export const evaluateUpdate = (
     }
   }
 
-  const isForced = minimumVersion
+  const belowMinimum = minimumVersion
     ? compare(currentVersion, minimumVersion) < 0
     : false;
-  const isSkipped =
-    !isForced &&
-    isUpdate &&
-    !!skipVersion &&
-    compare(skipVersion, latest.version) === 0;
+  const rule = option.required ?? latest.required ?? false;
+  const size = typeof rule === "string" ? SIZE[rule] : 0;
+  let isForced =
+    belowMinimum ||
+    (isUpdate &&
+      (rule === true || (size > 0 && (SIZE[updateType] ?? 0) >= size)));
 
-  return {
-    isNeeded: isForced || (isUpdate && !isSkipped),
-    storeUrl: latest.storeUrl ?? option.storeUrl ?? "",
-    currentVersion,
-    latestVersion: latest.version,
-    isForced,
-    isSkipped,
-    updateType,
-    minimumVersion,
-    releaseNotes: latest.releaseNotes,
-    releaseDate: latest.releaseDate,
+  const build = (forced: boolean): NeedUpdateResult => {
+    const canSkip = !forced && option.canSkip !== false;
+    const isSkipped =
+      canSkip &&
+      isUpdate &&
+      !!skipVersion &&
+      compare(skipVersion, latest.version) === 0;
+    return {
+      isNeeded: forced || (isUpdate && !isSkipped),
+      storeUrl: latest.storeUrl ?? option.storeUrl ?? "",
+      currentVersion,
+      latestVersion: latest.version,
+      isForced: forced,
+      isSkipped,
+      canSkip,
+      updateType,
+      minimumVersion,
+      releaseNotes: latest.releaseNotes,
+      releaseDate: latest.releaseDate,
+    };
   };
+
+  // A function rule sees the result as it stands without the rule, then can force it.
+  if (!isForced && isUpdate && typeof rule === "function") {
+    isForced = rule(build(false));
+  }
+  return build(isForced);
 };
 
 export function needUpdate(

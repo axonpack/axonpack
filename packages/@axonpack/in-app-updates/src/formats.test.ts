@@ -104,3 +104,80 @@ describe("custom compare for formats the parser rejects", () => {
     expect(skipped).toMatchObject({ isSkipped: true, isNeeded: false });
   });
 });
+
+describe("required and canSkip", () => {
+  const latest = { version: "2.0.0" };
+
+  test("required true forces any update, and nothing when up to date", () => {
+    expect(evaluateUpdate("1.0.0", latest, { required: true })).toMatchObject({
+      isForced: true,
+      isNeeded: true,
+      canSkip: false,
+    });
+    expect(evaluateUpdate("2.0.0", latest, { required: true })).toMatchObject({
+      isForced: false,
+      isNeeded: false,
+    });
+  });
+
+  test("required by size", () => {
+    expect(
+      evaluateUpdate("1.0.0", latest, { required: "major" }).isForced,
+    ).toBe(true);
+    expect(
+      evaluateUpdate("1.9.0", { version: "1.10.0" }, { required: "major" })
+        .isForced,
+    ).toBe(false);
+    expect(
+      evaluateUpdate("1.9.0", { version: "1.10.0" }, { required: "minor" })
+        .isForced,
+    ).toBe(true);
+    expect(
+      evaluateUpdate("1.9.0", { version: "1.9.1" }, { required: "minor" })
+        .isForced,
+    ).toBe(false);
+    expect(
+      evaluateUpdate("1.9.0", { version: "1.9.1" }, { required: "patch" })
+        .isForced,
+    ).toBe(true);
+  });
+
+  test("required as a function sees the result", () => {
+    const rule = (r: { updateType: string }) => r.updateType === "major";
+    expect(evaluateUpdate("1.0.0", latest, { required: rule }).isForced).toBe(
+      true,
+    );
+    expect(
+      evaluateUpdate("1.0.0", { version: "1.1.0" }, { required: rule })
+        .isForced,
+    ).toBe(false);
+  });
+
+  test("a provider can report required", () => {
+    expect(
+      evaluateUpdate("1.0.0", { version: "1.0.1", required: true }).isForced,
+    ).toBe(true);
+    expect(
+      evaluateUpdate(
+        "1.0.0",
+        { version: "1.0.1", required: true },
+        { required: false },
+      ).isForced,
+    ).toBe(false);
+  });
+
+  test("canSkip false means a skipVersion is ignored", () => {
+    const r = evaluateUpdate("1.0.0", latest, {
+      canSkip: false,
+      skipVersion: "2.0.0",
+    });
+    expect(r).toMatchObject({
+      canSkip: false,
+      isSkipped: false,
+      isNeeded: true,
+    });
+    expect(
+      evaluateUpdate("1.0.0", latest, { skipVersion: "2.0.0" }),
+    ).toMatchObject({ canSkip: true, isSkipped: true, isNeeded: false });
+  });
+});

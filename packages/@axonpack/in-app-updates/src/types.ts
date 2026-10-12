@@ -20,6 +20,8 @@ export type ProviderResult = {
   minimumVersion?: string;
   /** Compared only when `version` equals the installed version. */
   buildNumber?: number | string;
+  /** The provider says this update is mandatory, e.g. a flag in remote config. */
+  required?: boolean;
 };
 
 export type RequestOptions = {
@@ -83,6 +85,19 @@ export type NeedUpdateOption = GetLatestVersionOption & {
    * positive like Array.sort. `depth` is ignored when this is set.
    */
   compare?: (a: string, b: string) => number;
+  /**
+   * Make an update mandatory by rule, so the user cannot dismiss or skip it.
+   * `true`: every available update. `"major"` | `"minor"` | `"patch"`: that size of update or bigger.
+   * A function decides per result. Without it, only `minimumVersion` forces an update.
+   */
+  required?:
+    | boolean
+    | "major"
+    | "minor"
+    | "patch"
+    | ((result: NeedUpdateResult) => boolean);
+  /** Let the user skip a soft update. Default true. A forced update can never be skipped. */
+  canSkip?: boolean;
   /** Versions below this are a forced update. Overrides what the provider reports. */
   minimumVersion?: string;
   /** A soft update to this exact version is reported as not needed. Never mutes a forced update. */
@@ -100,6 +115,8 @@ export type NeedUpdateResult = {
   latestVersion: string;
   isForced: boolean;
   isSkipped: boolean;
+  /** False when the update is forced or `canSkip` is false. */
+  canSkip: boolean;
   updateType: UpdateType;
   minimumVersion?: string;
   releaseNotes?: string;
