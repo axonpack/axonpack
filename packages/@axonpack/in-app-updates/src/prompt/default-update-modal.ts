@@ -118,6 +118,10 @@ export const DefaultUpdateModal = (props: UpdateModalProps) => {
         }
       : { elevation: 8 };
 
+  // The same version can ship again as a new build, so the build tells the two apart.
+  const withBuild = (version: string, build?: number) =>
+    build === undefined ? version : `${version} (${build})`;
+
   const versionBox = (label: string, value: string, highlight: boolean) =>
     h(
       View,
@@ -255,13 +259,21 @@ export const DefaultUpdateModal = (props: UpdateModalProps) => {
               marginTop: 20,
             },
           },
-          versionBox(labels.installed, props.currentVersion, false),
+          versionBox(
+            labels.installed,
+            withBuild(props.currentVersion, props.currentBuildNumber),
+            false,
+          ),
           h(
             Text,
             { style: { ...font("medium", 18), color: theme.muted } },
             "→",
           ),
-          versionBox(labels.latest, props.latestVersion, true),
+          versionBox(
+            labels.latest,
+            withBuild(props.latestVersion, props.latestBuildNumber),
+            true,
+          ),
         ),
         props.releaseNotes
           ? h(

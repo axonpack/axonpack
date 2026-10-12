@@ -71,6 +71,8 @@ export const UpdatePrompt = ({
     latestVersion: result.latestVersion,
     minimumVersion: result.minimumVersion,
     updateType: result.updateType,
+    currentBuildNumber: result.currentBuildNumber,
+    latestBuildNumber: result.latestBuildNumber,
     releaseNotes: result.releaseNotes,
     storeUrl: result.storeUrl,
     theme,

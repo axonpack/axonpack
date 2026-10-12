@@ -57,6 +57,9 @@ export type UpdateModalProps = {
   latestVersion: string;
   minimumVersion?: string;
   updateType: UpdateType;
+  /** Set for a new build of the same version, so the two versions can be told apart. */
+  currentBuildNumber?: number;
+  latestBuildNumber?: number;
   releaseNotes?: string;
   storeUrl: string;
   /** True from the Update press until the store has been opened (or your `onUpdate` has finished). */

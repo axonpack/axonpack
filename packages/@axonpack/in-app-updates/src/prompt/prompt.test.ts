@@ -1,10 +1,13 @@
 import { createElement as h } from "react";
 import { baseInfo, fake } from "../native-fake.test-helper";
+import { resetNativeUpdateState } from "../native-update";
 import {
   DARK_THEME,
   DefaultUpdateModal,
   LIGHT_THEME,
 } from "./default-update-modal";
+import { clearCache } from "../cache";
+import { setVersionInfo } from "../source";
 import { UpdatePrompt } from "./update-prompt";
 import TestRenderer, { act, type ReactTestInstance } from "react-test-renderer";
 
@@ -81,6 +84,7 @@ const render = (element: Parameters<typeof TestRenderer.create>[0]) => {
 };
 
 beforeEach(() => {
+  resetNativeUpdateState();
   opened.length = 0;
   scheme = "light";
 });
@@ -482,4 +486,52 @@ test("nativeUpdate off: Play is never asked", async () => {
   render(h(UpdatePrompt, promptOptions));
   await settle();
   expect(fake.calls).toEqual([]);
+});
+
+test("a new build of the same version shows both build numbers", () => {
+  const tree = render(
+    h(DefaultUpdateModal, {
+      ...modalProps,
+      currentVersion: "1.0.0",
+      latestVersion: "1.0.0",
+      updateType: "build",
+      currentBuildNumber: 10,
+      latestBuildNumber: 20,
+    }),
+  );
+  expect(texts(tree.root)).toContain("1.0.0 (10)");
+  expect(texts(tree.root)).toContain("1.0.0 (20)");
+});
+
+test("other updates show the version alone", () => {
+  const tree = render(h(DefaultUpdateModal, modalProps));
+  expect(texts(tree.root)).not.toContain("(");
+});
+
+test("the whole chain: Play page, Play version code and the prompt agree on a new Android build", async () => {
+  fake.reset();
+  clearCache();
+  fake.info = { ...baseInfo, available: true, availableVersionCode: 20 };
+  setVersionInfo({
+    getCountry: () => "US",
+    getPackageName: () => "com.example.app",
+    getCurrentBuildNumber: () => 10,
+    getCurrentVersion: () => "1.0.0",
+  });
+  const tree = render(
+    h(UpdatePrompt, {
+      provider: "playStore",
+      platform: "android",
+      packageName: "com.example.app",
+      retries: 0,
+      fetch: (async () =>
+        new Response(
+          "<div>Current Version</div><span>1.0.0</span>",
+        )) as unknown as typeof fetch,
+    }),
+  );
+  await settle();
+  expect(texts(tree.root)).toContain("Update available");
+  expect(texts(tree.root)).toContain("1.0.0 (10)");
+  expect(texts(tree.root)).toContain("1.0.0 (20)");
 });
