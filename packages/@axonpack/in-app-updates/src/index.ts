@@ -13,11 +13,14 @@ export type { MockVersion } from "./mock";
 export {
   completeNativeUpdate,
   getNativeUpdateInfo,
+  getNativeUpdateState,
+  setNativeUpdateFake,
   isNativeUpdateSupported,
   startNativeUpdate,
   INSTALL_STATUS_DOWNLOADED,
 } from "./native-update";
 export type {
+  NativeFakeScenario,
   NativeInstallStatus,
   NativeUpdateInfo,
   NativeUpdateOutcome,

@@ -1,5 +1,6 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { createElement as h } from "react";
+import { baseInfo, fake } from "../native-fake.test-helper";
 import TestRenderer, { act, type ReactTestInstance } from "react-test-renderer";
 
 // The package loads react-native lazily, so a fake native layer stands in for it. Host elements
@@ -368,4 +369,116 @@ test("notesExpanded opens the notes from the start", () => {
     }),
   );
   expect(texts(tree.root)).toContain("Fixed things");
+});
+
+const pressUpdate = async (tree: TestRenderer.ReactTestRenderer) => {
+  await act(async () => {
+    button(tree.root, "Update")!.props.onPress();
+    await new Promise((r) => setTimeout(r, 20));
+  });
+};
+
+const starts = () => fake.calls.filter((c) => c.startsWith("start"));
+
+test("nativeUpdate: a forced update runs the immediate flow, a soft one the flexible flow", async () => {
+  fake.reset();
+  const forced = render(
+    h(UpdatePrompt, {
+      ...promptOptions,
+      minimumVersion: "1.5.0",
+      nativeUpdate: true,
+    }),
+  );
+  await settle();
+  await pressUpdate(forced);
+  expect(starts()).toEqual(["start:immediate"]);
+
+  fake.reset();
+  const soft = render(
+    h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }),
+  );
+  await settle();
+  await pressUpdate(soft);
+  expect(starts()).toEqual(["start:flexible"]);
+});
+
+test("nativeUpdate: when Play has nothing to start, the store link opens", async () => {
+  fake.reset();
+  fake.infoError = true;
+  const tree = render(
+    h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }),
+  );
+  await settle();
+  await pressUpdate(tree);
+  expect(opened).toEqual(["https://store.test"]);
+});
+
+test("nativeUpdate: a Play failure also opens the store link", async () => {
+  fake.reset();
+  fake.startCode = 1;
+  const tree = render(
+    h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }),
+  );
+  await settle();
+  await pressUpdate(tree);
+  expect(opened).toEqual(["https://store.test"]);
+});
+
+test("nativeUpdate: a declined consent dialog does not open the store", async () => {
+  fake.reset();
+  fake.startCode = 0;
+  const tree = render(
+    h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }),
+  );
+  await settle();
+  await pressUpdate(tree);
+  expect(opened).toEqual([]);
+});
+
+test("nativeUpdate: an accepted flexible update hides the modal while it downloads", async () => {
+  fake.reset();
+  const tree = render(
+    h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }),
+  );
+  await settle();
+  await pressUpdate(tree);
+  expect(tree.root.findAll((n) => host(n, "Modal"))).toHaveLength(0);
+});
+
+test("nativeUpdate: a finished download installs without a second prompt", async () => {
+  fake.reset();
+  const tree = render(
+    h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }),
+  );
+  await settle();
+  await pressUpdate(tree);
+  await act(async () => fake.emit(11));
+  expect(fake.calls).toContain("complete");
+});
+
+test("nativeUpdate: an immediate update the user left is resumed when the app opens", async () => {
+  fake.reset();
+  fake.info = { ...baseInfo, available: false, inProgress: true };
+  render(h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }));
+  await settle();
+  expect(starts()).toEqual(["start:immediate"]);
+});
+
+test("nativeUpdate: an update that finished downloading while the app was closed is installed on Update", async () => {
+  fake.reset();
+  fake.info = { ...baseInfo, installStatus: 11 };
+  const tree = render(
+    h(UpdatePrompt, { ...promptOptions, nativeUpdate: true }),
+  );
+  await settle();
+  await pressUpdate(tree);
+  expect(fake.calls).toContain("complete");
+  expect(starts()).toEqual([]);
+});
+
+test("nativeUpdate off: Play is never asked", async () => {
+  fake.reset();
+  render(h(UpdatePrompt, promptOptions));
+  await settle();
+  expect(fake.calls).toEqual([]);
 });
