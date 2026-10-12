@@ -53,6 +53,64 @@ const result = evaluateUpdate('1.0.0', { version: '2.0.0' }, { required: 'major'
 // result.isForced === true
 ```
 
+## The fake Play
+
+Google Play's update flow only runs for an app installed from Play. To test how your app reacts, turn
+on a **fake Play**. It plays the part of Play and of the user, so the whole flow runs on a debug
+build with no store. It uses Google's own `FakeAppUpdateManager` from Play Core.
+
+```tsx
+import { setNativeUpdateFake, startNativeUpdate } from '@axonpack/in-app-updates';
+
+if (__DEV__) await setNativeUpdateFake('flexibleAccepted');
+
+const outcome = await startNativeUpdate('flexible', (status) => console.log(status));
+```
+
+| Scenario               | What the fake does                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| `flexibleAccepted`     | The user agrees, a download runs with progress events, then it is ready to install        |
+| `immediateAccepted`    | The user agrees, Play downloads and installs, and says it is done                         |
+| `declined`             | The user says no. The outcome is `'declined'`                                             |
+| `failed`               | The user agrees, then the download fails. The status goes to `FAILED`                     |
+| `unavailable`          | Play has no update. The outcome is `'unavailable'`, and the prompt opens the store link   |
+| `inProgress`           | An immediate update was started and left. The app resumes it on start                     |
+| `downloadedOnLaunch`   | A flexible update finished downloading earlier. **Update** installs it                    |
+
+Pass `null` to turn the fake off again.
+
+<Callout type="warn" title="It cannot run in a release build">
+The fake works only when `__DEV__` is true, and the Android module also refuses it unless the app is
+a debuggable build. It cannot be turned on for your users.
+</Callout>
+
+The fake replaces Play's consent dialog and update screen, so it shows how your code reacts. It does
+not show Google's screens. For those, see the next section.
+
+## Test it for real
+
+Google's screens only appear for an app that Google Play knows. The way to test them is **internal
+app sharing**. These steps follow Google's guide
+([Test in-app updates](https://developer.android.com/guide/playcore/in-app-updates/test)).
+
+1. Use a device or emulator with Google Play, signed in to a Google account.
+2. Share an older build internally from the Play Console, and install it from its internal app
+   sharing link. It must already include this package.
+3. Share a newer build the same way. It needs a higher version code, and the same application ID and
+   signing key.
+4. On the device, open the internal sharing link for the newer build, but do **not** install it from
+   the Play page that opens.
+5. Open the app from the home screen or app drawer. Play now has an update for it, and the real
+   consent dialog or update screen can appear.
+
+Good to know, from the same guide:
+
+- The account must have downloaded the app from Play at least once. Play only offers updates to
+  accounts that own the app.
+- Play only updates to a higher version code.
+- The update priority field is not supported in internal app sharing, so you cannot test priority
+  this way.
+
 ## The example app
 
 The repository has an example app, `packages/@axonpack/in-app-updates/example`. It shows the live

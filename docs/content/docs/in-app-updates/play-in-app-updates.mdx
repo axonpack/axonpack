@@ -55,9 +55,19 @@ export default function App() {
 }
 ```
 
-**Update** now starts the Play flow: immediate for a forced update, flexible for a soft one. If Play
-has nothing to start, it opens the store link instead, which takes the user out of your app. A
-finished flexible download installs without a second prompt.
+**Update** now starts the Play flow: immediate for a forced update, flexible for a soft one.
+
+| What happens                                    | What the prompt does                                                      |
+| ----------------------------------------------- | ------------------------------------------------------------------------- |
+| The user accepts a flexible update              | The prompt closes. The download runs in the background                    |
+| A flexible download finishes                    | It installs, and the app restarts. There is no second prompt             |
+| The user declines in Play's dialog              | Nothing else happens. The prompt stays                                    |
+| Play has nothing to start, or fails to start it | It opens the store link, which takes the user out of your app             |
+| The app opens, and an immediate update was left | The immediate flow resumes, as Google's guide asks                        |
+| The app opens, and a flexible update finished downloading while it was closed | **Update** installs it, with no new download |
+
+The app checks for a left or finished update when it starts and every time it returns to the
+foreground.
 
 ## Without the prompt
 
@@ -65,16 +75,25 @@ finished flexible download installs without a second prompt.
 import {
   INSTALL_STATUS_DOWNLOADED,
   completeNativeUpdate,
+  getNativeUpdateState,
   startNativeUpdate,
 } from '@axonpack/in-app-updates';
 
+// Call this when the app starts and each time it comes back to the foreground.
 export async function updateInTheBackground() {
+  const state = await getNativeUpdateState();
+  if (state === 'in-progress') return startNativeUpdate('immediate'); // resume the one the user left
+  if (state === 'downloaded') return completeNativeUpdate(); // install the finished download
+
   const outcome = await startNativeUpdate('flexible', (status) => {
     if (status.status === INSTALL_STATUS_DOWNLOADED) completeNativeUpdate();
   });
   return outcome; // 'accepted', 'declined', 'failed' or 'unavailable'
 }
 ```
+
+A second call while one is running returns the first call's result, so a double tap starts only one
+update. The status listener is removed when the update installs, fails or is canceled.
 
 `getNativeUpdateInfo()` tells you what Play knows before you start anything:
 
@@ -85,6 +104,7 @@ export async function updateInTheBackground() {
 | `availableVersionCode`                | The new build's version code                                   |
 | `updatePriority`                      | 0 to 5, set in the Play Developer API                          |
 | `stalenessDays`                       | Days since Play first knew about the update                    |
+| `installStatus`                       | Play's install status. `11` means a flexible update is downloaded and waiting |
 | `flexibleAllowed`, `immediateAllowed` | Which kinds Play allows right now                              |
 
 `isNativeUpdateSupported()` is false on iOS, in Expo Go, and in any build without the module.
@@ -92,7 +112,8 @@ export async function updateInTheBackground() {
 <Callout type="warn" title="Play only answers for apps installed from Play">
 On a build you installed yourself, Play refuses with "The app is not owned by any user on this
 device". `startNativeUpdate` turns that into `'unavailable'`, so the prompt falls back to the store
-link. To test the real flow, use Play's internal app sharing or an internal testing track.
+link. To see the flow without Play, use the [fake Play](/docs/in-app-updates/testing#the-fake-play).
+To see Google's own screens, use [internal app sharing](/docs/in-app-updates/testing#test-it-for-real).
 </Callout>
 
 The module asks the user for no permission.
