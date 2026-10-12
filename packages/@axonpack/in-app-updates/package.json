@@ -15,7 +15,7 @@
     "url": "https://github.com/axonpack/axonpack/issues"
   },
   "license": "MIT",
-  "homepage": "https://github.com/axonpack/axonpack/tree/main/packages/@axonpack/in-app-updates#readme",
+  "homepage": "https://axonpack.dev/docs/in-app-updates/",
   "repository": {
     "type": "git",
     "url": "https://github.com/axonpack/axonpack.git",
@@ -28,7 +28,8 @@
     "android",
     "build",
     "expo-module.config.json",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "notes"
   ],
   "main": "build/index.js",
   "types": "build/index.d.ts",
