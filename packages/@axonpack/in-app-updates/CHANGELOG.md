@@ -1,5 +1,12 @@
 # @axonpack/in-app-updates
 
+## 0.1.1
+
+### Patch Changes
+
+- a1d817a: - **Docs on axonpack.dev**: the npm homepage links to the docs at axonpack.dev
+  - **Feature list in the package**: the notes on what is built, and what is not, ship with it
+
 ## 0.1.0
 
 ### Minor Changes

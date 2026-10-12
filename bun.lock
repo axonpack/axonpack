@@ -88,7 +88,7 @@
     },
     "packages/@axonpack/in-app-updates": {
       "name": "@axonpack/in-app-updates",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "@babel/runtime": "^7.28.4",
         "@types/jest": "^29.2.1",

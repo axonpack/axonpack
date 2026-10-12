@@ -1,6 +1,6 @@
 {
   "name": "@axonpack/in-app-updates",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Store version check, force updates and update prompts for React Native and Expo",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
