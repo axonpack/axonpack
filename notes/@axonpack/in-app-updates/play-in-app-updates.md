@@ -1,0 +1,1 @@
+../../../packages/@axonpack/in-app-updates/notes/play-in-app-updates.md
