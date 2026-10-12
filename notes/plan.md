@@ -49,6 +49,14 @@ that runs **in the app**, against a renderer that reports what it drew, so it re
 state with no bridge and no copy; the panel builds the real elements from the changes that arrive.
 Its notes: [packages/@axonpack/react-native-devtools-tab/notes](../packages/@axonpack/react-native-devtools-tab/notes/README.md).
 
+## @axonpack/in-app-updates
+
+_Shipped._
+
+Checks the App Store and Play Store for a newer version of the app and shows an update modal, with
+soft and forced updates and skipping a version. Its docs:
+[docs/content/docs/in-app-updates](../docs/content/docs/in-app-updates/index.mdx).
+
 ## @axonpack/api-kit
 
 _Planned — no package yet._
