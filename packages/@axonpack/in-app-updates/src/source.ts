@@ -65,7 +65,7 @@ const buildNumber = (
   value: string | null | undefined,
 ): number | string | undefined => {
   if (value == null) return undefined;
-  // Android versionCode is a number, iOS buildNumber stays a string.
+  // The build number is the Android versionCode (a number) or the iOS CFBundleVersion (a string).
   return currentPlatform() === "android" && /^\d+$/.test(value)
     ? Number(value)
     : value;
