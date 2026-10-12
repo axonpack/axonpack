@@ -55,8 +55,11 @@ ignored while it is set. `updateType` falls back to `patch` for any newer versio
 ## Build numbers
 
 When the store and the app have the same version, a provider can still report a higher build number.
-That counts as an update of type `build`. To do the same without a provider, give `needUpdate` both
-numbers:
+That counts as an update of type `build`.
+
+The App Store and the Play Store page report no build number, so this only works with your own JSON
+endpoint (`buildNumber` or `latestBuildNumber`), or with the `latestBuildNumber` option. Give
+`needUpdate` both numbers:
 
 ```ts
 import { needUpdate } from '@axonpack/in-app-updates';
