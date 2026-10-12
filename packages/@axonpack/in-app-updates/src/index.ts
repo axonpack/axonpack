@@ -24,9 +24,16 @@ export type {
 } from "./native-update";
 export { checkOtaUpdate, applyOtaUpdate } from "./ota";
 export { UpdatePrompt, DefaultUpdateModal } from "./prompt/update-prompt";
+export {
+  LIGHT_THEME,
+  DARK_THEME,
+  DEFAULT_LABELS,
+  resolveTheme,
+} from "./prompt/default-update-modal";
 export type {
   UpdatePromptProps,
   UpdateModalProps,
+  UpdateModalFonts,
   UpdateModalTheme,
   UpdateModalLabels,
 } from "./prompt/types";

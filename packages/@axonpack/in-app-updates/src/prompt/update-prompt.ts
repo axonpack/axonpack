@@ -6,7 +6,7 @@ import {
   startNativeUpdate,
 } from "../native-update";
 import { useVersionCheck } from "../use-version-check";
-import { DefaultUpdateModal, noop } from "./default-update-modal";
+import { DefaultUpdateModal } from "./default-update-modal";
 import type { UpdatePromptProps } from "./types";
 
 export { DefaultUpdateModal };
@@ -19,14 +19,15 @@ export const UpdatePrompt = ({
   component: Modal = DefaultUpdateModal,
   theme,
   labels,
+  icon,
   onUpdate,
   nativeUpdate,
-  hideSkip,
   children,
   ...options
 }: UpdatePromptProps) => {
   const check = useVersionCheck(options);
   const [dismissedFor, setDismissedFor] = useState<string | undefined>();
+  const [isUpdating, setIsUpdating] = useState(false);
   const { result } = check;
 
   const visible =
@@ -45,20 +46,29 @@ export const UpdatePrompt = ({
     storeUrl: result.storeUrl,
     theme,
     labels,
+    icon,
+    isUpdating,
     onUpdate: () => {
-      if (onUpdate) return void onUpdate();
-      if (!nativeUpdate) return void check.openStore();
-      void startNativeUpdate(
-        result.isForced ? "immediate" : "flexible",
-        (s) => {
-          if (s.status === INSTALL_STATUS_DOWNLOADED)
-            void completeNativeUpdate();
-        },
-      ).then((outcome) => {
-        if (outcome === "unavailable") void check.openStore();
-      });
+      if (isUpdating) return;
+      setIsUpdating(true);
+      const run = async () => {
+        if (onUpdate) return onUpdate();
+        if (!nativeUpdate) return check.openStore();
+        const outcome = await startNativeUpdate(
+          result.isForced ? "immediate" : "flexible",
+          (s) => {
+            if (s.status === INSTALL_STATUS_DOWNLOADED)
+              void completeNativeUpdate();
+          },
+        );
+        if (outcome === "unavailable") await check.openStore();
+      };
+      run()
+        .catch(() => {})
+        .finally(() => setIsUpdating(false));
     },
-    onLater: () => !result.isForced && setDismissedFor(result.latestVersion),
-    onSkip: hideSkip ? noop : () => void check.skipVersion(),
+    onDismiss: () => !result.isForced && setDismissedFor(result.latestVersion),
+    canSkip: result.canSkip,
+    onSkip: () => void check.skipVersion(),
   });
 };
