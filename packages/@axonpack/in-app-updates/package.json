@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
+    "@types/node": "^24.0.0",
     "@types/react": "~19.2.2",
     "linter": "*",
     "oxlint": "^1.80.0",

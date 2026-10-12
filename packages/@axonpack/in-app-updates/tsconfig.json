@@ -13,6 +13,7 @@
     "inlineSources": true,
     "skipLibCheck": true,
     "strict": true,
+    "types": ["node"],
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,

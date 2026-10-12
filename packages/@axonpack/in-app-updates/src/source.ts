@@ -27,14 +27,23 @@ const regionFromIntl = (): string | undefined => {
 
 /** expo-localization first (new API, then the old one), then Intl. Undefined when all fail. */
 export const detectCountry = (): string | undefined => {
-  const localization = optionalRequire(
-    () => require("expo-localization") as ExpoLocalization,
+  let region: string | null | undefined;
+  try {
+    const localization = optionalRequire(
+      () => require("expo-localization") as ExpoLocalization,
+    );
+    // A future release may change these. Whatever it does, the country is a nice-to-have, so
+    // any failure here falls through to Intl.
+    region =
+      localization?.getLocales?.()?.[0]?.regionCode ??
+      localization?.region ??
+      localization?.country;
+  } catch {
+    region = undefined;
+  }
+  return (
+    (typeof region === "string" && region) || regionFromIntl() || undefined
   );
-  const region =
-    localization?.getLocales?.()[0]?.regionCode ??
-    localization?.region ??
-    localization?.country;
-  return region || regionFromIntl() || undefined;
 };
 
 const buildNumber = (
