@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.axonpackinappupdates'
+version = '0.0.0'
+
+android {
+  namespace "expo.modules.axonpackinappupdates"
+  defaultConfig {
+    versionCode 1
+    versionName '0.0.0'
+  }
+}
+
+dependencies {
+  // Google's own Play Core library for in-app updates.
+  implementation 'com.google.android.play:app-update:2.1.0'
+}
