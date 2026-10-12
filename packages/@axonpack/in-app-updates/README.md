@@ -71,47 +71,132 @@ wins over an older one that is still in flight.
 ### The modal
 
 `UpdatePrompt` runs the check and shows a modal when an update is needed. The default modal has
-the version, release notes, **Update**, **Later** and **Skip this version**. A forced update has
-only **Update**, and the Android back button does nothing.
+an icon badge, the installed and latest versions, a collapsible "What's new" row with the release notes when the store has them, a full
+width **Update** button, and **Later** and **Skip this version** underneath. A forced update has
+only **Update**, in the danger colour, and the Android back button does nothing. While the store
+is opening, the button shows a spinner.
 
 ```tsx
 import { UpdatePrompt } from "@axonpack/in-app-updates";
 
 <UpdatePrompt
-  minimumVersion="2.0.0"
-  theme={{ primary: "#16a34a" }}
-  labels={{ update: "Mettre à jour" }}
+  required="major"
+  theme={{
+    primary: "#16a34a",
+    radius: 16,
+    fonts: { regular: "Inter-Regular", bold: "Inter-Bold" },
+  }}
+  labels={{ update: "Mettre à jour", later: "Plus tard" }}
 />;
 ```
 
-Bring your own modal with `component`. It gets the state and three handlers and renders anything:
+**Theme.** Every colour, the corner radius, the card width and the fonts are tokens. Pass any of
+them as a partial `theme`. The modal follows the device appearance, and `mode: "light" | "dark"`
+pins it. Your app's own `userInterfaceStyle` decides what the device appearance is.
+
+| Token                                   | What it colours                                                            |
+| --------------------------------------- | -------------------------------------------------------------------------- |
+| `backdrop`, `card`                      | The dimmed screen and the card                                             |
+| `surface`, `border`                     | The version row, and the release notes box                                 |
+| `title`, `text`, `muted`                | Headings, body text, and quiet text (labels and **Skip this version**)     |
+| `primary`, `primaryText`, `primarySoft` | The Update button and **Later**, the text on it, the icon badge            |
+| `danger`, `dangerSoft`                  | The same, for a forced update                                              |
+| `radius`, `maxWidth`                    | Card corners (buttons and boxes scale from it) and width. 20 and 340       |
+| `fonts`                                 | `{ regular, medium, bold }` family names. Missing ones use the system font |
+
+`LIGHT_THEME`, `DARK_THEME` and `resolveTheme` are exported if you want to start from the defaults.
+`labels` takes `title`, `forcedTitle`, `message`, `forcedMessage`, `installed`, `latest`,
+`releaseNotes`, `update`, `later` and `skip`. `icon` replaces the badge content with any element.
+
+**Your own modal.** Pass `component`. It receives everything below and renders anything, so an app
+can reuse its own Button, Text and theme hook:
 
 ```tsx
-import type { UpdateModalProps } from "@axonpack/in-app-updates";
+import { UpdatePrompt, type UpdateModalProps } from "@axonpack/in-app-updates";
+import { Modal, View } from "react-native";
 
-const MySheet = ({
+import { Button } from "@/components/button";
+import { Text } from "@/components/text";
+import { useTheme } from "@/theme";
+
+const AppUpdateModal = ({
   visible,
   isForced,
+  isUpdating,
+  canSkip,
+  currentVersion,
   latestVersion,
   releaseNotes,
   onUpdate,
-  onLater,
+  onDismiss,
   onSkip,
-}: UpdateModalProps) => (
-  <BottomSheet open={visible} dismissable={!isForced}>
-    ...
-  </BottomSheet>
-);
+}: UpdateModalProps) => {
+  const { colors } = useTheme();
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={isForced ? undefined : onDismiss}
+    >
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          padding: 24,
+          backgroundColor: "rgba(0,0,0,0.5)",
+        }}
+      >
+        <View
+          style={{
+            borderRadius: 20,
+            padding: 24,
+            backgroundColor: colors.backgroundSecondary,
+          }}
+        >
+          <Text variant="heading">
+            {isForced ? "Update required" : "Update available"}
+          </Text>
+          <Text variant="body">
+            {currentVersion} to {latestVersion}
+          </Text>
+          {releaseNotes ? <Text variant="body">{releaseNotes}</Text> : null}
+          <Button fullWidth isLoading={isUpdating} onPress={onUpdate}>
+            Update
+          </Button>
+          {!isForced && (
+            <Button variant="ghost" onPress={onDismiss}>
+              Later
+            </Button>
+          )}
+          {canSkip && (
+            <Button variant="ghost" onPress={onSkip}>
+              Skip this version
+            </Button>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
-<UpdatePrompt component={MySheet} />;
+<UpdatePrompt component={AppUpdateModal} />;
 ```
 
-`onUpdate` opens the store. Pass `onUpdate` to `UpdatePrompt` to do something else.
+The props are `visible`, `isForced`, `isUpdating`, `canSkip`, `currentVersion`, `latestVersion`,
+`minimumVersion`, `updateType`, `releaseNotes`, `storeUrl`, `onUpdate`, `onDismiss`, `onSkip`, plus
+the `theme`, `labels` and `icon` you gave `UpdatePrompt`. `onUpdate` opens the store. Pass `onUpdate`
+to `UpdatePrompt` to do something else, such as show your own error when there is no store URL.
+`isUpdating` is true from the press until that finishes.
 
 ### Force update and soft update
 
 - `minimumVersion` (option, or reported by the provider): a build below it gets `isForced: true`,
   and `isNeeded` is `true` whatever else is set.
+- `required`: make updates mandatory without a minimum version. `true` forces every update,
+  `"major"`, `"minor"` or `"patch"` forces that size of update or bigger, and a function decides per
+  result. A provider can also report `required: true`. A forced update cannot be dismissed or skipped.
+- `canSkip`: `false` removes **Skip this version** from soft updates. Default `true`.
 - `skipVersion`: a soft update to exactly that version comes back `isNeeded: false`,
   `isSkipped: true`. It never mutes a forced update. The hook's `skipVersion()` stores this for
   you; give `skipStorage` (AsyncStorage, MMKV or `localStorage`-shaped) to keep it across launches.
