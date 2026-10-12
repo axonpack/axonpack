@@ -22,7 +22,9 @@
     "testing",
     "troubleshooting",
     "---Reference---",
-    "reference"
+    "reference",
+    "---Releases---",
+    "changelog"
   ],
   "defaultOpen": true
 }

@@ -22,6 +22,7 @@ const PACKAGES = [
   { name: '@axonpack/expo-devtools', slug: 'expo-devtools' },
   { name: '@axonpack/react-native-devtools-tab', slug: 'react-native-devtools-tab' },
   { name: '@axonpack/react-pretty-print', slug: 'react-pretty-print' },
+  { name: '@axonpack/in-app-updates', slug: 'in-app-updates' },
 ];
 
 const OUT_DATA = new URL('../src/lib/releases.generated.ts', import.meta.url);
