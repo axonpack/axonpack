@@ -296,12 +296,13 @@ Mocks only work when `__DEV__` is `true`. In a release build they are ignored, s
 
 - Google Play in-app update, Android only: `startNativeUpdate('flexible' | 'immediate')`,
   `getNativeUpdateInfo()` (priority, staleness, what Play allows), `completeNativeUpdate()` and
-  `isNativeUpdateSupported()`. Flexible downloads in the background and reports progress; immediate
-  is the full-screen flow. It talks to Google's own Play Core library through a native module in this
+  `isNativeUpdateSupported()`. Flexible: Play asks for consent over your app, then downloads in the
+  background. Immediate: Play shows its own full-screen update screen, then restarts the app. It talks to Google's own Play Core library through a native module in this
   package (needs `expo` and a development build). Play only answers for an app installed from Play,
   so on a debug build it resolves `'unavailable'` and you fall back to `openStore()`.
   `<UpdatePrompt nativeUpdate />` does all of this for you: immediate for a forced update, flexible
-  otherwise, store link as the fallback.
+  otherwise. When Play has no update to start for that user, it opens the store link, which takes the
+  user out of the app.
 - `openStore()`: opens the store page. On iOS it falls back to https if `itms-apps://` is refused.
 - `checkOtaUpdate()` / `applyOtaUpdate()`: Expo Updates (optional peer `expo-updates`), so a
   store update and an OTA update share one place. A store update always wins: check it first.

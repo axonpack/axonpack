@@ -60,10 +60,12 @@ export const getNativeUpdateInfo = async (): Promise<
 > => nativeModule()?.getUpdateInfo();
 
 /**
- * Starts Play's in-app update. `flexible` downloads in the background while the app keeps running,
- * and reports progress to `onStatus`; call completeNativeUpdate() when it reports
- * INSTALL_STATUS_DOWNLOADED. `immediate` is a full-screen flow that restarts the app.
- * Resolves 'unavailable' when there is nothing to start, so callers can fall back to openStore().
+ * Starts Play's in-app update. `flexible`: Play shows its own consent dialog, then downloads in the
+ * background while the app keeps running. It reports progress to `onStatus`; call
+ * completeNativeUpdate() when it reports INSTALL_STATUS_DOWNLOADED, which restarts the app.
+ * `immediate`: Play shows its own full-screen update screen over the app, then restarts it.
+ * Play only starts when it offers the update to this user. Otherwise this resolves 'unavailable',
+ * and callers can fall back to openStore(), which leaves the app.
  */
 export const startNativeUpdate = async (
   kind: "flexible" | "immediate" = "flexible",

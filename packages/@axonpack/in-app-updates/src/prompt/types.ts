@@ -86,9 +86,9 @@ export type UpdatePromptProps = UseVersionCheckOptions & {
   /** Start with the "What's new" notes open. Default false. */
   notesExpanded?: boolean;
   /**
-   * Android: use Google Play's in-app update instead of leaving the app. A forced update runs the
-   * immediate flow, any other the flexible one. Falls back to the store link when Play has nothing
-   * to start or the native module is not linked.
+   * Android: update through Google Play's own update screen, instead of opening the store page. A
+   * forced update runs the immediate flow, any other the flexible one. Falls back to the store link,
+   * which leaves the app, when Play has nothing to start or the native module is not linked.
    */
   nativeUpdate?: boolean;
   /** Replaces what the Update button does. */

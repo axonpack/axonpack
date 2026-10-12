@@ -1,18 +1,34 @@
 ---
 title: Play in-app updates
-description: On Android, let Google Play download and install the update without leaving your app.
+description: On Android, let Google Play update your app through its own update screen, without sending the user to the store.
 icon: Smartphone
 ---
 
 This is an optional extra for Android. Without it, **Update** opens the store page, and that works
-fine. With it, Google Play does the download inside your app.
+fine. With it, Google Play shows its own update screen over your app, so the user is not sent to the
+Play Store app.
 
 It is a small Android module in this package. It uses Google's own Play Core library.
 
-| Kind          | What the user sees                                                    |
-| ------------- | --------------------------------------------------------------------- |
-| `'flexible'`  | The update downloads in the background while the app keeps running    |
-| `'immediate'` | A full-screen Play screen installs the update and restarts the app    |
+| Kind          | What it does                                                                  |
+| ------------- | ----------------------------------------------------------------------------- |
+| `'flexible'`  | Play asks for consent, then downloads in the background while the app runs    |
+| `'immediate'` | Play shows a full-screen update screen, installs the update and restarts the app |
+
+## What the user sees
+
+These screens belong to Google, not to your app.
+
+- **Flexible.** Play shows its own consent dialog over your app. After the user agrees, the update
+  downloads in the background and the app keeps running. Installing it restarts the app.
+- **Immediate.** Play shows its own full-screen update screen on top of your app, then restarts the
+  app. The user is not sent to the Play Store app, but they do leave your app's own screens for Google's.
+- **When it does not start.** Play only starts an update when it offers one to that user. It does not
+  for a build you installed yourself, a staged rollout the user is not in yet, or a release Play has
+  not noticed yet. Then the prompt opens the store link, which does take the user out of your app.
+
+This behaviour comes from Google Play Core. It has not been tested end to end here, because Play only
+answers for apps installed from Play.
 
 ## What you need
 
@@ -40,8 +56,8 @@ export default function App() {
 ```
 
 **Update** now starts the Play flow: immediate for a forced update, flexible for a soft one. If Play
-has nothing to start, it opens the store link instead. A finished flexible download installs without
-a second prompt.
+has nothing to start, it opens the store link instead, which takes the user out of your app. A
+finished flexible download installs without a second prompt.
 
 ## Without the prompt
 

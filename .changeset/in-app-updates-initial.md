@@ -11,5 +11,5 @@
 - **Your own backend**: read the latest version from a JSON file or API, and fall back from one source to the next
 - **Version formats**: dates, four-part numbers, and beta and canary tags compare correctly, and you can supply your own comparison
 - **Fake a release**: try the whole flow in a development build without publishing anything
-- **Google Play in-app update**: on Android, download and install an update without leaving the app
+- **Google Play in-app update**: on Android, update through Google's own update screen, then restart into the new version
 - **Hook**: keep the update state in a component, refreshed each time the app returns to the foreground
