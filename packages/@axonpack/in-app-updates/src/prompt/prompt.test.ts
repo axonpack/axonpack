@@ -358,3 +358,14 @@ test("without release notes there is no What's new row", () => {
   const tree = render(h(DefaultUpdateModal, modalProps));
   expect(button(tree.root, "What's new")).toBeUndefined();
 });
+
+test("notesExpanded opens the notes from the start", () => {
+  const tree = render(
+    h(DefaultUpdateModal, {
+      ...modalProps,
+      releaseNotes: "Fixed things",
+      notesExpanded: true,
+    }),
+  );
+  expect(texts(tree.root)).toContain("Fixed things");
+});

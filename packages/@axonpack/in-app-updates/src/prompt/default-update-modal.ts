@@ -72,7 +72,7 @@ export const resolveTheme = (
 };
 
 export const DefaultUpdateModal = (props: UpdateModalProps) => {
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(props.notesExpanded ?? false);
   const rn = reactNative() as Rn | undefined;
   if (!rn) return null;
   const {

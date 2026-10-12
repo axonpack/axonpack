@@ -71,6 +71,8 @@ export type UpdateModalProps = {
   labels?: Partial<UpdateModalLabels>;
   /** False when the skip button should not be shown. */
   canSkip: boolean;
+  /** Start with the "What's new" notes open. Default false. */
+  notesExpanded?: boolean;
   /** Shown in the round badge at the top. Default is an arrow. */
   icon?: ReactNode;
 };
@@ -81,6 +83,8 @@ export type UpdatePromptProps = UseVersionCheckOptions & {
   theme?: Partial<UpdateModalTheme>;
   labels?: Partial<UpdateModalLabels>;
   icon?: ReactNode;
+  /** Start with the "What's new" notes open. Default false. */
+  notesExpanded?: boolean;
   /**
    * Android: use Google Play's in-app update instead of leaving the app. A forced update runs the
    * immediate flow, any other the flexible one. Falls back to the store link when Play has nothing

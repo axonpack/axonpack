@@ -8,13 +8,13 @@ import {
   Text,
   View,
 } from "react-native";
+import { AppUpdateSheet } from "./components/AppUpdateSheet";
 import VersionCheck, {
   UpdatePrompt,
   getNativeUpdateInfo,
   isNativeUpdateSupported,
   setMockVersion,
   startNativeUpdate,
-  type UpdateModalProps,
 } from "@axonpack/in-app-updates";
 
 // Open with a link to switch what the prompt shows, e.g. inappupdatesexample://?s=forced
@@ -22,41 +22,51 @@ import VersionCheck, {
 const SCENARIOS = [
   "live",
   "soft",
+  "expanded",
   "forced",
-  "none",
+  "dark",
+  "brand",
+  "minimal",
   "custom",
+  "none",
   "native",
 ] as const;
 type Scenario = (typeof SCENARIOS)[number];
 
-const MOCKS = {
-  soft: {
-    latestVersion: "9.0.0",
-    releaseNotes: "Soft update notes\n- one\n- two",
-  },
+const NOTES = "Soft update notes\n- one\n- two";
+
+const MOCKS: Record<Exclude<Scenario, "live">, object> = {
+  soft: { latestVersion: "9.0.0", releaseNotes: NOTES },
+  expanded: { latestVersion: "9.0.0", releaseNotes: NOTES },
   forced: {
     latestVersion: "9.0.0",
     minimumVersion: "5.0.0",
     releaseNotes: "Forced update notes",
   },
+  dark: { latestVersion: "9.0.0", releaseNotes: NOTES },
+  brand: { latestVersion: "9.0.0", releaseNotes: NOTES },
+  minimal: { latestVersion: "9.0.0" },
+  custom: { latestVersion: "9.0.0", releaseNotes: NOTES },
   none: { latestVersion: VersionCheck.getCurrentVersion() ?? "1.0.0" },
-  custom: { latestVersion: "9.0.0" },
   native: { latestVersion: "9.0.0" },
-} as const;
+};
 
-const CustomModal = (p: UpdateModalProps) => (
-  <View style={styles.custom}>
-    <Text>
-      CUSTOM MODAL v{p.latestVersion} forced={String(p.isForced)}
-    </Text>
-    <Text onPress={p.onUpdate}>[update]</Text>
-    <Text onPress={p.onDismiss}>[dismiss]</Text>
-  </View>
-);
+const serif = Platform.select({ ios: "Georgia", default: "serif" });
+const BRAND = {
+  primary: "#16a34a",
+  primarySoft: "#e3f6e8",
+  radius: 28,
+  fonts: { regular: serif, medium: serif, bold: serif },
+};
+
+// A fixed scenario for screenshots: EXPO_PUBLIC_SCENARIO=forced EXPO_PUBLIC_SHOT=1 bun run start
+const START =
+  (process.env.EXPO_PUBLIC_SCENARIO as Scenario | undefined) ?? "live";
+const SHOT = process.env.EXPO_PUBLIC_SHOT === "1";
 
 export default function App() {
   const [rows, setRows] = useState<[string, string][]>([]);
-  const [scenario, setScenario] = useState<Scenario>("live");
+  const [scenario, setScenario] = useState<Scenario>(START);
   const url = Linking.useLinkingURL();
 
   useEffect(() => {
@@ -128,48 +138,63 @@ export default function App() {
   const value = (k: string) => rows.find(([key]) => key === k)?.[1];
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.title}>In-app updates</Text>
-        <Text style={styles.subtitle}>__DEV__ = {String(__DEV__)}</Text>
+    <View
+      style={[
+        styles.root,
+        SHOT && scenario === "dark" && { backgroundColor: "#0b1020" },
+      ]}
+    >
+      {SHOT ? null : (
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text style={styles.title}>In-app updates</Text>
+          <Text style={styles.subtitle}>__DEV__ = {String(__DEV__)}</Text>
 
-        <View style={styles.chips}>
-          {SCENARIOS.map((name) => (
-            <Pressable
-              key={name}
-              onPress={() => setScenario(name)}
-              style={[styles.chip, scenario === name && styles.chipActive]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  scenario === name && styles.chipTextActive,
-                ]}
+          <View style={styles.chips}>
+            {SCENARIOS.map((name) => (
+              <Pressable
+                key={name}
+                onPress={() => setScenario(name)}
+                style={[styles.chip, scenario === name && styles.chipActive]}
               >
-                {name}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {groups.map(([title, keys]) => (
-          <View key={title} style={styles.card}>
-            <Text style={styles.cardTitle}>{title}</Text>
-            {keys
-              .filter((k) => value(k) !== undefined)
-              .map((k) => (
-                <View key={k} style={styles.row}>
-                  <Text style={styles.rowKey}>{k}</Text>
-                  <Text style={styles.rowValue}>{value(k)}</Text>
-                </View>
-              ))}
+                <Text
+                  style={[
+                    styles.chipText,
+                    scenario === name && styles.chipTextActive,
+                  ]}
+                >
+                  {name}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-        ))}
-      </ScrollView>
+
+          {groups.map(([title, keys]) => (
+            <View key={title} style={styles.card}>
+              <Text style={styles.cardTitle}>{title}</Text>
+              {keys
+                .filter((k) => value(k) !== undefined)
+                .map((k) => (
+                  <View key={k} style={styles.row}>
+                    <Text style={styles.rowKey}>{k}</Text>
+                    <Text style={styles.rowValue}>{value(k)}</Text>
+                  </View>
+                ))}
+            </View>
+          ))}
+        </ScrollView>
+      )}
       <UpdatePrompt
         key={scenario}
         mock={mock}
-        component={scenario === "custom" ? CustomModal : undefined}
+        component={scenario === "custom" ? AppUpdateSheet : undefined}
+        theme={
+          scenario === "dark"
+            ? { mode: "dark" }
+            : scenario === "brand"
+              ? BRAND
+              : undefined
+        }
+        notesExpanded={scenario === "expanded"}
         nativeUpdate={scenario === "native"}
       />
     </View>

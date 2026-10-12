@@ -20,6 +20,7 @@ export const UpdatePrompt = ({
   theme,
   labels,
   icon,
+  notesExpanded,
   onUpdate,
   nativeUpdate,
   children,
@@ -47,6 +48,7 @@ export const UpdatePrompt = ({
     theme,
     labels,
     icon,
+    notesExpanded,
     isUpdating,
     onUpdate: () => {
       if (isUpdating) return;
