@@ -22,7 +22,8 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      "@axonpack/preview-ready"
     ],
     "runtimeVersion": "1.0.0",
     "updates": {

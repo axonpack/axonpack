@@ -5,6 +5,11 @@ public final class AxonpackPreviewReadyModule: Module {
   public func definition() -> ModuleDefinition {
     Name("AxonpackPreviewReady")
 
+    // What the config plugin wrote at prebuild; nil when the plugin is not in the app config.
+    Constants([
+      "fingerprint": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyFingerprint") as? String
+    ])
+
     OnCreate {
       DispatchQueue.main.async {
         PreviewReadyReactDelegateHandler.startOnSelectedPreview()

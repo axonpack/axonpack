@@ -29,6 +29,7 @@
     "ios",
     "bin",
     "build",
+    "app.plugin.js",
     "expo-module.config.json",
     "CHANGELOG.md",
     "notes"

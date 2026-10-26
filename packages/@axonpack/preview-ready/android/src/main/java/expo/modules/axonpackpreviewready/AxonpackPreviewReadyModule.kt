@@ -1,5 +1,6 @@
 package expo.modules.axonpackpreviewready
 
+import android.content.pm.PackageManager
 import android.util.Log
 import com.facebook.react.ReactApplication
 import expo.modules.kotlin.modules.Module
@@ -8,6 +9,8 @@ import expo.modules.kotlin.modules.ModuleDefinition
 class AxonpackPreviewReadyModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("AxonpackPreviewReady")
+
+    Constants("fingerprint" to buildFingerprint())
 
     Function("select") { bundle: String? ->
       val context = appContext.reactContext ?: return@Function
@@ -33,5 +36,18 @@ class AxonpackPreviewReadyModule : Module() {
       BundleLoaderOverride.apply(it, host)
     }
     host.reload("preview-ready: switch bundle")
+  }
+
+  /** What the config plugin wrote at prebuild; null when the plugin is not in the app config. */
+  private fun buildFingerprint(): String? {
+    val context = appContext.reactContext ?: return null
+    return try {
+      context.packageManager
+        .getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+        .metaData
+        ?.getString("dev.axonpack.preview-ready.FINGERPRINT")
+    } catch (e: Exception) {
+      null
+    }
   }
 }
