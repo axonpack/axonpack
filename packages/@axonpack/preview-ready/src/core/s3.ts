@@ -4,24 +4,53 @@ import { Credentials, EMPTY_SHA256, sha256Hex, signRequest } from "./sigv4";
 export type S3Config = {
   endpoint: string;
   bucket: string;
+  /** Folder inside the bucket that everything goes under, so several apps can share one bucket. */
+  prefix?: string;
   region: string;
   /** Write key in the CLI, read-only key in the app. Without one, requests go unsigned. */
   credentials?: Credentials;
-  /** Where public reads go when that isn't `<endpoint>/<bucket>`, such as R2's r2.dev address. */
+  /** Where public reads of the bucket go when that isn't `<endpoint>/<bucket>`, such as R2's r2.dev address. */
   publicUrl?: string;
 };
+
+/** MinIO and R2 accept it too, so a region is only needed for AWS buckets elsewhere. */
+export const DEFAULT_REGION = "us-east-1";
 
 const trimSlash = (s: string) => s.replace(/\/+$/, "");
 const encodeKey = (key: string) =>
   key.split("/").map(encodeURIComponent).join("/");
 
+/**
+ * Splits one URL, `<endpoint>/<bucket>[/<prefix>]`, so a single setting says where everything
+ * lives: `http://localhost:9000/previews-public`, `https://<account>.r2.cloudflarestorage.com/previews/my-app`.
+ */
+export function parseBucketUrl(
+  value: string,
+): Pick<S3Config, "endpoint" | "bucket" | "prefix"> {
+  const url = new URL(value);
+  const [bucket, ...rest] = url.pathname.split("/").filter(Boolean);
+  if (!bucket)
+    throw new Error(`${value} has no bucket: use <endpoint>/<bucket>`);
+  return {
+    endpoint: url.origin,
+    bucket,
+    prefix: rest.length > 0 ? rest.join("/") : undefined,
+  };
+}
+
+const withPrefix = (config: S3Config, key: string) =>
+  config.prefix ? `${config.prefix}/${key}` : key;
+
+const bucketUrl = (config: S3Config) =>
+  `${trimSlash(config.endpoint)}/${config.bucket}`;
+
 export const objectUrl = (config: S3Config, key: string) =>
-  `${trimSlash(config.endpoint)}/${config.bucket}/${encodeKey(key)}`;
+  `${bucketUrl(config)}/${encodeKey(withPrefix(config, key))}`;
 
 /** The address the app reads from: the public URL for an unsigned bucket, else the endpoint. */
 export const readUrl = (config: S3Config, key: string) =>
   config.publicUrl && !config.credentials
-    ? `${trimSlash(config.publicUrl)}/${encodeKey(key)}`
+    ? `${trimSlash(config.publicUrl)}/${encodeKey(withPrefix(config, key))}`
     : objectUrl(config, key);
 
 export class S3Error extends Error {
@@ -48,7 +77,7 @@ export async function s3Fetch(
 ): Promise<Response> {
   const base =
     request.key === undefined
-      ? objectUrl(config, "").replace(/\/$/, "")
+      ? bucketUrl(config)
       : readUrl(config, request.key);
   const url = new URL(base);
   for (const [k, v] of Object.entries(request.query ?? {}))
@@ -137,15 +166,19 @@ export async function listKeys(
   prefix: string,
 ): Promise<string[]> {
   const keys: string[] = [];
+  const strip = config.prefix ? config.prefix.length + 1 : 0;
   let token: string | undefined;
   do {
-    const query: Record<string, string> = { "list-type": "2", prefix };
+    const query: Record<string, string> = {
+      "list-type": "2",
+      prefix: withPrefix(config, prefix),
+    };
     if (token) query["continuation-token"] = token;
     const res = await s3Fetch(config, { method: "GET", query });
     const xml = await res.text();
     if (!res.ok) throw new S3Error(res.status, prefix, xml);
     for (const match of xml.matchAll(/<Key>([^<]*)<\/Key>/g))
-      keys.push(unescapeXml(match[1]));
+      keys.push(unescapeXml(match[1]).slice(strip));
     token = /<IsTruncated>true<\/IsTruncated>/.test(xml)
       ? unescapeXml(/<NextContinuationToken>([^<]*)</.exec(xml)?.[1] ?? "")
       : undefined;

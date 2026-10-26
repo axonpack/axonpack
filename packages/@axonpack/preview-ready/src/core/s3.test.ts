@@ -1,4 +1,4 @@
-import { objectUrl, putObject, readUrl, S3Config } from "./s3";
+import { objectUrl, parseBucketUrl, putObject, readUrl, S3Config } from "./s3";
 
 const config: S3Config = {
   endpoint: "http://localhost:9000/",
@@ -9,6 +9,21 @@ const config: S3Config = {
 test("builds path-style URLs and keeps slashes in keys", () => {
   expect(objectUrl(config, "files/abc")).toBe(
     "http://localhost:9000/b/files/abc",
+  );
+});
+
+test("splits <endpoint>/<bucket>/<prefix> and puts keys under the prefix", () => {
+  const parts = parseBucketUrl("http://localhost:9000/b/app/one");
+  expect(parts).toEqual({
+    endpoint: "http://localhost:9000",
+    bucket: "b",
+    prefix: "app/one",
+  });
+  expect(objectUrl({ ...parts, region: "us-east-1" }, "index.json")).toBe(
+    "http://localhost:9000/b/app/one/index.json",
+  );
+  expect(() => parseBucketUrl("http://localhost:9000")).toThrow(
+    "has no bucket",
   );
 });
 

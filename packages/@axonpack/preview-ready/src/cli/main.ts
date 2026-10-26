@@ -24,9 +24,10 @@ const HELP = `preview-ready <command> [options]
 
   --project <dir>    the app's root, where .env lives (default: the current folder)
 
-Bucket and write key come from .env or the environment: PREVIEW_READY_S3_ENDPOINT,
-PREVIEW_READY_S3_BUCKET, PREVIEW_READY_S3_REGION, PREVIEW_READY_S3_ACCESS_KEY_ID,
-PREVIEW_READY_S3_SECRET_ACCESS_KEY, and optionally PREVIEW_READY_S3_PUBLIC_URL.`;
+Where to publish comes from .env in the app's root or the environment:
+  PREVIEW_READY_URL       <endpoint>/<bucket>[/<folder>], e.g. http://localhost:9000/previews-public
+  AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY   the write key
+  AWS_REGION (default us-east-1), PREVIEW_READY_PUBLIC_URL   optional`;
 
 async function main() {
   const { values, positionals } = parseArgs({
