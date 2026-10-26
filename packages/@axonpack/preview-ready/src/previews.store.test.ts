@@ -11,6 +11,7 @@ const mockNative = {
   }),
   reload: jest.fn(),
   markLaunched: jest.fn(),
+  selectLocalServer: jest.fn(),
   state: () => ({ bundle: mockNative.bundle, broken: [] as string[] }),
 };
 jest.mock("expo", () => ({ requireOptionalNativeModule: () => mockNative }));
@@ -157,4 +158,12 @@ test("each refresh replaces the list with what the bucket says now", async () =>
     "one",
   ]);
   expect(global.fetch).toHaveBeenCalledTimes(2);
+});
+
+test("back to base also stops a local Metro server", async () => {
+  await previewsStore.refresh(config);
+  await previewsStore.switchTo(config, null);
+  expect(mockNative.selectLocalServer).toHaveBeenCalledWith(null, null);
+  expect(mockNative.select).toHaveBeenCalledWith(null, null);
+  expect(mockNative.reload).toHaveBeenCalled();
 });

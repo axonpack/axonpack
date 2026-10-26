@@ -118,6 +118,10 @@ export const previewsStore = {
     // A native side older than this JS (an app not rebuilt since the package changed) throws here.
     // The list shows the reason instead of the button silently doing nothing.
     try {
+      // "Back to base" also stops a local Metro server, so it always means the default.
+      if (id === null && typeof native.selectLocalServer === "function") {
+        native.selectLocalServer(null, null);
+      }
       native.select(
         id === null ? null : previewBundlePath(id),
         local?.key ?? null,
