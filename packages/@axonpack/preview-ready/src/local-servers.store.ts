@@ -28,9 +28,13 @@ const POLL_MS = 2000;
 let watchers = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 
+let polling = false;
+
 async function poll(options: LocalServersOptions) {
   const platform = currentPlatform();
-  if (!platform) return;
+  // A round can outlast the interval on a slow host; overlapping rounds would land out of order.
+  if (!platform || polling) return;
+  polling = true;
   try {
     const found = await discover(options, platform);
     set({
@@ -45,6 +49,8 @@ async function poll(options: LocalServersOptions) {
     });
   } catch (error) {
     set({ error: error instanceof Error ? error.message : String(error) });
+  } finally {
+    polling = false;
   }
 }
 

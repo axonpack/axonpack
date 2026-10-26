@@ -97,6 +97,12 @@ export function mergeServers(input: {
   return servers.sort((a, b) => a.port - b.port);
 }
 
+// Generous on purpose. Android's HTTP client runs 5 requests per host at a time, so most of the
+// 19 probes wait in its queue, and the emulator's NAT takes about 400 ms even to refuse a closed
+// port. A tighter limit dropped live servers on the emulator. A closed port on a real computer
+// still fails at once, so a round only gets slow on a host that drops packets.
+const PROBE_MS = 2000;
+
 const timeout = (ms: number) => {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), ms);
@@ -106,7 +112,7 @@ const timeout = (ms: number) => {
 async function isMetro(host: string, port: number): Promise<boolean> {
   try {
     const res = await fetch(`http://${host}:${port}/status`, {
-      signal: timeout(400),
+      signal: timeout(PROBE_MS),
     });
     return (await res.text()).includes("packager-status:running");
   } catch {
@@ -133,7 +139,7 @@ async function readRegistry(
 ): Promise<RegisteredServer[] | null> {
   try {
     const res = await fetch(`http://${host}:${port}/servers`, {
-      signal: timeout(400),
+      signal: timeout(PROBE_MS),
     });
     return ((await res.json()) as { servers: RegisteredServer[] }).servers;
   } catch {

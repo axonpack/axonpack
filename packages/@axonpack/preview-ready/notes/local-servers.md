@@ -33,8 +33,10 @@ branch, worktree and the native key `publish` would use. Heartbeats every 5 s ke
 drops out 15 s after the last, so a killed process goes too. Plain `expo start` servers are found
 by probing the port range for Metro's `/status`; each one's Expo manifest then gives its slug,
 name, version and bundle URL. A server found both ways uses the registry's details. While the list
-is on screen the app looks every 2 s; a probe gives up after 400 ms, and a closed port fails at
-once, so the scan stays cheap.
+is on screen the app looks every 2 s, and never starts a look while the last one runs. A probe gives
+up after 2 s: Android sends 5 requests per host at a time and the emulator takes about 400 ms to
+refuse a closed port, so a tighter limit dropped live servers there. A closed port on the computer
+itself fails at once, so the scan stays cheap.
 
 **Which servers.** Only the app's own slug, which the config plugin bakes into the build. A server
 for the same app but another native key (another app version, or another fingerprint) is listed and
