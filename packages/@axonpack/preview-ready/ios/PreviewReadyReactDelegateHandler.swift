@@ -12,6 +12,7 @@ import React
  */
 public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
   private static var installed = false
+  private static weak var rootViewFactory: NSObject?
 
   public override func createReactRootView(
     reactDelegate: ExpoReactDelegate,
@@ -41,6 +42,7 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
       previewReadyLog.warning("Could not reach React's bundle URL, so previews are off and the base bundle loads")
       return false
     }
+    Self.rootViewFactory = rootViewFactory
     let base = unsafeBitCast(current as AnyObject, to: BundleURLBlock.self)
     let block: BundleURLBlock = {
       guard let preview = PreviewState.selectedBundle() else {
@@ -54,5 +56,29 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
     }
     configuration.setValue(block, forKey: "bundleURLBlock")
     return true
+  }
+
+  /**
+   React's bundle manager prefers a URL fixed when the first root view was made. For a debug build
+   that started on Metro that is the packager address, so a reload would ignore the block above and
+   go to Metro again. Resetting it to React's default configuration, which fixes no URL, hands every
+   reload back to the block. Each step is checked, since a missing key would throw.
+   */
+  static func letReloadAskAgain() {
+    guard
+      let factory = rootViewFactory,
+      factory.responds(to: NSSelectorFromString("reactHost")),
+      let host = factory.value(forKey: "reactHost") as? NSObject,
+      let ivar = class_getInstanceVariable(type(of: host), "_bundleManager"),
+      let manager = object_getIvar(host, ivar) as? NSObject,
+      manager.responds(to: NSSelectorFromString("setBundleConfig:")),
+      let configurationClass = NSClassFromString("RCTBundleConfiguration") as? NSObject.Type,
+      configurationClass.responds(to: NSSelectorFromString("defaultConfiguration")),
+      let defaultConfiguration = configurationClass.perform(NSSelectorFromString("defaultConfiguration"))?.takeUnretainedValue()
+    else {
+      previewReadyLog.warning("Could not reset React's bundle configuration, so a reload may keep the current bundle")
+      return
+    }
+    manager.setValue(defaultConfiguration, forKey: "bundleConfig")
   }
 }

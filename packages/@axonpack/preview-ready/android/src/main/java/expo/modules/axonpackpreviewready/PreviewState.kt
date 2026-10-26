@@ -2,6 +2,8 @@ package expo.modules.axonpackpreviewready
 
 import android.content.Context
 import android.util.Log
+import com.facebook.react.ReactHost
+import com.facebook.react.common.build.ReactBuildConfig
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import org.json.JSONObject
 import java.io.File
@@ -29,6 +31,26 @@ internal object PreviewState {
 
   fun warnOldArchitecture() =
     Log.w(TAG, "preview-ready needs the New Architecture, so the selected preview is ignored and the base bundle loads")
+
+  /** The selected preview if this app can run it, else null for the base bundle. */
+  fun bundleToLoad(context: Context): File? {
+    val bundle = selectedBundle(context) ?: return null
+    if (!newArchitecture()) {
+      warnOldArchitecture()
+      return null
+    }
+    return bundle
+  }
+
+  /**
+   * A debug build asks Metro before the bundle loader, unless its dev support has a bundle file set.
+   * So in a debug build the selected preview goes there, and clearing it hands the start back to
+   * Metro. Release builds never ask Metro and are left alone.
+   */
+  fun pointDevSupport(context: Context, host: ReactHost?) {
+    if (!ReactBuildConfig.DEBUG || host == null) return
+    host.devSupportManager?.bundleFilePath = bundleToLoad(context)?.absolutePath
+  }
 
   /**
    * Records the choice for the next start or reload. Null clears it, so the base bundle loads. The

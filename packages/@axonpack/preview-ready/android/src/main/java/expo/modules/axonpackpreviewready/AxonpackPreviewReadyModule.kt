@@ -28,6 +28,7 @@ class AxonpackPreviewReadyModule : Module() {
       PreviewState.warnOldArchitecture()
       return
     }
+    appContext.reactContext?.let { PreviewState.pointDevSupport(it, host) }
     host.reload("preview-ready: switch bundle")
   }
 }

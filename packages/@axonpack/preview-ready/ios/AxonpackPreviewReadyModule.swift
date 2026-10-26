@@ -16,6 +16,7 @@ public final class AxonpackPreviewReadyModule: Module {
       }
       // The reload asks the bundle URL block again, and that block reads the current choice.
       DispatchQueue.main.async {
+        PreviewReadyReactDelegateHandler.letReloadAskAgain()
         RCTTriggerReloadCommandListeners("preview-ready: switch bundle")
       }
     }

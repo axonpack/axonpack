@@ -67,3 +67,8 @@ The example app will turn cleartext on in its own config when downloads land, ne
 package's defaults. A real app should use HTTPS. iOS does not apply App Transport Security to IP
 addresses or `localhost`, so the simulator and a phone using the LAN IP should work as they are
 (to be checked on a device in the download phase).
+
+Android 17 also asks the user before an app may reach the local network, which includes the
+emulator's `10.0.2.2` and a LAN IP (the `ACCESS_LOCAL_NETWORK` permission). If it is denied, both
+downloads from the local server and a debug build's connection to Metro fail. On the emulator,
+`adb shell pm grant <package> android.permission.ACCESS_LOCAL_NETWORK` grants it.
