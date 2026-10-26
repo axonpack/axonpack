@@ -20,7 +20,9 @@ const git = (cwd: string, args: string[]): string | null => {
 // The copies the app's own `expo` uses, so the fingerprint and version match what its native build
 // used. They are dependencies of `expo`, not of the app, so they are resolved from there.
 const appRequire = (projectRoot: string) => {
-  const expo = createRequire(join(projectRoot, "package.json")).resolve("expo/package.json");
+  const expo = createRequire(join(projectRoot, "package.json")).resolve(
+    "expo/package.json",
+  );
   return createRequire(expo);
 };
 
