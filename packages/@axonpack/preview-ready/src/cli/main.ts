@@ -5,11 +5,21 @@ import { parseArgs } from "node:util";
 
 import { PLATFORMS, Platform } from "../core/layout";
 import { prune, publish, unpublish } from "./commands";
-import { DEFAULT_REGISTRY_PORT } from "../core/local-servers";
+import {
+  DEFAULT_PORT_RANGE,
+  DEFAULT_REGISTRY_PORT,
+} from "../core/local-servers";
 import { readConfig } from "./config";
 import { createRegistry } from "./registry";
+import { start } from "./start";
 import { compatibilityOf, resolveCompatibility } from "./expo-config";
-import { appConfig, changelogSince, defaultBase, gitInfo } from "./project";
+import {
+  appConfig,
+  changelogSince,
+  defaultBase,
+  gitInfo,
+  gitTopLevel,
+} from "./project";
 
 const HELP = `preview-ready <command> [options]
 
@@ -25,6 +35,10 @@ const HELP = `preview-ready <command> [options]
     --compatibility <c> appVersion or fingerprint; overrides the app config's plugin option
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
+  start [-- <expo start args>]
+                     run Metro on a free port and announce it to the app's local servers list
+    --ports <from>-<to> ports to pick from (default 8081-8099)
+    --registry-port <p> where the announcements go (default 19150)
 
   --project <dir>    the app's root, where .env.preview-ready lives (default: the current folder)
 
@@ -35,7 +49,12 @@ Where to publish comes from .env.preview-ready in the app's root, or the environ
   PREVIEW_READY_S3_REGION (default us-east-1), PREVIEW_READY_S3_PUBLIC_URL   optional`;
 
 async function main() {
+  // Everything after `--` goes to `expo start` untouched.
+  const argv = process.argv.slice(2);
+  const dash = argv.indexOf("--");
+  const passThrough = dash >= 0 ? argv.slice(dash + 1) : [];
   const { values, positionals } = parseArgs({
+    args: dash >= 0 ? argv.slice(0, dash) : argv,
     allowPositionals: true,
     options: {
       id: { type: "string" },
@@ -48,6 +67,8 @@ async function main() {
       compatibility: { type: "string" },
       project: { type: "string" },
       port: { type: "string" },
+      ports: { type: "string" },
+      "registry-port": { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -99,6 +120,24 @@ async function main() {
     await unpublish(s3(), arg);
   } else if (command === "prune") {
     await prune(s3());
+  } else if (command === "start") {
+    const [from, to] = (
+      values.ports ?? `${DEFAULT_PORT_RANGE[0]}-${DEFAULT_PORT_RANGE[1]}`
+    )
+      .split("-")
+      .map(Number);
+    if (!from || !to || from > to)
+      throw new Error("--ports must look like 8081-8099");
+    await start({
+      projectRoot,
+      config: appConfig(projectRoot),
+      branch: gitInfo(projectRoot).branch,
+      worktree: gitTopLevel(projectRoot) ?? projectRoot,
+      ports: [from, to],
+      registryPort: Number(values["registry-port"] ?? DEFAULT_REGISTRY_PORT),
+      expoArgs: passThrough,
+      bin: process.argv[1],
+    });
   } else if (command === "registry") {
     // Started by `preview-ready start` when none is running; exits once no server is left.
     const port = Number(values.port ?? DEFAULT_REGISTRY_PORT);

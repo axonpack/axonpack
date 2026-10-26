@@ -57,6 +57,10 @@ export function gitInfo(projectRoot: string) {
   };
 }
 
+/** The git worktree the project is in, so a list can say which checkout a server runs from. */
+export const gitTopLevel = (projectRoot: string): string | null =>
+  git(projectRoot, ["rev-parse", "--show-toplevel"]);
+
 /** The repo's default branch: what origin/HEAD points at, else main or master if one exists. */
 export function defaultBase(projectRoot: string): string | null {
   const head = git(projectRoot, [
