@@ -136,3 +136,25 @@ test("a failing native call shows its reason in the list instead of doing nothin
   );
   expect(mockNative.reload).not.toHaveBeenCalled();
 });
+
+test("each refresh replaces the list with what the bucket says now", async () => {
+  const entry = (id: string) => ({
+    id,
+    title: id,
+    revision: "r",
+    publishedAt: id,
+  });
+  let previews = [entry("one")];
+  global.fetch = jest.fn(
+    async () => new Response(JSON.stringify({ previews })),
+  ) as typeof fetch;
+  await previewsStore.refresh({ ...config, buildKey: "fp" });
+  expect(previewsStore.getState().remote?.map((p) => p.id)).toEqual(["one"]);
+  previews = [entry("two"), entry("one")];
+  await previewsStore.refresh({ ...config, buildKey: "fp" });
+  expect(previewsStore.getState().remote?.map((p) => p.id)).toEqual([
+    "two",
+    "one",
+  ]);
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+});
