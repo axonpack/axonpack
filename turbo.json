@@ -96,6 +96,16 @@
       "outputs": [
         "build/**"
       ]
+    },
+    "@axonpack/preview-ready#build": {
+      "outputs": [
+        "build/**"
+      ]
+    },
+    "@axonpack/preview-ready#prepare": {
+      "outputs": [
+        "build/**"
+      ]
     }
   }
 }
