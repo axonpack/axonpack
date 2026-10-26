@@ -2,8 +2,7 @@
 
 Where previews are kept: in the bucket they are published to, and on the device once downloaded.
 
-- [ ] Reads previews from an S3 or R2 bucket, public or private (with a read-only key)
-- [ ] Reads previews from GitHub Releases, public or private (with a read-only token)
+- [ ] Reads previews from any S3-compatible bucket (S3, R2, MinIO and others), public or private (with a read-only key)
 - [ ] Downloads a preview into the app's documents folder and checks every file
 - [ ] Keeps a download until QA deletes it; nothing expires on a timer
 - [ ] Shows downloads made for another native build apart, with one button to delete them all
