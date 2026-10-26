@@ -1,4 +1,4 @@
-import { createElement as h, type ReactNode } from "react";
+import { createElement as h, type ReactNode, useEffect } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,6 +10,11 @@ import {
   type ViewStyle,
 } from "react-native";
 
+import type { LocalServer } from "../local-servers";
+import {
+  localServersStore,
+  useLocalServersState,
+} from "../local-servers.store";
 import type { PreviewItem, PreviewStatus } from "../preview-items";
 import { usePreviewReady } from "../provider";
 import { DEFAULT_LABELS, formatSize, resolveTheme } from "./theme";
@@ -27,6 +32,17 @@ export type PreviewListProps = {
  */
 export function PreviewList(props: PreviewListProps) {
   const preview = usePreviewReady();
+  const local = useLocalServersState();
+  const localOptions = preview.localServers;
+  const showLocal = __DEV__ && localOptions?.enabled === true;
+  // Look for servers only while the list is on screen.
+  useEffect(
+    () =>
+      showLocal && localOptions
+        ? localServersStore.watch(localOptions)
+        : undefined,
+    [showLocal, localOptions],
+  );
   const theme = resolveTheme(props.theme, useColorScheme());
   const labels = {
     ...DEFAULT_LABELS,
@@ -245,6 +261,126 @@ export function PreviewList(props: PreviewListProps) {
   };
 
   const active = preview.items.find((i) => i.active);
+  const activeLocal = showLocal
+    ? local.servers.find((server) => server.url === local.activeUrl)
+    : undefined;
+
+  const localRow = (server: LocalServer) => {
+    const running = server.url === local.activeUrl;
+    const meta = [
+      server.branch,
+      server.hostPort,
+      server.version ? `v${server.version}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const badge =
+      server.compatible === false
+        ? { text: labels.localIncompatible, color: theme.warning }
+        : server.compatible === null
+          ? { text: labels.localUnknownBuild, color: theme.muted }
+          : null;
+    return h(
+      View,
+      {
+        key: server.hostPort,
+        style: {
+          gap: 6,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          borderColor: theme.border,
+        },
+      },
+      h(
+        View,
+        {
+          style: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: 8,
+          },
+        },
+        h(
+          Text,
+          { style: { ...font("bold", 16), color: theme.title, flexShrink: 1 } },
+          server.title,
+        ),
+        running
+          ? h(
+              Text,
+              { style: { ...font("medium", 13), color: theme.success } },
+              labels.running,
+            )
+          : null,
+      ),
+      h(Text, { style: { ...font("regular", 13), color: theme.muted } }, meta),
+      badge
+        ? h(
+            Text,
+            { style: { ...font("medium", 13), color: badge.color } },
+            badge.text,
+          )
+        : null,
+      h(
+        View,
+        { style: { flexDirection: "row", flexWrap: "wrap", gap: 8 } },
+        running
+          ? button(
+              labels.stopLocalServer,
+              () => localServersStore.switchTo(null),
+              "plain",
+            )
+          : button(labels.switchTo, () => localServersStore.switchTo(server)),
+      ),
+    );
+  };
+
+  const localSection = showLocal
+    ? card(
+        "local",
+        [
+          h(
+            Text,
+            {
+              key: "title",
+              style: { ...font("bold", 17), color: theme.title },
+            },
+            labels.localServersTitle,
+          ),
+          h(
+            Text,
+            {
+              key: "hint",
+              style: { ...font("regular", 13), color: theme.muted },
+            },
+            labels.localServersHint,
+          ),
+          local.error
+            ? h(
+                Text,
+                {
+                  key: "error",
+                  style: { ...font("regular", 13), color: theme.danger },
+                },
+                local.error,
+              )
+            : null,
+          ...(local.servers.length > 0
+            ? local.servers.map(localRow)
+            : [
+                h(
+                  Text,
+                  {
+                    key: "none",
+                    style: { ...font("regular", 15), color: theme.muted },
+                  },
+                  labels.noLocalServers,
+                ),
+              ]),
+        ].filter(Boolean) as ReactNode[],
+      )
+    : null;
+
   const header = card(
     "header",
     [
@@ -259,7 +395,9 @@ export function PreviewList(props: PreviewListProps) {
           key: "running",
           style: { ...font("regular", 15), color: theme.text },
         },
-        `${labels.running}: ${active ? active.entry.title : (preview.activeId ?? labels.base)}`,
+        activeLocal
+          ? `${labels.running}: ${activeLocal.title} (${labels.localSuffix}, ${activeLocal.hostPort})`
+          : `${labels.running}: ${active ? active.entry.title : (preview.activeId ?? labels.base)}`,
       ),
       __DEV__ && preview.activeId
         ? h(
@@ -292,7 +430,7 @@ export function PreviewList(props: PreviewListProps) {
             alignItems: "center",
           },
         },
-        preview.activeId
+        preview.activeId || (showLocal && local.activeUrl)
           ? button(labels.backToBase, () => preview.switchTo(null))
           : null,
         button(labels.refresh, () => preview.refresh(), "plain"),
@@ -368,6 +506,7 @@ export function PreviewList(props: PreviewListProps) {
       contentContainerStyle: { padding: 16, gap: 12 },
     },
     header,
+    localSection,
     ...preview.items.map(row),
     empty,
     incompatible,

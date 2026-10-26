@@ -44,6 +44,7 @@ export function usePreviewReady() {
       ...state,
       ...lists,
       enabled: config.enabled,
+      localServers: config.localServers,
       refresh: () => previewsStore.refresh(config),
       download: (id: string) => previewsStore.download(config, id),
       switchTo: (id: string | null) => previewsStore.switchTo(config, id),

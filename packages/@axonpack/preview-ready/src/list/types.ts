@@ -48,4 +48,12 @@ export type PreviewListLabels = {
   incompatibleTitle: string;
   incompatibleHint: string;
   deleteAll: string;
+  localServersTitle: string;
+  localServersHint: string;
+  noLocalServers: string;
+  stopLocalServer: string;
+  /** After the title in the header line, for a local server. */
+  localSuffix: string;
+  localIncompatible: string;
+  localUnknownBuild: string;
 };

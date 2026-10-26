@@ -60,6 +60,15 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   incompatibleHint:
     "Made for another native build. They can't run on this one.",
   deleteAll: "Delete all",
+  localServersTitle: "Local servers",
+  localServersHint:
+    "Metro servers for this app on your computer. Debug builds only.",
+  noLocalServers:
+    "No Metro server found. Start one with npx preview-ready start.",
+  stopLocalServer: "Stop using local server",
+  localSuffix: "local",
+  localIncompatible: "Made for another native build",
+  localUnknownBuild: "Native build unknown",
 };
 
 /** Merges a partial theme over the light or dark base. */

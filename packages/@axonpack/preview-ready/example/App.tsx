@@ -2,6 +2,7 @@ import {
   PreviewList,
   PreviewReadyProvider,
   previewTitle,
+  localServersStore,
   previewsStore,
   type PreviewReadyConfig,
 } from "@axonpack/preview-ready";
@@ -36,12 +37,15 @@ const config: PreviewReadyConfig = {
     process.env.EXPO_PUBLIC_PREVIEW_READY_S3_READ_SECRET_ACCESS_KEY,
   region: process.env.EXPO_PUBLIC_PREVIEW_READY_S3_REGION,
   publicUrl: process.env.EXPO_PUBLIC_PREVIEW_READY_S3_PUBLIC_URL,
+  // Lists this app's Metro servers on your computer (debug builds only): `npx preview-ready start`.
+  localServers: { enabled: true },
 };
 
 export default function App() {
   // Links do what the list's buttons do, so a run can be scripted from a terminal:
   // previewreadyexample://download/<id>, .../switch/<id>, .../switch/embedded, .../refresh,
-  // .../delete/<id>, .../deleteincompatible
+  // .../delete/<id>, .../deleteincompatible,
+  // .../local/<port>, .../localstop
   // (`xcrun simctl openurl booted <link>` or `adb shell am start -d <link>`).
   useEffect(() => {
     const sub = Linking.addEventListener("url", ({ url }) => {
@@ -51,6 +55,13 @@ export default function App() {
       if (action === "refresh") previewsStore.refresh(config);
       if (action === "delete" && id) previewsStore.remove(id);
       if (action === "deleteincompatible") previewsStore.removeIncompatible();
+      if (action === "local") {
+        const server = localServersStore
+          .getState()
+          .servers.find((s) => String(s.port) === id);
+        if (server) localServersStore.switchTo(server);
+      }
+      if (action === "localstop") localServersStore.switchTo(null);
       if (action === "switch")
         previewsStore.switchTo(config, id === "embedded" ? null : id);
     });
