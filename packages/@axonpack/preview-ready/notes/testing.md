@@ -42,12 +42,14 @@ From `packages/@axonpack/preview-ready`, after `bun install` at the repo root.
 6. Publish a preview from `example/`. Each label gives it a look of its own:
    ```sh
    EXPO_PUBLIC_BUNDLE_LABEL=task-1-login-fix \
-     npx preview-ready publish --id task-1-login-fix --changelog="- Fixes the login"
+     bunx preview-ready publish --id task-1-login-fix --changelog="- Fixes the login"
    ```
    That publishes for Android and iOS. `EXPO_PUBLIC_BUNDLE_LABEL=crash-on-start` gives a
    preview that throws while it loads.
+   Use `bunx` in this repo: `npx` can't read bun's install, so it looks for a `preview-ready`
+   package on npm and fails with a 404. An app installed with npm uses `npx`.
 7. In the app: Refresh, Download, Switch, then Back to base. Publish the same id again with other
-   changes to see "Update available", or `npx preview-ready unpublish <id>` to see "Unpublished".
+   changes to see "Update available", or `bunx preview-ready unpublish <id>` to see "Unpublished".
 8. Stop everything:
    ```sh
    cd .. && bun run storage:local:stop
@@ -66,8 +68,8 @@ app needs `localServers: { enabled: true }` (the example has it).
 
 1. In each worktree, start Metro with:
    ```sh
-   npx preview-ready start            # picks a free port in 8081-8099 and announces it
-   npx preview-ready start -- --clear # anything after -- goes to expo start
+   bunx preview-ready start            # picks a free port in 8081-8099 and announces it
+   bunx preview-ready start -- --clear # anything after -- goes to expo start
    ```
    A plain `npx expo start --port 8085` is found as well, with less detail (no branch).
 2. Open the list in the app. "Local servers" shows each server for this app within about two
