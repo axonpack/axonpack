@@ -19,7 +19,9 @@ device and Metro is not asked; going back to the base reloads from Metro.
 With no preview chosen, the package changes nothing at startup: expo-updates, or the bundle inside
 the app, loads as usual.
 
-expo-updates is placed ahead of every other module on both platforms, so this package can never be
-asked first. On Android it still wins whenever expo-updates is running the embedded update. On iOS,
-when expo-updates is active, the base bundle starts and the app then reloads straight into the
-preview.
+expo-updates is placed ahead of every other module on both platforms, so this package is never
+asked first. On Android a chosen preview is also put straight into React's host, in the private
+field expo-dev-launcher uses, so it wins even after expo-updates has applied a downloaded update; if
+that field is missing, the base loads and a warning says why. On iOS, while expo-updates is active,
+the base bundle starts and the app reloads once straight into the preview. Going back to the base
+hands the start back to expo-updates.

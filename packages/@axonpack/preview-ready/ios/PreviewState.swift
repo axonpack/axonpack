@@ -22,6 +22,18 @@ enum PreviewState {
     previewReadyLog.warning("preview-ready needs the New Architecture, so the selected preview is ignored and the base bundle loads")
   }
 
+  /// The selected preview if this app can run it, else nil for the base bundle.
+  static func bundleToLoad() -> URL? {
+    guard let preview = selectedBundle() else {
+      return nil
+    }
+    guard newArchitecture else {
+      warnOldArchitecture()
+      return nil
+    }
+    return preview
+  }
+
   /// Records the choice for the next start or reload. Nil clears it, so the base bundle loads. The
   /// path is relative to the preview folder and must stay inside it.
   static func select(_ bundle: String?) throws {

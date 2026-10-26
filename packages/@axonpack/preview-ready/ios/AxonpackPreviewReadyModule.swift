@@ -5,6 +5,12 @@ public final class AxonpackPreviewReadyModule: Module {
   public func definition() -> ModuleDefinition {
     Name("AxonpackPreviewReady")
 
+    OnCreate {
+      DispatchQueue.main.async {
+        PreviewReadyReactDelegateHandler.startOnSelectedPreview()
+      }
+    }
+
     Function("select") { (bundle: String?) in
       try PreviewState.select(bundle)
     }
@@ -16,8 +22,7 @@ public final class AxonpackPreviewReadyModule: Module {
       }
       // The reload asks the bundle URL block again, and that block reads the current choice.
       DispatchQueue.main.async {
-        PreviewReadyReactDelegateHandler.letReloadAskAgain()
-        RCTTriggerReloadCommandListeners("preview-ready: switch bundle")
+        PreviewReadyReactDelegateHandler.reload()
       }
     }
   }

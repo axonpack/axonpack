@@ -6,6 +6,7 @@
     "@axonpack/preview-ready": "*",
     "expo": "~58.0.19",
     "expo-status-bar": "~58.0.4",
+    "expo-updates": "~58.0.18",
     "react": "19.3.0",
     "react-native": "0.88.0"
   },

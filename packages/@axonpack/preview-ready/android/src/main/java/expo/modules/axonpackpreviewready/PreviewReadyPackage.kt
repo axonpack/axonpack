@@ -24,12 +24,16 @@ class PreviewReadyPackage : Package {
   override fun createApplicationLifecycleListeners(context: Context): List<ApplicationLifecycleListener> =
     listOf(
       object : ApplicationLifecycleListener {
-        // Runs before any activity starts React, so a debug build's first start already skips Metro.
+        // Runs before any activity starts React, so the first start already gets the preview. Only
+        // touches the host when a preview is selected, so an app without one starts as it always did.
         override fun onCreate(application: Application) {
+          if (PreviewState.bundleToLoad(application) == null) return
           try {
-            PreviewState.pointDevSupport(application, (application as? ReactApplication)?.reactHost)
+            val host = (application as? ReactApplication)?.reactHost
+            PreviewState.pointDevSupport(application, host)
+            BundleLoaderOverride.apply(application, host)
           } catch (e: Exception) {
-            Log.w(TAG, "Could not point the debug build at the selected preview, Metro loads instead", e)
+            Log.w(TAG, "Could not point the start at the selected preview, the base bundle loads", e)
           }
         }
       }
