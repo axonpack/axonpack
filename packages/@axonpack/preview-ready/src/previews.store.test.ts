@@ -123,3 +123,16 @@ test("the list shows why a refresh failed when the bucket URL answers with a web
     /^Expected JSON from http:\/\/localhost:9000\/b\/index\/ios\/fp\.json but got text\/html \(status 200\)/,
   );
 });
+
+test("a failing native call shows its reason in the list instead of doing nothing", async () => {
+  saveDownload("a", "fp");
+  mockNative.select.mockImplementationOnce(() => {
+    throw new Error("Received 2 arguments, but 1 was expected");
+  });
+  await previewsStore.refresh(config);
+  await expect(previewsStore.switchTo(config, "a")).resolves.toBeUndefined();
+  expect(previewsStore.getState().error).toBe(
+    "Received 2 arguments, but 1 was expected",
+  );
+  expect(mockNative.reload).not.toHaveBeenCalled();
+});

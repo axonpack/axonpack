@@ -115,11 +115,17 @@ export const previewsStore = {
       if (!state.local.some((p) => p.id === id)) return;
     }
     const local = state.local.find((p) => p.id === id);
-    native.select(
-      id === null ? null : previewBundlePath(id),
-      local?.key ?? null,
-    );
-    native.reload();
+    // A native side older than this JS (an app not rebuilt since the package changed) throws here.
+    // The list shows the reason instead of the button silently doing nothing.
+    try {
+      native.select(
+        id === null ? null : previewBundlePath(id),
+        local?.key ?? null,
+      );
+      native.reload();
+    } catch (error) {
+      set({ error: message(error) });
+    }
   },
 
   /** Deletes a download. If it is the one running, the app goes back to the base bundle first. */
@@ -127,11 +133,15 @@ export const previewsStore = {
     const platform = currentPlatform();
     if (!platform) return;
     const native = nativeModule();
-    if (state.activeId === id && native) {
-      native.select(null, null);
-      native.reload();
+    try {
+      if (state.activeId === id && native) {
+        native.select(null, null);
+        native.reload();
+      }
+      deleteLocalPreview(id, platform);
+    } catch (error) {
+      set({ error: message(error) });
     }
-    deleteLocalPreview(id, platform);
     await readLocal();
   },
 
