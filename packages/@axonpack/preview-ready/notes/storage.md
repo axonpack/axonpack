@@ -41,6 +41,9 @@ never pick up AWS keys already exported in a shell.
 
 ## Set up local storage
 
+For the whole run, from starting the server to switching previews in the app, see
+[testing.md](./testing.md).
+
 A local S3 server, so you can try both bucket modes without a cloud account. It is MinIO, with one
 public-read bucket and one private bucket plus a read-only key. Every name, key and the port live in
 `local-s3/local-s3.env`, and both setups below read that file. The keys are local test values only.

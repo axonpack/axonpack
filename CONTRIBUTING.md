@@ -104,6 +104,16 @@ cd packages/@axonpack/react-pretty-print/example-web    && bun run test
 cd packages/@axonpack/react-pretty-print/example-native && bun run test
 ```
 
+`@axonpack/preview-ready`'s example needs a local S3 server to publish previews to. The whole run,
+from starting it to switching previews in the app, is in
+[its testing note](packages/@axonpack/preview-ready/notes/testing.md):
+
+```sh
+cd packages/@axonpack/preview-ready
+bun run storage:local   # MinIO in Docker or Podman
+cd example && npx expo run:ios
+```
+
 `bun run test` from the root runs every workspace's tests through turbo, which is what CI does on a
 pull request. `@axonpack/expo-devtools` runs jest in watch mode unless `CI` is set, so prefix the
 root command with `CI=1` locally or it waits for a keypress.
