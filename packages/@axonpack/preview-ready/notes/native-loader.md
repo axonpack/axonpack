@@ -25,3 +25,26 @@ field expo-dev-launcher uses, so it wins even after expo-updates has applied a d
 that field is missing, the base loads and a warning says why. On iOS, while expo-updates is active,
 the base bundle starts and the app reloads once straight into the preview. Going back to the base
 hands the start back to expo-updates.
+
+## Testing next to expo-updates
+
+The example leaves expo-updates out, so its default setup stays small. To try the two together:
+
+1. In `example/`, run `npx expo install expo-updates`.
+2. Add to `app.json` under `expo`, so expo-updates is on in release builds but never asks the
+   network and always starts its embedded update:
+   ```json
+   "runtimeVersion": "1.0.0",
+   "updates": {
+     "url": "https://localhost.invalid/preview-ready-example",
+     "checkAutomatically": "NEVER",
+     "fallbackToCacheTimeout": 0
+   }
+   ```
+3. `npx expo prebuild`, then a release build: `npx expo run:android --variant release` or
+   `npx expo run:ios --configuration Release`.
+4. With no preview chosen, the app shows the embedded bundle. Choose a preview: it loads, and again
+   after closing and reopening the app. Go back to the base: the embedded bundle loads.
+5. To check the case where expo-updates has applied a downloaded update, point `updates.url` at a
+   real update server (EAS Update, or your own), publish an update, let the app apply it, then
+   repeat step 4. Going back to the base should load that update.

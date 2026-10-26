@@ -24,12 +24,6 @@
     "plugins": [
       "expo-status-bar",
       "@axonpack/preview-ready"
-    ],
-    "runtimeVersion": "1.0.0",
-    "updates": {
-      "url": "https://localhost.invalid/preview-ready-example",
-      "checkAutomatically": "NEVER",
-      "fallbackToCacheTimeout": 0
-    }
+    ]
   }
 }
