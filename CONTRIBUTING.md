@@ -114,6 +114,10 @@ bun run storage:local   # MinIO in Docker or Podman
 cd example && npx expo run:ios
 ```
 
+To work on several tasks at once against one installed debug build, start each worktree's Metro
+with `npx preview-ready start`; the example's list switches between them
+([local servers](packages/@axonpack/preview-ready/notes/local-servers.md)).
+
 `bun run test` from the root runs every workspace's tests through turbo, which is what CI does on a
 pull request. `@axonpack/expo-devtools` runs jest in watch mode unless `CI` is set, so prefix the
 root command with `CI=1` locally or it waits for a keypress.

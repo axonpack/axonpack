@@ -11,6 +11,7 @@ only disagree with these.
 | [distribution.md](./distribution.md)   | Publishing a preview so installed apps can find it                |
 | [storage.md](./storage.md)             | Where previews are kept, and running a local S3 to test with      |
 | [testing.md](./testing.md)             | Running the example end to end on your own machine                |
+| [local-servers.md](./local-servers.md) | Several local Metro servers for one app, switched live (debug)    |
 
 To run the example end to end without a cloud account, follow [testing.md](./testing.md).
 

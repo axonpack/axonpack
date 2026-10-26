@@ -59,6 +59,25 @@ The example also takes links, which run the same code as its buttons:
 and `deleteincompatible`. Open them with `xcrun simctl openurl booted <link>` or
 `adb shell am start -d <link>`.
 
+## Several tasks at once (people and AI agents)
+
+One debug build of the example can run any of several Metro servers, one per task or worktree. The
+app needs `localServers: { enabled: true }` (the example has it).
+
+1. In each worktree, start Metro with:
+   ```sh
+   npx preview-ready start            # picks a free port in 8081-8099 and announces it
+   npx preview-ready start -- --clear # anything after -- goes to expo start
+   ```
+   A plain `npx expo start --port 8085` is found as well, with less detail (no branch).
+2. Open the list in the app. "Local servers" shows each server for this app within about two
+   seconds, with its branch, port and version. Switch runs that server; "Stop using local server"
+   goes back.
+3. Stop a server with Ctrl+C; it leaves the list on its own.
+
+On the Android emulator nothing else is needed. A phone on USB needs `adb reverse` for each port;
+`preview-ready start` does it when `adb` is on the PATH. See [local-servers.md](./local-servers.md).
+
 ## Troubleshooting
 
 - **"Expected JSON from … but got text/html"**: something other than the bucket answered. The URL is
