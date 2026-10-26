@@ -90,10 +90,13 @@
       "**/*.test.tsx"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!.*(react-native|expo))"
+      "node_modules/(?!.*(react-native|expo|@noble))"
     ],
     "moduleNameMapper": {
       "^@babel/runtime/(.*)$": "<rootDir>/node_modules/@babel/runtime/$1"
     }
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0"
   }
 }
