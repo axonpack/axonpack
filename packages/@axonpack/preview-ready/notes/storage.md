@@ -100,6 +100,12 @@ The address `localhost:9000` works as it is on the iOS simulator. On the Android
 this computer. On a phone, use the computer's LAN address instead (`http://<LAN IP>:9000/...`), in
 both the publish URL and the app's URL.
 
+A tunnel works too, for a phone on another network: forward port 9000 (a VS Code dev tunnel, for
+example) and put its HTTPS address in the app's URL, while publishing stays on `localhost:9000`. The
+tunnel must be public, or it answers every request with a redirect to a login page. Dev tunnels may
+also put a warning page in front of the first request; pass
+`headers: { "X-Tunnel-Skip-AntiPhishing-Page": "True" }` in the app's config to skip it.
+
 ### Plain HTTP on a device
 
 The local server has no TLS. A release build on Android refuses plain HTTP to any host unless the

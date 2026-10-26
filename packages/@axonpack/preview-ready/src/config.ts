@@ -21,6 +21,8 @@ export type PreviewReadyConfig = {
   region?: string;
   /** Where public reads go when that isn't `<endpoint>/<bucket>`, such as R2's r2.dev address. */
   publicUrl?: string;
+  /** Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket. */
+  headers?: Record<string, string>;
   /** This build's fingerprint, when the config plugin is not used. */
   fingerprint?: string;
 };
@@ -37,6 +39,7 @@ export function toS3Config(config: PreviewReadyConfig): S3Config {
           }
         : undefined,
     publicUrl: config.publicUrl,
+    headers: config.headers,
   };
 }
 

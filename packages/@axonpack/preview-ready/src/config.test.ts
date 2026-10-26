@@ -31,3 +31,21 @@ test("a read key makes the app sign its reads, and only both halves count", () =
       .credentials,
   ).toBeUndefined();
 });
+
+test("extra headers go with every read", async () => {
+  const seen: Record<string, string>[] = [];
+  global.fetch = jest.fn(async (_url, init) => {
+    seen.push((init as RequestInit).headers as Record<string, string>);
+    return new Response("{}");
+  }) as typeof fetch;
+  const { getJson } = require("./core/s3");
+  await getJson(
+    toS3Config({
+      enabled: true,
+      url: "http://h/b",
+      headers: { "X-Tunnel-Skip-AntiPhishing-Page": "True" },
+    }),
+    "index.json",
+  );
+  expect(seen[0]["X-Tunnel-Skip-AntiPhishing-Page"]).toBe("True");
+});

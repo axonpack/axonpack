@@ -9,6 +9,8 @@ export type S3Config = {
   region: string;
   /** Write key in the CLI, read-only key in the app. Without one, requests go unsigned. */
   credentials?: Credentials;
+  /** Sent with every request, such as a header a proxy or tunnel in front of the bucket wants. */
+  headers?: Record<string, string>;
   /** Where public reads of the bucket go when that isn't `<endpoint>/<bucket>`, such as R2's r2.dev address. */
   publicUrl?: string;
 };
@@ -89,7 +91,7 @@ export async function s3Fetch(
   const url = new URL(base);
   for (const [k, v] of Object.entries(request.query ?? {}))
     url.searchParams.set(k, v);
-  let headers = { ...request.headers };
+  let headers = { ...config.headers, ...request.headers };
   if (config.credentials) {
     headers = signRequest({
       method: request.method,
