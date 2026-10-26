@@ -10,11 +10,23 @@ Where previews are kept: in the bucket they are published to, and on the device 
 A half-finished download is never offered, because it only becomes a preview once every file has
 been checked.
 
-## Publishing settings
+## Settings
 
-`preview-ready publish` reads these from `.env` in the app's root, then from the environment. A
-variable set in the environment wins over the file, so CI can pass its secrets without one. `.env`
-is gitignored; `example/.env.example` has the local values.
+Publishing and the app never share a file, so the write key cannot end up inside an app.
+
+| File                 | Read by                                   | What goes there                                                                                  |
+| -------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `.env.preview-ready` | `preview-ready publish`, and nothing else | The bucket URL and the **write** key (`PREVIEW_READY_S3_*`). Gitignore it                        |
+| `.env`               | Expo, when it bundles the app             | The bucket URL and, for a private bucket, a **read-only** key (`EXPO_PUBLIC_PREVIEW_READY_S3_*`) |
+
+Expo loads `.env`, `.env.local` and `.env.<mode>` when it bundles and builds `EXPO_PUBLIC_*` values
+into the app. `.env.preview-ready` is none of those, so Expo never reads it. The CLI reads only that
+file and the environment, never `.env` or `EXPO_PUBLIC_*`. The example has
+`example/.env.preview-ready.example` and `example/.env.example` with the local values.
+
+### Publish settings
+
+A variable set in the environment wins over the file, so CI can pass its secrets without one.
 
 | Variable                             | Needed | What it is                                                                                                                                                                               |
 | ------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -26,11 +38,6 @@ is gitignored; `example/.env.example` has the local values.
 
 The names are the package's own, not `AWS_*`, so they work the same for any S3-compatible host and
 never pick up AWS keys already exported in a shell.
-
-None of them starts with `EXPO_PUBLIC_`, so Expo never puts them into a bundle.
-
-The app takes the same shape in its config: `url`, optionally `readAccessKeyId` and
-`readSecretAccessKey` (a read-only key, for a private bucket), `region` and `publicUrl`.
 
 ## Set up local storage
 
@@ -77,8 +84,7 @@ A file is at `<endpoint>/<bucket>/<path>`.
 
 ### The example app
 
-The example reads its bucket from `example/.env` (copy `example/.env.example`), next to the publish
-settings:
+The example reads its bucket from `example/.env` (copy `example/.env.example`):
 
 | Variable                                              | What it is                                                                    |
 | ----------------------------------------------------- | ----------------------------------------------------------------------------- |

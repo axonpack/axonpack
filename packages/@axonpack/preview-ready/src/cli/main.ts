@@ -22,9 +22,9 @@ const HELP = `preview-ready <command> [options]
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
 
-  --project <dir>    the app's root, where .env lives (default: the current folder)
+  --project <dir>    the app's root, where .env.preview-ready lives (default: the current folder)
 
-Where to publish comes from .env in the app's root or the environment:
+Where to publish comes from .env.preview-ready in the app's root, or the environment (CI):
   PREVIEW_READY_S3_URL                 <endpoint>/<bucket>[/<folder>], e.g. http://localhost:9000/previews-public
   PREVIEW_READY_S3_ACCESS_KEY_ID       the write key
   PREVIEW_READY_S3_SECRET_ACCESS_KEY

@@ -1,5 +1,6 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseEnv } from "node:util";
 
 import { DEFAULT_REGION, S3Config, parseBucketUrl } from "../core/s3";
 
@@ -12,15 +13,23 @@ export const ENV = {
 } as const;
 
 /**
- * Reads where to publish and the write key from `.env` in the app's root, then the environment. A
- * variable already set in the environment wins over the file, so CI can pass its secrets without one.
+ * The publish settings' own file. Not `.env`: Expo loads `.env`, `.env.local` and `.env.<mode>`
+ * into the bundler's environment, and the write key must never get near an app build.
+ */
+export const ENV_FILE = ".env.preview-ready";
+
+/**
+ * Reads where to publish and the write key from `.env.preview-ready` in the app's root, then the
+ * environment. A variable already set in the environment wins over the file, so CI can pass its
+ * secrets without one. Nothing else is read: not `.env`, not `EXPO_PUBLIC_*`.
  */
 export function readConfig(
   projectRoot: string,
   env: Record<string, string | undefined> = process.env,
 ): S3Config {
-  const file = join(projectRoot, ".env");
-  if (env === process.env && existsSync(file)) process.loadEnvFile(file);
+  const file = join(projectRoot, ENV_FILE);
+  const fromFile = existsSync(file) ? parseEnv(readFileSync(file, "utf8")) : {};
+  env = { ...fromFile, ...env };
   const missing = [ENV.url, ENV.accessKeyId, ENV.secretAccessKey].filter(
     (name) => !env[name],
   );
