@@ -56,3 +56,59 @@ test("a failed condition reports false so the caller can retry", async () => {
     "*",
   );
 });
+
+describe("bucket URLs with or without slashes", () => {
+  const base = {
+    endpoint: "https://acct.r2.dev:9000",
+    bucket: "b",
+    prefix: undefined,
+  };
+  test.each([
+    "https://acct.r2.dev:9000/b",
+    "https://acct.r2.dev:9000/b/",
+    "https://acct.r2.dev:9000//b//",
+    " HTTPS://acct.r2.dev:9000/b ",
+  ])("%s", (value) => {
+    expect(parseBucketUrl(value)).toEqual({
+      ...base,
+      endpoint: base.endpoint.replace("HTTPS", "https"),
+    });
+  });
+
+  test.each([
+    "http://h:9/b/app/v1",
+    "http://h:9/b/app/v1/",
+    "http://h:9/b//app//v1//",
+  ])("keeps the folder: %s", (value) => {
+    const config = { ...parseBucketUrl(value), region: "us-east-1" };
+    expect(config.prefix).toBe("app/v1");
+    expect(objectUrl(config, "index.json")).toBe(
+      "http://h:9/b/app/v1/index.json",
+    );
+  });
+
+  test("a public URL reads the same with or without a slash at the end", () => {
+    const urls = ["https://pub.r2.dev", "https://pub.r2.dev/"].map(
+      (publicUrl) =>
+        readUrl(
+          {
+            ...parseBucketUrl("http://h/b/app/"),
+            region: "us-east-1",
+            publicUrl,
+          },
+          "files/x",
+        ),
+    );
+    expect(urls).toEqual([
+      "https://pub.r2.dev/app/files/x",
+      "https://pub.r2.dev/app/files/x",
+    ]);
+  });
+
+  test("says what is wrong with a value that is not a bucket URL", () => {
+    expect(() => parseBucketUrl("localhost:9000/b")).toThrow("is not a URL");
+    expect(() => parseBucketUrl("http://localhost:9000/")).toThrow(
+      "has no bucket",
+    );
+  });
+});

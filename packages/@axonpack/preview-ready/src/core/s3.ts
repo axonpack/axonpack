@@ -27,12 +27,19 @@ const encodeKey = (key: string) =>
 export function parseBucketUrl(
   value: string,
 ): Pick<S3Config, "endpoint" | "bucket" | "prefix"> {
-  const url = new URL(value);
-  const [bucket, ...rest] = url.pathname.split("/").filter(Boolean);
+  // Plain string parsing rather than `URL`, so the CLI and the app read it the same way whatever
+  // URL implementation the JS engine has. Empty segments are dropped, so slashes at the end or
+  // doubled in the middle change nothing.
+  const match = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)/i.exec(
+    value.trim(),
+  );
+  if (!match) throw new Error(`${value} is not a URL: use <endpoint>/<bucket>`);
+  const [, scheme, host, path] = match;
+  const [bucket, ...rest] = path.split("/").filter(Boolean);
   if (!bucket)
     throw new Error(`${value} has no bucket: use <endpoint>/<bucket>`);
   return {
-    endpoint: url.origin,
+    endpoint: `${scheme.toLowerCase()}://${host}`,
     bucket,
     prefix: rest.length > 0 ? rest.join("/") : undefined,
   };
