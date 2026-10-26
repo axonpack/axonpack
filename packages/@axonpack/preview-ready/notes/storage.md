@@ -73,13 +73,26 @@ copies, pinned by digest.
 | Write key      | `preview-ready-admin` / `preview-ready-admin-secret` (MinIO's root user)              |
 | Read key       | `preview-ready-reader` / `preview-ready-reader-secret` (read `previews-private` only) |
 
-A file is at `<endpoint>/<bucket>/<path>`. The address a device uses for the endpoint:
+A file is at `<endpoint>/<bucket>/<path>`.
 
-| Device                  | Endpoint                               |
-| ----------------------- | -------------------------------------- |
-| Android emulator        | `http://10.0.2.2:9000`                 |
-| iOS simulator           | `http://localhost:9000`                |
-| Phone on the same Wi-Fi | `http://<your computer's LAN IP>:9000` |
+### The example app
+
+The example reads its bucket from `example/.env` (copy `example/.env.example`), next to the publish
+settings:
+
+| Variable                                              | What it is                                                                    |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_URL`                    | The same `<endpoint>/<bucket>` the previews are published to                  |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_READ_ACCESS_KEY_ID`     | Only for a private bucket: the read-only key (`preview-ready-reader` locally) |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_READ_SECRET_ACCESS_KEY` | Its secret (`preview-ready-reader-secret` locally)                            |
+
+Expo builds `EXPO_PUBLIC_*` values into the app, so only a read-only key may go there, never the
+write key. They are read when the app is bundled, so rebuild after changing them.
+
+The address `localhost:9000` works as it is on the iOS simulator. On the Android emulator, run
+`adb reverse tcp:9000 tcp:9000` once per emulator start, so the emulator's `localhost:9000` reaches
+this computer. On a phone, use the computer's LAN address instead (`http://<LAN IP>:9000/...`), in
+both the publish URL and the app's URL.
 
 ### Plain HTTP on a device
 

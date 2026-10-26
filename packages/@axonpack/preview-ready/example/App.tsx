@@ -7,7 +7,7 @@ import {
 } from "@axonpack/preview-ready";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Linking, Platform, StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 
 // Set at bundle time so each test preview looks different without editing this file:
 // EXPO_PUBLIC_BUNDLE_LABEL=task-1-login-fix npx preview-ready publish --id task-1-login-fix
@@ -25,11 +25,15 @@ const LOOKS: Record<string, { background: string; text: string }> = {
 };
 const look = LOOKS[label] ?? { background: "#7c3aed", text: "#ffffff" };
 
-// The local MinIO from `bun run storage:local` in the package. The Android emulator reaches this
-// computer at 10.0.2.2; on a phone, use the computer's LAN address instead.
+// From .env (see .env.example). Expo builds EXPO_PUBLIC_* values into the app, so only a read-only
+// key may go there, never the write key.
+const url = process.env.EXPO_PUBLIC_PREVIEW_READY_S3_URL ?? "";
 const config: PreviewReadyConfig = {
   enabled: true,
-  url: `http://${Platform.OS === "android" ? "10.0.2.2" : "localhost"}:9000/previews-public`,
+  url,
+  readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_READY_S3_READ_ACCESS_KEY_ID,
+  readSecretAccessKey:
+    process.env.EXPO_PUBLIC_PREVIEW_READY_S3_READ_SECRET_ACCESS_KEY,
 };
 
 export default function App() {
@@ -57,7 +61,14 @@ export default function App() {
           {previewTitle(label)}
         </Text>
       </View>
-      <PreviewList style={styles.list} />
+      {config.enabled ? (
+        <PreviewList style={styles.list} />
+      ) : (
+        <Text style={styles.missing}>
+          Set EXPO_PUBLIC_PREVIEW_READY_S3_URL in .env (copy .env.example), then
+          rebuild the app.
+        </Text>
+      )}
       <StatusBar style="auto" />
     </PreviewReadyProvider>
   );
@@ -67,4 +78,5 @@ const styles = StyleSheet.create({
   banner: { paddingTop: 60, paddingBottom: 16, paddingHorizontal: 16 },
   bannerText: { fontSize: 20, fontWeight: "700" },
   list: { flex: 1 },
+  missing: { padding: 16, fontSize: 15, color: "#b91c1c" },
 });

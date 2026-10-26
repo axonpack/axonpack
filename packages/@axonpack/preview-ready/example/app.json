@@ -21,8 +21,10 @@
       },
       "predictiveBackGestureEnabled": false
     },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "plugins": [
-      "expo-status-bar",
       "@axonpack/preview-ready",
       [
         "expo-build-properties",
