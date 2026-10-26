@@ -16,19 +16,21 @@ been checked.
 variable set in the environment wins over the file, so CI can pass its secrets without one. `.env`
 is gitignored; `example/.env.example` has the local values.
 
-| Variable                   | Needed | What it is                                                                                                                                                                               |
-| -------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PREVIEW_READY_URL`        | yes    | `<endpoint>/<bucket>`, plus a folder inside the bucket if there are more segments: `http://localhost:9000/previews-public`, `https://<account>.r2.cloudflarestorage.com/previews/my-app` |
-| `AWS_ACCESS_KEY_ID`        | yes    | Write key id, under the name every S3 tool reads. Never ship it in the app                                                                                                               |
-| `AWS_SECRET_ACCESS_KEY`    | yes    | Write key secret                                                                                                                                                                         |
-| `AWS_REGION`               | no     | Signing region. Default `us-east-1`, which MinIO and R2 accept                                                                                                                           |
-| `AWS_SESSION_TOKEN`        | no     | Only with temporary AWS credentials                                                                                                                                                      |
-| `PREVIEW_READY_PUBLIC_URL` | no     | Where public reads of the bucket go when that is not `<endpoint>/<bucket>`, such as R2's `https://pub-<id>.r2.dev`. The CLI only prints it; the app takes the same value as `publicUrl`  |
+| Variable                             | Needed | What it is                                                                                                                                                                               |
+| ------------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PREVIEW_READY_S3_URL`               | yes    | `<endpoint>/<bucket>`, plus a folder inside the bucket if there are more segments: `http://localhost:9000/previews-public`, `https://<account>.r2.cloudflarestorage.com/previews/my-app` |
+| `PREVIEW_READY_S3_ACCESS_KEY_ID`     | yes    | Write key id. Never ship it in the app                                                                                                                                                   |
+| `PREVIEW_READY_S3_SECRET_ACCESS_KEY` | yes    | Write key secret                                                                                                                                                                         |
+| `PREVIEW_READY_S3_REGION`            | no     | Signing region. Default `us-east-1`, which MinIO and R2 accept                                                                                                                           |
+| `PREVIEW_READY_S3_PUBLIC_URL`        | no     | Where public reads of the bucket go when that is not `<endpoint>/<bucket>`, such as R2's `https://pub-<id>.r2.dev`. The CLI only prints it; the app takes the same value as `publicUrl`  |
+
+The names are the package's own, not `AWS_*`, so they work the same for any S3-compatible host and
+never pick up AWS keys already exported in a shell.
 
 None of them starts with `EXPO_PUBLIC_`, so Expo never puts them into a bundle.
 
-The app takes the same shape in its config: `url`, optionally `readKey` and `readSecret` (a
-read-only key, for a private bucket) and `publicUrl`.
+The app takes the same shape in its config: `url`, optionally `readAccessKeyId` and
+`readSecretAccessKey` (a read-only key, for a private bucket), `region` and `publicUrl`.
 
 ## Set up local storage
 

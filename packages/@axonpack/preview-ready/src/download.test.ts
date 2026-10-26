@@ -135,8 +135,8 @@ test("signs requests for a private bucket with the read key", async () => {
   const requests = serve({ "index/ios/fp.json": { previews: [entry] } });
   const index = await fetchPreviews({
     ...config,
-    readKey: "reader",
-    readSecret: "secret",
+    readAccessKeyId: "reader",
+    readSecretAccessKey: "secret",
   });
   expect(index.previews).toHaveLength(1);
   expect(requests[0].url).toBe(

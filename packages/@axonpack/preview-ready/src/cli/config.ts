@@ -4,13 +4,11 @@ import { join } from "node:path";
 import { DEFAULT_REGION, S3Config, parseBucketUrl } from "../core/s3";
 
 export const ENV = {
-  url: "PREVIEW_READY_URL",
-  publicUrl: "PREVIEW_READY_PUBLIC_URL",
-  // The names every S3 tool already reads.
-  accessKeyId: "AWS_ACCESS_KEY_ID",
-  secretAccessKey: "AWS_SECRET_ACCESS_KEY",
-  sessionToken: "AWS_SESSION_TOKEN",
-  region: "AWS_REGION",
+  url: "PREVIEW_READY_S3_URL",
+  accessKeyId: "PREVIEW_READY_S3_ACCESS_KEY_ID",
+  secretAccessKey: "PREVIEW_READY_S3_SECRET_ACCESS_KEY",
+  region: "PREVIEW_READY_S3_REGION",
+  publicUrl: "PREVIEW_READY_S3_PUBLIC_URL",
 } as const;
 
 /**
@@ -37,7 +35,6 @@ export function readConfig(
     credentials: {
       accessKeyId: env[ENV.accessKeyId]!,
       secretAccessKey: env[ENV.secretAccessKey]!,
-      sessionToken: env[ENV.sessionToken] || undefined,
     },
     publicUrl: env[ENV.publicUrl] || undefined,
   };

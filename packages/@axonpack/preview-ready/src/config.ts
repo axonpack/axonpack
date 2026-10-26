@@ -12,11 +12,11 @@ import { DEFAULT_REGION, S3Config, parseBucketUrl } from "./core/s3";
 export type PreviewReadyConfig = {
   /** Previews are on only when this is true. The app decides per build; nothing is detected. */
   enabled: boolean;
-  /** `<endpoint>/<bucket>[/<folder>]`, the same value as `PREVIEW_READY_URL` when publishing. */
+  /** `<endpoint>/<bucket>[/<folder>]`, the same value as `PREVIEW_READY_S3_URL` when publishing. */
   url: string;
-  /** Read-only key id, for a private bucket. Leave out for a public one. */
-  readKey?: string;
-  readSecret?: string;
+  /** Read-only key, for a private bucket. Leave out for a public one. Never the write key. */
+  readAccessKeyId?: string;
+  readSecretAccessKey?: string;
   /** Signing region. Default us-east-1, which MinIO and R2 accept. */
   region?: string;
   /** Where public reads go when that isn't `<endpoint>/<bucket>`, such as R2's r2.dev address. */
@@ -30,8 +30,11 @@ export function toS3Config(config: PreviewReadyConfig): S3Config {
     ...parseBucketUrl(config.url),
     region: config.region ?? DEFAULT_REGION,
     credentials:
-      config.readKey && config.readSecret
-        ? { accessKeyId: config.readKey, secretAccessKey: config.readSecret }
+      config.readAccessKeyId && config.readSecretAccessKey
+        ? {
+            accessKeyId: config.readAccessKeyId,
+            secretAccessKey: config.readSecretAccessKey,
+          }
         : undefined,
     publicUrl: config.publicUrl,
   };

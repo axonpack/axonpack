@@ -21,7 +21,7 @@ test("one URL gives the endpoint and bucket, and us-east-1 is the default region
   });
 });
 
-test("extra path segments become a folder inside the bucket, and AWS_REGION is honoured", () => {
+test("extra path segments become a folder inside the bucket, and the region setting is honoured", () => {
   const config = readConfig("/nowhere", {
     ...full,
     [ENV.url]: "https://acct.r2.cloudflarestorage.com/previews/my-app/",
@@ -36,6 +36,6 @@ test("extra path segments become a folder inside the bucket, and AWS_REGION is h
 
 test("names every missing variable", () => {
   expect(() => readConfig("/nowhere", { [ENV.url]: "http://x/b" })).toThrow(
-    "AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY",
+    "PREVIEW_READY_S3_ACCESS_KEY_ID, PREVIEW_READY_S3_SECRET_ACCESS_KEY",
   );
 });
