@@ -23,7 +23,15 @@
     },
     "plugins": [
       "expo-status-bar",
-      "@axonpack/preview-ready"
+      "@axonpack/preview-ready",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

@@ -83,8 +83,8 @@ A file is at `<endpoint>/<bucket>/<path>`. The address a device uses for the end
 
 The local server has no TLS. A release build on Android refuses plain HTTP to any host unless the
 app allows cleartext traffic, so downloads fail with a cleartext error, while a debug build works.
-The example app will turn cleartext on in its own config when downloads land, never in the
-package's defaults. A real app should use HTTPS. iOS does not apply App Transport Security to IP
+The example app turns cleartext on in its own config (`expo-build-properties`,
+`android.usesCleartextTraffic`), never in the package's defaults. A real app should use HTTPS. iOS does not apply App Transport Security to IP
 addresses or `localhost`, so the simulator and a phone using the LAN IP should work as they are
 (to be checked on a device in the download phase).
 
