@@ -38,13 +38,17 @@ const config: PreviewReadyConfig = {
 
 export default function App() {
   // Links do what the list's buttons do, so a run can be scripted from a terminal:
-  // previewreadyexample://download/<id>, .../switch/<id>, .../switch/embedded
+  // previewreadyexample://download/<id>, .../switch/<id>, .../switch/embedded, .../refresh,
+  // .../delete/<id>, .../deleteincompatible
   // (`xcrun simctl openurl booted <link>` or `adb shell am start -d <link>`).
   useEffect(() => {
     const sub = Linking.addEventListener("url", ({ url }) => {
       const [, action, id] =
         url.split("://")[1]?.match(/^([a-z]+)\/?(.*)$/) ?? [];
       if (action === "download" && id) previewsStore.download(config, id);
+      if (action === "refresh") previewsStore.refresh(config);
+      if (action === "delete" && id) previewsStore.remove(id);
+      if (action === "deleteincompatible") previewsStore.removeIncompatible();
       if (action === "switch")
         previewsStore.switchTo(config, id === "embedded" ? null : id);
     });
