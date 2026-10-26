@@ -129,6 +129,23 @@ internal object PreviewState {
     return true
   }
 
+  /**
+   * The running start threw before JS confirmed it. True when that start was a preview: it is then
+   * marked broken and taken off the selection, so the next start is the base bundle.
+   */
+  fun failStart(context: Context): Boolean {
+    val json = readJson(context)
+    val bundle = json.optString("bundle")
+    if (bundle.isEmpty() || json.optString("pending") != token()) return false
+    val id = bundle.substringBefore("/")
+    Log.w(TAG, "The preview \"$id\" failed while starting, so it is marked broken and the base bundle loads")
+    json.put("broken", JSONArray(brokenIds(json) + id))
+    json.remove("bundle")
+    json.remove("pending")
+    writeJson(context, json)
+    return true
+  }
+
   /** JS calls this once the app has mounted: this start worked. */
   fun confirmStart(context: Context) {
     val json = readJson(context)
