@@ -9,7 +9,10 @@ only disagree with these.
 | [bundles.md](./bundles.md)             | Building a preview bundle, and which native build it can run on   |
 | [native-loader.md](./native-loader.md) | Starting the app from a downloaded bundle, and getting back again |
 | [distribution.md](./distribution.md)   | Publishing a preview so installed apps can find it                |
-| [storage.md](./storage.md)             | Downloads on the device: keeping, replacing and deleting them     |
+| [storage.md](./storage.md)             | Where previews are kept, and running a local S3 to test with      |
+
+To test locally without a cloud account, run `bun run storage:local` in this package. The steps
+are in [storage.md](./storage.md#set-up-local-storage).
 
 ## How to edit an area note
 

@@ -54,7 +54,10 @@
     "lint": "oxlint src",
     "format": "oxlint src --fix",
     "test": "jest",
-    "check-types": "tsc --noEmit -p tsconfig.check.json"
+    "check-types": "tsc --noEmit -p tsconfig.check.json",
+    "storage:local": "./local-s3/run.sh start",
+    "storage:local:stop": "./local-s3/run.sh stop",
+    "storage:local:reset": "./local-s3/run.sh reset"
   },
   "devDependencies": {
     "@babel/runtime": "^7.28.4",

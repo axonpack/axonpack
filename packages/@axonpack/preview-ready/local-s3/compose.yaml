@@ -1,0 +1,32 @@
+# Local S3 for trying previews without a cloud account. Start it with `bun run storage:local`.
+# MinIO stopped publishing its own images in 2025, so these are Bitnami's frozen copies, pinned by
+# digest so every machine gets the same build.
+name: preview-ready-local-s3
+
+services:
+  minio:
+    image: docker.io/bitnamilegacy/minio:2025.5.24@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
+    env_file: local-s3.env
+    # Runs as you, so the data folder stays yours and `reset` can delete it without sudo on Linux.
+    user: "${LOCAL_S3_UID:-1001}:0"
+    ports:
+      - "${LOCAL_S3_PORT:-9000}:9000"
+    volumes:
+      - ./data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:9000/minio/health/live"]
+      interval: 2s
+      retries: 30
+
+  init:
+    image: docker.io/bitnamilegacy/minio-client:2025.5.21@sha256:00dcc4e58ada0df45bb7d9ee435af98295f96c27c3c68292ce78ec700a87b511
+    env_file: local-s3.env
+    environment:
+      LOCAL_S3_URL: http://minio:9000
+    entrypoint: ["sh", "/init.sh"]
+    volumes:
+      - ./init.sh:/init.sh:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+    profiles: [init]

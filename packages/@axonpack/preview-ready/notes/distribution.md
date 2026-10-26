@@ -7,5 +7,6 @@ Publishing a preview so installed apps can find it.
 - [ ] Removes a preview, and cleans up files nothing uses any more
 - [ ] Serves previews from a folder on the laptop while developing
 
-Where previews are stored is still open. The app only needs an HTTPS address and, if the storage
-wants one, a header to send. It gets both from the config the app passes in.
+Previews go to an S3 or R2 bucket, or to GitHub Releases. Both hold the same files in the same
+layout; only the upload and download code differs. The app gets the address and any key or token
+from the config it passes in.
