@@ -11,6 +11,8 @@ A changeset is a pending release note + semver bump, folded into each package's 
 
 ## 1. Look before writing
 
+- **Run this skill before writing or rewording any changeset line**, even for a one-line tweak.
+- **Check `.changeset/` for a pending entry on the same feature first.** If one exists, edit it; never add a second file.
 - Read `.changeset/config.json`: `ignore`, `fixed`/`linked` groups, `updateInternalDependencies`, and whether the `changelog` generator is custom.
 - Skim 3–5 recent `.changeset/*.md` files (not `README.md`) — the freshest signal of house style.
 - Skim the top of each target package's `CHANGELOG.md` for how entries read once merged.
@@ -93,7 +95,23 @@ Never decide this silently, even when it seems obvious.
 
 **Always produce a changeset file — never hand-edit a `CHANGELOG.md` directly**, even to backfill a missed entry.
 
-## 9. Final check
+## 9. Plain-language pass (required before the final check)
+
+Rewrite every bullet as one plain sentence a care worker would say to a colleague. Read each line out loud; if it sounds like a feature label or a spec, rewrite it.
+
+- Speak to the reader: "your request now…", "you can…", "if HR offers you…". Not "a request keeps…".
+- Everyday words: "when the clocks change", not "in summer and winter time"; "answer", not "reply to".
+- One clause per line. No comma or semicolon splicing a second idea.
+- No stiff noun-phrase leads like "Leave rules —" unless the sentence after it is plain.
+
+| ✗                                                                     | ✓                                                                        |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| a request keeps the exact days you picked, in summer and winter time. | your request now keeps the days you picked, even when the clocks change. |
+| reply to the weeks HR offers you from the Leave tab.                  | if HR offers you different weeks, you can answer them in the Leave tab.  |
+| days the rules don't allow are greyed out                             | days you can't pick are greyed out                                       |
+| a request that breaks a rule shows why under the dates                | if a request breaks a rule, the dates show why                           |
+
+## 10. Final check
 
 Read the batch as the client will see it — all pending files together, as one release.
 
