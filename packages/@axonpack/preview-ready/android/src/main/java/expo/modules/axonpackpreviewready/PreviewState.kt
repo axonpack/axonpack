@@ -2,14 +2,16 @@ package expo.modules.axonpackpreviewready
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.preference.PreferenceManager
 import android.util.Log
 import com.facebook.react.ReactHost
 import com.facebook.react.common.build.ReactBuildConfig
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
-import org.json.JSONArray
-import org.json.JSONObject
+import com.facebook.react.packagerconnection.PackagerConnectionSettings
 import java.io.File
 import java.util.UUID
+import org.json.JSONArray
+import org.json.JSONObject
 
 internal const val TAG = "AxonpackPreviewReady"
 
@@ -77,7 +79,58 @@ internal object PreviewState {
    */
   fun pointDevSupport(context: Context, host: ReactHost?) {
     if (!ReactBuildConfig.DEBUG || host == null) return
-    host.devSupportManager?.bundleFilePath = bundleToLoad(context)?.absolutePath
+    val devSupport = host.devSupportManager ?: return
+    val settings = devSupport.devSettings?.packagerConnectionSettings
+    val local = localServerHostPort(context)
+    if (local != null && settings != null) {
+      // A local Metro server wins over a downloaded preview and the default Metro (debug only).
+      saveDebugHost(context)
+      settings.debugServerHost = local
+      devSupport.bundleFilePath = null
+      return
+    }
+    if (settings != null) restoreDebugHost(context, settings)
+    devSupport.bundleFilePath = bundleToLoad(context)?.absolutePath
+  }
+
+  // Local Metro servers (debug builds only). `localServer` sits next to the preview fields and
+  // never changes them, so stopping a local server brings back whatever preview was chosen.
+
+  /** The chosen local server as `host:port`, or null; always null in a release build. */
+  fun localServerHostPort(context: Context): String? {
+    if (!ReactBuildConfig.DEBUG) return null
+    return readJson(context).optJSONObject("localServer")?.optString("hostPort")?.ifEmpty { null }
+  }
+
+  fun selectLocalServer(context: Context, url: String?, hostPort: String?) {
+    val json = readJson(context)
+    if (url == null || hostPort == null) {
+      json.remove("localServer")
+    } else {
+      json.put("localServer", JSONObject().put("url", url).put("hostPort", hostPort))
+    }
+    writeJson(context, json)
+  }
+
+  // The dev menu's "Change bundle location" lives in the same preference, so the developer's own
+  // value is kept aside while a local server is in use, and put back when it stops.
+  private const val DEBUG_HOST_PREF = "debug_http_host"
+
+  private fun saveDebugHost(context: Context) {
+    val json = readJson(context)
+    if (json.has("savedDebugHost")) return
+    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+    json.put("savedDebugHost", prefs.getString(DEBUG_HOST_PREF, null) ?: "")
+    writeJson(context, json)
+  }
+
+  private fun restoreDebugHost(context: Context, settings: PackagerConnectionSettings) {
+    val json = readJson(context)
+    if (!json.has("savedDebugHost")) return
+    val saved = json.optString("savedDebugHost")
+    if (saved.isEmpty()) settings.resetDebugServerHost() else settings.debugServerHost = saved
+    json.remove("savedDebugHost")
+    writeJson(context, json)
   }
 
   // Crash fallback. Every JS start has its own token. A preview start writes it into the state as
@@ -212,7 +265,11 @@ internal object PreviewState {
   /** The raw choice and the broken list, for JS to show. */
   fun read(context: Context): Map<String, Any?> {
     val json = readJson(context)
-    return mapOf("bundle" to json.optString("bundle").ifEmpty { null }, "broken" to brokenIds(json))
+    return mapOf(
+      "bundle" to json.optString("bundle").ifEmpty { null },
+      "broken" to brokenIds(json),
+      "localServer" to json.optJSONObject("localServer")?.optString("url")?.ifEmpty { null },
+    )
   }
 
   /** Null means "load the base bundle", which is also the answer to anything unexpected. */

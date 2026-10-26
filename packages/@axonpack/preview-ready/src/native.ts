@@ -1,11 +1,17 @@
 import { requireOptionalNativeModule } from "expo";
 
-export type NativeState = { bundle?: string | null; broken?: string[] };
+export type NativeState = {
+  bundle?: string | null;
+  broken?: string[];
+  /** The chosen local Metro server's bundle URL (debug builds only). */
+  localServer?: string | null;
+};
 
 type NativeModule = {
   select(bundle: string | null, key: string | null): void;
   reload(): void;
   markLaunched(): void;
+  selectLocalServer(url: string | null, hostPort: string | null): void;
   state(): NativeState;
 };
 

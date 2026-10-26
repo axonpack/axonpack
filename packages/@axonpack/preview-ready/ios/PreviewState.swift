@@ -174,10 +174,42 @@ enum PreviewState {
     writeJson(json)
   }
 
+  // Local Metro servers (debug builds only). `localServer` sits next to the preview fields and
+  // never changes them, so stopping a local server brings back whatever preview was chosen.
+
+  /// The chosen local server's bundle URL, or nil; always nil in a release build.
+  static var localServerURL: URL? {
+    #if DEBUG
+    guard
+      let server = readJson()["localServer"] as? [String: Any],
+      let url = server["url"] as? String
+    else {
+      return nil
+    }
+    return URL(string: url)
+    #else
+    return nil
+    #endif
+  }
+
+  static func selectLocalServer(_ url: String?) {
+    var json = readJson()
+    if let url {
+      json["localServer"] = ["url": url]
+    } else {
+      json["localServer"] = nil
+    }
+    writeJson(json)
+  }
+
   /// The raw choice and the broken list, for JS to show.
   static func read() -> [String: Any?] {
     let json = readJson()
-    return ["bundle": json["bundle"] as? String, "broken": json["broken"] as? [String] ?? []]
+    return [
+      "bundle": json["bundle"] as? String,
+      "broken": json["broken"] as? [String] ?? [],
+      "localServer": (json["localServer"] as? [String: Any])?["url"] as? String,
+    ]
   }
 
   /// Nil means "load the base bundle", which is also the answer to anything unexpected.

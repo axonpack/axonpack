@@ -18,8 +18,11 @@ class PreviewReadyPackage : Package {
       object : ReactNativeHostHandler {
         // Asked each time the React instance is created, so a reload picks up a new choice. Null
         // leaves the start to expo-updates or the embedded bundle, exactly as without this package.
-        override fun getJSBundleFile(useDeveloperSupport: Boolean): String? =
-          PreviewState.bundleToLoad(appContext)?.absolutePath
+        override fun getJSBundleFile(useDeveloperSupport: Boolean): String? {
+          // A local Metro server is loaded by dev support, not from a file.
+          if (PreviewState.localServerHostPort(appContext) != null) return null
+          return PreviewState.bundleToLoad(appContext)?.absolutePath
+        }
 
         // Expo hands JS errors to the host handlers and only throws itself when there are none, so
         // this handler decides. A preview that failed while starting goes back to the base bundle
@@ -54,7 +57,12 @@ class PreviewReadyPackage : Package {
         // Runs before any activity starts React, so the first start already gets the preview. Only
         // touches the host when a preview is selected, so an app without one starts as it always did.
         override fun onCreate(application: Application) {
-          if (PreviewState.bundleToLoad(application) == null) return
+          if (
+            PreviewState.localServerHostPort(application) == null &&
+            PreviewState.bundleToLoad(application) == null
+          ) {
+            return
+          }
           try {
             val host = (application as? ReactApplication)?.reactHost
             PreviewState.pointDevSupport(application, host)

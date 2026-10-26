@@ -21,6 +21,11 @@ class AxonpackPreviewReadyModule : Module() {
       PreviewState.select(context, bundle, key)
     }
 
+    Function("selectLocalServer") { url: String?, hostPort: String? ->
+      val context = appContext.reactContext ?: return@Function
+      PreviewState.selectLocalServer(context, url, hostPort)
+    }
+
     Function("state") {
       appContext.reactContext?.let { PreviewState.read(it) } ?: emptyMap<String, Any?>()
     }

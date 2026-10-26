@@ -52,7 +52,8 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
     Self.rootViewFactory = rootViewFactory
     let base = unsafeBitCast(current as AnyObject, to: BundleURLBlock.self)
     let block: BundleURLBlock = {
-      let url = PreviewState.bundleToLoad() ?? base()
+      // A local Metro server wins over a downloaded preview and the default (debug builds only).
+      let url = PreviewState.localServerURL ?? PreviewState.bundleToLoad() ?? base()
       Self.lastServed = url
       return url
     }
@@ -68,7 +69,12 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
   static func startOnSelectedPreview() {
     // The plain lookup, not `bundleToLoad`: that would count this start as a preview start and the
     // reload below as a second one.
-    guard !hopped, let preview = PreviewState.selectedBundle(), PreviewState.newArchitecture else {
+    guard
+      !hopped,
+      PreviewState.localServerURL == nil,
+      let preview = PreviewState.selectedBundle(),
+      PreviewState.newArchitecture
+    else {
       return
     }
     if installed, lastServed?.standardizedFileURL == preview.standardizedFileURL {
@@ -92,7 +98,9 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
       let ivar = class_getInstanceVariable(type(of: host), "_bundleManager"),
       let manager = object_getIvar(host, ivar) as? NSObject,
       manager.responds(to: NSSelectorFromString("setBundleConfig:")),
-      let configuration = bundleConfiguration(for: PreviewState.bundleToLoad())
+      let configuration = bundleConfiguration(
+        for: PreviewState.localServerURL == nil ? PreviewState.bundleToLoad() : nil
+      )
     else {
       previewReadyLog.warning("Could not reach React's bundle manager, so the reload keeps the current bundle")
       RCTTriggerReloadCommandListeners("preview-ready: switch bundle")

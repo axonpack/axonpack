@@ -22,6 +22,11 @@ public final class AxonpackPreviewReadyModule: Module {
       try PreviewState.select(bundle, key: key)
     }
 
+    // `hostPort` is what Android needs; iOS loads the bundle URL itself.
+    Function("selectLocalServer") { (url: String?, _: String?) in
+      PreviewState.selectLocalServer(url)
+    }
+
     Function("state") {
       PreviewState.read()
     }
