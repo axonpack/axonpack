@@ -26,7 +26,8 @@ export function PreviewReadyProvider(props: {
     markLaunched();
   }, []);
   useEffect(() => {
-    if (props.config.enabled) previewsStore.refresh(props.config).catch(() => undefined);
+    if (props.config.enabled)
+      previewsStore.refresh(props.config).catch(() => undefined);
   }, [props.config]);
   return h(ConfigContext.Provider, { value: props.config }, props.children);
 }
