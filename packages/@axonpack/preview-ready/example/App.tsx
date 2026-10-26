@@ -1,6 +1,7 @@
 import { previewTitle, reload } from "@axonpack/preview-ready";
 import { StatusBar } from "expo-status-bar";
-import { Button, Image, StyleSheet, Text, View } from "react-native";
+import { useEffect } from "react";
+import { Button, Image, Linking, StyleSheet, Text, View } from "react-native";
 
 // Set at bundle time, so a test preview can be told apart from the embedded bundle without
 // editing this file: EXPO_PUBLIC_BUNDLE_LABEL=preview-bundle npx expo export:embed ...
@@ -8,6 +9,15 @@ const label = process.env.EXPO_PUBLIC_BUNDLE_LABEL ?? "embedded-bundle";
 
 // TODO(@axonpack/preview-ready): the preview list goes here once the package has one.
 export default function App() {
+  // previewreadyexample://reload does what the button does, so a switch can be scripted from a
+  // terminal: `xcrun simctl openurl booted previewreadyexample://reload` or `adb shell am start -d`.
+  useEffect(() => {
+    const sub = Linking.addEventListener("url", ({ url }) => {
+      if (url.endsWith("://reload")) reload();
+    });
+    return () => sub.remove();
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text testID="bundle-label">{previewTitle(label)}</Text>

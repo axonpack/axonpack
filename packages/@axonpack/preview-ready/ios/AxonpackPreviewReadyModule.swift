@@ -10,11 +10,8 @@ public final class AxonpackPreviewReadyModule: Module {
         PreviewState.warnOldArchitecture()
         return
       }
-      // The base is the bundle inside the app. Going back to Metro or to an expo-updates update
-      // comes with the debug-build and expo-updates items.
-      let url = PreviewState.selectedBundle() ?? Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+      // The reload asks the bundle URL block again, and that block reads the current choice.
       DispatchQueue.main.async {
-        RCTReloadCommandSetBundleURL(url)
         RCTTriggerReloadCommandListeners("preview-ready: switch bundle")
       }
     }
