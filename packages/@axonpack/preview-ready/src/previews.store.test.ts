@@ -10,7 +10,8 @@ const mockNative = {
     mockNative.bundle = bundle;
   }),
   reload: jest.fn(),
-  state: () => ({ bundle: mockNative.bundle }),
+  markLaunched: jest.fn(),
+  state: () => ({ bundle: mockNative.bundle, broken: [] as string[] }),
 };
 jest.mock("expo", () => ({ requireOptionalNativeModule: () => mockNative }));
 
@@ -65,4 +66,47 @@ test("delete all removes only downloads for another build", async () => {
   await previewsStore.removeIncompatible();
   expect(previewsStore.getState().local.map((p) => p.id)).toEqual(["mine"]);
   expect(mockNative.reload).not.toHaveBeenCalled();
+});
+
+test("switching to a preview that is not on the device downloads it first", async () => {
+  const bundle = new TextEncoder().encode("b");
+  const { sha256Hex } = require("./core/sigv4");
+  const sha = sha256Hex(bundle);
+  const entry = {
+    id: "t",
+    title: "T",
+    branch: "t",
+    commit: "c",
+    author: "a",
+    publishedAt: "p",
+    appVersion: "1",
+    buildNumber: "1",
+    revision: "r",
+    size: 1,
+    changelog: "",
+    manifest: "previews/ios/fp/t.json",
+  };
+  const objects: Record<string, unknown> = {
+    "index/ios/fp.json": { previews: [entry] },
+    "previews/ios/fp/t.json": {
+      fingerprint: "fp",
+      bundle: "main.jsbundle",
+      files: [{ path: "main.jsbundle", sha256: sha, size: 1 }],
+    },
+    [`files/${sha}`]: bundle,
+  };
+  global.fetch = jest.fn(async (url: string | URL) => {
+    const body = objects[String(url).replace("http://localhost:9000/b/", "")];
+    if (body === undefined) return new Response("", { status: 404 });
+    return new Response(
+      (body instanceof Uint8Array ? body : JSON.stringify(body)) as BodyInit,
+    );
+  }) as typeof fetch;
+  await previewsStore.refresh({ ...config, fingerprint: "fp" });
+  await previewsStore.switchTo({ ...config, fingerprint: "fp" }, "t");
+  expect(disk.get("file:/docs/preview-ready/t/ios/main.jsbundle")).toEqual(
+    bundle,
+  );
+  expect(mockNative.select).toHaveBeenCalledWith("t/ios/main.jsbundle");
+  expect(mockNative.reload).toHaveBeenCalled();
 });

@@ -9,6 +9,7 @@ import type { IndexEntry } from "./core/layout";
 import { downloadPreview } from "./download";
 import { LocalPreview, deleteLocalPreview, listLocalPreviews } from "./local";
 import { nativeModule, selectedPreviewId } from "./native";
+import { previewBundlePath } from "./select";
 import { fetchPreviews } from "./remote";
 
 export type PreviewsState = {
@@ -23,6 +24,8 @@ export type PreviewsState = {
   downloading: Record<string, number>;
   /** The preview the next start loads, or null for the base bundle. */
   activeId: string | null;
+  /** Previews that stopped before they finished starting, so the base bundle loaded instead. */
+  broken: string[];
 };
 
 let state: PreviewsState = {
@@ -33,6 +36,7 @@ let state: PreviewsState = {
   local: [],
   downloading: {},
   activeId: null,
+  broken: [],
 };
 const listeners = new Set<() => void>();
 
@@ -43,10 +47,11 @@ const set = (patch: Partial<PreviewsState>) => {
 
 const readLocal = async () => {
   const platform = currentPlatform();
-  const native = nativeModule();
+  const nativeState = nativeModule()?.state() ?? {};
   set({
     local: platform ? await listLocalPreviews(platform) : [],
-    activeId: native ? selectedPreviewId(native.state()) : null,
+    activeId: selectedPreviewId(nativeState),
+    broken: nativeState.broken ?? [],
   });
 };
 
@@ -96,6 +101,27 @@ export const previewsStore = {
       set({ downloading: rest });
       await readLocal();
     }
+  },
+
+  /**
+   * Restarts into a preview, downloading it first when it is not on the device, or into the base
+   * bundle with null. A preview with an update keeps its downloaded copy until QA updates it.
+   */
+  async switchTo(config: PreviewReadyConfig, id: string | null) {
+    const native = nativeModule();
+    const platform = currentPlatform();
+    if (!native || !platform) return;
+    if (
+      id !== null &&
+      !state.local.some(
+        (p) => p.id === id && p.fingerprint === state.fingerprint,
+      )
+    ) {
+      await previewsStore.download(config, id);
+      if (!state.local.some((p) => p.id === id)) return;
+    }
+    native.select(id === null ? null : previewBundlePath(id));
+    native.reload();
   },
 
   /** Deletes a download. If it is the one running, the app goes back to the base bundle first. */

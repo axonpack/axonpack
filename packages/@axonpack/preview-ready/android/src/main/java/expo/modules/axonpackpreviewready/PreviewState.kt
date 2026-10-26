@@ -5,8 +5,10 @@ import android.util.Log
 import com.facebook.react.ReactHost
 import com.facebook.react.common.build.ReactBuildConfig
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.UUID
 
 internal const val TAG = "AxonpackPreviewReady"
 
@@ -45,6 +47,7 @@ internal object PreviewState {
       Log.w(TAG, "The preview is Hermes bytecode $preview but this build runs $embedded, so the base bundle loads")
       return null
     }
+    if (!claimStart(context)) return null
     return bundle
   }
 
@@ -75,37 +78,92 @@ internal object PreviewState {
     host.devSupportManager?.bundleFilePath = bundleToLoad(context)?.absolutePath
   }
 
+  // Crash fallback. Every JS start has its own token. A preview start writes it into the state as
+  // `pending`, and JS clears it once the app has mounted. Finding someone else's token means an
+  // earlier start of this preview never got that far, so the preview is marked broken and the base
+  // bundle loads instead. Several lookups in one start see their own token and change nothing.
+  private val processToken = UUID.randomUUID().toString()
+  private var starts = 0
+  private fun token() = "$processToken:$starts"
+
+  /** Called before a reload, so the next start has a token of its own. */
+  fun nextStart() {
+    starts++
+  }
+
+  private fun stateFile(context: Context) = File(root(context), "state.json")
+
+  private fun readJson(context: Context): JSONObject =
+    try {
+      val file = stateFile(context)
+      if (file.isFile) JSONObject(file.readText()) else JSONObject()
+    } catch (e: Exception) {
+      JSONObject()
+    }
+
+  private fun writeJson(context: Context, json: JSONObject) {
+    root(context).mkdirs()
+    stateFile(context).writeText(json.toString())
+  }
+
+  private fun brokenIds(json: JSONObject): List<String> {
+    val array = json.optJSONArray("broken") ?: return emptyList()
+    return (0 until array.length()).map { array.getString(it) }
+  }
+
+  private fun claimStart(context: Context): Boolean {
+    val json = readJson(context)
+    val pending = json.optString("pending")
+    if (pending == token()) return true
+    if (pending.isNotEmpty()) {
+      val id = json.optString("bundle").substringBefore("/")
+      Log.w(TAG, "The preview \"$id\" stopped before it finished starting, so it is marked broken and the base bundle loads")
+      json.put("broken", JSONArray(brokenIds(json) + id))
+      json.remove("bundle")
+      json.remove("pending")
+      writeJson(context, json)
+      return false
+    }
+    json.put("pending", token())
+    writeJson(context, json)
+    return true
+  }
+
+  /** JS calls this once the app has mounted: this start worked. */
+  fun confirmStart(context: Context) {
+    val json = readJson(context)
+    if (json.optString("pending") == token()) {
+      json.remove("pending")
+      writeJson(context, json)
+    }
+  }
+
   /**
    * Records the choice for the next start or reload. Null clears it, so the base bundle loads. The
-   * path is relative to the preview folder and must stay inside it.
+   * path is relative to the preview folder and must stay inside it. Choosing a preview again takes
+   * it off the broken list, since it may have been fixed and downloaded again.
    */
   fun select(context: Context, bundle: String?) {
     val root = root(context)
-    val state = File(root, "state.json")
+    val json = readJson(context)
+    json.remove("pending")
     if (bundle == null) {
-      state.delete()
-      return
+      json.remove("bundle")
+    } else {
+      require(File(root, bundle).canonicalPath.startsWith(root.canonicalPath + File.separator)) {
+        "The bundle path must stay inside the preview folder"
+      }
+      json.put("bundle", bundle)
+      json.put("broken", JSONArray(brokenIds(json) - bundle.substringBefore("/")))
     }
-    require(File(root, bundle).canonicalPath.startsWith(root.canonicalPath + File.separator)) {
-      "The bundle path must stay inside the preview folder"
-    }
-    root.mkdirs()
-    state.writeText(JSONObject().put("bundle", bundle).toString())
+    writeJson(context, json)
   }
 
-  /** The raw choice, for JS to show which preview is active. Empty when nothing is chosen. */
-  fun read(context: Context): Map<String, Any?> =
-    try {
-      val state = File(root(context), "state.json")
-      if (!state.isFile) {
-        emptyMap()
-      } else {
-        val json = JSONObject(state.readText())
-        mapOf("bundle" to json.optString("bundle").ifEmpty { null })
-      }
-    } catch (e: Exception) {
-      emptyMap()
-    }
+  /** The raw choice and the broken list, for JS to show. */
+  fun read(context: Context): Map<String, Any?> {
+    val json = readJson(context)
+    return mapOf("bundle" to json.optString("bundle").ifEmpty { null }, "broken" to brokenIds(json))
+  }
 
   /** Null means "load the base bundle", which is also the answer to anything unexpected. */
   fun selectedBundle(context: Context): File? {

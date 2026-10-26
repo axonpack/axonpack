@@ -21,6 +21,10 @@ class AxonpackPreviewReadyModule : Module() {
       appContext.reactContext?.let { PreviewState.read(it) } ?: emptyMap<String, Any?>()
     }
 
+    Function("markLaunched") {
+      appContext.reactContext?.let { PreviewState.confirmStart(it) }
+    }
+
     Function("reload") { reload() }
   }
 
@@ -35,6 +39,7 @@ class AxonpackPreviewReadyModule : Module() {
       PreviewState.warnOldArchitecture()
       return
     }
+    PreviewState.nextStart()
     appContext.reactContext?.let {
       PreviewState.pointDevSupport(it, host)
       BundleLoaderOverride.apply(it, host)

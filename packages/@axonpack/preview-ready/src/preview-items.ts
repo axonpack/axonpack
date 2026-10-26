@@ -46,6 +46,7 @@ export function previewItems(state: PreviewsState): {
     const progress = state.downloading[entry.id] ?? null;
     let status: PreviewStatus = "available";
     if (progress !== null) status = "downloading";
+    else if (local && state.broken.includes(entry.id)) status = "broken";
     else if (local && !listed && state.remote !== null) status = "unpublished";
     else if (local && listed && local.revision !== entry.revision)
       status = "update-available";

@@ -66,7 +66,9 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
    preview that cannot load never turns into a reload loop.
    */
   static func startOnSelectedPreview() {
-    guard !hopped, let preview = PreviewState.bundleToLoad() else {
+    // The plain lookup, not `bundleToLoad`: that would count this start as a preview start and the
+    // reload below as a second one.
+    guard !hopped, let preview = PreviewState.selectedBundle(), PreviewState.newArchitecture else {
       return
     }
     if installed, lastServed?.standardizedFileURL == preview.standardizedFileURL {
@@ -84,6 +86,7 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
    whether or not the block above was installed. Each step is checked, since a missing key throws.
    */
   static func reload() {
+    PreviewState.nextStart()
     guard
       let host = reactHost(),
       let ivar = class_getInstanceVariable(type(of: host), "_bundleManager"),

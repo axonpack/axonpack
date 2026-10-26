@@ -24,6 +24,10 @@ public final class AxonpackPreviewReadyModule: Module {
       PreviewState.read()
     }
 
+    Function("markLaunched") {
+      PreviewState.confirmStart()
+    }
+
     Function("reload") {
       guard PreviewState.newArchitecture else {
         PreviewState.warnOldArchitecture()

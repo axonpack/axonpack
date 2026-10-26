@@ -35,6 +35,9 @@ enum PreviewState {
       previewReadyLog.warning("The preview is Hermes bytecode \(version) but this build runs \(embedded), so the base bundle loads")
       return nil
     }
+    guard claimStart() else {
+      return nil
+    }
     return preview
   }
 
@@ -60,34 +63,95 @@ enum PreviewState {
     return header.suffix(4).enumerated().reduce(UInt32(0)) { $0 | UInt32($1.element) << (8 * UInt32($1.offset)) }
   }
 
+  // Crash fallback. Every JS start has its own token. A preview start writes it into the state as
+  // `pending`, and JS clears it once the app has mounted. Finding someone else's token means an
+  // earlier start of this preview never got that far, so the preview is marked broken and the base
+  // bundle loads instead. Several lookups in one start see their own token and change nothing.
+  private static let processToken = UUID().uuidString
+  private static var starts = 0
+  private static var token: String { "\(processToken):\(starts)" }
+
+  /// Called before a reload, so the next start has a token of its own.
+  static func nextStart() {
+    starts += 1
+  }
+
+  private static var stateURL: URL? { root?.appendingPathComponent("state.json") }
+
+  private static func readJson() -> [String: Any] {
+    guard
+      let stateURL,
+      let data = try? Data(contentsOf: stateURL),
+      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else {
+      return [:]
+    }
+    return json
+  }
+
+  private static func writeJson(_ json: [String: Any]) {
+    guard let root, let stateURL else {
+      return
+    }
+    try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    try? JSONSerialization.data(withJSONObject: json).write(to: stateURL, options: .atomic)
+  }
+
+  private static func claimStart() -> Bool {
+    var json = readJson()
+    let pending = json["pending"] as? String ?? ""
+    if pending == token {
+      return true
+    }
+    if !pending.isEmpty {
+      let id = (json["bundle"] as? String ?? "").components(separatedBy: "/").first ?? ""
+      previewReadyLog.warning("The preview \(id, privacy: .public) stopped before it finished starting, so it is marked broken and the base bundle loads")
+      json["broken"] = (json["broken"] as? [String] ?? []) + [id]
+      json["bundle"] = nil
+      json["pending"] = nil
+      writeJson(json)
+      return false
+    }
+    json["pending"] = token
+    writeJson(json)
+    return true
+  }
+
+  /// JS calls this once the app has mounted: this start worked.
+  static func confirmStart() {
+    var json = readJson()
+    if json["pending"] as? String == token {
+      json["pending"] = nil
+      writeJson(json)
+    }
+  }
+
   /// Records the choice for the next start or reload. Nil clears it, so the base bundle loads. The
-  /// path is relative to the preview folder and must stay inside it.
+  /// path is relative to the preview folder and must stay inside it. Choosing a preview again takes
+  /// it off the broken list, since it may have been fixed and downloaded again.
   static func select(_ bundle: String?) throws {
     guard let root else {
       return
     }
-    let state = root.appendingPathComponent("state.json")
-    guard let bundle else {
-      try? FileManager.default.removeItem(at: state)
-      return
+    var json = readJson()
+    json["pending"] = nil
+    if let bundle {
+      guard root.appendingPathComponent(bundle).standardizedFileURL.path.hasPrefix(root.standardizedFileURL.path + "/") else {
+        throw PreviewPathOutsideException()
+      }
+      let id = bundle.components(separatedBy: "/").first ?? ""
+      json["bundle"] = bundle
+      json["broken"] = (json["broken"] as? [String] ?? []).filter { $0 != id }
+    } else {
+      json["bundle"] = nil
     }
-    guard root.appendingPathComponent(bundle).standardizedFileURL.path.hasPrefix(root.standardizedFileURL.path + "/") else {
-      throw PreviewPathOutsideException()
-    }
-    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-    try JSONSerialization.data(withJSONObject: ["bundle": bundle]).write(to: state, options: .atomic)
+    writeJson(json)
   }
 
-  /// The raw choice, for JS to show which preview is active. Empty when nothing is chosen.
+  /// The raw choice and the broken list, for JS to show.
   static func read() -> [String: Any?] {
-    guard
-      let root,
-      let data = try? Data(contentsOf: root.appendingPathComponent("state.json")),
-      let state = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-    else {
-      return [:]
-    }
-    return ["bundle": state["bundle"] as? String]
+    let json = readJson()
+    return ["bundle": json["bundle"] as? String, "broken": json["broken"] as? [String] ?? []]
   }
 
   /// Nil means "load the base bundle", which is also the answer to anything unexpected.
