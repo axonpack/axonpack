@@ -10,6 +10,23 @@ Where previews are kept: in the bucket they are published to, and on the device 
 A half-finished download is never offered, because it only becomes a preview once every file has
 been checked.
 
+## Publishing settings
+
+`preview-ready publish` reads these from `.env` in the app's root, then from the environment. A
+variable set in the environment wins over the file, so CI can pass its secrets without one. `.env`
+is gitignored; `example/.env.example` shows the local values.
+
+| Variable                             | Needed | What it is                                                                                                                 |
+| ------------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `PREVIEW_READY_S3_ENDPOINT`          | yes    | S3 API address: `https://<account>.r2.cloudflarestorage.com`, `https://s3.<region>.amazonaws.com`, `http://localhost:9000` |
+| `PREVIEW_READY_S3_BUCKET`            | yes    | Bucket name. Objects are addressed path-style: `<endpoint>/<bucket>/<key>`                                                 |
+| `PREVIEW_READY_S3_REGION`            | no     | Signing region. Default `us-east-1`; `auto` on R2                                                                          |
+| `PREVIEW_READY_S3_ACCESS_KEY_ID`     | yes    | Write key id. Never ship it in the app                                                                                     |
+| `PREVIEW_READY_S3_SECRET_ACCESS_KEY` | yes    | Write key secret                                                                                                           |
+| `PREVIEW_READY_S3_PUBLIC_URL`        | no     | Where public reads go when that is not `<endpoint>/<bucket>`, such as R2's `r2.dev` address. Only printed by the CLI       |
+
+None of them starts with `EXPO_PUBLIC_`, so Expo never puts them into a bundle.
+
 ## Set up local storage
 
 A local S3 server, so you can try both bucket modes without a cloud account. It is MinIO, with one

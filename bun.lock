@@ -139,6 +139,9 @@
     "packages/@axonpack/preview-ready": {
       "name": "@axonpack/preview-ready",
       "version": "0.0.0",
+      "bin": {
+        "preview-ready": "bin/preview-ready.js",
+      },
       "dependencies": {
         "@noble/hashes": "^2.4.0",
       },
