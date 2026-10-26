@@ -9,6 +9,11 @@ class AxonpackPreviewReadyModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("AxonpackPreviewReady")
 
+    Function("select") { bundle: String? ->
+      val context = appContext.reactContext ?: return@Function
+      PreviewState.select(context, bundle)
+    }
+
     Function("reload") { reload() }
   }
 

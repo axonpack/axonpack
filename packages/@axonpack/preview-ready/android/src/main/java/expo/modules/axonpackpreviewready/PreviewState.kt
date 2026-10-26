@@ -30,6 +30,24 @@ internal object PreviewState {
   fun warnOldArchitecture() =
     Log.w(TAG, "preview-ready needs the New Architecture, so the selected preview is ignored and the base bundle loads")
 
+  /**
+   * Records the choice for the next start or reload. Null clears it, so the base bundle loads. The
+   * path is relative to the preview folder and must stay inside it.
+   */
+  fun select(context: Context, bundle: String?) {
+    val root = root(context)
+    val state = File(root, "state.json")
+    if (bundle == null) {
+      state.delete()
+      return
+    }
+    require(File(root, bundle).canonicalPath.startsWith(root.canonicalPath + File.separator)) {
+      "The bundle path must stay inside the preview folder"
+    }
+    root.mkdirs()
+    state.writeText(JSONObject().put("bundle", bundle).toString())
+  }
+
   /** Null means "load the base bundle", which is also the answer to anything unexpected. */
   fun selectedBundle(context: Context): File? {
     return try {

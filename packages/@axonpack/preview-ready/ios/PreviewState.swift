@@ -22,6 +22,24 @@ enum PreviewState {
     previewReadyLog.warning("preview-ready needs the New Architecture, so the selected preview is ignored and the base bundle loads")
   }
 
+  /// Records the choice for the next start or reload. Nil clears it, so the base bundle loads. The
+  /// path is relative to the preview folder and must stay inside it.
+  static func select(_ bundle: String?) throws {
+    guard let root else {
+      return
+    }
+    let state = root.appendingPathComponent("state.json")
+    guard let bundle else {
+      try? FileManager.default.removeItem(at: state)
+      return
+    }
+    guard root.appendingPathComponent(bundle).standardizedFileURL.path.hasPrefix(root.standardizedFileURL.path + "/") else {
+      throw PreviewPathOutsideException()
+    }
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    try JSONSerialization.data(withJSONObject: ["bundle": bundle]).write(to: state, options: .atomic)
+  }
+
   /// Nil means "load the base bundle", which is also the answer to anything unexpected.
   static func selectedBundle() -> URL? {
     guard let root, let data = try? Data(contentsOf: root.appendingPathComponent("state.json")) else {
