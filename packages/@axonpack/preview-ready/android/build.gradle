@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.axonpackpreviewready'
+version = '0.0.0'
+
+android {
+  namespace "expo.modules.axonpackpreviewready"
+  defaultConfig {
+    versionCode 1
+    versionName '0.0.0'
+  }
+}
+
+dependencies {
+  // ReactApplication and ReactHost, to restart into a newly chosen bundle.
+  implementation 'com.facebook.react:react-android'
+}
