@@ -5,7 +5,9 @@ import { parseArgs } from "node:util";
 
 import { PLATFORMS, Platform } from "../core/layout";
 import { prune, publish, unpublish } from "./commands";
+import { DEFAULT_REGISTRY_PORT } from "../core/local-servers";
 import { readConfig } from "./config";
+import { createRegistry } from "./registry";
 import { compatibilityOf, resolveCompatibility } from "./expo-config";
 import { appConfig, changelogSince, defaultBase, gitInfo } from "./project";
 
@@ -45,6 +47,7 @@ async function main() {
       "entry-file": { type: "string" },
       compatibility: { type: "string" },
       project: { type: "string" },
+      port: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -54,7 +57,8 @@ async function main() {
     return;
   }
   const projectRoot = resolve(values.project ?? process.cwd());
-  const s3 = readConfig(projectRoot);
+  // Only the bucket commands need the publish settings.
+  const s3 = () => readConfig(projectRoot);
 
   if (command === "publish") {
     const git = gitInfo(projectRoot);
@@ -82,7 +86,7 @@ async function main() {
       projectRoot,
       config,
       compatibility,
-      s3,
+      s3: s3(),
       platforms,
       id,
       title: values.title,
@@ -92,9 +96,14 @@ async function main() {
     });
   } else if (command === "unpublish") {
     if (!arg) throw new Error("Which preview? preview-ready unpublish <id>");
-    await unpublish(s3, arg);
+    await unpublish(s3(), arg);
   } else if (command === "prune") {
-    await prune(s3);
+    await prune(s3());
+  } else if (command === "registry") {
+    // Started by `preview-ready start` when none is running; exits once no server is left.
+    const port = Number(values.port ?? DEFAULT_REGISTRY_PORT);
+    const { server } = createRegistry({ onIdle: () => process.exit(0) });
+    server.listen(port);
   } else {
     throw new Error(`Unknown command ${command}.\n\n${HELP}`);
   }
