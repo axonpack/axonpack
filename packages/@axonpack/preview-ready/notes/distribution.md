@@ -19,25 +19,35 @@ Run from the app's root (`--project <dir>` otherwise). `preview-ready --help` li
 
 ```sh
 npx preview-ready publish                  # id = git branch, both platforms
-npx preview-ready publish --id task-1 --platform android --changelog="- Fixes the login"
+npx preview-ready publish --id task-1 --changelog="- Fixes the login"
 npx preview-ready unpublish task-1
 npx preview-ready prune
 ```
 
 `publish` builds with `expo export:embed --dev false --bytecode`, the same step a release build
-runs, so the bundle is Hermes bytecode with its images beside it. It then takes the native
-fingerprint with the app's own `@expo/fingerprint`, uploads each file once under its sha256, writes
-the preview's manifest, and only then adds it to the lists. An app never sees a preview whose files
+runs, so the bundle is Hermes bytecode with its images beside it. It reads the `compatibility`
+option from the app config (see [bundles.md](./bundles.md)), builds the same key the app was built
+with, records the app version and the native fingerprint either way, uploads each file once under
+its sha256, writes the preview's manifest, and only then adds it to the lists. `--compatibility`
+overrides the option, with a warning, since a build of the app would then not list the preview. An app never sees a preview whose files
 are not all there. The changelog is the commit subjects since the branch left the base branch
 (`--base`, default: the repo's default branch); `--changelog=<text>` or `--changelog-file` replace it.
 
 ## Layout
 
 ```
-index.json                                   every native build and its previews, for people
-index/<platform>/<fingerprint>.json          what one native build can run; the app reads this
-previews/<platform>/<fingerprint>/<id>.json  one preview's manifest: files, changelog, versions
-files/<sha256>                               bundle and image blobs, shared between previews
+index.json                            every native build and its previews, for people
+index/<platform>/<key>.json           what one native build can run; the app reads this
+previews/<platform>/<key>/<id>.json   one preview's manifest: files, changelog, versions
+files/<sha256>                        bundle and image blobs, shared between previews
+```
+
+`<key>` is `version-1.0.0` or `fingerprint-<hash>`. Every manifest and index entry also records the
+compatibility setting, the app version and the native fingerprint, so `index.json` can group builds
+by version whichever setting made them.
+
+```
+
 ```
 
 Both lists are read, changed and written back only if nobody wrote in between (`If-Match` on the

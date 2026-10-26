@@ -42,9 +42,9 @@ From `packages/@axonpack/preview-ready`, after `bun install` at the repo root.
 6. Publish a preview from `example/`. Each label gives it a look of its own:
    ```sh
    EXPO_PUBLIC_BUNDLE_LABEL=task-1-login-fix \
-     npx preview-ready publish --platform android --id task-1-login-fix --changelog="- Fixes the login"
+     npx preview-ready publish --id task-1-login-fix --changelog="- Fixes the login"
    ```
-   Use `--platform ios`, or leave it out for both. `EXPO_PUBLIC_BUNDLE_LABEL=crash-on-start` gives a
+   That publishes for Android and iOS. `EXPO_PUBLIC_BUNDLE_LABEL=crash-on-start` gives a
    preview that throws while it loads.
 7. In the app: Refresh, Download, Switch, then Back to base. Publish the same id again with other
    changes to see "Update available", or `npx preview-ready unpublish <id>` to see "Unpublished".
@@ -64,9 +64,10 @@ and `deleteincompatible`. Open them with `xcrun simctl openurl booted <link>` or
 - **"Expected JSON from … but got text/html"**: something other than the bucket answered. The URL is
   not public, or a tunnel is showing its login page. Make the tunnel public, or use `localhost` with
   `adb reverse`.
-- **The list is empty**: nothing is published for this exact build. A preview only shows on a build
-  with the same native fingerprint, so publish again after the build you are running (a prebuild,
-  or a native or app config change, gives a new fingerprint).
+- **The list is empty**: nothing is published for this build's key. With the default
+  `compatibility: "appVersion"` the key is the app version, so publish again after a version bump.
+  With `"fingerprint"`, a prebuild or any native or app config change gives a new key, so publish
+  again after the build you are running.
 - **Android cannot connect**: the `adb reverse` was lost when the emulator or phone restarted, or the
   app was refused local network access (Android 17 asks). Run `adb reverse` again, or allow the
   permission in the app's settings.
