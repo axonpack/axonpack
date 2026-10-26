@@ -31,7 +31,33 @@ enum PreviewState {
       warnOldArchitecture()
       return nil
     }
+    if let embedded = embeddedHermesVersion, let version = hermesVersion(of: preview), embedded != version {
+      previewReadyLog.warning("The preview is Hermes bytecode \(version) but this build runs \(embedded), so the base bundle loads")
+      return nil
+    }
     return preview
+  }
+
+  /// The bundle inside the app was compiled by the Hermes this build runs. A debug build has none,
+  /// and then nothing is checked.
+  static let embeddedHermesVersion: UInt32? = Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    .flatMap { hermesVersion(of: $0) }
+
+  /// Hermes bytecode starts with an 8-byte magic number, then its format version as a 32-bit int.
+  /// Nil for anything else, such as a plain JS bundle.
+  static func hermesVersion(of url: URL) -> UInt32? {
+    guard let handle = try? FileHandle(forReadingFrom: url) else {
+      return nil
+    }
+    defer { try? handle.close() }
+    guard let header = try? handle.read(upToCount: 12), header.count == 12 else {
+      return nil
+    }
+    let magic: [UInt8] = [0xc6, 0x1f, 0xbc, 0x03, 0xc1, 0x03, 0x19, 0x1f]
+    guard Array(header.prefix(8)) == magic else {
+      return nil
+    }
+    return header.suffix(4).enumerated().reduce(UInt32(0)) { $0 | UInt32($1.element) << (8 * UInt32($1.offset)) }
   }
 
   /// Records the choice for the next start or reload. Nil clears it, so the base bundle loads. The

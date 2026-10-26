@@ -39,7 +39,30 @@ internal object PreviewState {
       warnOldArchitecture()
       return null
     }
+    val embedded = embeddedHermesVersion(context)
+    val preview = bundle.inputStream().use { HermesHeader.version(it) }
+    if (embedded != null && preview != null && embedded != preview) {
+      Log.w(TAG, "The preview is Hermes bytecode $preview but this build runs $embedded, so the base bundle loads")
+      return null
+    }
     return bundle
+  }
+
+  // The bundle inside the app was compiled by the Hermes this build runs. A debug build has none,
+  // and then nothing is checked.
+  private var embeddedVersion: Int? = null
+  private var embeddedChecked = false
+
+  private fun embeddedHermesVersion(context: Context): Int? {
+    if (!embeddedChecked) {
+      embeddedVersion = try {
+        context.assets.open("index.android.bundle").use { HermesHeader.version(it) }
+      } catch (e: Exception) {
+        null
+      }
+      embeddedChecked = true
+    }
+    return embeddedVersion
   }
 
   /**
