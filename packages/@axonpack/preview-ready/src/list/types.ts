@@ -1,0 +1,51 @@
+import type { PreviewStatus } from "../preview-items";
+
+export type PreviewListFonts = {
+  /** Font family names, as registered in your app. Each falls back to the system font. */
+  regular?: string;
+  medium?: string;
+  bold?: string;
+};
+
+export type PreviewListTheme = {
+  /** "auto" follows the device appearance. Default "auto". */
+  mode: "auto" | "light" | "dark";
+  background: string;
+  card: string;
+  /** Behind the changelog and the progress track. */
+  surface: string;
+  border: string;
+  title: string;
+  text: string;
+  /** Quiet text: branch, author, date, size. */
+  muted: string;
+  primary: string;
+  primaryText: string;
+  danger: string;
+  warning: string;
+  success: string;
+  /** Card corner radius. Buttons scale from it. Default 14. */
+  radius: number;
+  fonts: PreviewListFonts;
+};
+
+export type PreviewListLabels = {
+  title: string;
+  /** What is running now. */
+  running: string;
+  base: string;
+  backToBase: string;
+  /** Shown in a debug build while a preview runs, since Metro is not used then. */
+  metroBypassed: string;
+  refresh: string;
+  empty: string;
+  noFingerprint: string;
+  download: string;
+  switchTo: string;
+  update: string;
+  delete: string;
+  status: Record<PreviewStatus, string>;
+  incompatibleTitle: string;
+  incompatibleHint: string;
+  deleteAll: string;
+};
