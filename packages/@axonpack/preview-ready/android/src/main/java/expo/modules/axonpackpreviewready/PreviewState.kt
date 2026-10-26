@@ -2,6 +2,7 @@ package expo.modules.axonpackpreviewready
 
 import android.content.Context
 import android.util.Log
+import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import org.json.JSONObject
 import java.io.File
 
@@ -14,6 +15,20 @@ internal const val TAG = "AxonpackPreviewReady"
  */
 internal object PreviewState {
   fun root(context: Context) = File(context.filesDir, "preview-ready")
+
+  /**
+   * Previews need the New Architecture. Anything else, including a React Native too old to answer,
+   * counts as the old one, which only ever gets the base bundle.
+   */
+  fun newArchitecture(): Boolean =
+    try {
+      ReactNativeFeatureFlags.enableBridgelessArchitecture()
+    } catch (e: Throwable) {
+      false
+    }
+
+  fun warnOldArchitecture() =
+    Log.w(TAG, "preview-ready needs the New Architecture, so the selected preview is ignored and the base bundle loads")
 
   /** Null means "load the base bundle", which is also the answer to anything unexpected. */
   fun selectedBundle(context: Context): File? {

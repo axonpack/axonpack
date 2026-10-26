@@ -1,4 +1,5 @@
 import Foundation
+import React
 import os
 
 let previewReadyLog = Logger(subsystem: "dev.axonpack.preview-ready", category: "AxonpackPreviewReady")
@@ -12,6 +13,13 @@ enum PreviewState {
   static var root: URL? {
     FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
       .appendingPathComponent("preview-ready", isDirectory: true)
+  }
+
+  /// Previews need the New Architecture; under the old one only the base bundle ever loads.
+  static var newArchitecture: Bool { RCTIsNewArchEnabled() }
+
+  static func warnOldArchitecture() {
+    previewReadyLog.warning("preview-ready needs the New Architecture, so the selected preview is ignored and the base bundle loads")
   }
 
   /// Nil means "load the base bundle", which is also the answer to anything unexpected.

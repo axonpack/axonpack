@@ -6,6 +6,10 @@ public final class AxonpackPreviewReadyModule: Module {
     Name("AxonpackPreviewReady")
 
     Function("reload") {
+      guard PreviewState.newArchitecture else {
+        PreviewState.warnOldArchitecture()
+        return
+      }
       // The base is the bundle inside the app. Going back to Metro or to an expo-updates update
       // comes with the debug-build and expo-updates items.
       let url = PreviewState.selectedBundle() ?? Bundle.main.url(forResource: "main", withExtension: "jsbundle")

@@ -15,6 +15,10 @@ public final class PreviewReadyReactDelegateHandler: ExpoReactDelegateHandler {
     guard let bundle = PreviewState.selectedBundle() else {
       return nil
     }
+    guard PreviewState.newArchitecture else {
+      PreviewState.warnOldArchitecture()
+      return nil
+    }
     return reactDelegate.reactNativeFactory.recreateRootView(
       withBundleURL: bundle,
       moduleName: moduleName,
