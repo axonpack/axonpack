@@ -5,7 +5,7 @@ jest.mock("expo-file-system", () => require("./fake-file-system.test-helper"));
 
 const mockNative = {
   bundle: null as string | null,
-  fingerprint: "fp",
+  key: "fp",
   select: jest.fn((bundle: string | null) => {
     mockNative.bundle = bundle;
   }),
@@ -17,7 +17,7 @@ jest.mock("expo", () => ({ requireOptionalNativeModule: () => mockNative }));
 
 const config = { enabled: true, url: "http://localhost:9000/b" };
 
-const saveDownload = (id: string, fingerprint: string) => {
+const saveDownload = (id: string, buildKey: string) => {
   const root = "file:/docs/preview-ready";
   disk.set(root, "dir");
   disk.set(`${root}/${id}`, "dir");
@@ -29,7 +29,7 @@ const saveDownload = (id: string, fingerprint: string) => {
       JSON.stringify({
         id,
         platform: "ios",
-        fingerprint,
+        key: buildKey,
         revision: "r",
         downloadedAt: "",
         entry: { id },
@@ -89,7 +89,7 @@ test("switching to a preview that is not on the device downloads it first", asyn
   const objects: Record<string, unknown> = {
     "index/ios/fp.json": { previews: [entry] },
     "previews/ios/fp/t.json": {
-      fingerprint: "fp",
+      key: "fp",
       bundle: "main.jsbundle",
       files: [{ path: "main.jsbundle", sha256: sha, size: 1 }],
     },
@@ -102,8 +102,8 @@ test("switching to a preview that is not on the device downloads it first", asyn
       (body instanceof Uint8Array ? body : JSON.stringify(body)) as BodyInit,
     );
   }) as typeof fetch;
-  await previewsStore.refresh({ ...config, fingerprint: "fp" });
-  await previewsStore.switchTo({ ...config, fingerprint: "fp" }, "t");
+  await previewsStore.refresh({ ...config, buildKey: "fp" });
+  await previewsStore.switchTo({ ...config, buildKey: "fp" }, "t");
   expect(disk.get("file:/docs/preview-ready/t/ios/main.jsbundle")).toEqual(
     bundle,
   );
@@ -118,7 +118,7 @@ test("the list shows why a refresh failed when the bucket URL answers with a web
         headers: { "content-type": "text/html" },
       }),
   ) as typeof fetch;
-  await previewsStore.refresh({ ...config, fingerprint: "fp" });
+  await previewsStore.refresh({ ...config, buildKey: "fp" });
   expect(previewsStore.getState().error).toMatch(
     /^Expected JSON from http:\/\/localhost:9000\/b\/index\/ios\/fp\.json but got text\/html \(status 200\)/,
   );

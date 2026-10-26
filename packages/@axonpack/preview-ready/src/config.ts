@@ -1,6 +1,6 @@
 import { Platform as RNPlatform } from "react-native";
 
-import { buildFingerprint } from "./build-info";
+import { buildKey } from "./build-info";
 import type { Platform } from "./core/layout";
 import { DEFAULT_REGION, S3Config, parseBucketUrl } from "./core/s3";
 
@@ -23,8 +23,11 @@ export type PreviewReadyConfig = {
   publicUrl?: string;
   /** Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket. */
   headers?: Record<string, string>;
-  /** This build's fingerprint, when the config plugin is not used. */
-  fingerprint?: string;
+  /**
+   * This build's key (`version-<app version>` or `fingerprint-<hash>`), only when the config plugin
+   * is not used to bake it in.
+   */
+  buildKey?: string;
 };
 
 export function toS3Config(config: PreviewReadyConfig): S3Config {
@@ -47,5 +50,5 @@ export const currentPlatform = (): Platform | null =>
   RNPlatform.OS === "android" || RNPlatform.OS === "ios" ? RNPlatform.OS : null;
 
 /** The build to ask previews for. Null means previews cannot be listed on this build. */
-export const resolveFingerprint = (config: PreviewReadyConfig): string | null =>
-  config.fingerprint ?? buildFingerprint();
+export const resolveBuildKey = (config: PreviewReadyConfig): string | null =>
+  config.buildKey ?? buildKey();

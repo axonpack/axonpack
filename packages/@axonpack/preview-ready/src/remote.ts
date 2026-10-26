@@ -1,9 +1,14 @@
-import { Manifest, PlatformIndex, platformIndexKey } from "./core/layout";
+import {
+  Manifest,
+  PlatformIndex,
+  compatibilityOfKey,
+  platformIndexKey,
+} from "./core/layout";
 import { getJson } from "./core/s3";
 import {
   PreviewReadyConfig,
   currentPlatform,
-  resolveFingerprint,
+  resolveBuildKey,
   toS3Config,
 } from "./config";
 
@@ -17,23 +22,24 @@ export async function fetchPreviews(
   config: PreviewReadyConfig,
 ): Promise<PlatformIndex> {
   const platform = currentPlatform();
-  const fingerprint = resolveFingerprint(config);
+  const key = resolveBuildKey(config);
   if (!platform)
     throw new PreviewReadyError("Previews run on Android and iOS only.");
-  if (!fingerprint) {
+  if (!key) {
     throw new PreviewReadyError(
-      'This build has no fingerprint. Add "@axonpack/preview-ready" to the app config plugins and rebuild, or pass `fingerprint`.',
+      'This build has no compatibility key. Add "@axonpack/preview-ready" to the app config plugins and rebuild, or pass `buildKey`.',
     );
   }
   const found = await getJson<PlatformIndex>(
     toS3Config(config),
-    platformIndexKey(platform, fingerprint),
+    platformIndexKey(platform, key),
   );
   return (
     found?.data ?? {
       schema: 1,
       platform,
-      fingerprint,
+      key,
+      compatibility: compatibilityOfKey(key),
       updatedAt: "",
       previews: [],
     }

@@ -10,7 +10,7 @@ jest.mock("expo-file-system", () => require("./fake-file-system.test-helper"));
 const config = {
   enabled: true,
   url: "http://localhost:9000/previews-public",
-  fingerprint: "fp",
+  buildKey: "fp",
 };
 const bundle = new TextEncoder().encode("bundle bytes");
 const image = new TextEncoder().encode("image bytes");
@@ -28,7 +28,9 @@ const manifest = (
   appVersion: "1.0.0",
   buildNumber: "1",
   platform: "ios",
+  compatibility: "fingerprint",
   fingerprint: "fp",
+  key: "fp",
   bundle: "main.jsbundle",
   hermesVersion: 99,
   changelog: "- a",
@@ -48,6 +50,8 @@ const entry: IndexEntry = {
   publishedAt: "2026-01-01",
   appVersion: "1.0.0",
   buildNumber: "1",
+  compatibility: "fingerprint",
+  fingerprint: "fp",
   revision: "r1",
   size: 20,
   changelog: "- a",
@@ -93,7 +97,7 @@ test("downloads every file into <id>/<platform> and records it", async () => {
   expect(local).toMatchObject({
     id: "task-1",
     platform: "ios",
-    fingerprint: "fp",
+    key: "fp",
     revision: "r1",
   });
   expect(disk.get("file:/docs/preview-ready/task-1/ios/main.jsbundle")).toEqual(
@@ -128,7 +132,7 @@ test("asks for this build's list and treats a missing one as empty", async () =>
   serve({});
   const index = await fetchPreviews(config);
   expect(index.previews).toEqual([]);
-  expect(index.fingerprint).toBe("fp");
+  expect(index.key).toBe("fp");
 });
 
 test("signs requests for a private bucket with the read key", async () => {
@@ -147,8 +151,8 @@ test("signs requests for a private bucket with the read key", async () => {
   );
 });
 
-test("says how to fix a build with no fingerprint", async () => {
+test("says how to fix a build with no compatibility key", async () => {
   await expect(
-    fetchPreviews({ ...config, fingerprint: undefined }),
+    fetchPreviews({ ...config, buildKey: undefined }),
   ).rejects.toThrow("config plugins");
 });

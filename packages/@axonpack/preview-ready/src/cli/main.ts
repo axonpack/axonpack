@@ -6,7 +6,8 @@ import { parseArgs } from "node:util";
 import { PLATFORMS, Platform } from "../core/layout";
 import { prune, publish, unpublish } from "./commands";
 import { readConfig } from "./config";
-import { changelogSince, defaultBase, gitInfo } from "./project";
+import { compatibilityOf, resolveCompatibility } from "./expo-config";
+import { appConfig, changelogSince, defaultBase, gitInfo } from "./project";
 
 const HELP = `preview-ready <command> [options]
 
@@ -19,6 +20,7 @@ const HELP = `preview-ready <command> [options]
                        with a dash, as a "- item" list does)
     --changelog-file <path>
     --entry-file <path>
+    --compatibility <c> appVersion or fingerprint; overrides the app config's plugin option
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
 
@@ -41,6 +43,7 @@ async function main() {
       changelog: { type: "string" },
       "changelog-file": { type: "string" },
       "entry-file": { type: "string" },
+      compatibility: { type: "string" },
       project: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
@@ -68,8 +71,17 @@ async function main() {
       (values["changelog-file"]
         ? readFileSync(resolve(values["changelog-file"]), "utf8").trim()
         : changelogSince(projectRoot, values.base ?? defaultBase(projectRoot)));
+    const config = appConfig(projectRoot);
+    const { compatibility, warnings } = resolveCompatibility(
+      compatibilityOf(config),
+      values.compatibility,
+    );
+    for (const warning of warnings)
+      process.stderr.write(`warning: ${warning}\n`);
     await publish({
       projectRoot,
+      config,
+      compatibility,
       s3,
       platforms,
       id,

@@ -7,7 +7,8 @@ public final class AxonpackPreviewReadyModule: Module {
 
     // What the config plugin wrote at prebuild; nil when the plugin is not in the app config.
     Constants([
-      "fingerprint": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyFingerprint") as? String
+      "compatibility": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyCompatibility") as? String,
+      "key": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyKey") as? String
     ])
 
     OnCreate {

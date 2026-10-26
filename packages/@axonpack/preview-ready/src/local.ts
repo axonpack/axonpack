@@ -9,7 +9,8 @@ import type { IndexEntry, Platform } from "./core/layout";
 export type LocalPreview = {
   id: string;
   platform: Platform;
-  fingerprint: string;
+  /** The build key it was published for; it runs only on a build with the same key. */
+  key: string;
   revision: string;
   downloadedAt: string;
   entry: IndexEntry;

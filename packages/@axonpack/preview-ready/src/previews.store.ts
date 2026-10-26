@@ -1,10 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import {
-  PreviewReadyConfig,
-  currentPlatform,
-  resolveFingerprint,
-} from "./config";
+import { PreviewReadyConfig, currentPlatform, resolveBuildKey } from "./config";
 import type { IndexEntry } from "./core/layout";
 import { downloadPreview } from "./download";
 import { LocalPreview, deleteLocalPreview, listLocalPreviews } from "./local";
@@ -15,8 +11,8 @@ import { fetchPreviews } from "./remote";
 export type PreviewsState = {
   loading: boolean;
   error: string | null;
-  /** This build's fingerprint; downloads made for any other are incompatible. */
-  fingerprint: string | null;
+  /** This build's key; downloads made for any other are incompatible. */
+  buildKey: string | null;
   /** What the bucket lists for this build. Null until it has answered once. */
   remote: IndexEntry[] | null;
   local: LocalPreview[];
@@ -31,7 +27,7 @@ export type PreviewsState = {
 let state: PreviewsState = {
   loading: false,
   error: null,
-  fingerprint: null,
+  buildKey: null,
   remote: null,
   local: [],
   downloading: {},
@@ -70,7 +66,7 @@ export const previewsStore = {
     set({
       loading: true,
       error: null,
-      fingerprint: resolveFingerprint(config),
+      buildKey: resolveBuildKey(config),
     });
     try {
       await readLocal();
@@ -113,9 +109,7 @@ export const previewsStore = {
     if (!native || !platform) return;
     if (
       id !== null &&
-      !state.local.some(
-        (p) => p.id === id && p.fingerprint === state.fingerprint,
-      )
+      !state.local.some((p) => p.id === id && p.key === state.buildKey)
     ) {
       await previewsStore.download(config, id);
       if (!state.local.some((p) => p.id === id)) return;
@@ -140,7 +134,7 @@ export const previewsStore = {
   /** Deletes every download made for another native build. */
   async removeIncompatible() {
     for (const preview of state.local) {
-      if (preview.fingerprint !== state.fingerprint)
+      if (preview.key !== state.buildKey)
         await previewsStore.remove(preview.id);
     }
   },

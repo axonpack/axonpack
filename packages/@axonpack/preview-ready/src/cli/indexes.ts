@@ -1,4 +1,5 @@
 import {
+  Compatibility,
   PlatformIndex,
   IndexEntry,
   Platform,
@@ -15,7 +16,7 @@ const newestFirst = (a: { publishedAt: string }, b: { publishedAt: string }) =>
 export function upsertPreview(
   index: PlatformIndex | null,
   platform: Platform,
-  fingerprint: string,
+  build: { key: string; compatibility: Compatibility },
   entry: IndexEntry,
   now: string,
 ): PlatformIndex {
@@ -23,7 +24,8 @@ export function upsertPreview(
   return {
     schema: SCHEMA,
     platform,
-    fingerprint,
+    key: build.key,
+    compatibility: build.compatibility,
     updatedAt: now,
     previews: [...others, entry].sort(newestFirst),
   };
@@ -48,19 +50,20 @@ export function syncRootVersion(
   now: string,
 ): RootIndex {
   const versions = (root?.versions ?? []).filter(
-    (v) =>
-      !(v.platform === index.platform && v.fingerprint === index.fingerprint),
+    (v) => !(v.platform === index.platform && v.key === index.key),
   );
   if (index.previews.length > 0) {
     const latest = index.previews[0];
     const version: RootVersion = {
       platform: index.platform,
-      fingerprint: index.fingerprint,
+      key: index.key,
+      compatibility: index.compatibility,
       appVersion: latest.appVersion,
       buildNumber: latest.buildNumber,
+      fingerprint: latest.fingerprint,
       count: index.previews.length,
       updatedAt: now,
-      index: platformIndexKey(index.platform, index.fingerprint),
+      index: platformIndexKey(index.platform, index.key),
       previews: index.previews.map(({ id, title, publishedAt }) => ({
         id,
         title,

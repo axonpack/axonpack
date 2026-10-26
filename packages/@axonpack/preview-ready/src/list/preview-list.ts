@@ -122,7 +122,13 @@ export function PreviewList(props: PreviewListProps) {
     const date = entry.publishedAt
       ? new Date(entry.publishedAt).toLocaleString()
       : "";
-    const meta = [entry.branch, entry.author, date, formatSize(entry.size)]
+    const meta = [
+      entry.appVersion ? `v${entry.appVersion}` : "",
+      entry.branch,
+      entry.author,
+      date,
+      formatSize(entry.size),
+    ]
       .filter(Boolean)
       .join(" · ");
     const actions: ReactNode[] = [];
@@ -310,7 +316,7 @@ export function PreviewList(props: PreviewListProps) {
               padding: 16,
             },
           },
-          preview.fingerprint ? labels.empty : labels.noFingerprint,
+          preview.buildKey ? labels.empty : labels.noBuildKey,
         )
       : null;
 

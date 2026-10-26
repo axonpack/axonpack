@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 import {
   BUNDLE_FILE,
+  Compatibility,
   IndexEntry,
   Manifest,
   Platform,
@@ -10,6 +11,7 @@ import {
   ROOT_INDEX_KEY,
   RootIndex,
   SCHEMA,
+  compatibilityKey,
   fileKey,
   manifestKey,
   platformIndexKey,
@@ -32,7 +34,8 @@ import {
   syncRootVersion,
   upsertPreview,
 } from "./indexes";
-import { appVersion, fingerprint } from "./project";
+import { AppConfig, appVersionOf, buildNumberOf } from "./expo-config";
+import { fingerprint } from "./project";
 
 const log = (message: string) => process.stdout.write(`${message}\n`);
 
@@ -63,6 +66,8 @@ async function updateJson<T>(
 
 export type PublishOptions = {
   projectRoot: string;
+  config: AppConfig;
+  compatibility: Compatibility;
   s3: S3Config;
   platforms: Platform[];
   id: string;
@@ -87,7 +92,11 @@ export async function publish(options: PublishOptions) {
       options.entryFile,
     );
     const fp = await fingerprint(options.projectRoot, platform);
-    const version = appVersion(options.projectRoot, platform);
+    const version = appVersionOf(options.config, platform);
+    const key = compatibilityKey(
+      options.compatibility,
+      options.compatibility === "appVersion" ? version : fp,
+    );
 
     let uploaded = 0;
     for (const file of files) {
@@ -108,20 +117,23 @@ export async function publish(options: PublishOptions) {
       commit: options.commit,
       author: options.author,
       publishedAt,
-      ...version,
+      appVersion: version,
+      buildNumber: buildNumberOf(options.config, platform),
+      compatibility: options.compatibility,
+      fingerprint: fp,
     };
     const manifest: Manifest = {
       schema: SCHEMA,
       ...info,
       platform,
-      fingerprint: fp,
+      key,
       bundle: BUNDLE_FILE[platform],
       hermesVersion,
       changelog: options.changelog,
       files: files.map(({ path, sha256, size }) => ({ path, sha256, size })),
     };
-    const key = manifestKey(platform, fp, id);
-    await putObject(s3, key, JSON.stringify(manifest, null, 2), {
+    const manifestPath = manifestKey(platform, key, id);
+    await putObject(s3, manifestPath, JSON.stringify(manifest, null, 2), {
       contentType: "application/json",
     });
 
@@ -138,19 +150,26 @@ export async function publish(options: PublishOptions) {
         .slice(0, 16),
       size: files.reduce((sum, f) => sum + f.size, 0),
       changelog: shortChangelog(options.changelog),
-      manifest: key,
+      manifest: manifestPath,
     };
     // Last, so an app never sees an entry whose files are not all there yet.
     const index = await updateJson<PlatformIndex>(
       s3,
-      platformIndexKey(platform, fp),
-      (current) => upsertPreview(current, platform, fp, entry, publishedAt),
+      platformIndexKey(platform, key),
+      (current) =>
+        upsertPreview(
+          current,
+          platform,
+          { key, compatibility: options.compatibility },
+          entry,
+          publishedAt,
+        ),
     );
     await updateJson<RootIndex>(s3, ROOT_INDEX_KEY, (root) =>
       syncRootVersion(root, index, publishedAt),
     );
-    log(`${platform}: published ${id} for build ${fp}`);
-    log(`${platform}: ${readUrl(s3, platformIndexKey(platform, fp))}`);
+    log(`${platform}: published ${id} for build ${key}`);
+    log(`${platform}: ${readUrl(s3, platformIndexKey(platform, key))}`);
   }
 }
 
@@ -169,7 +188,7 @@ export async function unpublish(s3: S3Config, id: string) {
         throw new Error(`${key} is listed in ${ROOT_INDEX_KEY} but missing`);
       return removePreview(current, id, now);
     });
-    await deleteObject(s3, manifestKey(index.platform, index.fingerprint, id));
+    await deleteObject(s3, manifestKey(index.platform, index.key, id));
     await updateJson<RootIndex>(s3, ROOT_INDEX_KEY, (current) =>
       syncRootVersion(current, index, now),
     );

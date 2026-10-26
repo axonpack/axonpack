@@ -10,7 +10,7 @@ class AxonpackPreviewReadyModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("AxonpackPreviewReady")
 
-    Constants("fingerprint" to buildFingerprint())
+    Constants("compatibility" to metaData("COMPATIBILITY"), "key" to metaData("KEY"))
 
     Function("select") { bundle: String? ->
       val context = appContext.reactContext ?: return@Function
@@ -48,15 +48,16 @@ class AxonpackPreviewReadyModule : Module() {
   }
 
   /** What the config plugin wrote at prebuild; null when the plugin is not in the app config. */
-  private fun buildFingerprint(): String? {
+  private fun metaData(name: String): String? {
     val context = appContext.reactContext ?: return null
     return try {
       context.packageManager
         .getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
         .metaData
-        ?.getString("dev.axonpack.preview-ready.FINGERPRINT")
+        ?.getString("dev.axonpack.preview-ready.$name")
     } catch (e: Exception) {
       null
     }
   }
+
 }

@@ -29,12 +29,8 @@ export function previewItems(state: PreviewsState): {
   items: PreviewItem[];
   incompatible: LocalPreview[];
 } {
-  const compatible = state.local.filter(
-    (p) => p.fingerprint === state.fingerprint,
-  );
-  const incompatible = state.local.filter(
-    (p) => p.fingerprint !== state.fingerprint,
-  );
+  const compatible = state.local.filter((p) => p.key === state.buildKey);
+  const incompatible = state.local.filter((p) => p.key !== state.buildKey);
   const localById = new Map(compatible.map((p) => [p.id, p]));
   const remote = state.remote ?? [];
 

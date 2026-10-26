@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import type { Platform } from "../core/layout";
 import { changelogFromSubjects } from "./changelog";
+import type { AppConfig } from "./expo-config";
 
 const git = (cwd: string, args: string[]): string | null => {
   try {
@@ -26,16 +27,10 @@ const appRequire = (projectRoot: string) => {
   return createRequire(expo);
 };
 
-export function appVersion(projectRoot: string, platform: Platform) {
+/** The app's Expo config, as the build sees it. */
+export function appConfig(projectRoot: string): AppConfig {
   const { getConfig } = appRequire(projectRoot)("@expo/config");
-  const { exp } = getConfig(projectRoot, { skipSDKVersionRequirement: true });
-  return {
-    appVersion: String(exp.version ?? ""),
-    buildNumber: String(
-      (platform === "ios" ? exp.ios?.buildNumber : exp.android?.versionCode) ??
-        "",
-    ),
-  };
+  return getConfig(projectRoot, { skipSDKVersionRequirement: true }).exp;
 }
 
 export async function fingerprint(

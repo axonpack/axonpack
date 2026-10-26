@@ -42,7 +42,8 @@ export const DEFAULT_LABELS: PreviewListLabels = {
     "Debug build: Metro is not used while a preview runs. Go back to base to load from Metro again.",
   refresh: "Refresh",
   empty: "No previews published for this build yet.",
-  noFingerprint: "This build has no fingerprint, so it cannot list previews.",
+  noBuildKey:
+    "This build has no compatibility key, so it cannot list previews. Add the config plugin and rebuild.",
   download: "Download",
   switchTo: "Switch",
   update: "Update",

@@ -12,20 +12,18 @@ const entry = (id: string, revision = "r1"): IndexEntry => ({
   publishedAt: "2026-01-01",
   appVersion: "1",
   buildNumber: "1",
+  compatibility: "appVersion",
+  fingerprint: "f",
   revision,
   size: 1,
   changelog: "",
   manifest: `previews/ios/fp/${id}.json`,
 });
 
-const local = (
-  id: string,
-  fingerprint = "fp",
-  revision = "r1",
-): LocalPreview => ({
+const local = (id: string, key = "fp", revision = "r1"): LocalPreview => ({
   id,
   platform: "ios",
-  fingerprint,
+  key,
   revision,
   downloadedAt: "2026-01-02",
   entry: entry(id, revision),
@@ -34,7 +32,7 @@ const local = (
 const state = (patch: Partial<PreviewsState>): PreviewsState => ({
   loading: false,
   error: null,
-  fingerprint: "fp",
+  buildKey: "fp",
   remote: [],
   local: [],
   downloading: {},
@@ -96,3 +94,21 @@ test("a preview that stopped before starting shows as broken", () => {
     a: "broken",
   });
 });
+
+test.each([
+  ["appVersion", "version-1.0.1", "version-1.0.0"],
+  ["fingerprint", "fingerprint-new", "fingerprint-old"],
+])(
+  "in %s mode, downloads for another build key are incompatible",
+  (_mode, current, old) => {
+    const { items, incompatible } = previewItems(
+      state({
+        buildKey: current,
+        remote: [],
+        local: [local("now", current), local("before", old)],
+      }),
+    );
+    expect(items.map((i) => i.id)).toEqual(["now"]);
+    expect(incompatible.map((p) => p.id)).toEqual(["before"]);
+  },
+);

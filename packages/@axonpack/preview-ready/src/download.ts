@@ -69,7 +69,7 @@ export async function downloadPreview(
   const local: LocalPreview = {
     id: entry.id,
     platform,
-    fingerprint: manifest.fingerprint,
+    key: manifest.key,
     revision: entry.revision,
     downloadedAt: new Date().toISOString(),
     entry,

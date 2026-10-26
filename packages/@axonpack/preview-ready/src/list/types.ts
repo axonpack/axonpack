@@ -39,7 +39,7 @@ export type PreviewListLabels = {
   metroBypassed: string;
   refresh: string;
   empty: string;
-  noFingerprint: string;
+  noBuildKey: string;
   download: string;
   switchTo: string;
   update: string;

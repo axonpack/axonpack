@@ -1,14 +1,24 @@
 import { requireOptionalNativeModule } from "expo";
 
-type NativeModule = { fingerprint?: string | null };
+import type { Compatibility } from "./core/layout";
+
+type NativeModule = { compatibility?: string | null; key?: string | null };
 
 /**
- * This native build's fingerprint, as the config plugin baked it in at prebuild. The app only
- * offers previews published for this value. Null without the plugin or the native module.
+ * The key this native build lists previews under, as the config plugin baked it in at prebuild:
+ * `version-<app version>` or `fingerprint-<hash>`. Null without the plugin or the native module.
  */
-export function buildFingerprint(): string | null {
+export function buildKey(): string | null {
   return (
-    requireOptionalNativeModule<NativeModule>("AxonpackPreviewReady")
-      ?.fingerprint ?? null
+    requireOptionalNativeModule<NativeModule>("AxonpackPreviewReady")?.key ??
+    null
   );
+}
+
+/** The compatibility setting the build was made with, for showing; null without the plugin. */
+export function buildCompatibility(): Compatibility | null {
+  const value = requireOptionalNativeModule<NativeModule>(
+    "AxonpackPreviewReady",
+  )?.compatibility;
+  return value === "appVersion" || value === "fingerprint" ? value : null;
 }
