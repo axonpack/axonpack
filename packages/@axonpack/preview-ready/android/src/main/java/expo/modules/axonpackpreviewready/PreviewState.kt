@@ -93,6 +93,20 @@ internal object PreviewState {
     state.writeText(JSONObject().put("bundle", bundle).toString())
   }
 
+  /** The raw choice, for JS to show which preview is active. Empty when nothing is chosen. */
+  fun read(context: Context): Map<String, Any?> =
+    try {
+      val state = File(root(context), "state.json")
+      if (!state.isFile) {
+        emptyMap()
+      } else {
+        val json = JSONObject(state.readText())
+        mapOf("bundle" to json.optString("bundle").ifEmpty { null })
+      }
+    } catch (e: Exception) {
+      emptyMap()
+    }
+
   /** Null means "load the base bundle", which is also the answer to anything unexpected. */
   fun selectedBundle(context: Context): File? {
     return try {

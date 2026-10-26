@@ -58,3 +58,13 @@ export async function listLocalPreviews(
   }
   return previews;
 }
+
+/** Removes the download's files and its record. The folder for the id goes once it is empty. */
+export function deleteLocalPreview(id: string, platform: Platform): void {
+  const folder = previewDirectory(id, platform);
+  if (folder.exists) folder.delete();
+  const meta = metaFile(id, platform);
+  if (meta.exists) meta.delete();
+  const parent = new Directory(rootDirectory(), id);
+  if (parent.exists && parent.list().length === 0) parent.delete();
+}

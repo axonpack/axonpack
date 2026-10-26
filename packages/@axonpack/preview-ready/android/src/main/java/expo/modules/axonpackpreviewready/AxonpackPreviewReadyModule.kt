@@ -17,6 +17,10 @@ class AxonpackPreviewReadyModule : Module() {
       PreviewState.select(context, bundle)
     }
 
+    Function("state") {
+      appContext.reactContext?.let { PreviewState.read(it) } ?: emptyMap<String, Any?>()
+    }
+
     Function("reload") { reload() }
   }
 

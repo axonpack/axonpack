@@ -78,6 +78,18 @@ enum PreviewState {
     try JSONSerialization.data(withJSONObject: ["bundle": bundle]).write(to: state, options: .atomic)
   }
 
+  /// The raw choice, for JS to show which preview is active. Empty when nothing is chosen.
+  static func read() -> [String: Any?] {
+    guard
+      let root,
+      let data = try? Data(contentsOf: root.appendingPathComponent("state.json")),
+      let state = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else {
+      return [:]
+    }
+    return ["bundle": state["bundle"] as? String]
+  }
+
   /// Nil means "load the base bundle", which is also the answer to anything unexpected.
   static func selectedBundle() -> URL? {
     guard let root, let data = try? Data(contentsOf: root.appendingPathComponent("state.json")) else {

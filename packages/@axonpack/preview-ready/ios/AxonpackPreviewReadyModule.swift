@@ -20,6 +20,10 @@ public final class AxonpackPreviewReadyModule: Module {
       try PreviewState.select(bundle)
     }
 
+    Function("state") {
+      PreviewState.read()
+    }
+
     Function("reload") {
       guard PreviewState.newArchitecture else {
         PreviewState.warnOldArchitecture()

@@ -37,7 +37,8 @@ export class Directory {
     disk.set(this.uri, "dir");
   }
   delete() {
-    for (const key of [...disk.keys()]) {
+    // Collected first: the map changes while it is walked.
+    for (const key of Array.from(disk.keys())) {
       if (key === this.uri || key.startsWith(`${this.uri}/`)) disk.delete(key);
     }
   }
@@ -54,7 +55,7 @@ export class Directory {
   }
   rename(newName: string) {
     const target = `${this.uri.slice(0, this.uri.lastIndexOf("/"))}/${newName}`;
-    for (const [key, value] of [...disk.entries()]) {
+    for (const [key, value] of Array.from(disk.entries())) {
       if (key === this.uri || key.startsWith(`${this.uri}/`)) {
         disk.delete(key);
         disk.set(target + key.slice(this.uri.length), value);
