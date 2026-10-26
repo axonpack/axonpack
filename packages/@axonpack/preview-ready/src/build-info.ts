@@ -2,7 +2,11 @@ import { requireOptionalNativeModule } from "expo";
 
 import type { Compatibility } from "./core/layout";
 
-type NativeModule = { compatibility?: string | null; key?: string | null };
+type NativeModule = {
+  compatibility?: string | null;
+  key?: string | null;
+  slug?: string | null;
+};
 
 /**
  * The key this native build lists previews under, as the config plugin baked it in at prebuild:
@@ -21,4 +25,12 @@ export function buildCompatibility(): Compatibility | null {
     "AxonpackPreviewReady",
   )?.compatibility;
   return value === "appVersion" || value === "fingerprint" ? value : null;
+}
+
+/** The app's Expo slug, baked in by the config plugin; it tells this app's local servers apart. */
+export function buildSlug(): string | null {
+  return (
+    requireOptionalNativeModule<NativeModule>("AxonpackPreviewReady")?.slug ??
+    null
+  );
 }

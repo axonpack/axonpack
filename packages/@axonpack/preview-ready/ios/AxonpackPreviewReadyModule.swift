@@ -8,7 +8,8 @@ public final class AxonpackPreviewReadyModule: Module {
     // What the config plugin wrote at prebuild; nil when the plugin is not in the app config.
     Constants([
       "compatibility": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyCompatibility") as? String,
-      "key": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyKey") as? String
+      "key": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyKey") as? String,
+      "slug": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadySlug") as? String
     ])
 
     OnCreate {

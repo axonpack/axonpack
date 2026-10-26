@@ -10,7 +10,11 @@ class AxonpackPreviewReadyModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("AxonpackPreviewReady")
 
-    Constants("compatibility" to metaData("COMPATIBILITY"), "key" to metaData("KEY"))
+    Constants(
+      "compatibility" to metaData("COMPATIBILITY"),
+      "key" to metaData("KEY"),
+      "slug" to metaData("SLUG"),
+    )
 
     Function("select") { bundle: String?, key: String? ->
       val context = appContext.reactContext ?: return@Function

@@ -19,10 +19,12 @@ const pkg = require("./package.json");
 const PLIST = {
   compatibility: "AxonpackPreviewReadyCompatibility",
   key: "AxonpackPreviewReadyKey",
+  slug: "AxonpackPreviewReadySlug",
 };
 const META = {
   compatibility: "dev.axonpack.preview-ready.COMPATIBILITY",
   key: "dev.axonpack.preview-ready.KEY",
+  slug: "dev.axonpack.preview-ready.SLUG",
 };
 
 // Kept in step with src/core/layout.ts and src/cli/expo-config.ts by a test.
@@ -70,6 +72,8 @@ const withPreviewReady = (config, options = {}) => {
       "ios",
       compatibility,
     );
+    // Tells this app's local Metro servers apart from other projects' (notes/local-servers.md).
+    mod.modResults[PLIST.slug] = mod.slug;
     return mod;
   });
   config = withAndroidManifest(config, async (mod) => {
@@ -91,6 +95,11 @@ const withPreviewReady = (config, options = {}) => {
       application,
       META.key,
       key,
+    );
+    AndroidConfig.Manifest.addMetaDataItemToMainApplication(
+      application,
+      META.slug,
+      mod.slug,
     );
     return mod;
   });
