@@ -110,3 +110,16 @@ test("switching to a preview that is not on the device downloads it first", asyn
   expect(mockNative.select).toHaveBeenCalledWith("t/ios/main.jsbundle");
   expect(mockNative.reload).toHaveBeenCalled();
 });
+
+test("the list shows why a refresh failed when the bucket URL answers with a web page", async () => {
+  global.fetch = jest.fn(
+    async () =>
+      new Response("<html>login</html>", {
+        headers: { "content-type": "text/html" },
+      }),
+  ) as typeof fetch;
+  await previewsStore.refresh({ ...config, fingerprint: "fp" });
+  expect(previewsStore.getState().error).toMatch(
+    /^Expected JSON from http:\/\/localhost:9000\/b\/index\/ios\/fp\.json but got text\/html \(status 200\)/,
+  );
+});

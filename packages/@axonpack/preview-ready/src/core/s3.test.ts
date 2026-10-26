@@ -1,4 +1,11 @@
-import { objectUrl, parseBucketUrl, putObject, readUrl, S3Config } from "./s3";
+import {
+  getJson,
+  objectUrl,
+  parseBucketUrl,
+  putObject,
+  readUrl,
+  S3Config,
+} from "./s3";
 
 const config: S3Config = {
   endpoint: "http://localhost:9000/",
@@ -111,4 +118,37 @@ describe("bucket URLs with or without slashes", () => {
       "has no bucket",
     );
   });
+});
+
+test("a login page instead of JSON says where it came from", async () => {
+  const page = new Response(
+    "<!DOCTYPE html><html><body>Sign in with GitHub</body></html>",
+    {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    },
+  );
+  Object.defineProperty(page, "url", {
+    value: "https://global.rel.tunnels.example/auth/github",
+  });
+  global.fetch = jest.fn(async () => page) as typeof fetch;
+  await expect(
+    getJson(
+      { ...config, endpoint: "https://tunnel.example" },
+      "index/android/fp.json",
+    ),
+  ).rejects.toThrow(
+    "Expected JSON from https://tunnel.example/b/index/android/fp.json but got text/html (status 200, redirected to https://global.rel.tunnels.example/auth/github). Is the URL public",
+  );
+});
+
+test("without a content type, the start of the body is shown", async () => {
+  global.fetch = jest.fn(async () => {
+    const res = new Response("not json at all");
+    res.headers.delete("content-type");
+    return res;
+  }) as typeof fetch;
+  await expect(getJson(config, "index.json")).rejects.toThrow(
+    'but got "not json at all" (status 200)',
+  );
 });

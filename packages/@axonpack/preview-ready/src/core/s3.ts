@@ -118,8 +118,29 @@ export async function getJson<T>(
   const res = await s3Fetch(config, { method: "GET", key });
   if (res.status === 404 || (res.status === 403 && !config.credentials))
     return null;
-  if (!res.ok) throw new S3Error(res.status, key, await res.text());
-  return { data: (await res.json()) as T, etag: res.headers.get("etag") };
+  const body = await res.text();
+  if (!res.ok) throw new S3Error(res.status, key, body);
+  try {
+    return { data: JSON.parse(body) as T, etag: res.headers.get("etag") };
+  } catch {
+    throw new Error(notJsonMessage(readUrl(config, key), res, body));
+  }
+}
+
+/**
+ * Something in front of the bucket answered instead of it: most often a private tunnel or proxy
+ * sending a login page. Say what came back and from where, instead of a bare JSON parse error.
+ */
+export function notJsonMessage(
+  url: string,
+  res: Response,
+  body: string,
+): string {
+  const type = res.headers.get("content-type")?.split(";")[0];
+  const got = type || JSON.stringify(body.trim().slice(0, 80));
+  const redirected =
+    res.url && res.url !== url ? `, redirected to ${res.url}` : "";
+  return `Expected JSON from ${url} but got ${got} (status ${res.status}${redirected}). Is the URL public, or does it need a read key or headers?`;
 }
 
 /**
