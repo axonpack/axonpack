@@ -34,6 +34,8 @@ const config: PreviewReadyConfig = {
   readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_READY_S3_READ_ACCESS_KEY_ID,
   readSecretAccessKey:
     process.env.EXPO_PUBLIC_PREVIEW_READY_S3_READ_SECRET_ACCESS_KEY,
+  region: process.env.EXPO_PUBLIC_PREVIEW_READY_S3_REGION,
+  publicUrl: process.env.EXPO_PUBLIC_PREVIEW_READY_S3_PUBLIC_URL,
 };
 
 export default function App() {

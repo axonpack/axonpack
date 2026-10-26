@@ -89,11 +89,15 @@ A file is at `<endpoint>/<bucket>/<path>`.
 
 The example reads its bucket from `example/.env` (copy `example/.env.example`):
 
-| Variable                                              | What it is                                                                    |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `EXPO_PUBLIC_PREVIEW_READY_S3_URL`                    | The same `<endpoint>/<bucket>` the previews are published to                  |
-| `EXPO_PUBLIC_PREVIEW_READY_S3_READ_ACCESS_KEY_ID`     | Only for a private bucket: the read-only key (`preview-ready-reader` locally) |
-| `EXPO_PUBLIC_PREVIEW_READY_S3_READ_SECRET_ACCESS_KEY` | Its secret (`preview-ready-reader-secret` locally)                            |
+| Variable                                              | Needed | What it is                                                                          |
+| ----------------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_URL`                    | yes    | The same `<endpoint>/<bucket>` the previews are published to                        |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_READ_ACCESS_KEY_ID`     | no     | Only for a private bucket: the read-only key (`preview-ready-reader` locally)       |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_READ_SECRET_ACCESS_KEY` | no     | Its secret (`preview-ready-reader-secret` locally)                                  |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_REGION`                 | no     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
+| `EXPO_PUBLIC_PREVIEW_READY_S3_PUBLIC_URL`             | no     | A public bucket served from another address, such as R2's `https://pub-<id>.r2.dev` |
+
+Headers for a tunnel or proxy are not env values: pass `headers` in the app's config.
 
 Expo builds `EXPO_PUBLIC_*` values into the app, so only a read-only key may go there, never the
 write key. They are read when the app is bundled, so rebuild after changing them.
