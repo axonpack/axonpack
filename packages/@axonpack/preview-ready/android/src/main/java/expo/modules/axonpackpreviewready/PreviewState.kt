@@ -1,6 +1,7 @@
 package expo.modules.axonpackpreviewready
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.util.Log
 import com.facebook.react.ReactHost
 import com.facebook.react.common.build.ReactBuildConfig
@@ -37,6 +38,7 @@ internal object PreviewState {
   /** The selected preview if this app can run it, else null for the base bundle. */
   fun bundleToLoad(context: Context): File? {
     val bundle = selectedBundle(context) ?: return null
+    if (!madeForThisBuild(context)) return null
     if (!newArchitecture()) {
       warnOldArchitecture()
       return null
@@ -160,17 +162,48 @@ internal object PreviewState {
    * path is relative to the preview folder and must stay inside it. Choosing a preview again takes
    * it off the broken list, since it may have been fixed and downloaded again.
    */
-  fun select(context: Context, bundle: String?) {
+  /** The key the config plugin baked into this build; null without the plugin. */
+  private fun buildKey(context: Context): String? =
+    try {
+      context.packageManager
+        .getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+        .metaData
+        ?.getString("dev.axonpack.preview-ready.KEY")
+    } catch (e: Exception) {
+      null
+    }
+
+  /**
+   * A preview chosen on an earlier build (the app was updated since) is not loaded: with app
+   * version matching, a new version is a new native build. The choice is cleared, so the app and
+   * the list both show the base bundle. Without a key on either side there is nothing to compare.
+   */
+  private fun madeForThisBuild(context: Context): Boolean {
+    val json = readJson(context)
+    val chosenFor = json.optString("key")
+    val build = buildKey(context)
+    if (chosenFor.isEmpty() || build == null || chosenFor == build) return true
+    Log.w(TAG, "The chosen preview was made for build $chosenFor but this is $build, so the base bundle loads")
+    json.remove("bundle")
+    json.remove("key")
+    json.remove("pending")
+    writeJson(context, json)
+    return false
+  }
+
+  fun select(context: Context, bundle: String?, key: String? = null) {
     val root = root(context)
     val json = readJson(context)
     json.remove("pending")
     if (bundle == null) {
       json.remove("bundle")
+      json.remove("key")
     } else {
       require(File(root, bundle).canonicalPath.startsWith(root.canonicalPath + File.separator)) {
         "The bundle path must stay inside the preview folder"
       }
       json.put("bundle", bundle)
+      if (key != null) json.put("key", key) else json.remove("key")
       json.put("broken", JSONArray(brokenIds(json) - bundle.substringBefore("/")))
     }
     writeJson(context, json)

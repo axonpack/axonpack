@@ -27,6 +27,9 @@ enum PreviewState {
     guard let preview = selectedBundle() else {
       return nil
     }
+    guard madeForThisBuild() else {
+      return nil
+    }
     guard newArchitecture else {
       warnOldArchitecture()
       return nil
@@ -117,6 +120,27 @@ enum PreviewState {
     return true
   }
 
+  /// The key the config plugin baked into this build; nil without the plugin.
+  private static var buildKey: String? {
+    Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewReadyKey") as? String
+  }
+
+  /// A preview chosen on an earlier build (the app was updated since) is not loaded: with app
+  /// version matching, a new version is a new native build. The choice is cleared, so the app and
+  /// the list both show the base bundle. Without a key on either side there is nothing to compare.
+  private static func madeForThisBuild() -> Bool {
+    var json = readJson()
+    guard let chosenFor = json["key"] as? String, let build = buildKey, chosenFor != build else {
+      return true
+    }
+    previewReadyLog.warning("The chosen preview was made for build \(chosenFor, privacy: .public) but this is \(build, privacy: .public), so the base bundle loads")
+    json["bundle"] = nil
+    json["key"] = nil
+    json["pending"] = nil
+    writeJson(json)
+    return false
+  }
+
   /// JS calls this once the app has mounted: this start worked.
   static func confirmStart() {
     var json = readJson()
@@ -129,7 +153,7 @@ enum PreviewState {
   /// Records the choice for the next start or reload. Nil clears it, so the base bundle loads. The
   /// path is relative to the preview folder and must stay inside it. Choosing a preview again takes
   /// it off the broken list, since it may have been fixed and downloaded again.
-  static func select(_ bundle: String?) throws {
+  static func select(_ bundle: String?, key: String? = nil) throws {
     guard let root else {
       return
     }
@@ -141,9 +165,11 @@ enum PreviewState {
       }
       let id = bundle.components(separatedBy: "/").first ?? ""
       json["bundle"] = bundle
+      json["key"] = key
       json["broken"] = (json["broken"] as? [String] ?? []).filter { $0 != id }
     } else {
       json["bundle"] = nil
+      json["key"] = nil
     }
     writeJson(json)
   }

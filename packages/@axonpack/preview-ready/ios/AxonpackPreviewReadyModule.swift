@@ -17,8 +17,8 @@ public final class AxonpackPreviewReadyModule: Module {
       }
     }
 
-    Function("select") { (bundle: String?) in
-      try PreviewState.select(bundle)
+    Function("select") { (bundle: String?, key: String?) in
+      try PreviewState.select(bundle, key: key)
     }
 
     Function("state") {

@@ -114,7 +114,11 @@ export const previewsStore = {
       await previewsStore.download(config, id);
       if (!state.local.some((p) => p.id === id)) return;
     }
-    native.select(id === null ? null : previewBundlePath(id));
+    const local = state.local.find((p) => p.id === id);
+    native.select(
+      id === null ? null : previewBundlePath(id),
+      local?.key ?? null,
+    );
     native.reload();
   },
 
@@ -124,7 +128,7 @@ export const previewsStore = {
     if (!platform) return;
     const native = nativeModule();
     if (state.activeId === id && native) {
-      native.select(null);
+      native.select(null, null);
       native.reload();
     }
     deleteLocalPreview(id, platform);

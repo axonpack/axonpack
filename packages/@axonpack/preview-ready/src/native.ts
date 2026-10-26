@@ -3,7 +3,7 @@ import { requireOptionalNativeModule } from "expo";
 export type NativeState = { bundle?: string | null; broken?: string[] };
 
 type NativeModule = {
-  select(bundle: string | null): void;
+  select(bundle: string | null, key: string | null): void;
   reload(): void;
   markLaunched(): void;
   state(): NativeState;

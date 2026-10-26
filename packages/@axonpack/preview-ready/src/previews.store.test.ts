@@ -6,7 +6,7 @@ jest.mock("expo-file-system", () => require("./fake-file-system.test-helper"));
 const mockNative = {
   bundle: null as string | null,
   key: "fp",
-  select: jest.fn((bundle: string | null) => {
+  select: jest.fn((bundle: string | null, _key?: string | null) => {
     mockNative.bundle = bundle;
   }),
   reload: jest.fn(),
@@ -53,7 +53,7 @@ test("deleting the running preview goes back to the base bundle first", async ()
   await previewsStore.refresh(config);
   expect(previewsStore.getState().activeId).toBe("a");
   await previewsStore.remove("a");
-  expect(mockNative.select).toHaveBeenCalledWith(null);
+  expect(mockNative.select).toHaveBeenCalledWith(null, null);
   expect(mockNative.reload).toHaveBeenCalled();
   expect(disk.has("file:/docs/preview-ready/a")).toBe(false);
   expect(previewsStore.getState().local).toEqual([]);
@@ -107,7 +107,7 @@ test("switching to a preview that is not on the device downloads it first", asyn
   expect(disk.get("file:/docs/preview-ready/t/ios/main.jsbundle")).toEqual(
     bundle,
   );
-  expect(mockNative.select).toHaveBeenCalledWith("t/ios/main.jsbundle");
+  expect(mockNative.select).toHaveBeenCalledWith("t/ios/main.jsbundle", "fp");
   expect(mockNative.reload).toHaveBeenCalled();
 });
 

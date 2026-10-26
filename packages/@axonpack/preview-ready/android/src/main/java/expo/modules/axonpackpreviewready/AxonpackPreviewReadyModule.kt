@@ -12,9 +12,9 @@ class AxonpackPreviewReadyModule : Module() {
 
     Constants("compatibility" to metaData("COMPATIBILITY"), "key" to metaData("KEY"))
 
-    Function("select") { bundle: String? ->
+    Function("select") { bundle: String?, key: String? ->
       val context = appContext.reactContext ?: return@Function
-      PreviewState.select(context, bundle)
+      PreviewState.select(context, bundle, key)
     }
 
     Function("state") {
