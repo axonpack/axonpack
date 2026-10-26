@@ -162,13 +162,19 @@ export async function start(options: StartOptions) {
   const server = registration({ ...options, port, fingerprints });
   adbReverse([options.registryPort, port]);
 
-  const register = () =>
+  const post = () =>
     fetch(`${registry}/servers`, {
       method: "POST",
       body: JSON.stringify(server),
-    }).catch(() => {
-      // The registry restarts on demand; the next heartbeat registers again.
     });
+  // The registry exits once it has been empty for a while, which a slow start (adb, fingerprint)
+  // can outlast, and it may be killed: start it again and register in that case.
+  const register = () =>
+    post()
+      .catch(() => ensureRegistry(options.registryPort, options.bin).then(post))
+      .catch(() => {
+        // Still down; the next heartbeat tries again.
+      });
   const unregister = () =>
     fetch(`${registry}/servers/${encodeURIComponent(server.id)}`, {
       method: "DELETE",
