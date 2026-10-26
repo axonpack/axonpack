@@ -76,9 +76,9 @@
     "typescript": "^5.9.2"
   },
   "peerDependencies": {
-    "expo": ">=58",
+    "expo": ">=53",
     "react": ">=18",
-    "react-native": ">=0.88"
+    "react-native": ">=0.79"
   },
   "jest": {
     "preset": "jest-expo",
