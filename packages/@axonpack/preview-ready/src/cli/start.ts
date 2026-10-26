@@ -19,9 +19,16 @@ const portIsFree = (port: number) =>
     probe.listen(port);
   });
 
-/** The first port in the range nothing listens on. */
-export async function freePort([from, to]: [number, number]): Promise<number> {
+/**
+ * The first port in the range nothing listens on and no other `start` has claimed. A claim counts
+ * because Metro takes a few seconds to bind, and two starts close together would pick the same port.
+ */
+export async function freePort(
+  [from, to]: [number, number],
+  claimed: Set<number> = new Set(),
+): Promise<number> {
   for (let port = from; port <= to; port++) {
+    if (claimed.has(port)) continue;
     if (await portIsFree(port)) return port;
   }
   throw new Error(
@@ -140,7 +147,12 @@ export type StartOptions = {
  * process is killed outright.
  */
 export async function start(options: StartOptions) {
-  const port = await freePort(options.ports);
+  const registry = await ensureRegistry(options.registryPort, options.bin);
+  const claimed = await fetch(`${registry}/servers`)
+    .then((res) => res.json() as Promise<{ servers: RegisteredServer[] }>)
+    .then(({ servers }) => new Set(servers.map((s) => s.port)))
+    .catch(() => new Set<number>());
+  const port = await freePort(options.ports, claimed);
   const fingerprints: Partial<Record<Platform, string>> = {};
   if (compatibilityOf(options.config) === "fingerprint") {
     for (const platform of PLATFORMS) {
@@ -148,7 +160,6 @@ export async function start(options: StartOptions) {
     }
   }
   const server = registration({ ...options, port, fingerprints });
-  const registry = await ensureRegistry(options.registryPort, options.bin);
   adbReverse([options.registryPort, port]);
 
   const register = () =>

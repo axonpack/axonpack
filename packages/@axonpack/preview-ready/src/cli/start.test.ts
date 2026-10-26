@@ -13,6 +13,13 @@ test("skips a port something already listens on", async () => {
   }
 });
 
+test("skips a port another start has claimed but Metro has not bound yet", async () => {
+  const free = await freePort([40000, 40100]);
+  expect(await freePort([free, free + 100], new Set([free]))).toBeGreaterThan(
+    free,
+  );
+});
+
 test("announces the branch, slug and the keys publish would use", () => {
   const server = registration({
     config: {
