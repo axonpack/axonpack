@@ -46,4 +46,4 @@ export {
   useDevPreviewServersState,
 } from "./features/dev-preview-servers/stores/dev-preview-servers.store";
 export type { DevPreviewServersState } from "./features/dev-preview-servers/stores/dev-preview-servers.store";
-export type { DevPreviewServer } from "./features/dev-preview-servers/services/discover.service";
+export type { DevPreviewServer } from "./features/dev-preview-servers/utils/merge-servers.util";

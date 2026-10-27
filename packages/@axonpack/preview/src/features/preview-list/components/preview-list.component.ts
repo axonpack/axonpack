@@ -10,7 +10,7 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import type { DevPreviewServer } from "../../dev-preview-servers/services/discover.service";
+import type { DevPreviewServer } from "../../dev-preview-servers/utils/merge-servers.util";
 import {
   devPreviewServersStore,
   useDevPreviewServersState,

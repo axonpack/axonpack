@@ -2,11 +2,11 @@ import { useSyncExternalStore } from "react";
 
 import { buildKey, buildSlug } from "../../../core/services/build-info.service";
 import { currentPlatform } from "../../../core/utils/config.util";
+import { discover } from "../services/discover.service";
 import {
   type DevPreviewServer,
-  discover,
   mergeServers,
-} from "../services/discover.service";
+} from "../utils/merge-servers.util";
 import { nativeModule } from "../../../core/services/native.service";
 
 export type DevPreviewServersState = {

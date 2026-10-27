@@ -1,4 +1,4 @@
-import type { DevPreviewServer } from "../../../dev-preview-servers/services/discover.service";
+import type { DevPreviewServer } from "../../../dev-preview-servers/utils/merge-servers.util";
 import type { PreviewItem } from "../preview-items.util";
 import { runningNow } from "../running.util";
 

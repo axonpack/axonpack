@@ -1,5 +1,5 @@
 import type { RegisteredServer } from "../../../../core/constants/dev-preview-servers.const";
-import { type ScannedServer, mergeServers } from "../discover.service";
+import { type ScannedServer, mergeServers } from "../merge-servers.util";
 
 const scanned = (
   port: number,
