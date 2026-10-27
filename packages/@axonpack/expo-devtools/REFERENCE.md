@@ -581,6 +581,7 @@ into lasts until the app reloads.
 | Clear           | Throws away the log.                                                                                      |
 | Sort arrow      | Flips the direction of the current sort. Its tooltip says what pressing it would give you.                |
 | Filter          | Shows or hides the filter bar. Filled while any filter is on.                                             |
+| Overrides       | Shows or hides the overrides pane. Lit while any override or block is on.                                 |
 | Throttling      | `No throttling`, `Slow 3G`, `Fast 3G`, `Fast 4G`, `Offline`, `Custom`. The same profiles as the device's. |
 | Export          | Downloads the rows the filters keep as JSON, the same file the device's Export shares.                    |
 | Settings (gear) | Shows or hides the settings pane.                                                                         |
@@ -698,6 +699,13 @@ Opens in the request pane, with ✕ to go back to the request.
 It starts from the rule the URL already has, or from what the server really answered. **Save**
 applies it to every request to that exact URL, **Remove** drops it, **Cancel** goes back. While a rule
 is on the request is not sent at all, so the endpoint does not have to exist.
+
+### Overrides pane
+
+The app's overrides panel, under the toolbar: every override and block, with **Edit** (or
+**Override** on a block), **Block**, **Remove** and **Clear all**, which asks first. **Edit** opens the
+override editor in place of the list, and **Save** or **Cancel** goes back to it. Hover a URL for the
+whole of it. A rule changed here changes in the app too, and the other way round.
 
 ### Sandbox
 

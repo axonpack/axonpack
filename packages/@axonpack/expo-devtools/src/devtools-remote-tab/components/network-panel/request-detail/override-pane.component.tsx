@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import type { NetworkLogEntry } from '../../../../features/network/stores/network-log.store';
 import {
   networkOverridesStore,
   useNetworkOverridesStore,
@@ -9,6 +8,7 @@ import {
   overrideDraftFor,
   saveOverride,
   type OverrideDraft,
+  type OverrideSource,
 } from '../../../../features/network/utils/override-draft.util';
 import { SyncedInput } from '../synced-input.component';
 
@@ -16,7 +16,7 @@ import { SyncedInput } from '../synced-input.component';
  * The app's override sheet, in the request pane. The draft is this editor's own: only the saved
  * rule goes to the store, so a half-typed body never redraws the device.
  */
-export function OverridePane({ entry, onDone }: { entry: NetworkLogEntry; onDone: () => void }) {
+export function OverridePane({ entry, onDone }: { entry: OverrideSource; onDone: () => void }) {
   const [draft, setDraft] = useState<OverrideDraft>(() => overrideDraftFor(entry));
   const existing = useNetworkOverridesStore((state) =>
     state.overrides.find((override) => override.url === entry.url)

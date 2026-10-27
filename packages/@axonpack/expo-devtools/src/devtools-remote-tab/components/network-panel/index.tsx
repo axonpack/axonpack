@@ -4,6 +4,7 @@ import { NetworkFilterBar } from './filter-bar.component';
 import { NetworkOverview } from './overview.component';
 import { RequestDetail, type RequestPane } from './request-detail';
 import { RequestGrid } from './request-grid.component';
+import { NetworkOverridesPane } from './overrides-pane.component';
 import { NetworkSettingsPane } from './settings-pane.component';
 import { SplitResizer } from './split-resizer.component';
 import { NetworkSummaryBar } from './summary-bar.component';
@@ -32,6 +33,7 @@ const LIST_MIN = 120;
 export function NetworkPanel() {
   const [filterBarOpen, setFilterBarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [overridesOpen, setOverridesOpen] = useState(false);
   // The id, not the entry: the store replaces an entry's object on every update, and a pane holding
   // the old one would keep showing a request as pending after it finished.
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -68,9 +70,12 @@ export function NetworkPanel() {
         onToggleFilterBar={() => setFilterBarOpen((open) => !open)}
         settingsOpen={settingsOpen}
         onToggleSettings={() => setSettingsOpen((open) => !open)}
+        overridesOpen={overridesOpen}
+        onToggleOverrides={() => setOverridesOpen((open) => !open)}
       />
       {filterBarOpen && <NetworkFilterBar />}
       {settingsOpen && <NetworkSettingsPane />}
+      {overridesOpen && <NetworkOverridesPane />}
       {settings.showOverview && <NetworkOverview />}
       <div className="axonpack-net-main">
         <div
