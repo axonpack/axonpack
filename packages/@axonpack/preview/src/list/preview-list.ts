@@ -15,9 +15,9 @@ import {
   localServersStore,
   useLocalServersState,
 } from "../local-servers.store";
-import { nativeModule } from "../native";
 import type { PreviewItem, PreviewStatus } from "../preview-items";
 import { usePreview } from "../provider";
+import { useRunning } from "../running";
 import { DEFAULT_LABELS, formatSize, resolveTheme } from "./theme";
 import type { PreviewListLabels, PreviewListTheme } from "./types";
 
@@ -34,6 +34,7 @@ export type PreviewListProps = {
 export function PreviewList(props: PreviewListProps) {
   const preview = usePreview();
   const local = useLocalServersState();
+  const now = useRunning();
   const localOptions = preview.localServers;
   const showLocal = __DEV__ && localOptions?.enabled === true;
   // Look for servers only while the list is on screen.
@@ -261,15 +262,6 @@ export function PreviewList(props: PreviewListProps) {
     );
   };
 
-  const active = preview.items.find((i) => i.active);
-  // The first poll fills activeUrl a moment after mount, but native knows it from the start.
-  const localUrl = showLocal
-    ? (local.activeUrl ?? nativeModule()?.state().localServer ?? null)
-    : null;
-  const activeLocal = localUrl
-    ? local.servers.find((server) => server.url === localUrl)
-    : undefined;
-
   const localRow = (server: LocalServer) => {
     const running = server.url === local.activeUrl;
     const meta = [
@@ -400,14 +392,18 @@ export function PreviewList(props: PreviewListProps) {
           key: "running",
           style: { ...font("regular", 15), color: theme.text },
         },
-        activeLocal
-          ? `${labels.running}: ${activeLocal.title} (${labels.localSuffix}, ${activeLocal.hostPort})`
-          : localUrl
-            ? `${labels.running}: ${localUrl.replace(/^\w+:\/\/([^/]+).*$/, "$1")} (${labels.localSuffix})`
-            : `${labels.running}: ${active ? active.entry.title : (preview.activeId ?? labels.base)}`,
+        `${labels.running}: ${
+          now.kind === "local"
+            ? now.server
+              ? `${now.server.title} (${labels.localSuffix}, ${now.hostPort})`
+              : `${now.hostPort} (${labels.localSuffix})`
+            : now.kind === "preview"
+              ? now.title
+              : labels.base
+        }`,
       ),
       // A local server wins over a picked preview, so Metro is in use and the note would be wrong.
-      __DEV__ && preview.activeId && !localUrl
+      __DEV__ && now.kind === "preview"
         ? h(
             Text,
             {
