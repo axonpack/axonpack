@@ -15,6 +15,7 @@ import {
   localServersStore,
   useLocalServersState,
 } from "../local-servers.store";
+import { nativeModule } from "../native";
 import type { PreviewItem, PreviewStatus } from "../preview-items";
 import { usePreview } from "../provider";
 import { DEFAULT_LABELS, formatSize, resolveTheme } from "./theme";
@@ -261,8 +262,12 @@ export function PreviewList(props: PreviewListProps) {
   };
 
   const active = preview.items.find((i) => i.active);
-  const activeLocal = showLocal
-    ? local.servers.find((server) => server.url === local.activeUrl)
+  // The first poll fills activeUrl a moment after mount, but native knows it from the start.
+  const localUrl = showLocal
+    ? (local.activeUrl ?? nativeModule()?.state().localServer ?? null)
+    : null;
+  const activeLocal = localUrl
+    ? local.servers.find((server) => server.url === localUrl)
     : undefined;
 
   const localRow = (server: LocalServer) => {
@@ -397,9 +402,12 @@ export function PreviewList(props: PreviewListProps) {
         },
         activeLocal
           ? `${labels.running}: ${activeLocal.title} (${labels.localSuffix}, ${activeLocal.hostPort})`
-          : `${labels.running}: ${active ? active.entry.title : (preview.activeId ?? labels.base)}`,
+          : localUrl
+            ? `${labels.running}: ${localUrl.replace(/^\w+:\/\/([^/]+).*$/, "$1")} (${labels.localSuffix})`
+            : `${labels.running}: ${active ? active.entry.title : (preview.activeId ?? labels.base)}`,
       ),
-      __DEV__ && preview.activeId
+      // A local server wins over a picked preview, so Metro is in use and the note would be wrong.
+      __DEV__ && preview.activeId && !localUrl
         ? h(
             Text,
             {

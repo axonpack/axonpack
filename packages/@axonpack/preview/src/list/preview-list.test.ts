@@ -5,16 +5,18 @@ import { PreviewProvider } from "../provider";
 import { PreviewList } from "./preview-list";
 
 jest.mock("expo-file-system", () => require("../fake-file-system.test-helper"));
+let mockNativeState: { bundle?: string; localServer?: string } = {};
 jest.mock("expo", () => ({
   requireOptionalNativeModule: () => ({
     key: "version-1.0.0",
     slug: "shop",
-    state: () => ({}),
+    state: () => mockNativeState,
     markLaunched: () => undefined,
   }),
 }));
 
 beforeEach(() => {
+  mockNativeState = {};
   global.fetch = jest.fn(
     async () => new Response("", { status: 404 }),
   ) as typeof fetch;
@@ -66,4 +68,33 @@ test("a release build never shows it", async () => {
   } finally {
     (global as { __DEV__?: boolean }).__DEV__ = dev;
   }
+});
+
+const METRO_NOTE =
+  "Debug build: Metro is not used while a preview runs. Go back to base to load from Metro again.";
+
+test("a preview running in a debug build says Metro is not used", async () => {
+  mockNativeState = { bundle: "task-1/ios/main.jsbundle" };
+  const tree = await render({ enabled: true });
+  expect(texts(tree)).toContain("Running: task-1");
+  expect(texts(tree)).toContain(METRO_NOTE);
+  await act(async () => tree.unmount());
+});
+
+test("a local server in use names the server and drops the Metro note", async () => {
+  mockNativeState = {
+    bundle: "task-1/ios/main.jsbundle",
+    localServer: "http://localhost:8082/index.bundle?platform=ios",
+  };
+  const tree = await render({ enabled: true });
+  expect(texts(tree)).toContain("Running: localhost:8082 (local)");
+  expect(texts(tree)).not.toContain(METRO_NOTE);
+  await act(async () => tree.unmount());
+});
+
+test("the base bundle shows no note", async () => {
+  const tree = await render({ enabled: true });
+  expect(texts(tree)).toContain("Running: Embedded bundle");
+  expect(texts(tree)).not.toContain(METRO_NOTE);
+  await act(async () => tree.unmount());
 });
