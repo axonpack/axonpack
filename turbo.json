@@ -97,12 +97,12 @@
         "build/**"
       ]
     },
-    "@axonpack/preview-ready#build": {
+    "@axonpack/preview#build": {
       "outputs": [
         "build/**"
       ]
     },
-    "@axonpack/preview-ready#prepare": {
+    "@axonpack/preview#prepare": {
       "outputs": [
         "build/**"
       ]

@@ -57,14 +57,14 @@ Checks the App Store and Play Store for a newer version of the app and shows an 
 soft and forced updates and skipping a version. Its docs:
 [docs/content/docs/in-app-updates](../docs/content/docs/in-app-updates/index.mdx).
 
-## @axonpack/preview-ready
+## @axonpack/preview
 
 _Planned. Being built, not on npm yet._
 
 Download and switch between preview JS bundles of an app, one per task branch, without a native
 rebuild. QA lists the previews built for the installed native build, downloads one into the
 documents folder and restarts into it. expo-updates keeps working underneath. Its notes, area by
-area: [packages/@axonpack/preview-ready/notes](../packages/@axonpack/preview-ready/notes/README.md).
+area: [packages/@axonpack/preview/notes](../packages/@axonpack/preview/notes/README.md).
 
 ## @axonpack/api-kit
 

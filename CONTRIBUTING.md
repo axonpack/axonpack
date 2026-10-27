@@ -104,19 +104,19 @@ cd packages/@axonpack/react-pretty-print/example-web    && bun run test
 cd packages/@axonpack/react-pretty-print/example-native && bun run test
 ```
 
-`@axonpack/preview-ready`'s example needs a local S3 server to publish previews to. The whole run,
+`@axonpack/preview`'s example needs a local S3 server to publish previews to. The whole run,
 from starting it to switching previews in the app, is in
-[its testing note](packages/@axonpack/preview-ready/notes/testing.md):
+[its testing note](packages/@axonpack/preview/notes/testing.md):
 
 ```sh
-cd packages/@axonpack/preview-ready
+cd packages/@axonpack/preview
 bun run storage:local   # MinIO in Docker or Podman
 cd example && npx expo run:ios
 ```
 
 To work on several tasks at once against one installed debug build, start each worktree's Metro
-with `npx preview-ready start`; the example's list switches between them
-([local servers](packages/@axonpack/preview-ready/notes/local-servers.md)).
+with `npx preview start`; the example's list switches between them
+([local servers](packages/@axonpack/preview/notes/local-servers.md)).
 
 `bun run test` from the root runs every workspace's tests through turbo, which is what CI does on a
 pull request. `@axonpack/expo-devtools` runs jest in watch mode unless `CI` is set, so prefix the

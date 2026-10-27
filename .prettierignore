@@ -10,8 +10,8 @@ packages/@axonpack/react-pretty-print/example-native/ios
 packages/@axonpack/react-pretty-print/example-native/android
 packages/@axonpack/in-app-updates/example/ios
 packages/@axonpack/in-app-updates/example/android
-packages/@axonpack/preview-ready/example/ios
-packages/@axonpack/preview-ready/example/android
+packages/@axonpack/preview/example/ios
+packages/@axonpack/preview/example/android
 
 # Its own app with its own formatting. The root `format` task would rewrite the whole site in one diff.
 docs
