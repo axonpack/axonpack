@@ -46,6 +46,8 @@ export function registration(input: {
   port: number;
   branch: string;
   worktree: string;
+  /** What the app's list shows. Default: the branch's readable title, or the app's name. */
+  title?: string;
   fingerprints?: Partial<Record<Platform, string>>;
 }): RegisteredServer {
   const { config } = input;
@@ -61,7 +63,9 @@ export function registration(input: {
   return {
     id: `${input.port}-${randomUUID().slice(0, 8)}`,
     port: input.port,
-    title: input.branch ? previewTitle(input.branch) : (config.name ?? ""),
+    title:
+      input.title ||
+      (input.branch ? previewTitle(input.branch) : (config.name ?? "")),
     branch: input.branch,
     worktree: input.worktree,
     slug: config.slug ?? "",
@@ -134,6 +138,7 @@ export type StartOptions = {
   config: AppConfig & { slug?: string; name?: string };
   branch: string;
   worktree: string;
+  title?: string;
   ports: [number, number];
   registryPort: number;
   expoArgs: string[];

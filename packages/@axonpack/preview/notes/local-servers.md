@@ -9,6 +9,7 @@ between them live.
 - [x] Leaves out other apps' servers; keeps the same app built for other native code, marked
 - [x] Switches the running app to a server, and back, with no rebuild
 - [x] Starts Metro on a free port and announces it with one command, `preview start`
+- [x] Asks for the name the app shows, prefilled from the branch (`--title` or no terminal skips it)
 - [x] Off unless the app turns it on, and never in a release build
 
 ## Turning it on
@@ -26,6 +27,11 @@ between them live.
 | `slug`         | the slug baked into the build  | Only servers for this slug are listed                 |
 
 ## How it works
+
+**The name.** In a terminal, `preview start` asks for the name the app's list shows, prefilled with
+the branch's readable title (`task-1-login-fix` becomes "Task 1 login fix"). Enter keeps it, or edit
+it first. `--title <name>` skips the question, and so does a run with no terminal (CI, an AI agent),
+which takes the branch title. `publish` asks the same way for the title QA sees.
 
 **Two sources.** `preview start` runs `expo start` on a free port and announces it to a small
 registry on the computer (started by the first `start`, gone once no server is left), with the

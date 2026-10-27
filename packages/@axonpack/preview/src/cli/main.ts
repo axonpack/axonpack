@@ -12,6 +12,8 @@ import {
 import { readConfig } from "./config";
 import { createRegistry } from "./registry";
 import { start } from "./start";
+import { askTitle } from "./title";
+import { previewTitle } from "../preview-title";
 import { compatibilityOf, resolveCompatibility } from "./expo-config";
 import {
   appConfig,
@@ -25,7 +27,8 @@ const HELP = `preview <command> [options]
 
   publish            build this app's JS bundle and upload it as a preview
     --id <id>          preview id (default: the git branch)
-    --title <title>    title QA sees (default: a readable form of the id)
+    --title <title>    name QA sees; without it a terminal asks, prefilled with a readable
+                       form of the id (Enter keeps it). No prompt without a terminal (CI)
     --platform <p>     android, ios or all (default: all)
     --base <branch>    branch the changelog counts from (default: the repo's default branch)
     --changelog=<text> changelog text instead of the commit subjects (use = when it starts
@@ -37,6 +40,8 @@ const HELP = `preview <command> [options]
   prune              delete files no preview uses any more
   start [-- <expo start args>]
                      run Metro on a free port and announce it to the app's local servers list
+    --title <title>    name the app's list shows; asked like publish, prefilled with a
+                       readable form of the branch
     --ports <from>-<to> ports to pick from (default 8081-8099)
     --registry-port <p> where the announcements go (default 19150)
 
@@ -110,7 +115,10 @@ async function main() {
       s3: s3(),
       platforms,
       id,
-      title: values.title,
+      title: await askTitle({
+        given: values.title,
+        fallback: previewTitle(id),
+      }),
       ...git,
       changelog,
       entryFile: values["entry-file"],
@@ -128,10 +136,18 @@ async function main() {
       .map(Number);
     if (!from || !to || from > to)
       throw new Error("--ports must look like 8081-8099");
+    const config = appConfig(projectRoot);
+    const branch = gitInfo(projectRoot).branch;
+    const title = await askTitle({
+      given: values.title,
+      // Empty lets the announcement fall back to the app's name.
+      fallback: branch ? previewTitle(branch) : "",
+    });
     await start({
       projectRoot,
-      config: appConfig(projectRoot),
-      branch: gitInfo(projectRoot).branch,
+      config,
+      branch,
+      title,
       worktree: gitTopLevel(projectRoot) ?? projectRoot,
       ports: [from, to],
       registryPort: Number(values["registry-port"] ?? DEFAULT_REGISTRY_PORT),

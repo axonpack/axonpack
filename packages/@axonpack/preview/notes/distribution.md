@@ -18,7 +18,7 @@ in.
 Run from the app's root (`--project <dir>` otherwise). `preview --help` lists every option.
 
 ```sh
-npx preview publish                  # id = git branch, both platforms
+npx preview publish                  # id = git branch, both platforms; asks for the title
 npx preview publish --id task-1 --changelog="- Fixes the login"
 npx preview unpublish task-1
 npx preview prune

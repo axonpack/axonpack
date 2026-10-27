@@ -71,6 +71,8 @@ app needs `localServers: { enabled: true }` (the example has it).
    bunx preview start            # picks a free port in 8081-8099 and announces it
    bunx preview start -- --clear # anything after -- goes to expo start
    ```
+   In a terminal it asks for the name the app shows, prefilled from the branch; Enter keeps it.
+   `--title <name>` skips the question, and so does a run with no terminal.
    A plain `npx expo start --port 8085` is found as well, with less detail (no branch).
 2. Open the list in the app. "Local servers" shows each server for this app within about two
    seconds, with its branch, port and version. Switch runs that server; "Stop using local server"
