@@ -3,25 +3,28 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { PLATFORMS, Platform } from "../core/layout";
-import { prune, publish, unpublish } from "./commands";
+import { PLATFORMS, Platform } from "../core/utils/layout.util";
+import { prune, publish, unpublish } from "./services/commands.service";
 import {
   DEFAULT_PORT_RANGE,
   DEFAULT_REGISTRY_PORT,
-} from "../core/dev-preview-servers";
-import { readConfig } from "./config";
-import { createRegistry } from "./registry";
-import { start } from "./start";
-import { askTitle } from "./title";
-import { previewTitle } from "../preview-title";
-import { compatibilityOf, resolveCompatibility } from "./expo-config";
+} from "../core/constants/dev-preview-servers.const";
+import { readConfig } from "./services/config.service";
+import { createRegistry } from "./services/registry.service";
+import { start } from "./services/start.service";
+import { askTitle } from "./services/title.service";
+import { previewTitle } from "../core/utils/preview-title.util";
+import {
+  compatibilityOf,
+  resolveCompatibility,
+} from "../core/utils/expo-config.util";
 import {
   appConfig,
   changelogSince,
   defaultBase,
   gitInfo,
   gitTopLevel,
-} from "./project";
+} from "./services/project.service";
 
 const HELP = `preview <command> [options]
 

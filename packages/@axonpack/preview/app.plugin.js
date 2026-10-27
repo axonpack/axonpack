@@ -27,7 +27,7 @@ const META = {
   slug: "dev.axonpack.preview.SLUG",
 };
 
-// Kept in step with src/core/layout.ts and src/cli/expo-config.ts by a test.
+// Kept in step with src/core/utils/layout.util.ts and src/core/utils/expo-config.util.ts by a test.
 const compatibilityOf = (options) => {
   const value = options?.compatibility ?? "appVersion";
   if (value !== "appVersion" && value !== "fingerprint") {
