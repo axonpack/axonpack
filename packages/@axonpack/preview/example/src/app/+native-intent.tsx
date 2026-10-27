@@ -1,4 +1,4 @@
-import { localServersStore, previewsStore } from "@axonpack/preview";
+import { devPreviewServersStore, previewsStore } from "@axonpack/preview";
 
 import { previewConfig as config } from "@/preview-config";
 
@@ -13,12 +13,12 @@ const ACTIONS: Record<string, (id: string) => void> = {
   delete: (id) => id && previewsStore.remove(id),
   deleteincompatible: () => previewsStore.removeIncompatible(),
   local: (id) => {
-    const server = localServersStore
+    const server = devPreviewServersStore
       .getState()
       .servers.find((s) => String(s.port) === id);
-    if (server) localServersStore.switchTo(server);
+    if (server) devPreviewServersStore.switchTo(server);
   },
-  localstop: () => localServersStore.switchTo(null),
+  localstop: () => devPreviewServersStore.switchTo(null),
   switch: (id) => previewsStore.switchTo(config, id === "embedded" ? null : id),
 };
 

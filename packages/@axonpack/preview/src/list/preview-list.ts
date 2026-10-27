@@ -10,12 +10,13 @@ import {
   type ViewStyle,
 } from "react-native";
 
-import type { LocalServer } from "../local-servers";
+import type { DevPreviewServer } from "../dev-preview-servers";
 import {
-  localServersStore,
-  useLocalServersState,
-} from "../local-servers.store";
+  devPreviewServersStore,
+  useDevPreviewServersState,
+} from "../dev-preview-servers.store";
 import type { PreviewItem, PreviewStatus } from "../preview-items";
+import { buildSlug } from "../build-info";
 import { usePreview } from "../provider";
 import { useRunning } from "../running";
 import { DEFAULT_LABELS, formatSize, resolveTheme } from "./theme";
@@ -33,17 +34,15 @@ export type PreviewListProps = {
  */
 export function PreviewList(props: PreviewListProps) {
   const preview = usePreview();
-  const local = useLocalServersState();
+  const local = useDevPreviewServersState();
   const now = useRunning();
-  const localOptions = preview.localServers;
-  const showLocal = __DEV__ && localOptions?.enabled === true;
+  const showLocal = __DEV__ && preview.devPreviewServers;
+  // Without the slug the plugin bakes in, other apps' servers can't be told apart, so none are listed.
+  const appSlug = buildSlug();
   // Look for servers only while the list is on screen.
   useEffect(
-    () =>
-      showLocal && localOptions
-        ? localServersStore.watch(localOptions)
-        : undefined,
-    [showLocal, localOptions],
+    () => (showLocal && appSlug ? devPreviewServersStore.watch() : undefined),
+    [showLocal, appSlug],
   );
   const theme = resolveTheme(props.theme, useColorScheme());
   const labels = {
@@ -262,7 +261,7 @@ export function PreviewList(props: PreviewListProps) {
     );
   };
 
-  const localRow = (server: LocalServer) => {
+  const localRow = (server: DevPreviewServer) => {
     const running = server.url === local.activeUrl;
     const meta = [
       server.branch,
@@ -323,11 +322,13 @@ export function PreviewList(props: PreviewListProps) {
         { style: { flexDirection: "row", flexWrap: "wrap", gap: 8 } },
         running
           ? button(
-              labels.stopLocalServer,
-              () => localServersStore.switchTo(null),
+              labels.stopDevPreviewServer,
+              () => devPreviewServersStore.switchTo(null),
               "plain",
             )
-          : button(labels.switchTo, () => localServersStore.switchTo(server)),
+          : button(labels.switchTo, () =>
+              devPreviewServersStore.switchTo(server),
+            ),
       ),
     );
   };
@@ -342,7 +343,7 @@ export function PreviewList(props: PreviewListProps) {
               key: "title",
               style: { ...font("bold", 17), color: theme.title },
             },
-            labels.localServersTitle,
+            labels.devPreviewServersTitle,
           ),
           h(
             Text,
@@ -350,7 +351,7 @@ export function PreviewList(props: PreviewListProps) {
               key: "hint",
               style: { ...font("regular", 13), color: theme.muted },
             },
-            labels.localServersHint,
+            labels.devPreviewServersHint,
           ),
           local.error
             ? h(
@@ -362,18 +363,29 @@ export function PreviewList(props: PreviewListProps) {
                 local.error,
               )
             : null,
-          ...(local.servers.length > 0
-            ? local.servers.map(localRow)
-            : [
+          ...(!appSlug
+            ? [
                 h(
                   Text,
                   {
-                    key: "none",
-                    style: { ...font("regular", 15), color: theme.muted },
+                    key: "noslug",
+                    style: { ...font("regular", 15), color: theme.danger },
                   },
-                  labels.noLocalServers,
+                  labels.noBuildSlug,
                 ),
-              ]),
+              ]
+            : local.servers.length > 0
+              ? local.servers.map(localRow)
+              : [
+                  h(
+                    Text,
+                    {
+                      key: "none",
+                      style: { ...font("regular", 15), color: theme.muted },
+                    },
+                    labels.noDevPreviewServers,
+                  ),
+                ]),
         ].filter(Boolean) as ReactNode[],
       )
     : null;
@@ -402,7 +414,7 @@ export function PreviewList(props: PreviewListProps) {
               : labels.base
         }`,
       ),
-      // A local server wins over a picked preview, so Metro is in use and the note would be wrong.
+      // A dev preview server wins over a picked preview, so Metro is in use and the note would be wrong.
       __DEV__ && now.kind === "preview"
         ? h(
             Text,

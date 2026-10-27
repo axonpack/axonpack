@@ -1,7 +1,7 @@
 import { request } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import type { RegisteredServer } from "../core/local-servers";
+import type { RegisteredServer } from "../core/dev-preview-servers";
 import { ServerList, createRegistry } from "./registry";
 
 const server = (id: string, port: number): RegisteredServer => ({

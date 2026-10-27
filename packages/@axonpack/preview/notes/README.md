@@ -4,14 +4,14 @@ Scope: this package only. One note per area, and **each one owns its own feature
 built, what is not, and what never will be. There is no combined list anywhere; a second copy would
 only disagree with these.
 
-| Note                                   | Covers                                                            |
-| -------------------------------------- | ----------------------------------------------------------------- |
-| [bundles.md](./bundles.md)             | Building a preview bundle, and which native build it can run on   |
-| [native-loader.md](./native-loader.md) | Starting the app from a downloaded bundle, and getting back again |
-| [distribution.md](./distribution.md)   | Publishing a preview so installed apps can find it                |
-| [storage.md](./storage.md)             | Where previews are kept, and running a local S3 to test with      |
-| [testing.md](./testing.md)             | Running the example end to end on your own machine                |
-| [local-servers.md](./local-servers.md) | Several local Metro servers for one app, switched live (debug)    |
+| Note                                               | Covers                                                            |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| [bundles.md](./bundles.md)                         | Building a preview bundle, and which native build it can run on   |
+| [native-loader.md](./native-loader.md)             | Starting the app from a downloaded bundle, and getting back again |
+| [distribution.md](./distribution.md)               | Publishing a preview so installed apps can find it                |
+| [storage.md](./storage.md)                         | Where previews are kept, and running a local S3 to test with      |
+| [testing.md](./testing.md)                         | Running the example end to end on your own machine                |
+| [dev-preview-servers.md](./dev-preview-servers.md) | Several local Metro servers for one app, switched live (debug)    |
 
 To run the example end to end without a cloud account, follow [testing.md](./testing.md).
 

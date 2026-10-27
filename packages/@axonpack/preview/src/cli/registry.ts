@@ -1,6 +1,9 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 
-import { type RegisteredServer, SERVER_TTL_MS } from "../core/local-servers";
+import {
+  type RegisteredServer,
+  SERVER_TTL_MS,
+} from "../core/dev-preview-servers";
 
 type Entry = { server: RegisteredServer; lastSeen: number };
 

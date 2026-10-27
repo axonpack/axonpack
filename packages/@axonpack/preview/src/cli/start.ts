@@ -3,7 +3,10 @@ import { randomUUID } from "node:crypto";
 import { createServer } from "node:net";
 
 import { PLATFORMS, compatibilityKey, type Platform } from "../core/layout";
-import { HEARTBEAT_MS, type RegisteredServer } from "../core/local-servers";
+import {
+  HEARTBEAT_MS,
+  type RegisteredServer,
+} from "../core/dev-preview-servers";
 import { previewTitle } from "../preview-title";
 import { type AppConfig, appVersionOf, compatibilityOf } from "./expo-config";
 import { fingerprint } from "./project";

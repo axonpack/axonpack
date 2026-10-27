@@ -1,4 +1,4 @@
-import type { LocalServer } from "./local-servers";
+import type { DevPreviewServer } from "./dev-preview-servers";
 import type { PreviewItem } from "./preview-items";
 import { runningNow } from "./running";
 
@@ -9,7 +9,7 @@ const server = {
   hostPort: "10.0.2.2:8082",
   title: "Task 2",
   branch: "task-2",
-} as LocalServer;
+} as DevPreviewServer;
 
 test("nothing picked is the base bundle", () => {
   expect(
@@ -34,7 +34,7 @@ test("a preview the list no longer has falls back to its id", () => {
   ).toEqual({ kind: "preview", id: "gone", title: "gone" });
 });
 
-test("a local server wins over a picked preview", () => {
+test("a dev preview server wins over a picked preview", () => {
   expect(
     runningNow({
       items: [item("task-1", "Task 1", true)],
@@ -50,7 +50,7 @@ test("a local server wins over a picked preview", () => {
   });
 });
 
-test("a local server not found yet still gives its host and port", () => {
+test("a dev preview server not found yet still gives its host and port", () => {
   expect(
     runningNow({
       items: [],

@@ -60,11 +60,14 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   incompatibleHint:
     "Made for another native build. They can't run on this one.",
   deleteAll: "Delete all",
-  localServersTitle: "Local servers",
-  localServersHint:
+  devPreviewServersTitle: "Dev preview servers",
+  devPreviewServersHint:
     "Metro servers for this app on your computer. Debug builds only.",
-  noLocalServers: "No Metro server found. Start one with npx preview start.",
-  stopLocalServer: "Stop using local server",
+  noDevPreviewServers:
+    "No Metro server found. Start one with npx preview start.",
+  noBuildSlug:
+    "This build has no app slug, so it cannot tell its servers from other apps'. Add the config plugin and rebuild.",
+  stopDevPreviewServer: "Stop using dev preview server",
   localSuffix: "local",
   localIncompatible: "Made for another native build",
   localUnknownBuild: "Native build unknown",

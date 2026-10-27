@@ -10,10 +10,10 @@ import {
   DEFAULT_PORT_RANGE,
   DEFAULT_REGISTRY_PORT,
   type RegisteredServer,
-} from "./core/local-servers";
+} from "./core/dev-preview-servers";
 
 /** A Metro server on the developer's computer that this app can run from (debug builds only). */
-export type LocalServer = {
+export type DevPreviewServer = {
   /** `host:port`, also what Android's dev support connects to. */
   hostPort: string;
   host: string;
@@ -34,18 +34,6 @@ export type LocalServer = {
   announced: boolean;
 };
 
-export type LocalServersOptions = {
-  enabled: boolean;
-  /** Ports probed for plain `expo start` servers. Default 8081 to 8099. */
-  ports?: [number, number];
-  /** Where `preview start` announces servers. Default 19150. */
-  registryPort?: number;
-  /** The computer's address as the device sees it. Default: the host the app's Metro is on. */
-  host?: string;
-  /** Only servers for this slug are listed. Default: the slug baked into the build. */
-  slug?: string;
-};
-
 export type ScannedServer = {
   host: string;
   port: number;
@@ -61,15 +49,16 @@ export type ScannedServer = {
 export function mergeServers(input: {
   registry: RegisteredServer[];
   scanned: ScannedServer[];
-  appSlug: string | null;
+  /** The slug the config plugin baked into the build. Only its servers are listed. */
+  appSlug: string;
   buildKey: string | null;
   platform: Platform;
-}): LocalServer[] {
-  const servers: LocalServer[] = [];
+}): DevPreviewServer[] {
+  const servers: DevPreviewServer[] = [];
   for (const found of input.scanned) {
     const announced = input.registry.find((r) => r.port === found.port);
     const slug = announced?.slug ?? found.expo.slug ?? "";
-    if (input.appSlug && slug !== input.appSlug) continue;
+    if (slug !== input.appSlug) continue;
     const key =
       announced?.keys[input.platform] ??
       (compatibilityOf(found.expo) === "appVersion"
@@ -162,9 +151,9 @@ function devServerHost(): string {
  * Where to look. On Android, 10.0.2.2 is the computer as the emulator sees it, so plain servers
  * are found there without an `adb reverse` per port.
  */
-export function candidateHosts(options: LocalServersOptions): string[] {
-  const hosts = [options.host ?? devServerHost()];
-  if (RNPlatform.OS === "android" && !options.host) hosts.push("10.0.2.2");
+export function candidateHosts(): string[] {
+  const hosts = [devServerHost()];
+  if (RNPlatform.OS === "android") hosts.push("10.0.2.2");
   return [...new Set(hosts)];
 }
 
@@ -175,17 +164,13 @@ const manifests = new Map<
 
 /** One look: every Metro in the range on the candidate hosts, plus the registry. */
 export async function discover(
-  options: LocalServersOptions,
   platform: Platform,
 ): Promise<{ registry: RegisteredServer[]; scanned: ScannedServer[] }> {
-  const [from, to] = options.ports ?? DEFAULT_PORT_RANGE;
-  const hosts = candidateHosts(options);
+  const [from, to] = DEFAULT_PORT_RANGE;
+  const hosts = candidateHosts();
   let registry: RegisteredServer[] = [];
   for (const host of hosts) {
-    const found = await readRegistry(
-      host,
-      options.registryPort ?? DEFAULT_REGISTRY_PORT,
-    );
+    const found = await readRegistry(host, DEFAULT_REGISTRY_PORT);
     if (found) {
       registry = found;
       break;

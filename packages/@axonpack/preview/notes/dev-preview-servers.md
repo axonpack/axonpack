@@ -1,4 +1,4 @@
-# Local servers
+# Dev preview servers
 
 Several Metro servers for the same app, one per task or worktree, and one debug build that switches
 between them live.
@@ -11,20 +11,19 @@ between them live.
 - [x] Starts Metro on a free port and announces it with one command, `preview start`
 - [x] Asks for the name the app shows, prefilled from the branch (`--title` or no terminal skips it)
 - [x] Off unless the app turns it on, and never in a release build
+- [x] Only this app's servers, by the slug the config plugin bakes in; a build without it says so
 
 ## Turning it on
 
 ```ts
-<PreviewProvider config={{ ...config, localServers: { enabled: true } }}>
+<PreviewProvider config={{ ...config, devPreviewServers: true }}>
 ```
 
-| Option         | Default                        | What it is                                            |
-| -------------- | ------------------------------ | ----------------------------------------------------- |
-| `enabled`      | off                            | Shows the "Local servers" section (debug builds only) |
-| `ports`        | `[8081, 8099]`                 | Ports probed for Metro servers                        |
-| `registryPort` | `19150`                        | Where `preview start` announces servers               |
-| `host`         | the host the app's Metro is on | The computer as the device sees it                    |
-| `slug`         | the slug baked into the build  | Only servers for this slug are listed                 |
+It is one switch, off by default, and only shows in a debug build. Nothing else is set: the app probes
+ports 8081 to 8099, asks the registry on port 19150 (the same constant `preview start` uses, in
+`src/core/dev-preview-servers.ts`), looks on the host its own Metro is on (plus `10.0.2.2` on the
+Android emulator), and lists only servers for the slug the config plugin baked into the build. A
+build made without the plugin has no slug, and the section says so instead of listing anything.
 
 ## How it works
 
@@ -55,9 +54,9 @@ which `preview start` runs for its port and the registry's when `adb` is on the 
 on Wi-Fi was started from the computer's LAN address, so the same rule finds the others.
 
 **Switching.** The choice is stored next to the preview choice and never changes it. On every start
-of a debug build the local server wins, then a downloaded preview, then the default Metro. Android
+of a debug build the dev preview server wins, then a downloaded preview, then the default Metro. Android
 points React Native's dev support at the server (and puts the developer's own dev-menu host back
-afterwards); iOS starts from the server's bundle URL. "Stop using local server" brings back what ran
+afterwards); iOS starts from the server's bundle URL. "Stop using dev preview server" brings back what ran
 before, a chosen preview included; "Back to base" stops both.
 
 ## Won't do

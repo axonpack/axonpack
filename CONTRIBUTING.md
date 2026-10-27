@@ -116,7 +116,7 @@ cd example && npx expo run:ios
 
 To work on several tasks at once against one installed debug build, start each worktree's Metro
 with `npx preview start`; the example's list switches between them
-([local servers](packages/@axonpack/preview/notes/local-servers.md)).
+([dev preview servers](packages/@axonpack/preview/notes/dev-preview-servers.md)).
 
 `bun run test` from the root runs every workspace's tests through turbo, which is what CI does on a
 pull request. `@axonpack/expo-devtools` runs jest in watch mode unless `CI` is set, so prefix the

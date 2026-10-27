@@ -8,7 +8,7 @@ import { prune, publish, unpublish } from "./commands";
 import {
   DEFAULT_PORT_RANGE,
   DEFAULT_REGISTRY_PORT,
-} from "../core/local-servers";
+} from "../core/dev-preview-servers";
 import { readConfig } from "./config";
 import { createRegistry } from "./registry";
 import { start } from "./start";
@@ -39,11 +39,10 @@ const HELP = `preview <command> [options]
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
   start [-- <expo start args>]
-                     run Metro on a free port and announce it to the app's local servers list
+                     run Metro on a free port and announce it to the app's Dev preview servers
     --title <title>    name the app's list shows; asked like publish, prefilled with a
                        readable form of the branch
     --ports <from>-<to> ports to pick from (default 8081-8099)
-    --registry-port <p> where the announcements go (default 19150)
 
   --project <dir>    the app's root, where .env.preview lives (default: the current folder)
 
@@ -73,7 +72,6 @@ async function main() {
       project: { type: "string" },
       port: { type: "string" },
       ports: { type: "string" },
-      "registry-port": { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -150,7 +148,7 @@ async function main() {
       title,
       worktree: gitTopLevel(projectRoot) ?? projectRoot,
       ports: [from, to],
-      registryPort: Number(values["registry-port"] ?? DEFAULT_REGISTRY_PORT),
+      registryPort: DEFAULT_REGISTRY_PORT,
       expoArgs: passThrough,
       bin: process.argv[1],
     });

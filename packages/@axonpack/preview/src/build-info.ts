@@ -25,7 +25,7 @@ export function buildCompatibility(): Compatibility | null {
   return value === "appVersion" || value === "fingerprint" ? value : null;
 }
 
-/** The app's Expo slug, baked in by the config plugin; it tells this app's local servers apart. */
+/** The app's Expo slug, baked in by the config plugin; it tells this app's dev preview servers apart. */
 export function buildSlug(): string | null {
   return (
     requireOptionalNativeModule<NativeModule>("AxonpackPreview")?.slug ?? null

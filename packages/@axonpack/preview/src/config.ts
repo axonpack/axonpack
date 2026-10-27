@@ -3,7 +3,6 @@ import { Platform as RNPlatform } from "react-native";
 import { buildKey } from "./build-info";
 import type { Platform } from "./core/layout";
 import { DEFAULT_REGION, S3Config, parseBucketUrl } from "./core/s3";
-import type { LocalServersOptions } from "./local-servers";
 
 /**
  * What the app passes in. It mirrors the publish side's `.env`: the same bucket URL, plus a
@@ -28,7 +27,7 @@ export type PreviewConfig = {
    * Lists the Metro servers for this app running on the developer's computer, and switches
    * between them live. Debug builds only; off unless `enabled` is true.
    */
-  localServers?: LocalServersOptions;
+  devPreviewServers?: boolean;
   /** Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket. */
   headers?: Record<string, string>;
   /**

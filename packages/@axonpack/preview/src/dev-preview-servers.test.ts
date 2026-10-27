@@ -1,5 +1,5 @@
-import type { RegisteredServer } from "./core/local-servers";
-import { type ScannedServer, mergeServers } from "./local-servers";
+import type { RegisteredServer } from "./core/dev-preview-servers";
+import { type ScannedServer, mergeServers } from "./dev-preview-servers";
 
 const scanned = (
   port: number,

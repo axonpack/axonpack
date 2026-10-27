@@ -72,7 +72,7 @@ const withPreview = (config, options = {}) => {
       "ios",
       compatibility,
     );
-    // Tells this app's local Metro servers apart from other projects' (notes/local-servers.md).
+    // Tells this app's local Metro servers apart from other projects' (notes/dev-preview-servers.md).
     mod.modResults[PLIST.slug] = mod.slug;
     return mod;
   });

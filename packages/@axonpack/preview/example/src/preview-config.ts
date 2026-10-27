@@ -10,5 +10,5 @@ export const previewConfig: PreviewConfig = {
     process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
   region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
   // Lists this app's Metro servers on your computer (debug builds only): `bunx preview start`.
-  localServers: { enabled: true },
+  devPreviewServers: true,
 };

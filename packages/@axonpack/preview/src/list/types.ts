@@ -48,11 +48,13 @@ export type PreviewListLabels = {
   incompatibleTitle: string;
   incompatibleHint: string;
   deleteAll: string;
-  localServersTitle: string;
-  localServersHint: string;
-  noLocalServers: string;
-  stopLocalServer: string;
-  /** After the title in the header line, for a local server. */
+  devPreviewServersTitle: string;
+  devPreviewServersHint: string;
+  noDevPreviewServers: string;
+  /** In place of the servers, when the build has no slug baked in by the config plugin. */
+  noBuildSlug: string;
+  stopDevPreviewServer: string;
+  /** After the title in the header line, for a dev preview server. */
   localSuffix: string;
   localIncompatible: string;
   localUnknownBuild: string;

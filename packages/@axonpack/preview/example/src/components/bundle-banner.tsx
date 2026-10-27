@@ -16,7 +16,7 @@ export function BundleBanner() {
   const [title, detail] =
     running.kind === "local"
       ? [
-          running.server?.title ?? "Local server",
+          running.server?.title ?? "Dev preview server",
           [running.server?.branch, running.hostPort]
             .filter(Boolean)
             .join(" · "),
