@@ -1,6 +1,6 @@
 import type { DevPreviewServer } from "../../../dev-preview-servers/services/discover.service";
-import type { PreviewItem } from "../../utils/preview-items.util";
-import { runningNow } from "../use-running.service";
+import type { PreviewItem } from "../preview-items.util";
+import { runningNow } from "../running.util";
 
 const item = (id: string, title: string, active: boolean) =>
   ({ id, entry: { title }, active }) as unknown as PreviewItem;

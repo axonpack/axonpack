@@ -25,11 +25,9 @@ export {
   PreviewProvider,
   usePreview,
 } from "./core/components/preview-provider.component";
-export {
-  runningNow,
-  useRunning,
-} from "./features/previews/services/use-running.service";
-export type { Running } from "./features/previews/services/use-running.service";
+export { runningNow } from "./features/previews/utils/running.util";
+export type { Running } from "./features/previews/utils/running.util";
+export { useRunning } from "./features/previews/services/use-running.service";
 export { PreviewList } from "./features/preview-list/components/preview-list.component";
 export type { PreviewListProps } from "./features/preview-list/components/preview-list.component";
 export type {
