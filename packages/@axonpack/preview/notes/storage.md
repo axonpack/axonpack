@@ -34,7 +34,6 @@ A variable set in the environment wins over the file, so CI can pass its secrets
 | `PREVIEW_S3_ACCESS_KEY_ID`     | yes    | Write key id. Never ship it in the app                                                                                                                                                   |
 | `PREVIEW_S3_SECRET_ACCESS_KEY` | yes    | Write key secret                                                                                                                                                                         |
 | `PREVIEW_S3_REGION`            | no     | Signing region. Default `us-east-1`, which MinIO and R2 accept                                                                                                                           |
-| `PREVIEW_S3_PUBLIC_URL`        | no     | Where public reads of the bucket go when that is not `<endpoint>/<bucket>`, such as R2's `https://pub-<id>.r2.dev`. The CLI only prints it; the app takes the same value as `publicUrl`  |
 
 The names are the package's own, not `AWS_*`, so they work the same for any S3-compatible host and
 never pick up AWS keys already exported in a shell.
@@ -89,13 +88,15 @@ A file is at `<endpoint>/<bucket>/<path>`.
 
 The example reads its bucket from `example/.env` (copy `example/.env.example`):
 
-| Variable                                        | Needed | What it is                                                                          |
-| ----------------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `EXPO_PUBLIC_PREVIEW_S3_URL`                    | yes    | The same `<endpoint>/<bucket>` the previews are published to                        |
-| `EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID`     | no     | Only for a private bucket: the read-only key (`preview-reader` locally)             |
-| `EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY` | no     | Its secret (`preview-reader-secret` locally)                                        |
-| `EXPO_PUBLIC_PREVIEW_S3_REGION`                 | no     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
-| `EXPO_PUBLIC_PREVIEW_S3_PUBLIC_URL`             | no     | A public bucket served from another address, such as R2's `https://pub-<id>.r2.dev` |
+| Variable                                        | Needed | What it is                                                                                                                                                                       |
+| ----------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EXPO_PUBLIC_PREVIEW_S3_URL`                    | yes    | With a read key, the same `<endpoint>/<bucket>` the previews are published to. Without one, any address they are public under: that URL, R2's `https://pub-<id>.r2.dev` or a CDN |
+| `EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID`     | no     | Only for a private bucket: the read-only key (`preview-reader` locally)                                                                                                          |
+| `EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY` | no     | Its secret (`preview-reader-secret` locally)                                                                                                                                     |
+| `EXPO_PUBLIC_PREVIEW_S3_REGION`                 | no     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2                                                                                                           |
+
+With a read key the app splits the URL into endpoint, bucket and folder and signs its reads. Without
+one it reads `<url>/<key>` unsigned, so the URL needs no bucket in it.
 
 Headers for a tunnel or proxy are not env values: pass `headers` in the app's config.
 

@@ -22,8 +22,8 @@ import {
   exists,
   getJson,
   listKeys,
+  objectUrl,
   putObject,
-  readUrl,
 } from "../core/s3";
 import { previewTitle } from "../preview-title";
 import { buildBundle } from "./bundle";
@@ -169,7 +169,7 @@ export async function publish(options: PublishOptions) {
       syncRootVersion(root, index, publishedAt),
     );
     log(`${platform}: published ${id} for build ${key}`);
-    log(`${platform}: ${readUrl(s3, platformIndexKey(platform, key))}`);
+    log(`${platform}: ${objectUrl(s3, platformIndexKey(platform, key))}`);
   }
 }
 

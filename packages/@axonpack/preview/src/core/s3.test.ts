@@ -1,11 +1,4 @@
-import {
-  getJson,
-  objectUrl,
-  parseBucketUrl,
-  putObject,
-  readUrl,
-  S3Config,
-} from "./s3";
+import { getJson, objectUrl, parseBucketUrl, putObject, S3Config } from "./s3";
 
 const config: S3Config = {
   endpoint: "http://localhost:9000/",
@@ -34,16 +27,10 @@ test("splits <endpoint>/<bucket>/<prefix> and puts keys under the prefix", () =>
   );
 });
 
-test("public reads use the public URL only for an unsigned bucket", () => {
-  const pub = { ...config, publicUrl: "https://pub.r2.dev/" };
-  expect(readUrl(pub, "index.json")).toBe("https://pub.r2.dev/index.json");
-  const signed = {
-    ...pub,
-    credentials: { accessKeyId: "k", secretAccessKey: "s" },
-  };
-  expect(readUrl(signed, "index.json")).toBe(
-    "http://localhost:9000/b/index.json",
-  );
+test("with no bucket the endpoint is the base every key goes under", () => {
+  expect(
+    objectUrl({ endpoint: "https://pub.r2.dev/", region: "auto" }, "a b/c"),
+  ).toBe("https://pub.r2.dev/a%20b/c");
 });
 
 test("a failed condition reports false so the caller can retry", async () => {
@@ -92,24 +79,6 @@ describe("bucket URLs with or without slashes", () => {
     expect(objectUrl(config, "index.json")).toBe(
       "http://h:9/b/app/v1/index.json",
     );
-  });
-
-  test("a public URL reads the same with or without a slash at the end", () => {
-    const urls = ["https://pub.r2.dev", "https://pub.r2.dev/"].map(
-      (publicUrl) =>
-        readUrl(
-          {
-            ...parseBucketUrl("http://h/b/app/"),
-            region: "us-east-1",
-            publicUrl,
-          },
-          "files/x",
-        ),
-    );
-    expect(urls).toEqual([
-      "https://pub.r2.dev/app/files/x",
-      "https://pub.r2.dev/app/files/x",
-    ]);
   });
 
   test("says what is wrong with a value that is not a bucket URL", () => {

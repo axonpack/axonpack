@@ -9,7 +9,6 @@ export const ENV = {
   accessKeyId: "PREVIEW_S3_ACCESS_KEY_ID",
   secretAccessKey: "PREVIEW_S3_SECRET_ACCESS_KEY",
   region: "PREVIEW_S3_REGION",
-  publicUrl: "PREVIEW_S3_PUBLIC_URL",
 } as const;
 
 /**
@@ -45,6 +44,5 @@ export function readConfig(
       accessKeyId: env[ENV.accessKeyId]!,
       secretAccessKey: env[ENV.secretAccessKey]!,
     },
-    publicUrl: env[ENV.publicUrl] || undefined,
   };
 }

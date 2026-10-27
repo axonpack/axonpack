@@ -3,7 +3,8 @@ import { Credentials, EMPTY_SHA256, sha256Hex, signRequest } from "./sigv4";
 /** Any S3-compatible bucket: AWS S3, Cloudflare R2, MinIO and others. Path-style URLs. */
 export type S3Config = {
   endpoint: string;
-  bucket: string;
+  /** Left out when `endpoint` already is the bucket's base, as for the app's unsigned reads. */
+  bucket?: string;
   /** Folder inside the bucket that everything goes under, so several apps can share one bucket. */
   prefix?: string;
   region: string;
@@ -11,8 +12,6 @@ export type S3Config = {
   credentials?: Credentials;
   /** Sent with every request, such as a header a proxy or tunnel in front of the bucket wants. */
   headers?: Record<string, string>;
-  /** Where public reads of the bucket go when that isn't `<endpoint>/<bucket>`, such as R2's r2.dev address. */
-  publicUrl?: string;
 };
 
 /** MinIO and R2 accept it too, so a region is only needed for AWS buckets elsewhere. */
@@ -51,16 +50,12 @@ const withPrefix = (config: S3Config, key: string) =>
   config.prefix ? `${config.prefix}/${key}` : key;
 
 const bucketUrl = (config: S3Config) =>
-  `${trimSlash(config.endpoint)}/${config.bucket}`;
+  config.bucket
+    ? `${trimSlash(config.endpoint)}/${config.bucket}`
+    : trimSlash(config.endpoint);
 
 export const objectUrl = (config: S3Config, key: string) =>
   `${bucketUrl(config)}/${encodeKey(withPrefix(config, key))}`;
-
-/** The address the app reads from: the public URL for an unsigned bucket, else the endpoint. */
-export const readUrl = (config: S3Config, key: string) =>
-  config.publicUrl && !config.credentials
-    ? `${trimSlash(config.publicUrl)}/${encodeKey(withPrefix(config, key))}`
-    : objectUrl(config, key);
 
 export class S3Error extends Error {
   constructor(
@@ -87,7 +82,7 @@ export async function s3Fetch(
   const base =
     request.key === undefined
       ? bucketUrl(config)
-      : readUrl(config, request.key);
+      : objectUrl(config, request.key);
   const url = new URL(base);
   for (const [k, v] of Object.entries(request.query ?? {}))
     url.searchParams.set(k, v);
@@ -123,7 +118,7 @@ export async function getJson<T>(
   try {
     return { data: JSON.parse(body) as T, etag: res.headers.get("etag") };
   } catch {
-    throw new Error(notJsonMessage(readUrl(config, key), res, body));
+    throw new Error(notJsonMessage(objectUrl(config, key), res, body));
   }
 }
 

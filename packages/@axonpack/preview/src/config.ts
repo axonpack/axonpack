@@ -13,15 +13,17 @@ import type { LocalServersOptions } from "./local-servers";
 export type PreviewConfig = {
   /** Previews are on only when this is true. The app decides per build; nothing is detected. */
   enabled: boolean;
-  /** `<endpoint>/<bucket>[/<folder>]`, the same value as `PREVIEW_S3_URL` when publishing. */
+  /**
+   * Where the previews are. With a read key: `<endpoint>/<bucket>[/<folder>]`, the same value as
+   * `PREVIEW_S3_URL` when publishing. Without one, any address the objects are public under:
+   * that same URL for a public bucket, or R2's `https://pub-<id>.r2.dev` or a CDN.
+   */
   url: string;
   /** Read-only key, for a private bucket. Leave out for a public one. Never the write key. */
   readAccessKeyId?: string;
   readSecretAccessKey?: string;
   /** Signing region. Default us-east-1, which MinIO and R2 accept. */
   region?: string;
-  /** Where public reads go when that isn't `<endpoint>/<bucket>`, such as R2's r2.dev address. */
-  publicUrl?: string;
   /**
    * Lists the Metro servers for this app running on the developer's computer, and switches
    * between them live. Debug builds only; off unless `enabled` is true.
@@ -37,19 +39,21 @@ export type PreviewConfig = {
 };
 
 export function toS3Config(config: PreviewConfig): S3Config {
-  return {
-    ...parseBucketUrl(config.url),
-    region: config.region ?? DEFAULT_REGION,
-    credentials:
-      config.readAccessKeyId && config.readSecretAccessKey
-        ? {
-            accessKeyId: config.readAccessKeyId,
-            secretAccessKey: config.readSecretAccessKey,
-          }
-        : undefined,
-    publicUrl: config.publicUrl,
-    headers: config.headers,
-  };
+  const region = config.region ?? DEFAULT_REGION;
+  const { headers } = config;
+  // Signing needs the bucket apart from the endpoint; a plain read only needs the base address.
+  if (config.readAccessKeyId && config.readSecretAccessKey) {
+    return {
+      ...parseBucketUrl(config.url),
+      region,
+      credentials: {
+        accessKeyId: config.readAccessKeyId,
+        secretAccessKey: config.readSecretAccessKey,
+      },
+      headers,
+    };
+  }
+  return { endpoint: config.url.trim(), region, headers };
 }
 
 export const currentPlatform = (): Platform | null =>

@@ -21,7 +21,6 @@ test("one URL gives the endpoint and bucket, and us-east-1 is the default region
       secretAccessKey: "secret",
       sessionToken: undefined,
     },
-    publicUrl: undefined,
   });
 });
 

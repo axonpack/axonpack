@@ -51,7 +51,7 @@ Where to publish comes from .env.preview in the app's root, or the environment (
   PREVIEW_S3_URL                 <endpoint>/<bucket>[/<folder>], e.g. http://localhost:9000/previews-public
   PREVIEW_S3_ACCESS_KEY_ID       the write key
   PREVIEW_S3_SECRET_ACCESS_KEY
-  PREVIEW_S3_REGION (default us-east-1), PREVIEW_S3_PUBLIC_URL   optional`;
+  PREVIEW_S3_REGION              optional, default us-east-1`;
 
 async function main() {
   // Everything after `--` goes to `expo start` untouched.
