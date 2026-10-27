@@ -3,7 +3,7 @@
 Running the example end to end on your own machine, with no cloud account.
 
 - [x] A local S3 server (MinIO) with a public and a private bucket, started with one command
-- [x] An example app that lists, downloads and switches previews against it
+- [x] An example app (the default `create-expo-app` template, tabs) with the list on a Previews tab
 - [x] Previews that each look different, so it is obvious which one is running
 - [x] A preview that crashes on purpose, to try the fallback
 - [x] Links that do what the list's buttons do, so a run can be scripted from a terminal
@@ -48,7 +48,7 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
    preview that throws while it loads.
    Use `bunx` in this repo: `npx` can't read bun's install, so it looks for a `preview`
    package on npm and fails with a 404. An app installed with npm uses `npx`.
-7. In the app: Refresh, Download, Switch, then Back to base. Publish the same id again with other
+7. In the app's Previews tab: Refresh, Download, Switch, then Back to base. Publish the same id again with other
    changes to see "Update available", or `bunx preview unpublish <id>` to see "Unpublished".
 8. Stop everything:
    ```sh
@@ -57,8 +57,9 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
    ```
 
 The example also takes links, which run the same code as its buttons:
-`previewexample://download/<id>`, `switch/<id>`, `switch/embedded`, `refresh`, `delete/<id>`
-and `deleteincompatible`. Open them with `xcrun simctl openurl booted <link>` or
+`previewexample://download/<id>`, `switch/<id>`, `switch/embedded`, `refresh`, `delete/<id>`,
+`deleteincompatible`, `local/<port>` and `localstop`. Each one lands on the Previews tab
+(`src/app/+native-intent.tsx`). Open them with `xcrun simctl openurl booted <link>` or
 `adb shell am start -d <link>`.
 
 ## Several tasks at once (people and AI agents)
@@ -74,7 +75,7 @@ app needs `localServers: { enabled: true }` (the example has it).
    In a terminal it asks for the name the app shows, prefilled from the branch; Enter keeps it.
    `--title <name>` skips the question, and so does a run with no terminal.
    A plain `npx expo start --port 8085` is found as well, with less detail (no branch).
-2. Open the list in the app. "Local servers" shows each server for this app within about two
+2. Open the Previews tab in the app. "Local servers" shows each server for this app within about two
    seconds, with its branch, port and version. Switch runs that server; "Stop using local server"
    goes back.
 3. Stop a server with Ctrl+C; it leaves the list on its own.
