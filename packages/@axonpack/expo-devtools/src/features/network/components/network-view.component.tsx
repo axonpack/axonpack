@@ -74,6 +74,10 @@ export function NetworkView() {
   const closeEntry = useCallback(() => setSelectedEntry(null), []);
   const closeOverride = useCallback(() => setOverrideEntry(null), []);
   const closeSandbox = useCallback(() => setSandboxEntry(null), []);
+  const overrideFromDetail = useCallback((entry: NetworkLogEntry) => {
+    setSelectedEntry(null);
+    setOverrideEntry(entry);
+  }, []);
 
   const sources = useMemo(() => {
     const seen = new Set<string>();
@@ -315,6 +319,7 @@ export function NetworkView() {
       <DetailPanel
         entry={selectedEntry?.kind === 'http' ? selectedEntry : null}
         onClose={closeEntry}
+        onOverride={overrideFromDetail}
         stackedHeaders={stackedHeaders}
       />
 

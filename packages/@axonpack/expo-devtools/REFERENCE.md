@@ -193,7 +193,7 @@ responses, HTML as HTML. Falls back to `No preview available`.
 DNS/TCP/TLS/TTFB breakdown isn't observable from JS, since those phases happen in the native
 networking stack.
 
-The sheet's ⋮ menu is the same list without **Override response…**.
+The sheet's ⋮ menu is the same list; **Override response…** closes the sheet and opens the override editor.
 
 ### Sandbox
 
