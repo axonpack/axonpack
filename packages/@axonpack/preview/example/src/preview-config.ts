@@ -1,10 +1,5 @@
 import type { PreviewConfig } from "@axonpack/preview";
 
-// Set at bundle time so each test preview looks different without editing this file:
-// EXPO_PUBLIC_BUNDLE_LABEL=task-1-login-fix bunx preview publish --id task-1-login-fix
-export const bundleLabel =
-  process.env.EXPO_PUBLIC_BUNDLE_LABEL ?? "embedded-bundle";
-
 // From .env (see .env.example). Expo builds EXPO_PUBLIC_* values into the app, so only a read-only
 // key may go there, never the write key.
 export const previewConfig: PreviewConfig = {

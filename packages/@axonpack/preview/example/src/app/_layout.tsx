@@ -6,12 +6,7 @@ import { useColorScheme, View } from "react-native";
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import AppTabs from "@/components/app-tabs";
 import { BundleBanner } from "@/components/bundle-banner";
-import { bundleLabel, previewConfig } from "@/preview-config";
-
-// Lets you try the crash fallback: a preview published with this label throws while it loads.
-if (bundleLabel === "crash-on-start") {
-  throw new Error("This preview crashes on purpose");
-}
+import { previewConfig } from "@/preview-config";
 
 SplashScreen.preventAutoHideAsync();
 

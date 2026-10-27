@@ -4,8 +4,7 @@ Running the example end to end on your own machine, with no cloud account.
 
 - [x] A local S3 server (MinIO) with a public and a private bucket, started with one command
 - [x] An example app (the default `create-expo-app` template, tabs) with the list on a Previews tab
-- [x] Previews that each look different, so it is obvious which one is running
-- [x] A preview that crashes on purpose, to try the fallback
+- [x] A banner on every tab that says what runs: a local server, a preview, or the base bundle
 - [x] Links that do what the list's buttons do, so a run can be scripted from a terminal
 
 ## Run the example end to end
@@ -39,16 +38,16 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
    `EXPO_PUBLIC_*` values are built into the bundle, so after changing one run
    `npx expo start --clear`, or rebuild for a release build.
 
-6. Publish a preview from `example/`. Each label gives it a look of its own:
+6. Publish a preview from `example/`:
    ```sh
-   EXPO_PUBLIC_BUNDLE_LABEL=task-1-login-fix \
-     bunx preview publish --id task-1-login-fix --changelog="- Fixes the login"
+   bunx preview publish --id task-1-login-fix --changelog="- Fixes the login"
    ```
-   That publishes for Android and iOS. `EXPO_PUBLIC_BUNDLE_LABEL=crash-on-start` gives a
-   preview that throws while it loads.
+   That publishes for Android and iOS. In a terminal it asks for the title, prefilled from the id;
+   Enter keeps it.
    Use `bunx` in this repo: `npx` can't read bun's install, so it looks for a `preview`
    package on npm and fails with a 404. An app installed with npm uses `npx`.
-7. In the app's Previews tab: Refresh, Download, Switch, then Back to base. Publish the same id again with other
+7. In the app's Previews tab: Refresh, Download, Switch, then Back to base. The banner at the top
+   names what runs. Publish the same id again with other
    changes to see "Update available", or `bunx preview unpublish <id>` to see "Unpublished".
 8. Stop everything:
    ```sh
