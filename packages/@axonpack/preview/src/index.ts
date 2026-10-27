@@ -37,8 +37,8 @@ export {
   DEFAULT_LABELS,
   DARK_THEME,
   LIGHT_THEME,
-  resolveTheme,
 } from "./features/preview-list/constants/theme.const";
+export { resolveTheme } from "./features/preview-list/utils/theme.util";
 export {
   devPreviewServersStore,
   useDevPreviewServersState,

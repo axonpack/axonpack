@@ -22,11 +22,8 @@ import type {
 import { buildSlug } from "../../../core/services/build-info.service";
 import { usePreview } from "../../../core/services/use-preview.service";
 import { useRunning } from "../../previews/services/use-running.service";
-import {
-  DEFAULT_LABELS,
-  formatSize,
-  resolveTheme,
-} from "../constants/theme.const";
+import { DEFAULT_LABELS } from "../constants/theme.const";
+import { formatSize, resolveTheme } from "../utils/theme.util";
 import type { PreviewListLabels, PreviewListTheme } from "../types";
 
 export type PreviewListProps = {
