@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { BottomSheet } from '../../../core/components/ui/bottom-sheet.ui';
 import { TextArea } from '../../../core/components/ui/text-area.ui';
@@ -50,7 +50,7 @@ function OverrideEditorBase({
 
   return (
     <BottomSheet visible={url !== null} onClose={onClose}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>URL</Text>
         <Text style={styles.url} numberOfLines={2} selectable>
           {url}
@@ -87,7 +87,13 @@ function OverrideEditorBase({
         </View>
 
         <Text style={styles.label}>Body</Text>
-        <TextArea value={body} onChangeText={setBody} bordered placeholder="Response body" />
+        <TextArea
+          value={body}
+          onChangeText={setBody}
+          bordered
+          placeholder="Response body"
+          style={styles.body}
+        />
 
         <Text style={styles.note}>
           The request is not sent while this rule is on — the body above is answered straight away,
@@ -104,7 +110,7 @@ function OverrideEditorBase({
             <Text style={[styles.buttonLabel, { color: COLORS.accent }]}>Save</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </BottomSheet>
   );
 }
@@ -154,6 +160,10 @@ const useStyles = makeThemedStyles((COLORS) => ({
     fontSize: 13,
     color: COLORS.textPrimary,
     padding: 0,
+  },
+  // Capped so a long body scrolls inside the field and Save stays on the sheet.
+  body: {
+    maxHeight: 240,
   },
   note: {
     fontSize: 11,
