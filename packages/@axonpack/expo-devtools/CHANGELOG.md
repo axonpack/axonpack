@@ -1,5 +1,18 @@
 # @axonpack/expo-devtools
 
+## 3.6.0
+
+### Minor Changes
+
+- 509b37f: - **Overrides in React Native DevTools**: the Network tab's toolbar has the same Overrides button, with a pane to edit, switch, remove or clear every rule
+- 98ed305: - **Overrides panel**: the Network toolbar has an Overrides button that lists every override and block, to edit, switch, remove or clear them. The button is lit while any rule is on
+
+### Patch Changes
+
+- 992761a: - **Sheets clear the keyboard on Android**: a sheet's last row, like the override editor's Save, no longer sits partly under the keyboard
+- 180e65e: - **Override from the detail sheet**: the request detail sheet's ⋮ menu has **Override response…**, like the row's
+- acd1e34: - **Override editor scrolls**: Save and Remove stay in reach when the response body is long
+
 ## 3.5.0
 
 ### Minor Changes
