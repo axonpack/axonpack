@@ -6,10 +6,17 @@ import { networkOverridesStore } from '../stores/network-overrides.store';
 export type OverrideDraft = { status: string; contentType: string; body: string };
 
 /**
+ * What the editor reads from a request. Only the URL is required, so a rule can be edited from the
+ * Overrides list after the request that made it has left the log.
+ */
+export type OverrideSource = Pick<NetworkLogEntry, 'url'> &
+  Partial<Pick<NetworkLogEntry, 'statusCode' | 'mimeType' | 'responseBody'>>;
+
+/**
  * Where editing starts: the rule this URL already has, or with none yet, what the server actually
  * answered. Overriding a response then means editing it rather than retyping it.
  */
-export function overrideDraftFor(entry: NetworkLogEntry): OverrideDraft {
+export function overrideDraftFor(entry: OverrideSource): OverrideDraft {
   const existing = networkOverridesStore.find(entry.url);
   return {
     status: String(existing?.status ?? entry.statusCode ?? 200),

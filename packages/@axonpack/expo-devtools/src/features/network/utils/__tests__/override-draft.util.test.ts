@@ -33,6 +33,23 @@ describe('overrideDraftFor', () => {
       body: 'ok',
     });
   });
+
+  it('starts from the saved rule given only its URL', () => {
+    saveOverride(entry.url, { status: '503', contentType: 'text/plain', body: 'down' });
+    expect(overrideDraftFor({ url: entry.url })).toEqual({
+      status: '503',
+      contentType: 'text/plain',
+      body: 'down',
+    });
+  });
+
+  it('starts from a 200 JSON draft given only a URL with no rule', () => {
+    expect(overrideDraftFor({ url: entry.url })).toEqual({
+      status: '200',
+      contentType: 'application/json',
+      body: '',
+    });
+  });
 });
 
 describe('saveOverride', () => {

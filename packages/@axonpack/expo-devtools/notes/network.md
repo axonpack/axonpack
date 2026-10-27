@@ -52,6 +52,7 @@ transfers.
 - [x] Requests from a JSI HTTP client, read from the observer it publishes
 - [x] Sandbox: edit any captured request and send it for real
 - [x] Override a response with a chosen status and body, or block a request outright
+- [x] List every override and block in one place, to edit, switch, remove or clear them
 - [x] Server-sent event streams, with every event, whichever client opened them
 - [x] Queued, DNS, TCP and TLS time, measured by the platform's own HTTP stack
 - [x] What a compressed response cost on the wire, beside what the app was handed

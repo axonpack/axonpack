@@ -45,10 +45,12 @@ const TABS: { key: Tab; label: string }[] = [
 function DetailPanelBase({
   entry,
   onClose,
+  onOverride,
   stackedHeaders,
 }: {
   entry: NetworkLogEntry | null;
   onClose: () => void;
+  onOverride: (entry: NetworkLogEntry) => void;
   stackedHeaders: boolean;
 }) {
   const styles = useStyles();
@@ -92,7 +94,7 @@ function DetailPanelBase({
       icon: <SparkleIcon />,
       onPress: () => setSandboxOpen(true),
     },
-    ...buildEntryCopyMenuItems(active),
+    ...buildEntryCopyMenuItems(active, onOverride),
   ];
 
   return (
@@ -186,7 +188,7 @@ function DetailPanelBase({
 /**
  * Memoised because the tab around it re-renders on every request the app makes, and this is the most
  * expensive thing in it — a body to highlight, a JSON tree to build — for an entry that has not
- * changed. Its `onClose` is a stable callback upstream for the same reason.
+ * changed. Its `onClose` and `onOverride` are stable callbacks upstream for the same reason.
  */
 export const DetailPanel = memo(DetailPanelBase);
 
