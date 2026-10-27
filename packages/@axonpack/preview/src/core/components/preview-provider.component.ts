@@ -1,21 +1,15 @@
 import {
   createContext,
   createElement as h,
-  useContext,
   useEffect,
-  useMemo,
   type ReactNode,
 } from "react";
 
 import type { PreviewConfig } from "../utils/config.util";
 import { markLaunched } from "../services/native.service";
-import { previewItems } from "../../features/previews/utils/preview-items.util";
-import {
-  previewsStore,
-  usePreviewsState,
-} from "../../features/previews/stores/previews.store";
+import { previewsStore } from "../../features/previews/stores/previews.store";
 
-const ConfigContext = createContext<PreviewConfig | null>(null);
+export const ConfigContext = createContext<PreviewConfig | null>(null);
 
 /**
  * Put it near the root. Once mounted it tells the native side this start worked (the crash
@@ -33,27 +27,4 @@ export function PreviewProvider(props: {
       previewsStore.refresh(props.config).catch(() => undefined);
   }, [props.config]);
   return h(ConfigContext.Provider, { value: props.config }, props.children);
-}
-
-/** The list and its actions, for the built-in list or a screen of your own. */
-export function usePreview() {
-  const config = useContext(ConfigContext);
-  if (!config)
-    throw new Error("usePreview needs a <PreviewProvider> above it.");
-  const state = usePreviewsState();
-  const lists = useMemo(() => previewItems(state), [state]);
-  return useMemo(
-    () => ({
-      ...state,
-      ...lists,
-      enabled: config.enabled,
-      devPreviewServers: config.devPreviewServers === true,
-      refresh: () => previewsStore.refresh(config),
-      download: (id: string) => previewsStore.download(config, id),
-      switchTo: (id: string | null) => previewsStore.switchTo(config, id),
-      remove: (id: string) => previewsStore.remove(id),
-      removeIncompatible: () => previewsStore.removeIncompatible(),
-    }),
-    [state, lists, config],
-  );
 }

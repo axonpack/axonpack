@@ -20,7 +20,7 @@ import type {
   PreviewStatus,
 } from "../../previews/utils/preview-items.util";
 import { buildSlug } from "../../../core/services/build-info.service";
-import { usePreview } from "../../../core/components/preview-provider.component";
+import { usePreview } from "../../../core/services/use-preview.service";
 import { useRunning } from "../../previews/services/use-running.service";
 import {
   DEFAULT_LABELS,

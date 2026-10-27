@@ -21,10 +21,8 @@ export type {
   PreviewItem,
   PreviewStatus,
 } from "./features/previews/utils/preview-items.util";
-export {
-  PreviewProvider,
-  usePreview,
-} from "./core/components/preview-provider.component";
+export { PreviewProvider } from "./core/components/preview-provider.component";
+export { usePreview } from "./core/services/use-preview.service";
 export { runningNow } from "./features/previews/utils/running.util";
 export type { Running } from "./features/previews/utils/running.util";
 export { useRunning } from "./features/previews/services/use-running.service";
