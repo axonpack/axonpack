@@ -2,46 +2,46 @@ export {
   buildCompatibility,
   buildKey,
   buildSlug,
-} from "./core/services/build-info.service";
-export { previewTitle } from "./core/utils/preview-title.util";
-export { reload } from "./features/previews/services/reload.service";
+} from "./services/native/build-info.service";
+export { previewTitle } from "./utils/previews/preview-title.util";
+export { reload } from "./services/previews/reload.service";
 export {
   previewBundlePath,
   selectPreview,
-} from "./features/previews/services/select.service";
-export { markLaunched } from "./core/services/native.service";
-export type { PreviewConfig } from "./core/utils/config.util";
+} from "./services/previews/select.service";
+export { markLaunched } from "./services/native/native.service";
+export type { PreviewConfig } from "./utils/config/config.util";
 export {
   previewsStore,
   usePreviewsState,
-} from "./features/previews/stores/previews.store";
-export type { PreviewsState } from "./features/previews/stores/previews.store";
-export { previewItems } from "./features/previews/utils/preview-items.util";
+} from "./stores/previews/previews.store";
+export type { PreviewsState } from "./stores/previews/previews.store";
+export { previewItems } from "./utils/previews/preview-items.util";
 export type {
   PreviewItem,
   PreviewStatus,
-} from "./features/previews/utils/preview-items.util";
-export { PreviewProvider } from "./core/components/preview-provider.component";
-export { usePreview } from "./core/services/use-preview.service";
-export { runningNow } from "./features/previews/utils/running.util";
-export type { Running } from "./features/previews/utils/running.util";
-export { useRunning } from "./features/previews/services/use-running.service";
-export { PreviewList } from "./features/preview-list/components/preview-list.component";
-export type { PreviewListProps } from "./features/preview-list/components/preview-list.component";
+} from "./utils/previews/preview-items.util";
+export { PreviewProvider } from "./components/preview-provider/preview-provider.component";
+export { usePreview } from "./services/previews/use-preview.service";
+export { runningNow } from "./utils/previews/running.util";
+export type { Running } from "./utils/previews/running.util";
+export { useRunning } from "./services/previews/use-running.service";
+export { PreviewList } from "./components/preview-list/preview-list.component";
+export type { PreviewListProps } from "./components/preview-list/preview-list.component";
 export type {
   PreviewListLabels,
   PreviewListTheme,
   PreviewListFonts,
-} from "./features/preview-list/types";
+} from "./components/preview-list/preview-list.types";
 export {
   DEFAULT_LABELS,
   DARK_THEME,
   LIGHT_THEME,
-} from "./features/preview-list/constants/theme.const";
-export { resolveTheme } from "./features/preview-list/utils/theme.util";
+} from "./constants/preview-list/theme.const";
+export { resolveTheme } from "./utils/preview-list/theme.util";
 export {
   devPreviewServersStore,
   useDevPreviewServersState,
-} from "./features/dev-preview-servers/stores/dev-preview-servers.store";
-export type { DevPreviewServersState } from "./features/dev-preview-servers/stores/dev-preview-servers.store";
-export type { DevPreviewServer } from "./features/dev-preview-servers/utils/merge-servers.util";
+} from "./stores/dev-preview-servers/dev-preview-servers.store";
+export type { DevPreviewServersState } from "./stores/dev-preview-servers/dev-preview-servers.store";
+export type { DevPreviewServer } from "./utils/dev-preview-servers/merge-servers.util";

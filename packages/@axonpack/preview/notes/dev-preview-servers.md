@@ -21,7 +21,7 @@ between them live.
 
 It is one switch, off by default, and only shows in a debug build. Nothing else is set: the app probes
 ports 8081 to 8099, asks the registry on port 19150 (the same constant `preview start` uses, in
-`src/core/constants/dev-preview-servers.const.ts`), looks on the host its own Metro is on (plus `10.0.2.2` on the
+`src/constants/dev-preview-servers/dev-preview-servers.const.ts`), looks on the host its own Metro is on (plus `10.0.2.2` on the
 Android emulator), and lists only servers for the slug the config plugin baked into the build. A
 build made without the plugin has no slug, and the section says so instead of listing anything.
 
