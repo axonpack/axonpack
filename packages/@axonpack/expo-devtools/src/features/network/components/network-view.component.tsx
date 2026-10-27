@@ -5,6 +5,7 @@ import { DetailPanel } from './detail-panel';
 import { FilterPanel } from './filter-panel.component';
 import { LogRow } from './log-row.component';
 import { OverrideEditor } from './override-editor.component';
+import { OverridesPanel } from './overrides-panel';
 import { SandboxSheet } from './sandbox';
 import { OverviewStrip } from './overview-strip.component';
 import { SettingsPanel } from './settings-panel.component';
@@ -22,6 +23,7 @@ import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-sty
 import { setNetworkPaused } from '../services/set-network-recording.service';
 import { networkLogStore, useNetworkLogStore } from '../stores/network-log.store';
 import type { NetworkEntry, NetworkLogEntry } from '../stores/network-log.store';
+import { networkOverridesStore, useNetworkOverridesStore } from '../stores/network-overrides.store';
 import {
   activeTimeRange,
   networkViewStore,
@@ -37,8 +39,10 @@ import {
   statusClass,
 } from '../utils/filter-entries.util';
 import { formatSource } from '../utils/formatters.util';
+
 import { groupBySource } from '../utils/group-by-source.util';
 import { startedInRange } from '../utils/overview-layout.util';
+import type { OverrideSource } from '../utils/override-draft.util';
 import { sortDirectionLabel, sortEntries } from '../utils/sort-entries.util';
 
 const SMALL_SCREEN_MAX_WIDTH = 768;
@@ -63,10 +67,10 @@ export function NetworkView() {
     settings: { bigRows, groupByFetchClient, showOverview },
   } = useNetworkViewStore();
   const timeRange = useNetworkViewStore(activeTimeRange);
-  const [openPanel, setOpenPanel] = useState<'settings' | 'filters' | null>(null);
+  const [openPanel, setOpenPanel] = useState<'settings' | 'filters' | 'overrides' | null>(null);
   const [stackedHeaders, setStackedHeaders] = useState(() => width < SMALL_SCREEN_MAX_WIDTH);
   const [selectedEntry, setSelectedEntry] = useState<NetworkEntry | null>(null);
-  const [overrideEntry, setOverrideEntry] = useState<NetworkLogEntry | null>(null);
+  const [overrideEntry, setOverrideEntry] = useState<OverrideSource | null>(null);
   const [sandboxEntry, setSandboxEntry] = useState<NetworkLogEntry | null>(null);
 
   // Stable, so the sheets below can be memoised: the list re-renders on every request, and an open
@@ -136,12 +140,13 @@ export function NetworkView() {
     [visibleLogs, groupByFetchClient]
   );
 
-  function togglePanel(panel: 'settings' | 'filters') {
+  function togglePanel(panel: 'settings' | 'filters' | 'overrides') {
     animateNextLayout();
     setOpenPanel((current) => (current === panel ? null : panel));
   }
 
   const filtersActive = hasActiveFilters(filters) || timeRange !== null;
+  const hasOverrides = useNetworkOverridesStore(networkOverridesStore.getSnapshot).length > 0;
 
   /**
    * The panels and the overview scroll with the rows rather than sitting above them. Pinned, an open
@@ -186,6 +191,8 @@ export function NetworkView() {
           filtersActive={filtersActive}
         />
       )}
+
+      {openPanel === 'overrides' && <OverridesPanel onEdit={setOverrideEntry} />}
 
       {showOverview && (
         <OverviewStrip
@@ -244,6 +251,14 @@ export function NetworkView() {
           active={openPanel === 'filters'}
           onPress={() => togglePanel('filters')}
           label="Filter"
+        />
+        <IconButton
+          name="rule"
+          // Lit while any rule is on, so a request answered by one is never a surprise.
+          color={openPanel === 'overrides' || hasOverrides ? COLORS.accent : COLORS.textSecondary}
+          active={openPanel === 'overrides'}
+          onPress={() => togglePanel('overrides')}
+          label="Overrides"
         />
 
         <ToolbarDivider />

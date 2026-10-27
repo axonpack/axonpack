@@ -6,15 +6,14 @@ import { TextArea } from '../../../core/components/ui/text-area.ui';
 import { TOUCH_TARGET } from '../../../core/constants/metrics.const';
 import { MONOSPACE } from '../../../core/constants/typography.const';
 import { makeThemedStyles, useThemeColors } from '../../../core/utils/themed-styles.util';
-import type { NetworkLogEntry } from '../stores/network-log.store';
 import { networkOverridesStore } from '../stores/network-overrides.store';
-import { overrideDraftFor, saveOverride } from '../utils/override-draft.util';
+import { overrideDraftFor, saveOverride, type OverrideSource } from '../utils/override-draft.util';
 
 function OverrideEditorBase({
   entry,
   onClose,
 }: {
-  entry: NetworkLogEntry | null;
+  entry: OverrideSource | null;
   onClose: () => void;
 }) {
   const url = entry?.url ?? null;

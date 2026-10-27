@@ -90,6 +90,7 @@ requests; older ones fall off the end. Request and response bodies are kept in f
 | Record / Clear  | As above.                                                                                                    |
 | Sort (↑ / ↓)    | Flips the direction of whatever **Sort by** is set to. Its label says what pressing it would give you.       |
 | Filter (⌕ list) | Opens the filters panel below.                                                                               |
+| Overrides       | Opens the overrides panel below. Lit while any override or block is on.                                      |
 | Export (⤓)      | Opens the OS share sheet with the **currently filtered** list as JSON, named `network-log-<timestamp>.json`. |
 | Settings (⚙)    | Opens the settings panel below.                                                                              |
 
@@ -116,6 +117,19 @@ Every filter combines with the search. **Invert** negates all of them together e
 switches, which stay absolute — inverting those would bring back the exact noise they suppress. A
 filter an entry has no figure for excludes it: a socket has no size or status code, and a request in
 flight has no duration yet.
+
+### Overrides panel
+
+Every override and block you have set, newest first, also after its request has left the log. Each
+row says `Override <status>` or `Blocked` over the URL; tap the URL to see all of it and select it.
+
+| Action        | What it does                                                                                  |
+| ------------- | --------------------------------------------------------------------------------------------- |
+| **Edit**      | On an override. Opens the override editor on the rule.                                        |
+| **Block**     | On an override. Turns it into a block. The response stays on the rule for **Override** later. |
+| **Override**  | On a block. Opens the override editor; **Save** turns the block into an override.             |
+| **Remove**    | Drops the rule.                                                                               |
+| **Clear all** | Asks first, then drops every rule.                                                            |
 
 ### Settings panel
 
