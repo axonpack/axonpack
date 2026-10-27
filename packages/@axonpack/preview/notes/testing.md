@@ -40,12 +40,13 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
 
 6. Publish a preview from `example/`:
    ```sh
-   bunx preview publish --id task-1-login-fix --changelog="- Fixes the login"
+   bun run publish:preview --id task-1-login-fix --changelog="- Fixes the login"
    ```
    That publishes for Android and iOS. In a terminal it asks for the title, prefilled from the id;
    Enter keeps it.
-   Use `bunx` in this repo: `npx` can't read bun's install, so it looks for a `preview`
-   package on npm and fails with a 404. An app installed with npm uses `npx`.
+   `bunx preview publish …` works too. Use `bunx` in this repo, not `npx`: `npx` can't read
+   bun's install, so it looks for a `preview` package on npm and fails with a 404. An app
+   installed with npm uses `npx`.
 7. In the app's Previews tab: Refresh, Download, Switch, then Back to base. The banner at the top
    names what runs. Publish the same id again with other
    changes to see "Update available", or `bunx preview unpublish <id>` to see "Unpublished".
@@ -68,8 +69,8 @@ app needs `devPreviewServers: true` (the example has it).
 
 1. In each worktree, start Metro with:
    ```sh
-   bunx preview start            # picks a free port in 8081-8099 and announces it
-   bunx preview start -- --clear # anything after -- goes to expo start
+   bun run start:preview                # picks a free port in 8081-8099 and announces it
+   bun run start:preview -- -- --clear  # after the second --, args go to expo start (bun eats the first)
    ```
    In a terminal it asks for the name the app shows, prefilled from the branch; Enter keeps it.
    `--title <name>` skips the question, and so does a run with no terminal.

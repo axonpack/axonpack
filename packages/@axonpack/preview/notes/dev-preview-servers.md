@@ -27,6 +27,8 @@ build made without the plugin has no slug, and the section says so instead of li
 
 ## How it works
 
+**Running it.** In the example, `bun run start:preview` (or `bunx preview start`).
+
 **The name.** In a terminal, `preview start` asks for the name the app's list shows, prefilled with
 the branch's readable title (`task-1-login-fix` becomes "Task 1 login fix"). Enter keeps it, or edit
 it first. `--title <name>` skips the question, and so does a run with no terminal (CI, an AI agent),
