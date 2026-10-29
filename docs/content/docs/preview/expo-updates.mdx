@@ -4,13 +4,13 @@ description: Previews sit on top of a build that expo-updates manages, with no s
 icon: RefreshCw
 ---
 
-expo-updates works alongside, with nothing to set up. It keeps managing the base build. A preview is
-an extra bundle on top of that base, for the same native build.
+expo-updates works alongside, with nothing to set up. It keeps managing the default bundle. A preview
+is an extra bundle on top of it, for the same native build.
 
 - **No preview chosen.** The package changes nothing at startup. expo-updates, or the bundle inside
   the app, loads as usual.
-- **A preview chosen.** The preview loads, on every start, until QA goes back to base.
-- **Back to base.** The start is handed back to expo-updates, which loads its current update.
+- **A preview chosen.** The preview loads, on every start, until QA goes back to the default bundle.
+- **Back to the default bundle.** The start is handed back to expo-updates, which loads its current update.
 
 ## How it decides, per platform
 
@@ -20,9 +20,9 @@ never asked first.
 **Android.** A chosen preview is also put straight into React's host, in the private field
 expo-dev-launcher uses, so it wins even after expo-updates has applied a downloaded update. The
 package ships a ProGuard keep rule for that field, so a minified release build keeps it. If the field
-is missing, the base loads and a warning in the log says why. It never crashes.
+is missing, the default bundle loads and a warning in the log says why. It never crashes.
 
-**iOS.** While expo-updates is active, the base bundle starts first, and the app then reloads once
+**iOS.** While expo-updates is active, the default bundle starts first, and the app then reloads once
 straight into the preview. That is one extra JS start behind the splash screen. It uses no private
 API.
 
@@ -34,12 +34,12 @@ An image that is new or changed in the preview falls back to the preview's own f
 ## What has been checked
 
 On Android and iOS release builds, with expo-updates on and its embedded update: no preview gives
-expo-updates' update; a chosen preview loads, also after closing and reopening the app; back to base
-gives expo-updates' update again.
+expo-updates' update; a chosen preview loads, also after closing and reopening the app; going back to
+the default bundle gives expo-updates' update again.
 
 The case where expo-updates has already applied a **downloaded** update has not been run against an
 update server yet. To check it in your own app, point `updates.url` at your update server, publish an
-update, let the app apply it, then choose a preview and go back to base. Back to base should load that
-update.
+update, let the app apply it, then choose a preview and go back to the default bundle. That should load
+the update.
 
 **Next:** [Troubleshooting](/docs/preview/troubleshooting)

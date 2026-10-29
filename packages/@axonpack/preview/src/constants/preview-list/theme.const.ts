@@ -68,6 +68,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   previewId: "Preview id",
   environment: "Environment",
   compatibilityKey: "Build key",
+  backToDefault: "Use the default bundle",
   backToBase: "Use the default bundle",
   metroBypassed:
     "Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again.",

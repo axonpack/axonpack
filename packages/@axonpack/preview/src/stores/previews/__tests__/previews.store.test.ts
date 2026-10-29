@@ -50,7 +50,7 @@ beforeEach(() => {
   ) as typeof fetch;
 });
 
-test("deleting the running preview goes back to the base bundle first", async () => {
+test("deleting the running preview goes back to the default bundle first", async () => {
   saveDownload("a", "fp");
   mockNative.bundle = "a/ios/main.jsbundle";
   await previewsStore.refresh(config);
@@ -160,7 +160,7 @@ test("each refresh replaces the list with what the bucket says now", async () =>
   expect(global.fetch).toHaveBeenCalledTimes(2);
 });
 
-test("back to base also stops a local Metro server", async () => {
+test("back to the default bundle also stops a local Metro server", async () => {
   await previewsStore.refresh(config);
   await previewsStore.switchTo(config, null);
   expect(mockNative.selectLocalServer).toHaveBeenCalledWith(null, null);

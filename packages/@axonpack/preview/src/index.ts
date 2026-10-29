@@ -29,7 +29,7 @@ export {
   runningNow,
   sameServer,
 } from "./utils/previews/running.util";
-export type { BaseSource, Running } from "./utils/previews/running.util";
+export type { DefaultSource, Running } from "./utils/previews/running.util";
 export { useRunning } from "./services/previews/use-running.service";
 export { PreviewList } from "./components/preview-list/preview-list.component";
 export type { PreviewListProps } from "./components/preview-list/preview-list.component";

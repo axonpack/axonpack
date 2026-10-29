@@ -7,8 +7,8 @@
 **Hand QA the JS of every pull request, inside the build they already have.**
 
 Publish one JS bundle per branch to your own S3-compatible bucket. QA opens a list in the app,
-picks a preview, and the app restarts into it. No native rebuild, no new install, and the base
-build comes back with one tap. Like EAS Update or CodePush, but only for previews.
+picks a preview, and the app restarts into it. No native rebuild, no new install, and the default
+bundle comes back with one tap. Like EAS Update or CodePush, but only for previews.
 
 **[Documentation](https://axonpack.dev/docs/preview)** · [Quick start](https://axonpack.dev/docs/preview/quick-start) · [CLI](https://axonpack.dev/docs/preview/cli) · [Changelog](https://axonpack.dev/docs/preview/changelog)
 
@@ -25,7 +25,7 @@ npx expo install @axonpack/preview expo-file-system
 ```
 
 It needs React Native's New Architecture, which means Expo SDK 53 or later. Under the old
-architecture the package logs one warning and always loads the base bundle, so the app still
+architecture the package logs one warning and always loads the default bundle, so the app still
 starts. It has native code, so it runs in a development or release build, not in Expo Go.
 
 ## Setup

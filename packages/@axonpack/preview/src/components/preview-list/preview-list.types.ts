@@ -89,7 +89,9 @@ export type PreviewListLabels = {
   /** The EAS environment a preview was published with. */
   environment: string;
   compatibilityKey: string;
-  /** Goes back to the app's own bundle, stopping a dev preview server too. */
+  /** Goes back to the default bundle, stopping a dev preview server too. */
+  backToDefault: string;
+  /** @deprecated Use `backToDefault`. Still shown when an app sets it and not `backToDefault`. */
   backToBase: string;
   /** Shown in a debug build while a preview runs, since Metro is not used then. */
   metroBypassed: string;

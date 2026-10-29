@@ -28,7 +28,7 @@ export const selectedPreviewId = (state: NativeState): string | null =>
 
 /**
  * Tells the native side this start worked. Until it is called, a crash makes the next launch fall
- * back to the base bundle and mark the preview broken. The provider calls it once mounted.
+ * back to the default bundle and mark the preview broken. The provider calls it once mounted.
  */
 export function markLaunched(): void {
   nativeModule()?.markLaunched();

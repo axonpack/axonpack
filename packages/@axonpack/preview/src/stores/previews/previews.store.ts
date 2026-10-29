@@ -29,9 +29,9 @@ export type PreviewsState = {
   local: LocalPreview[];
   /** Download progress by id, from 0 to 1. */
   downloading: Record<string, number>;
-  /** The preview the next start loads, or null for the base bundle. */
+  /** The preview the next start loads, or null for the default bundle. */
   activeId: string | null;
-  /** Previews that stopped before they finished starting, so the base bundle loaded instead. */
+  /** Previews that stopped before they finished starting, so the default bundle loaded instead. */
   broken: string[];
 };
 
@@ -111,8 +111,8 @@ export const previewsStore = {
   },
 
   /**
-   * Restarts into a preview, downloading it first when it is not on the device, or into the base
-   * bundle with null. A preview with an update keeps its downloaded copy until QA updates it.
+   * Restarts into a preview, downloading it first when it is not on the device, or into the
+   * default bundle with null. A preview with an update keeps its downloaded copy until QA updates it.
    */
   async switchTo(config: PreviewConfig, id: string | null) {
     const native = nativeModule();
@@ -143,7 +143,7 @@ export const previewsStore = {
     }
   },
 
-  /** Deletes a download. If it is the one running, the app goes back to the base bundle first. */
+  /** Deletes a download. If it is the one running, the app goes back to the default bundle first. */
   async remove(id: string) {
     const platform = currentPlatform();
     if (!platform) return;

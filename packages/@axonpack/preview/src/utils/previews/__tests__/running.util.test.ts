@@ -18,11 +18,11 @@ const server = {
   branch: "task-2",
 } as DevPreviewServer;
 
-test("nothing picked is the base bundle", () => {
+test("nothing picked is the default bundle", () => {
   expect(
     runningNow({ items: [], activeId: null, localUrl: null, servers: [] }),
   ).toEqual({
-    kind: "base",
+    kind: "default",
     source: "built-in",
     url: null,
     hostPort: null,
@@ -91,7 +91,10 @@ const metro = (hostPort: string, extra: Partial<DevPreviewServer> = {}) =>
     ...extra,
   }) as DevPreviewServer;
 
-const onBase = (scriptUrl: string | null, servers: DevPreviewServer[] = []) =>
+const onDefault = (
+  scriptUrl: string | null,
+  servers: DevPreviewServer[] = [],
+) =>
   runningNow({ items: [], activeId: null, localUrl: null, servers, scriptUrl });
 
 describe("sameServer", () => {
@@ -116,14 +119,14 @@ describe("sameServer", () => {
   });
 });
 
-describe("the base's source", () => {
+describe("the default's source", () => {
   test("a release build with no Metro runs the bundle built into the app", () => {
-    expect(onBase("file:///app/Main.app/main.jsbundle")).toMatchObject({
-      kind: "base",
+    expect(onDefault("file:///app/Main.app/main.jsbundle")).toMatchObject({
+      kind: "default",
       source: "built-in",
       hostPort: null,
     });
-    expect(onBase("assets://index.android.bundle")).toMatchObject({
+    expect(onDefault("assets://index.android.bundle")).toMatchObject({
       source: "built-in",
     });
   });
@@ -131,9 +134,9 @@ describe("the base's source", () => {
   test("Metro that the registry does not know is Expo's dev server", () => {
     const scan = metro("localhost:8081");
     expect(
-      onBase("http://localhost:8081/index.bundle?platform=ios", [scan]),
+      onDefault("http://localhost:8081/index.bundle?platform=ios", [scan]),
     ).toEqual({
-      kind: "base",
+      kind: "default",
       source: "expo-dev-server",
       url: "http://localhost:8081/index.bundle?platform=ios",
       hostPort: "localhost:8081",
@@ -142,7 +145,7 @@ describe("the base's source", () => {
   });
 
   test("Metro not found by the scan yet is still Expo's dev server", () => {
-    expect(onBase("http://192.168.1.5:8081/index.bundle")).toMatchObject({
+    expect(onDefault("http://192.168.1.5:8081/index.bundle")).toMatchObject({
       source: "expo-dev-server",
       hostPort: "192.168.1.5:8081",
       server: null,
@@ -152,16 +155,16 @@ describe("the base's source", () => {
   test("an announced Metro is a dev preview server, matched under another host name", () => {
     const announced = metro("10.0.2.2:8082", { announced: true });
     expect(
-      onBase("http://localhost:8082/index.bundle?platform=android", [
+      onDefault("http://localhost:8082/index.bundle?platform=android", [
         metro("10.0.2.2:8081"),
         announced,
       ]),
     ).toMatchObject({ source: "dev-preview-server", server: announced });
   });
 
-  test("a server on another port is not taken for the base", () => {
+  test("a server on another port is not taken for the default", () => {
     expect(
-      onBase("http://localhost:8081/index.bundle", [
+      onDefault("http://localhost:8081/index.bundle", [
         metro("localhost:8082", { announced: true }),
       ]),
     ).toMatchObject({ source: "expo-dev-server", server: null });
@@ -181,7 +184,7 @@ describe("a preview", () => {
     ).toEqual({ kind: "preview", id: "task-1", title: "Task 1" });
   });
 
-  test("picked but not loaded (the fallback ran) leaves the base", () => {
+  test("picked but not loaded (the fallback ran) leaves the default", () => {
     expect(
       runningNow({
         items: [item("task-1", "Task 1", true)],
@@ -190,7 +193,7 @@ describe("a preview", () => {
         servers: [],
         scriptUrl: "http://localhost:8081/index.bundle",
       }),
-    ).toMatchObject({ kind: "base", source: "expo-dev-server" });
+    ).toMatchObject({ kind: "default", source: "expo-dev-server" });
   });
 });
 
@@ -222,11 +225,11 @@ describe("a server picked by hand", () => {
       defaultServer,
     });
 
-  test("that is the Metro the app starts on anyway is the base", () => {
+  test("that is the Metro the app starts on anyway is the default", () => {
     expect(
       pick("http://127.0.0.1:8081/index.bundle?platform=ios", "localhost:8081"),
     ).toMatchObject({
-      kind: "base",
+      kind: "default",
       source: "expo-dev-server",
       hostPort: "127.0.0.1:8081",
     });
@@ -235,7 +238,7 @@ describe("a server picked by hand", () => {
         "http://localhost:8081/index.bundle?platform=android",
         "10.0.2.2:8081",
       ),
-    ).toMatchObject({ kind: "base" });
+    ).toMatchObject({ kind: "default" });
   });
 
   test("on another port, or with the default unknown, is what runs", () => {
@@ -253,13 +256,13 @@ describe("runningLabel", () => {
     runningLabel(r, DEFAULT_LABELS);
 
   test("says what serves the app's own bundle, with no word for 'base'", () => {
-    expect(label(onBase(null))).toBe("Built into the app");
-    expect(label(onBase("http://127.0.0.1:8081/index.bundle"))).toBe(
+    expect(label(onDefault(null))).toBe("Built into the app");
+    expect(label(onDefault("http://127.0.0.1:8081/index.bundle"))).toBe(
       "Expo dev server, localhost:8081",
     );
     expect(
       label(
-        onBase("http://localhost:8082/index.bundle", [
+        onDefault("http://localhost:8082/index.bundle", [
           metro("localhost:8082", { announced: true }),
         ]),
       ),
@@ -296,7 +299,7 @@ describe("runningLabel", () => {
 
   test("custom labels are used", () => {
     expect(
-      runningLabel(onBase(null), {
+      runningLabel(onDefault(null), {
         ...DEFAULT_LABELS,
         kindBuiltIn: "In the app",
       }),

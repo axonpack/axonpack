@@ -68,7 +68,7 @@ device.
 
 ## A preview shows as Broken
 
-**Cause.** It failed before the app had mounted the provider, so the next start loaded the base
+**Cause.** It failed before the app had mounted the provider, so the next start loaded the default
 bundle. On Android that happens straight away. On iOS the failed start leaves a blank screen until the
 app is closed and opened again.
 **Fix.** Look at the error in that branch's code. Also check that the provider is mounted on every

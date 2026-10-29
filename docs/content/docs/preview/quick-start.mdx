@@ -122,8 +122,8 @@ npx preview publish --id task-1-login-fix
 It builds for Android and iOS and uploads both. In a terminal it asks for the title QA sees,
 prefilled with "Task 1 login fix"; Enter keeps it. Without `--id` the id is the current git branch.
 
-Now undo the change in your code. In a debug build the base is whatever Metro serves, so this way
-the base and the preview look different.
+Now undo the change in your code. In a debug build the default bundle is whatever Metro serves, so
+this way the default and the preview look different.
 
 </Step>
 <Step>
@@ -131,7 +131,7 @@ the base and the preview look different.
 ### Switch to it
 
 Open the list in the app and tap **Refresh**. The preview is there. Tap **Download**, then
-**Switch**. The app restarts into the preview and shows your change. Tap **Back to base** to return.
+**Switch**. The app restarts into the preview and shows your change. Tap **Use the default bundle** to return.
 
 Publish the same id again with another change and the row says **Update available**.
 

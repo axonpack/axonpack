@@ -35,7 +35,7 @@ field is on [Reference](/docs/preview/reference#previewconfig).
 <Callout type="warn" title="Mount it on every start">
 Once the provider has mounted, it tells the native side that this start worked. The crash fallback
 waits for that: a preview that never gets that far is marked broken, and the next start loads the
-base bundle. So mount the provider on every start, also in builds where `enabled` is false, and not
+default bundle. So mount the provider on every start, also in builds where `enabled` is false, and not
 behind a login or a lazy screen.
 </Callout>
 
@@ -53,7 +53,7 @@ enabled: process.env.EXPO_PUBLIC_PREVIEWS === 'on',
 ```
 
 It applies to debug builds too. A preview chosen in a debug build loads instead of Metro, and the
-list says Metro is bypassed. **Back to base** returns to Metro.
+list says Metro is bypassed. **Use the default bundle** returns to Metro.
 
 ## The ready-made list
 
@@ -68,7 +68,7 @@ export default function PreviewsScreen() {
 Put it on a screen QA can reach: a tab in internal builds, a settings row, or a hidden gesture. It
 shows:
 
-- **Running:** what this start runs (the base bundle or a preview), and **Back to base**.
+- **Running:** what this start runs (the default bundle or a preview), and **Use the default bundle**.
 - **The previews for this build**, each with its title, app version, branch, author, date, size,
   changelog and state, and **Download**, **Switch**, **Update** or **Delete**.
 - **Incompatible:** downloads made for another native build, with **Delete all**.
@@ -82,10 +82,10 @@ shows:
 | Downloaded       | On the device and up to date                                             |
 | Update available | Published again since it was downloaded                                  |
 | Unpublished      | Still on the device, but no longer in the bucket                         |
-| Broken           | It stopped while starting, so the base bundle loaded                     |
+| Broken           | It stopped while starting, so the default bundle loaded                  |
 
 **Switch** downloads first when the preview is not on the device, then restarts into it. Deleting the
-preview that runs goes back to the base bundle first.
+preview that runs goes back to the default bundle first.
 
 ### Theme and labels
 
@@ -95,9 +95,11 @@ text:
 ```tsx
 <PreviewList
   theme={{ mode: 'dark', primary: '#16a34a', radius: 8, fonts: { bold: 'Inter-Bold' } }}
-  labels={{ title: 'QA builds', backToBase: 'Back to the store build' }}
+  labels={{ title: 'QA builds', backToDefault: 'Back to the store build' }}
 />
 ```
+
+`backToBase` still works but is deprecated. It is used only when `backToDefault` is not set.
 
 Every token and label is on [Reference](/docs/preview/reference#theme). `LIGHT_THEME`, `DARK_THEME`
 and `DEFAULT_LABELS` are exported to build on.
@@ -125,7 +127,7 @@ export function MyPreviews() {
           <Button title="Switch" onPress={() => preview.switchTo(item.id)} />
         </View>
       )}
-      ListFooterComponent={<Button title="Back to base" onPress={() => preview.switchTo(null)} />}
+      ListFooterComponent={<Button title="Use the default bundle" onPress={() => preview.switchTo(null)} />}
     />
   );
 }
@@ -136,7 +138,7 @@ The fields and actions are on [Reference](/docs/preview/reference#usepreview).
 ## A banner that says what runs
 
 So QA always knows what they are looking at, and how to get back. `useRunning()` says what this
-start runs: a dev preview server, a preview, or the base bundle.
+start runs: a dev preview server, a preview, or the default bundle.
 
 ```tsx
 import { useRunning } from '@axonpack/preview';
@@ -144,7 +146,7 @@ import { Text, View } from 'react-native';
 
 export function BundleBanner() {
   const running = useRunning();
-  if (running.kind === 'base') return null;
+  if (running.kind === 'default') return null;
   const label =
     running.kind === 'preview'
       ? `Preview: ${running.title}`

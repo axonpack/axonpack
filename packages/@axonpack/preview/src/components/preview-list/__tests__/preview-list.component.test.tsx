@@ -443,6 +443,32 @@ test("no state says 'Base' anywhere in the header", async () => {
   }
 });
 
+test("an app's backToBase label still names the way back, and backToDefault wins over it", async () => {
+  mockNativeState = { localServer: "http://127.0.0.1:8082/index.bundle" };
+  mockScriptUrl = "http://127.0.0.1:8082/index.bundle";
+  for (const [labels, shown] of [
+    [{ backToBase: "Back to the store build" }, "Back to the store build"],
+    [{ backToBase: "Old", backToDefault: "New" }, "New"],
+  ] as const) {
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(
+        <PreviewProvider
+          config={{
+            enabled: true,
+            url: "http://localhost:9000/b",
+            devPreviewServers: true,
+          }}
+        >
+          <PreviewList labels={labels} />
+        </PreviewProvider>,
+      );
+    });
+    expect(texts(tree)).toContain(shown);
+    await act(async () => tree.unmount());
+  }
+});
+
 test("the refresh button asks the bucket again and has a label for screen readers", async () => {
   const tree = await render();
   const fetch = global.fetch as jest.Mock;

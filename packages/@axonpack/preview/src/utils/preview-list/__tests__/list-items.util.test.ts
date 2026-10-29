@@ -33,7 +33,7 @@ test("no hint while the first answer is loading", () => {
   expect(shape({ loading: true })).toEqual(["previews"]);
 });
 
-test("on base the previews follow in order", () => {
+test("on the default bundle the previews follow in order", () => {
   expect(shape({ items: [item("a"), item("b")] })).toEqual([
     "previews",
     "preview:a",

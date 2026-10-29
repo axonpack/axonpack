@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const LOOKS = {
-  base: { background: "#e2e8f0", text: "#0f172a" },
+  default: { background: "#e2e8f0", text: "#0f172a" },
   preview: { background: "#1d4ed8", text: "#ffffff" },
   local: { background: "#047857", text: "#ecfdf5" },
 };

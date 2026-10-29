@@ -15,13 +15,13 @@ npx expo install @axonpack/preview expo-file-system
 | Needs                  | Why                                                                                      |
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Expo SDK 53 or later   | The iOS hook the package uses came with SDK 53                                           |
-| The New Architecture   | The default from SDK 53. Under the old one the package logs one warning and always loads the base bundle |
+| The New Architecture   | The default from SDK 53. Under the old one the package logs one warning and always loads the default bundle |
 | Hermes                 | Previews are Hermes bytecode, the same as a release build                                |
 | A native build         | The package has native code, so it does not run in Expo Go. A development or release build both work |
 
 <Callout type="warn" title="The old architecture">
 Under the old architecture nothing breaks, but nothing switches either. The package logs one warning
-and the base bundle always loads, so the app still starts.
+and the default bundle always loads, so the app still starts.
 </Callout>
 
 ## What each package does

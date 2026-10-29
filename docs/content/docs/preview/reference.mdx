@@ -47,7 +47,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `remote`               | What the bucket lists for this build. Null until it has answered once      |
 | `local`                | Every download on the device                                               |
 | `downloading`          | Download progress by id, from 0 to 1                                       |
-| `activeId`             | The preview the next start loads, or null for the base bundle             |
+| `activeId`             | The preview the next start loads, or null for the default bundle          |
 | `broken`               | Ids of previews that stopped before they finished starting                 |
 
 | Action                   | What it does                                                             |
@@ -55,8 +55,8 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `refresh()`              | Reads the downloads, then asks the bucket for this build's list          |
 | `download(id)`           | Downloads a preview, or its update                                       |
 | `switchTo(id)`           | Restarts into a preview, downloading it first if needed                  |
-| `switchTo(null)`         | Back to base. Also stops a dev preview server                            |
-| `remove(id)`             | Deletes a download. If it runs, goes back to base first                  |
+| `switchTo(null)`         | Back to the default bundle. Also stops a dev preview server              |
+| `remove(id)`             | Deletes a download. If it runs, goes back to the default bundle first    |
 | `removeIncompatible()`   | Deletes every download made for another native build                     |
 
 ### PreviewItem
@@ -74,7 +74,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 
 | `kind`     | Fields                                                             |
 | ---------- | ------------------------------------------------------------------ |
-| `base`     | none                                                               |
+| `default`  | `source` (`built-in`, `expo-dev-server` or `dev-preview-server`), `url`, `hostPort`, `server` |
 | `preview`  | `id`, `title`                                                      |
 | `local`    | `url`, `hostPort`, `server` (null until the list has found it)     |
 
@@ -82,7 +82,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 
 | Function                      | What it does                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------- |
-| `selectPreview(id, key?)`     | Chooses what the next start or `reload()` loads: a preview id, or null for the base bundle. False where the native module is missing |
+| `selectPreview(id, key?)`     | Chooses what the next start or `reload()` loads: a preview id, or null for the default bundle. False where the native module is missing |
 | `reload()`                    | Restarts JS, so a new choice takes effect. False where the native module is missing |
 | `previewBundlePath(id)`       | Where a preview's bundle sits, relative to the preview folder                |
 | `markLaunched()`              | Tells the native side this start worked. The provider calls it               |
@@ -130,8 +130,9 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `title`                  | Previews                                                                      |
 | `running`                | Running                                                                       |
 | `base`                   | Embedded bundle                                                               |
-| `backToBase`             | Back to base                                                                  |
-| `metroBypassed`          | Debug build: Metro is not used while a preview runs. Go back to base to load from Metro again. |
+| `backToDefault`          | Use the default bundle                                                        |
+| `backToBase`             | Deprecated: use `backToDefault`. Still shown when `backToDefault` is not set  |
+| `metroBypassed`          | Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again. |
 | `refresh`                | Refresh                                                                       |
 | `empty`                  | No previews published for this build yet.                                     |
 | `noBuildKey`             | This build has no compatibility key, so it cannot list previews. Add the config plugin and rebuild. |

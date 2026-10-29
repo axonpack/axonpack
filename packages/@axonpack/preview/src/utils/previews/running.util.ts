@@ -2,8 +2,8 @@ import type { DevPreviewServer } from "../dev-preview-servers/merge-servers.util
 import type { PreviewItem } from "./preview-items.util";
 import type { PreviewListLabels } from "../../components/preview-list/preview-list.types";
 
-/** Where the base bundle that runs now comes from. */
-export type BaseSource =
+/** Where the default bundle that runs now comes from. */
+export type DefaultSource =
   /** The bundle inside the app: a release build, or anything not loaded from Metro. */
   | "built-in"
   /** A Metro the preview registry does not know, such as `expo start` or `expo run:ios`. */
@@ -23,8 +23,8 @@ export type Running =
     }
   | { kind: "preview"; id: string; title: string }
   | {
-      kind: "base";
-      source: BaseSource;
+      kind: "default";
+      source: DefaultSource;
       /** The Metro bundle URL, or null when the bundle is built into the app. */
       url: string | null;
       hostPort: string | null;
@@ -85,7 +85,7 @@ export function runningNow(input: {
   servers: DevPreviewServer[];
   /**
    * What React Native says it loaded (`SourceCode.scriptURL`). Without it, only the choice the
-   * native side holds is known, and the base counts as built in.
+   * native side holds is known, and the default counts as built in.
    */
   scriptUrl?: string | null;
   /** `host:port` of the Metro the app starts on with nothing picked, from the native state. */
@@ -101,7 +101,7 @@ export function runningNow(input: {
     const server =
       input.servers.find((s) => s.url === localUrl) ??
       findServer(input.servers, hostPort);
-    // Picked by hand but the same Metro the app starts on anyway, it changes nothing: the base.
+    // Picked by hand but the same Metro the app starts on anyway, it changes nothing: the default.
     if (!defaultServer || !sameServer(hostPort, defaultServer))
       return {
         kind: "local",
@@ -110,7 +110,7 @@ export function runningNow(input: {
         server,
       };
   }
-  // A preview that could not load (another Hermes, the crash fallback) leaves the base running,
+  // A preview that could not load (another Hermes, the crash fallback) leaves the default running,
   // so when the loaded file is known it must be the preview's own.
   const previewLoaded =
     input.activeId &&
@@ -127,7 +127,7 @@ export function runningNow(input: {
     const hostPort = hostPortOf(metro) as string;
     const server = findServer(input.servers, hostPort);
     return {
-      kind: "base",
+      kind: "default",
       source: server?.announced ? "dev-preview-server" : "expo-dev-server",
       url: metro,
       hostPort,
@@ -135,7 +135,7 @@ export function runningNow(input: {
     };
   }
   return {
-    kind: "base",
+    kind: "default",
     source: "built-in",
     url: null,
     hostPort: null,

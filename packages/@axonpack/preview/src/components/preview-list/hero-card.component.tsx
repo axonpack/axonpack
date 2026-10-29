@@ -48,7 +48,7 @@ export function HeroCard(props: {
   /** A preview is chosen, even one that could not load. */
   canGoBack: boolean;
   /** Back to the default bundle: clears the chosen preview and the picked server. */
-  onBackToBase: () => void;
+  onBackToDefault: () => void;
   onRefresh: () => void;
 }) {
   const { theme, labels, running, build, entry } = props;
@@ -111,7 +111,7 @@ export function HeroCard(props: {
       ));
   const visibleRows = shown(rows);
   const detailRows = shown(details);
-  const isDefault = running.kind === "base";
+  const isDefault = running.kind === "default";
   const chips = [
     // The headline already says the kind when there is no other name.
     name === kind ? null : (
@@ -250,8 +250,8 @@ export function HeroCard(props: {
         >
           <Button
             theme={theme}
-            title={labels.backToBase}
-            onPress={props.onBackToBase}
+            title={labels.backToDefault}
+            onPress={props.onBackToDefault}
           />
         </View>
       ) : null}

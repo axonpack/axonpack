@@ -6,7 +6,7 @@ icon: House
 
 This package lets QA try the JS of a branch or pull request without a new native build. You publish
 one bundle per branch to your own S3-compatible bucket. In the app, QA opens a list, picks a
-preview, and the app restarts into it. Going back to the base build is one tap.
+preview, and the app restarts into it. Going back to the default bundle is one tap.
 
 It works like EAS Update or CodePush, but only for previews. Your store releases and expo-updates
 keep working as they do.
@@ -42,7 +42,7 @@ npx preview publish   # builds this branch for Android and iOS and uploads it
 3. The app reads the list for its own native build. QA downloads a preview into the app's documents
    folder. Every file is checked against its sha256.
 4. QA taps **Switch**. The native side starts the app from the downloaded bundle on the next start
-   and on every start after, until QA goes back to base.
+   and on every start after, until QA goes back to the default bundle.
 
 There is no server of your own to run. The bucket is the whole backend.
 
@@ -51,7 +51,7 @@ There is no server of your own to run. The bucket is the whole backend.
 | Word            | Meaning                                                                                                  |
 | --------------- | -------------------------------------------------------------------------------------------------------- |
 | Preview         | One published JS bundle, with its images. Its id is the branch name                                      |
-| Base bundle     | What the app runs with no preview chosen: the bundle inside the app, an expo-updates update, or Metro   |
+| Default bundle  | What the app runs with no preview chosen: the bundle inside the app, an expo-updates update, or Metro   |
 | Key             | The native build a preview was made for: `version-<app version>` or `fingerprint-<hash>`                |
 | Compatible      | Made for the same key as the installed build. Only those are listed                                      |
 | Incompatible    | A download made for another key, for example before a native update. It is kept apart and can't run     |
@@ -61,9 +61,9 @@ There is no server of your own to run. The bucket is the whole backend.
 ## What you get
 
 - **Your own bucket.** AWS S3, Cloudflare R2, MinIO, or any host with the S3 API. Public or private.
-- **A ready-made list for QA.** Download, switch, update, delete, and back to base, in light and dark mode.
+- **A ready-made list for QA.** Download, switch, update, delete, and back to the default bundle, in light and dark mode.
 - **Only previews that can run.** Each build lists only previews made for its own native code.
-- **A fallback.** A preview that fails while starting is marked broken and the base bundle loads.
+- **A fallback.** A preview that fails while starting is marked broken and the default bundle loads.
 - **CI in one file.** Sample GitHub Actions workflows publish every pull request and remove it on close.
 - **Several Metro servers in one debug build.** One per worktree, switched live, for people and AI agents.
 

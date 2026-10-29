@@ -18,7 +18,7 @@ export function useRunning(): Running {
     ? (local.activeUrl ?? nativeModule()?.state().localServer ?? null)
     : null;
   const loadedFrom = scriptUrl();
-  // Whether the base's Metro is a `preview start` server shows in the servers list, which is
+  // Whether the default's Metro is a `preview start` server shows in the servers list, which is
   // filled only while the list is on screen. One look is enough for the banner on other screens.
   const fromMetro = Boolean(loadedFrom?.startsWith("http"));
   useEffect(() => {

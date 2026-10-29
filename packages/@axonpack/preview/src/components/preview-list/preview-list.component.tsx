@@ -72,6 +72,11 @@ export function PreviewList(props: PreviewListProps) {
   const labels: PreviewListLabels = {
     ...DEFAULT_LABELS,
     ...props.labels,
+    // An app written before the rename still sees its own text.
+    backToDefault:
+      props.labels?.backToDefault ??
+      props.labels?.backToBase ??
+      DEFAULT_LABELS.backToDefault,
     status: { ...DEFAULT_LABELS.status, ...props.labels?.status },
   };
 
@@ -172,7 +177,7 @@ export function PreviewList(props: PreviewListProps) {
         error={preview.error}
         loading={preview.loading}
         canGoBack={Boolean(preview.activeId)}
-        onBackToBase={() => preview.switchTo(null)}
+        onBackToDefault={() => preview.switchTo(null)}
         onRefresh={() => {
           preview.refresh();
           if (showLocal) devPreviewServersStore.refresh();
