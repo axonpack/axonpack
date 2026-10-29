@@ -54,6 +54,50 @@ in the shell if the bundle needs them. Plain text and sensitive ones come throug
 variable is written by `eas env:pull` itself into the app's `.eas/.env/` folder, and its value is
 that file's path.
 
+## CI
+
+[`ci/github-actions/`](../ci/github-actions/) has a sample GitHub Actions workflow for each
+package manager. Copy the one that matches your app's lockfile into `.github/workflows/`; GitHub
+does not run them from this package.
+
+| Lockfile            | File to copy                                                |
+| ------------------- | ----------------------------------------------------------- |
+| `bun.lock`          | [`preview.bun.yml`](../ci/github-actions/preview.bun.yml)   |
+| `package-lock.json` | [`preview.npm.yml`](../ci/github-actions/preview.npm.yml)   |
+| `pnpm-lock.yaml`    | [`preview.pnpm.yml`](../ci/github-actions/preview.pnpm.yml) |
+| `yarn.lock`         | [`preview.yarn.yml`](../ci/github-actions/preview.yarn.yml) |
+
+All four have the same jobs; only the setup, install and run steps differ. The yarn file uses
+`yarn install --immutable` (Yarn 2 and later); for Yarn 1 change it to `--frozen-lockfile`. It
+publishes each pull request when it is opened, pushed to or reopened, with the branch name as the
+id and the pull request's base branch for the changelog. Pull requests from forks get no secrets,
+so it only works for branches in the repo.
+
+Repository secrets it reads:
+
+| Secret                         | Needed                                          |
+| ------------------------------ | ----------------------------------------------- |
+| `PREVIEW_S3_URL`               | yes                                             |
+| `PREVIEW_S3_ACCESS_KEY_ID`     | yes                                             |
+| `PREVIEW_S3_SECRET_ACCESS_KEY` | yes                                             |
+| `PREVIEW_S3_REGION`            | no, default `us-east-1`                         |
+| `EXPO_TOKEN`                   | only for `--environment` (an Expo access token) |
+
+Without EAS variables, drop the `expo/expo-github-action` step, `EXPO_TOKEN` and `--environment`.
+
+### Unpublish on close (optional)
+
+When a pull request closes, merged or not, the `unpublish` job removes its preview from every
+build's list. The job is optional. To keep previews after close, do one of these in your copy of
+the workflow:
+
+- delete the `unpublish` job
+- remove `closed` from the trigger's `types`
+- change the job's condition to `if: false`
+
+Then remove previews by hand with `preview unpublish <id>`, and delete the files no preview uses
+any more with `preview prune`.
+
 ## Layout
 
 ```

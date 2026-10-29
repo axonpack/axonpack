@@ -1,0 +1,74 @@
+# Sample workflow for @axonpack/preview, for an app installed with npm (package-lock.json).
+# Copy it into your app's .github/workflows/. GitHub does not run it from this package.
+# Publishes each pull request as a preview, and removes it when the pull request closes.
+#
+# Secrets: PREVIEW_S3_URL, PREVIEW_S3_ACCESS_KEY_ID, PREVIEW_S3_SECRET_ACCESS_KEY, and
+# PREVIEW_S3_REGION if your bucket needs one. EXPO_TOKEN only with --environment.
+# Pull requests from forks get no secrets, so these jobs only work for branches in the repo.
+name: Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  publish:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The PR's own commit, not the merge commit, and the full history for the changelog.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      # Only needed for --environment, which reads the EAS environment's variables.
+      # Drop this step, EXPO_TOKEN and --environment if the app keeps none on EAS.
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      # The branch names go through env, not straight into the script, so a branch name
+      # can never run as shell code.
+      - run: >-
+          npx preview publish --id "$PREVIEW_ID" --base "origin/$BASE_BRANCH"
+          --environment preview
+        env:
+          PREVIEW_ID: ${{ github.head_ref }}
+          BASE_BRANCH: ${{ github.base_ref }}
+          PREVIEW_S3_URL: ${{ secrets.PREVIEW_S3_URL }}
+          PREVIEW_S3_ACCESS_KEY_ID: ${{ secrets.PREVIEW_S3_ACCESS_KEY_ID }}
+          PREVIEW_S3_SECRET_ACCESS_KEY: ${{ secrets.PREVIEW_S3_SECRET_ACCESS_KEY }}
+          PREVIEW_S3_REGION: ${{ secrets.PREVIEW_S3_REGION }}
+
+  # Optional: removes the preview when the pull request closes, merged or not. To keep previews
+  # after close, delete this job, remove `closed` from the trigger's types, or change the
+  # condition below to `if: false`. Then remove them by hand with preview unpublish <id>.
+  unpublish:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx preview unpublish "$PREVIEW_ID"
+        env:
+          PREVIEW_ID: ${{ github.head_ref }}
+          PREVIEW_S3_URL: ${{ secrets.PREVIEW_S3_URL }}
+          PREVIEW_S3_ACCESS_KEY_ID: ${{ secrets.PREVIEW_S3_ACCESS_KEY_ID }}
+          PREVIEW_S3_SECRET_ACCESS_KEY: ${{ secrets.PREVIEW_S3_SECRET_ACCESS_KEY }}
+          PREVIEW_S3_REGION: ${{ secrets.PREVIEW_S3_REGION }}
