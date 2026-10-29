@@ -20,12 +20,13 @@ jest.mock("expo", () => ({
   }),
 }));
 
+const notFound = () =>
+  jest.fn(async () => new Response("", { status: 404 })) as typeof fetch;
+
 beforeEach(() => {
   mockNativeState = {};
   mockSlug = "shop";
-  global.fetch = jest.fn(
-    async () => new Response("", { status: 404 }),
-  ) as typeof fetch;
+  global.fetch = notFound();
 });
 
 const texts = (tree: ReactTestRenderer) =>
@@ -51,6 +52,14 @@ async function render(devPreviewServers?: boolean) {
   });
   return tree;
 }
+
+// The first render loads react-native's lazily required components: about 2 s locally with a cold
+// transform cache, and past the 5 s test timeout on a CI runner. Pay it once here, with room.
+beforeAll(async () => {
+  global.fetch = notFound();
+  const tree = await render();
+  await act(async () => tree.unmount());
+}, 30_000);
 
 test("the dev preview servers section is not there unless the app turns it on", async () => {
   const tree = await render();

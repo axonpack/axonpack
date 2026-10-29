@@ -14,18 +14,29 @@ import type { ScannedServer } from "../../utils/dev-preview-servers/merge-server
 // still fails at once, so a round only gets slow on a host that drops packets.
 const PROBE_MS = 2000;
 
-const timeout = (ms: number) => {
+/**
+ * Runs one request, body read included, and aborts it after `ms`. The timer is cleared once the
+ * request settles, so a fast answer leaves nothing pending: a poll round sends 20 of these.
+ */
+async function within<T>(
+  ms: number,
+  request: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
   const controller = new AbortController();
-  setTimeout(() => controller.abort(), ms);
-  return controller.signal;
-};
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await request(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function isMetro(host: string, port: number): Promise<boolean> {
   try {
-    const res = await fetch(`http://${host}:${port}/status`, {
-      signal: timeout(PROBE_MS),
-    });
-    return (await res.text()).includes("packager-status:running");
+    const text = await within(PROBE_MS, async (signal) =>
+      (await fetch(`http://${host}:${port}/status`, { signal })).text(),
+    );
+    return text.includes("packager-status:running");
   } catch {
     return false;
   }
@@ -33,11 +44,14 @@ async function isMetro(host: string, port: number): Promise<boolean> {
 
 /** The Expo manifest a dev server gives for this platform: its bundle URL and app config. */
 async function readManifest(host: string, port: number, platform: Platform) {
-  const res = await fetch(`http://${host}:${port}/`, {
-    headers: { "expo-platform": platform, accept: "application/json" },
-    signal: timeout(3000),
-  });
-  const manifest = await res.json();
+  const manifest = await within(3000, async (signal) =>
+    (
+      await fetch(`http://${host}:${port}/`, {
+        headers: { "expo-platform": platform, accept: "application/json" },
+        signal,
+      })
+    ).json(),
+  );
   return {
     url: String(manifest?.launchAsset?.url ?? ""),
     expo: (manifest?.extra?.expoClient ?? {}) as ScannedServer["expo"],
@@ -49,10 +63,10 @@ async function readRegistry(
   port: number,
 ): Promise<RegisteredServer[] | null> {
   try {
-    const res = await fetch(`http://${host}:${port}/servers`, {
-      signal: timeout(PROBE_MS),
-    });
-    return ((await res.json()) as { servers: RegisteredServer[] }).servers;
+    const body = await within(PROBE_MS, async (signal) =>
+      (await fetch(`http://${host}:${port}/servers`, { signal })).json(),
+    );
+    return (body as { servers: RegisteredServer[] }).servers;
   } catch {
     return null;
   }
