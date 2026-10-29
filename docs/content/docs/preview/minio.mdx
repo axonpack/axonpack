@@ -1,0 +1,116 @@
+---
+title: MinIO
+description: Your own MinIO server, with links to MinIO's docs, or the repository's local server for trying the package out.
+icon: Server
+---
+
+MinIO is an S3 server you run yourself. This page covers a server of your own, where MinIO's docs
+are the source of truth, and the local server from this repository for trying the package out.
+
+## Your own server
+
+MinIO stopped publishing free container images and binaries for its community server in 2025. The
+[community repository](https://github.com/minio/minio) now ships source code only, says it is no
+longer maintained, and points to MinIO AIStor. That is why the repository's `local-s3/compose.yaml`
+uses Bitnami's frozen copy of the last community image, pinned by digest; it gets no more updates.
+For a server that holds real previews, follow MinIO's own docs: build the community server from that
+repository, or run [MinIO AIStor](/docs/preview/aistor).
+
+### MinIO's docs
+
+MinIO's docs site now documents AIStor. The `mc` client and the S3 policy format are the same ones
+the community server uses.
+
+| Task                          | MinIO's page                                                                                              |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Docs home                     | [docs.min.io](https://docs.min.io/)                                                                       |
+| Run a server in a container   | [Deploy MinIO AIStor as a Container](https://docs.min.io/aistor/installation/container/install/)          |
+| TLS                           | [Enable Network Encryption](https://docs.min.io/aistor/installation/container/network-encryption/)        |
+| The `mc` client               | [AIStor Client](https://docs.min.io/aistor/reference/cli/)                                                |
+| Create a bucket               | [mc mb](https://docs.min.io/aistor/reference/cli/mc-mb/)                                                  |
+| Allow public reads            | [mc anonymous](https://docs.min.io/aistor/reference/cli/mc-anonymous/)                                    |
+| Users                         | [Built-in Identity Management](https://docs.min.io/aistor/administration/iam/identity/built-in-identity/) |
+| Policies                      | [Access Control with Policy Management](https://docs.min.io/aistor/administration/iam/access/)           |
+| The community server's source | [github.com/minio/minio](https://github.com/minio/minio)                                                  |
+
+### What this package needs
+
+- **The write key:** a user whose policy allows `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject`
+  on the bucket's objects and `s3:ListBucket` on the bucket. Don't give CI the root user.
+- **A public bucket:** anonymous download on the bucket, and nothing else.
+- **A private bucket:** a read user with only `s3:GetObject` and `s3:ListBucket`. That is what the
+  repository's `local-s3/init.sh` sets up for its private bucket, so it is a working example.
+- **Conditional PUT:** not looked up in MinIO's docs. The package is developed and tested against
+  the local MinIO server below.
+- **HTTPS**, through MinIO's own TLS or a proxy in front. A proxy must pass the original `Host` header
+  through, because every request is signed for the host it was sent to.
+
+### Settings
+
+```sh
+PREVIEW_S3_URL=https://<your server>/<bucket>
+PREVIEW_S3_ACCESS_KEY_ID=<write key id>
+PREVIEW_S3_SECRET_ACCESS_KEY=<write key secret>
+```
+
+The app gets `https://<your server>/<bucket>`, plus the read key for a private bucket. Leave the
+region at the default `us-east-1` unless the server is set to another one.
+
+Then run a [test publish](/docs/preview/s3-compatible#setup-checklist).
+
+### Plain HTTP
+
+Plain HTTP sends every preview, and the write key's signatures, in the clear. If you use it for a
+test server anyway:
+
+- **Android:** a release build refuses plain HTTP unless the app turns cleartext on in its own
+  config (`expo-build-properties`, `android.usesCleartextTraffic`). A debug build works as it is.
+- **iOS:** App Transport Security blocks plain HTTP to a domain name. It does not apply to an IP
+  address, so `http://<server IP>:9000/<bucket>` should load. That has not been checked on a device.
+
+## The local server
+
+The repository has a MinIO setup for trying the package without a cloud account. It lives in
+[`packages/@axonpack/preview/local-s3/`](https://github.com/axonpack/axonpack/tree/main/packages/@axonpack/preview/local-s3)
+and is not part of the npm package.
+
+```sh
+git clone --depth 1 https://github.com/axonpack/axonpack.git
+cd axonpack/packages/@axonpack/preview
+./local-s3/run.sh start   # starts MinIO, creates the buckets and the read key; safe to rerun
+./local-s3/run.sh stop    # stops it; uploads stay in local-s3/data/
+./local-s3/run.sh reset   # stops it and deletes local-s3/data/
+```
+
+Inside the repository the same commands are `bun run storage:local`, `storage:local:stop` and
+`storage:local:reset`. It needs Docker (Docker Desktop, OrbStack, or the Docker engine on Linux);
+Podman's Docker socket works too.
+
+| Value          | Local test value                                                          |
+| -------------- | ------------------------------------------------------------------------- |
+| Endpoint       | `http://localhost:9000`, region `us-east-1`                               |
+| Public bucket  | `previews-public`: anyone can read, only the write key can write          |
+| Private bucket | `previews-private`: reads need the read key                               |
+| Write key      | `preview-admin` / `preview-admin-secret` (MinIO's root user)              |
+| Read key       | `preview-reader` / `preview-reader-secret` (reads `previews-private` only) |
+
+Every name, key and the port are in `local-s3/local-s3.env`. They are local test values. Never use
+them on a server.
+
+Reaching it from a device:
+
+- **iOS simulator:** `localhost:9000` works as it is.
+- **Android emulator, or a phone on USB:** `adb reverse tcp:9000 tcp:9000`, once each time the
+  device starts.
+- **A phone on the same Wi-Fi:** the computer's LAN address, `http://<LAN IP>:9000/...`, in both
+  the publish URL and the app's URL.
+- **A phone on another network:** a public tunnel to port 9000 in the app's URL, while publishing
+  stays on `localhost:9000`. A private tunnel answers with a login page instead of the file. Pass
+  any header the tunnel wants with the `headers` option, for example
+  `{ 'X-Tunnel-Skip-AntiPhishing-Page': 'True' }` for a VS Code dev tunnel.
+
+Android 17 asks the user before an app may reach the local network, which includes the emulator's
+`10.0.2.2` and a LAN address. If it is denied, downloads from the local server fail. On the emulator,
+`adb shell pm grant <package> android.permission.ACCESS_LOCAL_NETWORK` grants it.
+
+**Next:** [MinIO AIStor](/docs/preview/aistor)

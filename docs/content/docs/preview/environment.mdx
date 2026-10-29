@@ -1,0 +1,122 @@
+---
+title: Settings and env files
+description: Where the publish settings and the app's settings come from, and building with an EAS environment.
+icon: KeyRound
+---
+
+There are two sets of settings, read by two different things:
+
+| Settings                   | Read by                        | Holds                                                   |
+| -------------------------- | ------------------------------ | ------------------------------------------------------- |
+| `PREVIEW_S3_*`             | `preview publish`, `unpublish`, `prune` | The bucket URL and the **write** key             |
+| The app's config           | The app, through `PreviewProvider` | The bucket URL and, for a private bucket, a **read-only** key |
+
+The CLI never reads the app's settings, and the app never sees `PREVIEW_S3_*`.
+
+## Publish settings
+
+| Variable                       | Needed | What it is                                                         |
+| ------------------------------ | ------ | ------------------------------------------------------------------ |
+| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>`, plus a folder if you add more segments      |
+| `PREVIEW_S3_ACCESS_KEY_ID`     | Yes    | The write key's id                                                 |
+| `PREVIEW_S3_SECRET_ACCESS_KEY` | Yes    | The write key's secret                                             |
+| `PREVIEW_S3_REGION`            | No     | Signing region. Default `us-east-1`, which MinIO and R2 accept     |
+
+The names are the package's own, not `AWS_*`, so they work the same for any S3-compatible host and
+never pick up AWS keys already exported in your shell.
+
+### Where they come from
+
+The environment comes first: your shell, or the CI job's secrets. CI has no settings file, so
+that is all it needs.
+
+On your own machine they can go in an env file instead. Publish loads the same files Expo loads for a
+release bundle (`expo export:embed --dev false`, mode `production`), through your app's own
+`@expo/env`, so the order and the `${VAR}` expansion are Expo's:
+
+1. `.env.production.local`
+2. `.env.local`
+3. `.env.production`
+4. `.env`
+
+A variable set in the environment wins over every file, and an earlier file wins over a later one.
+`.env.development*` files are not read. `EXPO_NO_DOTENV` turns the files off here too.
+
+<Callout type="error" title="Keep the write key out of a committed file">
+Put it in `.env.local` or `.env.production.local`, which Expo's project template gitignores
+(`.env*.local`), or in CI secrets. Never in a committed `.env`: anyone with the repository could then
+write to your bucket.
+</Callout>
+
+If a required value is missing, publish stops before it builds anything and names what to set.
+
+## The app's settings
+
+The package reads no environment variables in the app. You pass everything to the provider, and you
+decide where each value comes from. The usual way is Expo's `EXPO_PUBLIC_*` variables:
+
+```sh title=".env"
+EXPO_PUBLIC_PREVIEW_S3_URL=https://pub-<id>.r2.dev
+# Private bucket only:
+# EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID=...
+# EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY=...
+# EXPO_PUBLIC_PREVIEW_S3_REGION=auto
+```
+
+```ts title="preview-config.ts"
+import type { PreviewConfig } from '@axonpack/preview';
+
+export const previewConfig: PreviewConfig = {
+  enabled: true,
+  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? '',
+  readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
+  readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
+  region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
+};
+```
+
+These names are only a convention, the same ones the example app uses. Expo builds every
+`EXPO_PUBLIC_*` value into the bundle, so only a read-only key may go there. The values are read
+when the app is bundled, so restart Metro with `npx expo start --clear`, or rebuild, after a change.
+
+## A preview's own env values
+
+A preview is a new bundle, so its `EXPO_PUBLIC_*` values are whatever the publishing machine had
+when it ran `preview publish`, not what the installed build had. Publish runs `expo export:embed`
+in its own environment, with the same env files as above.
+
+So on CI, the app's own variables have to be there too: as job env or secrets, or from EAS with
+`--environment`, below. Otherwise a preview built on CI may point at other servers than the build it
+runs in, or at none.
+
+## Building with an EAS environment
+
+If your app keeps its variables on EAS, `--environment <name>` builds the preview with them, like
+`eas update --environment`:
+
+```sh
+npx preview publish --environment preview
+```
+
+- It runs `eas env:pull --environment <name> --non-interactive` into a temp folder outside your
+  app, reads the file and deletes it. Nothing is written into your project.
+- The values go into the environment of every step that reads the app config: the config itself
+  (app version, slug), the fingerprint and `expo export:embed`. So the preview's key matches a build
+  made in that environment.
+- A variable already set in your shell wins over the EAS one.
+- Without the flag nothing changes, and eas-cli is never called.
+
+It needs eas-cli installed (`npm install -g eas-cli`), a login (`eas login`, or `EXPO_TOKEN` in CI)
+and the app linked to an EAS project (`eas init`). If one is missing, publish says which.
+
+<Callout type="info" title="Secret variables stay on EAS">
+Variables with **secret** visibility never leave EAS servers: `eas env:pull` leaves them out. If the
+bundle needs one, set it in the shell or as a CI secret. Plain text and sensitive variables come
+through. A file-type variable is written by `eas env:pull` into the app's `.eas/.env/` folder, and
+its value is that file's path.
+</Callout>
+
+`PREVIEW_S3_*` do not belong in EAS. Publishing is not part of the app, and `--environment` is only
+for the app's own variables. Keep the publish settings in CI secrets or `.env.local`.
+
+**Next:** [Publishing](/docs/preview/publishing)

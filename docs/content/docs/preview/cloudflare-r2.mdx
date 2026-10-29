@@ -1,0 +1,66 @@
+---
+title: Cloudflare R2
+description: The values and permissions this package needs on R2, with links to Cloudflare's own guides.
+icon: CloudSun
+---
+
+Cloudflare documents how to create buckets, tokens and public access, and its pages are the source
+of truth. This page only says what this package needs. What the bucket and the keys must allow is on
+[Storage](/docs/preview/storage#the-two-keys).
+
+## Cloudflare's guides
+
+| Task                                    | Cloudflare's page                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------------------- |
+| R2 in general                           | [Cloudflare R2](https://developers.cloudflare.com/r2/)                                |
+| Create a bucket                         | [Create new buckets](https://developers.cloudflare.com/r2/buckets/create-buckets/)    |
+| Make the write token and the read token | [Authentication](https://developers.cloudflare.com/r2/api/tokens/)                    |
+| Allow public reads                      | [Public buckets](https://developers.cloudflare.com/r2/buckets/public-buckets/)        |
+| S3 API support                          | [S3 API compatibility](https://developers.cloudflare.com/r2/api/s3/api/)              |
+
+## What this package needs
+
+- **The write token:** Object Read & Write, limited to the one bucket. Its Access Key ID and Secret
+  Access Key are the publish settings.
+- **A public bucket:** public access through the `r2.dev` subdomain or a custom domain. The app reads
+  from that address.
+- **A private bucket:** a second token with Object Read only, limited to the bucket. It ends up inside
+  the app.
+- **Conditional PUT:** supported. The S3 API compatibility page lists `If-Match` and `If-None-Match`
+  under PutObject's conditional operations.
+
+## Settings
+
+The S3 endpoint is `https://<account id>.r2.cloudflarestorage.com`, and the region is `auto`. R2 also
+accepts the package's default `us-east-1`, so `PREVIEW_S3_REGION` can stay unset.
+
+Publish settings, from CI secrets or `.env.local`:
+
+```sh
+PREVIEW_S3_URL=https://<account id>.r2.cloudflarestorage.com/<bucket>
+PREVIEW_S3_ACCESS_KEY_ID=<write token's access key id>
+PREVIEW_S3_SECRET_ACCESS_KEY=<write token's secret>
+```
+
+The app, public bucket. The public address has no bucket in its path, which is fine for unsigned
+reads:
+
+```sh title=".env"
+EXPO_PUBLIC_PREVIEW_S3_URL=https://pub-<id>.r2.dev
+```
+
+The app, private bucket:
+
+```sh title=".env"
+EXPO_PUBLIC_PREVIEW_S3_URL=https://<account id>.r2.cloudflarestorage.com/<bucket>
+EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID=<read token's access key id>
+EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY=<read token's secret>
+EXPO_PUBLIC_PREVIEW_S3_REGION=auto
+```
+
+If you publish into a folder (`.../<bucket>/my-app`), the public address needs the same folder:
+`https://pub-<id>.r2.dev/my-app`.
+
+Then run a [test publish](/docs/preview/s3-compatible#setup-checklist).
+
+**Next:** [MinIO](/docs/preview/minio)

@@ -1,0 +1,83 @@
+---
+title: Compatibility
+description: The config plugin, and matching previews to builds by app version or by native fingerprint.
+icon: GitCompare
+---
+
+A preview is Hermes bytecode. It only runs on a build with the same native code and the same Hermes
+version. So every build gets a **key**, every preview is published under one, and the app lists only
+previews published under its own key.
+
+You pick how the key is made, with one option on the config plugin. The build and `preview publish`
+both read it from the same app config, so the two cannot disagree.
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": [["@axonpack/preview", { "compatibility": "appVersion" }]]
+  }
+}
+```
+
+| `compatibility`        | Key                     | Pick it when                                                                    |
+| ---------------------- | ----------------------- | ------------------------------------------------------------------------------- |
+| `appVersion` (default) | `version-<app version>` | You bump the version for every native change. Simple, and readable in the bucket |
+| `fingerprint`          | `fingerprint-<hash>`    | Native changes can land without a version bump. Exact                            |
+
+The app version is the platform's own `version` (`ios.version`, `android.version`) if set, or the
+top-level `version`. The fingerprint is `@expo/fingerprint`'s hash for that platform, the same one
+expo-updates' `runtimeVersion: { policy: "fingerprint" }` uses.
+
+## The trade-off of appVersion
+
+A native change without a version bump is not detected, so a preview built on the old native code is
+still offered. `publish` prints a one-line warning in this mode. Two things catch most of the
+damage:
+
+- A preview whose Hermes bytecode version differs from the build's is not loaded. The base bundle
+  loads instead.
+- A preview that fails while starting falls back to the base bundle and is marked broken.
+
+With `fingerprint`, any native change (a new native dependency, a config plugin change, a prebuild
+with other settings) gives a new key, so older previews stop being listed for that build.
+
+## What the plugin writes
+
+At prebuild, into `Info.plist` on iOS and as `<meta-data>` in `AndroidManifest.xml` on Android:
+
+| Value             | iOS key                        | Android name                           |
+| ----------------- | ------------------------------ | -------------------------------------- |
+| The setting       | `AxonpackPreviewCompatibility` | `dev.axonpack.preview.COMPATIBILITY`   |
+| The build's key   | `AxonpackPreviewKey`           | `dev.axonpack.preview.KEY`             |
+| The app's slug    | `AxonpackPreviewSlug`          | `dev.axonpack.preview.SLUG`            |
+
+Nothing secret goes into the native project. The bucket and the read key stay in your JS config.
+
+The slug is only for [dev preview servers](/docs/preview/dev-preview-servers): it tells this app's
+Metro servers apart from other apps'.
+
+## After a native update
+
+When QA installs a new native build, its key may change. Downloads made for the old key are not
+deleted. They move to an **Incompatible** section of the list, with one **Delete all** button, and
+can't be switched to. A preview chosen on the old build is not started by the new one; the base
+bundle starts instead.
+
+Nothing is deleted on a timer, and nothing on the device is deleted without QA asking.
+
+## Without the plugin
+
+If you can't use the plugin, pass the key yourself in the provider's config:
+
+```ts
+const config: PreviewConfig = {
+  enabled: true,
+  url: '...',
+  buildKey: 'version-1.4.0',
+};
+```
+
+It must match what `publish` uses for that build, so you take on keeping the two in step. Dev
+preview servers need the slug, which only the plugin provides.
+
+**Next:** [In the app](/docs/preview/app-setup)

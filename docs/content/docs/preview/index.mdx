@@ -1,0 +1,70 @@
+---
+title: Overview
+description: Publish one JS bundle per branch, and let QA switch to it inside the build they already have.
+icon: House
+---
+
+This package lets QA try the JS of a branch or pull request without a new native build. You publish
+one bundle per branch to your own S3-compatible bucket. In the app, QA opens a list, picks a
+preview, and the app restarts into it. Going back to the base build is one tap.
+
+It works like EAS Update or CodePush, but only for previews. Your store releases and expo-updates
+keep working as they do.
+
+```sh
+npx expo install @axonpack/preview expo-file-system
+```
+
+<LatestRelease slug="preview" />
+
+```tsx
+import { PreviewList, PreviewProvider } from '@axonpack/preview';
+
+export default function App() {
+  return (
+    <PreviewProvider config={{ enabled: true, url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? '' }}>
+      <PreviewList style={{ flex: 1 }} />
+    </PreviewProvider>
+  );
+}
+```
+
+```sh
+npx preview publish   # builds this branch for Android and iOS and uploads it
+```
+
+## How it works
+
+1. `preview publish` runs the same `expo export:embed` step a release build runs, so the preview is
+   Hermes bytecode with its images beside it.
+2. It uploads the files to your bucket, writes the preview's manifest, and only then adds it to the
+   list for the native build it was made for.
+3. The app reads the list for its own native build. QA downloads a preview into the app's documents
+   folder. Every file is checked against its sha256.
+4. QA taps **Switch**. The native side starts the app from the downloaded bundle on the next start
+   and on every start after, until QA goes back to base.
+
+There is no server of your own to run. The bucket is the whole backend.
+
+## Plain words
+
+| Word            | Meaning                                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------------------- |
+| Preview         | One published JS bundle, with its images. Its id is the branch name                                      |
+| Base bundle     | What the app runs with no preview chosen: the bundle inside the app, an expo-updates update, or Metro   |
+| Key             | The native build a preview was made for: `version-<app version>` or `fingerprint-<hash>`                |
+| Compatible      | Made for the same key as the installed build. Only those are listed                                      |
+| Incompatible    | A download made for another key, for example before a native update. It is kept apart and can't run     |
+| Write key       | The S3 key `preview publish` uses. It never goes in the app                                              |
+| Read key        | A read-only S3 key the app uses for a private bucket. Leave it out for a public bucket                   |
+
+## What you get
+
+- **Your own bucket.** AWS S3, Cloudflare R2, MinIO, or any host with the S3 API. Public or private.
+- **A ready-made list for QA.** Download, switch, update, delete, and back to base, in light and dark mode.
+- **Only previews that can run.** Each build lists only previews made for its own native code.
+- **A fallback.** A preview that fails while starting is marked broken and the base bundle loads.
+- **CI in one file.** Sample GitHub Actions workflows publish every pull request and remove it on close.
+- **Several Metro servers in one debug build.** One per worktree, switched live, for people and AI agents.
+
+**Next:** [Installation](/docs/preview/installation)

@@ -1,0 +1,94 @@
+---
+title: CI
+description: Publish every pull request as a preview with GitHub Actions, and remove it when the pull request closes.
+icon: Workflow
+---
+
+The repository has a sample GitHub Actions workflow for each package manager. Copy the one that
+matches your app's lockfile into your app's `.github/workflows/`. They are not part of the npm
+package, so take them from GitHub:
+
+| Lockfile            | File to copy                                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `bun.lock`          | [`preview.bun.yml`](https://github.com/axonpack/axonpack/blob/main/packages/@axonpack/preview/ci/github-actions/preview.bun.yml)   |
+| `package-lock.json` | [`preview.npm.yml`](https://github.com/axonpack/axonpack/blob/main/packages/@axonpack/preview/ci/github-actions/preview.npm.yml)   |
+| `pnpm-lock.yaml`    | [`preview.pnpm.yml`](https://github.com/axonpack/axonpack/blob/main/packages/@axonpack/preview/ci/github-actions/preview.pnpm.yml) |
+| `yarn.lock`         | [`preview.yarn.yml`](https://github.com/axonpack/axonpack/blob/main/packages/@axonpack/preview/ci/github-actions/preview.yarn.yml) |
+
+All four have the same jobs and triggers. Only the setup, install and run steps differ:
+
+| Package manager | Setup                                   | Install                          | Run                  |
+| --------------- | --------------------------------------- | -------------------------------- | -------------------- |
+| bun             | `oven-sh/setup-bun`                     | `bun install --frozen-lockfile`  | `bunx preview`       |
+| npm             | `actions/setup-node`                    | `npm ci`                         | `npx preview`        |
+| pnpm            | `pnpm/action-setup`, `actions/setup-node` | `pnpm install --frozen-lockfile` | `pnpm exec preview`  |
+| yarn            | `actions/setup-node`, `corepack enable` | `yarn install --immutable`       | `yarn preview`       |
+
+The yarn file is for Yarn 2 and later. For Yarn 1, change the install to
+`yarn install --frozen-lockfile`. pnpm and yarn take their version from `packageManager` in your
+`package.json`.
+
+## What it does
+
+The workflow runs on `pull_request`: `opened`, `synchronize`, `reopened` and `closed`.
+
+**`publish`** runs on every event but `closed`:
+
+1. Checks out the pull request's own commit (not the merge commit), with the full history so the
+   changelog can count commits from the base branch.
+2. Sets up the package manager and, for `--environment`, eas-cli with `EXPO_TOKEN`.
+3. Installs, then runs:
+
+   ```sh
+   preview publish --id "$PREVIEW_ID" --base "origin/$BASE_BRANCH" --environment preview
+   ```
+
+   with the branch name as the id and the pull request's base branch for the changelog. The branch
+   names go through `env`, not straight into the script, so a branch name can never run as shell
+   code.
+
+Pushing to the pull request publishes it again under the same id, so QA sees **Update available**.
+
+**`unpublish`** runs on `closed`, merged or not, and runs `preview unpublish "$PREVIEW_ID"`.
+
+## Secrets
+
+Add these under your repository's **Settings**, **Secrets and variables**, **Actions**:
+
+| Secret                         | Needed                                                         |
+| ------------------------------ | -------------------------------------------------------------- |
+| `PREVIEW_S3_URL`               | Yes                                                            |
+| `PREVIEW_S3_ACCESS_KEY_ID`     | Yes, the write key                                             |
+| `PREVIEW_S3_SECRET_ACCESS_KEY` | Yes                                                            |
+| `PREVIEW_S3_REGION`            | No. Default `us-east-1`                                        |
+| `EXPO_TOKEN`                   | Only with `--environment`: an Expo access token, from your account settings on expo.dev |
+
+If your app keeps no variables on EAS, remove the `expo/expo-github-action` step, `EXPO_TOKEN` and
+`--environment preview`. Then give the job any `EXPO_PUBLIC_*` values the bundle needs as `env`,
+since a preview is built with what the CI job has. See
+[A preview's own env values](/docs/preview/environment#a-previews-own-env-values).
+
+<Callout type="warn" title="Pull requests from forks">
+GitHub gives no secrets to a workflow run from a fork's pull request, so it can't publish. The
+workflow works for branches in your own repository.
+</Callout>
+
+## Unpublish on close (optional)
+
+The `unpublish` job is optional. To keep previews after a pull request closes, do one of these in
+your copy of the workflow:
+
+- delete the `unpublish` job
+- remove `closed` from the trigger's `types`
+- change the job's condition to `if: false`
+
+Then remove previews by hand with `preview unpublish <id>`, and delete the files no preview uses
+any more with `preview prune`.
+
+## Other CI systems
+
+Nothing in the CLI is specific to GitHub. Any CI that can check out the branch with its history,
+install your dependencies and set the `PREVIEW_S3_*` variables can run the same two commands. On a
+detached HEAD there is no branch name, so pass `--id` yourself.
+
+**Next:** [Compatibility](/docs/preview/compatibility)

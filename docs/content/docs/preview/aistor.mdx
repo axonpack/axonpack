@@ -1,0 +1,63 @@
+---
+title: MinIO AIStor
+description: MinIO's current server, with links to its docs and the values this package needs.
+icon: HardDrive
+---
+
+<Callout type="warn" title="Not tested with this package">
+Nothing on this page has been run against this package. AIStor serves the S3 API that the package
+uses. If you try it, an issue with what you found is welcome.
+</Callout>
+
+AIStor is MinIO's current object store. The community MinIO server is now
+[source code only](https://github.com/minio/minio), and its repository points to AIStor instead.
+AIStor needs a MinIO license, and MinIO offers a free tier with limits; both are on MinIO's licenses
+page. Getting a license needs a MinIO account, so that step is yours.
+
+## MinIO's docs
+
+MinIO's pages are the source of truth for installing and running AIStor.
+
+| Task                            | MinIO's page                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Docs home                       | [docs.min.io](https://docs.min.io/)                                                                       |
+| Licenses and the free tier      | [Licenses](https://docs.min.io/aistor/operations/licenses/)                                               |
+| Install in a container          | [Deploy MinIO AIStor as a Container](https://docs.min.io/aistor/installation/container/install/)          |
+| TLS                             | [Enable Network Encryption](https://docs.min.io/aistor/installation/container/network-encryption/)        |
+| Root user, users and access keys | [Identity and Access Management](https://docs.min.io/aistor/administration/iam/)                         |
+| Users                           | [Built-in Identity Management](https://docs.min.io/aistor/administration/iam/identity/built-in-identity/) |
+| Policies                        | [Access Control with Policy Management](https://docs.min.io/aistor/administration/iam/access/)           |
+| The `mc` client                 | [AIStor Client](https://docs.min.io/aistor/reference/cli/)                                                |
+| Create a bucket                 | [mc mb](https://docs.min.io/aistor/reference/cli/mc-mb/)                                                  |
+| Allow public reads              | [mc anonymous](https://docs.min.io/aistor/reference/cli/mc-anonymous/)                                    |
+
+## What this package needs
+
+The same as for the [community server](/docs/preview/minio#what-this-package-needs):
+
+- **The write key:** a user whose policy allows `s3:GetObject`, `s3:PutObject` and `s3:DeleteObject`
+  on the bucket's objects and `s3:ListBucket` on the bucket.
+- **A public bucket:** anonymous download on the bucket. **A private bucket:** a read user with only
+  `s3:GetObject` and `s3:ListBucket`.
+- **Conditional PUT:** not looked up in MinIO's docs.
+- **HTTPS**, through AIStor's TLS or a proxy that passes the original `Host` header through.
+
+## Settings
+
+The S3 API listens on its own port, separate from the web console. Use the S3 API's address:
+
+```sh
+PREVIEW_S3_URL=https://<your server>/<bucket>
+PREVIEW_S3_ACCESS_KEY_ID=<write key id>
+PREVIEW_S3_SECRET_ACCESS_KEY=<write key secret>
+```
+
+The app gets `https://<your server>/<bucket>`, plus the read key for a private bucket. Leave the
+region at the default `us-east-1` unless the server is set to another one.
+
+What differs from the community server, as far as this package goes: nothing in the settings. The
+differences are in installing and licensing the server, which MinIO's pages cover.
+
+Then run a [test publish](/docs/preview/s3-compatible#setup-checklist).
+
+**Next:** [Any S3-compatible host](/docs/preview/s3-compatible)

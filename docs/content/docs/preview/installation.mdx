@@ -1,0 +1,79 @@
+---
+title: Installation
+description: Install the package, add the config plugin, and make a native build.
+icon: Download
+---
+
+You need this page once, when you add the package.
+
+```sh
+npx expo install @axonpack/preview expo-file-system
+```
+
+## Requirements
+
+| Needs                  | Why                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| Expo SDK 53 or later   | The iOS hook the package uses came with SDK 53                                           |
+| The New Architecture   | The default from SDK 53. Under the old one the package logs one warning and always loads the base bundle |
+| Hermes                 | Previews are Hermes bytecode, the same as a release build                                |
+| A native build         | The package has native code, so it does not run in Expo Go. A development or release build both work |
+
+<Callout type="warn" title="The old architecture">
+Under the old architecture nothing breaks, but nothing switches either. The package logs one warning
+and the base bundle always loads, so the app still starts.
+</Callout>
+
+## What each package does
+
+| Package                 | Needed? | What it is for                                                      |
+| ----------------------- | ------- | ------------------------------------------------------------------- |
+| `expo`                  | Yes     | The native module, the config plugin, and `expo export:embed` for publishing |
+| `react`, `react-native` | Yes     | The list and the provider                                           |
+| `expo-file-system`      | Yes     | Downloads and keeps previews in the app's documents folder          |
+| `expo-updates`          | No      | Works alongside if you use it. See [expo-updates](/docs/preview/expo-updates) |
+
+The CLI, `preview`, comes with the package. It runs from your app's root and uses your app's own
+`expo` to build and to compute the fingerprint, so it needs nothing else installed.
+
+## Add the config plugin
+
+Add the plugin to `app.json` (or `app.config.js`):
+
+```json
+{
+  "expo": {
+    "plugins": [["@axonpack/preview", { "compatibility": "appVersion" }]]
+  }
+}
+```
+
+At prebuild the plugin bakes three values into the build: the compatibility setting, the build's
+key, and the app's slug. The app uses the key to ask the bucket only for previews made for it. The
+slug tells this app's [dev preview servers](/docs/preview/dev-preview-servers) apart from other
+apps'. Which setting to pick is on [Compatibility](/docs/preview/compatibility).
+
+Then make a native build:
+
+```sh
+npx expo prebuild
+npx expo run:ios       # or: npx expo run:android
+```
+
+With EAS Build, the plugin runs during the build as usual.
+
+<Callout type="info" title="Without the plugin">
+A build without the plugin has no key, and the list says so instead of showing anything. If you
+can't use the plugin, pass the key yourself with the `buildKey` option. See
+[Reference](/docs/preview/reference#previewconfig).
+</Callout>
+
+## Where to go next
+
+1. Make a bucket: [Storage](/docs/preview/storage).
+2. Put the list in the app: [In the app](/docs/preview/app-setup).
+3. Publish: [Publishing](/docs/preview/publishing), then [CI](/docs/preview/ci).
+
+Or do all three in a few minutes against a local server: [Quick start](/docs/preview/quick-start).
+
+**Next:** [Quick start](/docs/preview/quick-start)

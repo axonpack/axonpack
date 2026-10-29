@@ -1,0 +1,148 @@
+---
+title: Quick start
+description: From nothing to switching previews in your app, against a local S3 server.
+icon: Rocket
+---
+
+This page gets one preview running in your own app in a few minutes. It uses a local MinIO server,
+so you need no cloud account. When it works, swap the local server for a real bucket from
+[Storage](/docs/preview/storage). Nothing else changes.
+
+You need Docker (Docker Desktop, OrbStack, or the Docker engine on Linux; Podman's Docker socket
+works too), git, and an Expo app on SDK 53 or later with the package
+[installed](/docs/preview/installation).
+
+<Steps>
+<Step>
+
+### Start a local S3 server
+
+The repository has a ready-made MinIO setup with one public bucket, one private bucket and a
+read-only key. It is not part of the npm package, so take it from the repository:
+
+```sh
+git clone --depth 1 https://github.com/axonpack/axonpack.git
+cd axonpack/packages/@axonpack/preview
+./local-s3/run.sh start
+```
+
+It listens on `http://localhost:9000`. The values are local test values only. See
+[MinIO](/docs/preview/minio#the-local-server) for what it creates and how to stop it.
+
+</Step>
+<Step>
+
+### Tell the app where previews are
+
+In your app's root, create `.env`. Expo builds every `EXPO_PUBLIC_*` value into the app, so this
+file holds only the address, never a key that can write:
+
+```sh title=".env"
+EXPO_PUBLIC_PREVIEW_S3_URL=http://localhost:9000/previews-public
+```
+
+</Step>
+<Step>
+
+### Tell the CLI where to publish
+
+Create `.env.local` next to it. Expo's project template gitignores `.env*.local`, so the write key
+stays out of git:
+
+```sh title=".env.local"
+PREVIEW_S3_URL=http://localhost:9000/previews-public
+PREVIEW_S3_ACCESS_KEY_ID=preview-admin
+PREVIEW_S3_SECRET_ACCESS_KEY=preview-admin-secret
+```
+
+These names have no `EXPO_PUBLIC_` prefix, so Expo never builds them into the app.
+
+</Step>
+<Step>
+
+### Add the plugin, the provider and the list
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": ["@axonpack/preview"]
+  }
+}
+```
+
+```tsx title="App.tsx"
+import { PreviewList, PreviewProvider } from '@axonpack/preview';
+
+export default function App() {
+  return (
+    <PreviewProvider
+      config={{ enabled: true, url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? '' }}
+    >
+      <PreviewList style={{ flex: 1 }} />
+    </PreviewProvider>
+  );
+}
+```
+
+In a real app the list goes on a screen QA can reach, and the provider wraps the whole app. See
+[In the app](/docs/preview/app-setup).
+
+</Step>
+<Step>
+
+### Build and run
+
+```sh
+npx expo run:ios       # or: npx expo run:android
+```
+
+Make sure the device can reach the server:
+
+- iOS simulator: `localhost` works as it is.
+- Android emulator, or a phone on USB: run `adb reverse tcp:9000 tcp:9000` once each time the
+  device starts.
+- A phone on Wi-Fi: use the computer's LAN address in both URLs instead of `localhost`.
+
+The local server is plain HTTP. A debug build reaches it as it is. An Android **release** build
+refuses plain HTTP unless the app allows it, so for a release build against the local server, turn
+cleartext on in your app's own config (`expo-build-properties`, `android.usesCleartextTraffic`).
+Real buckets use HTTPS and need none of this.
+
+</Step>
+<Step>
+
+### Publish a preview
+
+Make a change you can see, for example a different title, then from the app's root:
+
+```sh
+npx preview publish --id task-1-login-fix
+```
+
+It builds for Android and iOS and uploads both. In a terminal it asks for the title QA sees,
+prefilled with "Task 1 login fix"; Enter keeps it. Without `--id` the id is the current git branch.
+
+Now undo the change in your code. In a debug build the base is whatever Metro serves, so this way
+the base and the preview look different.
+
+</Step>
+<Step>
+
+### Switch to it
+
+Open the list in the app and tap **Refresh**. The preview is there. Tap **Download**, then
+**Switch**. The app restarts into the preview and shows your change. Tap **Back to base** to return.
+
+Publish the same id again with another change and the row says **Update available**.
+
+</Step>
+</Steps>
+
+## Next
+
+- Pick a real bucket: [AWS S3](/docs/preview/aws-s3), [Cloudflare R2](/docs/preview/cloudflare-r2)
+  or [your own MinIO](/docs/preview/minio).
+- Publish every pull request: [CI](/docs/preview/ci).
+- Nothing in the list? [Troubleshooting](/docs/preview/troubleshooting).
+
+**Next:** [Storage](/docs/preview/storage)
