@@ -12,7 +12,7 @@
 - **Style it like a FlatList**: `PreviewList` takes FlatList props, such as `contentContainerStyle`, `ListHeaderComponent` and `ListFooterComponent`
 - **`usePreviewStatus`**: a new hook that returns everything the header card shows, with `backToDefault()` and `refresh()`, for a banner or badge of your own
 - **`Running.kind` is now `"default"`** where 0.1.0 said `"base"`, in `useRunning` and `runningNow`. `source` says where the default bundle comes from
-- **Deprecated labels**: `title`, `base`, `backToBase`, `stopServer`, `stopDevPreviewServer`, `localSuffix` and `status`. They are still accepted. Use `backToDefault` and `statusShort` instead
+- **Deprecated labels**: `title`, `base`, `backToBase`, `stopDevPreviewServer`, `localSuffix` and `status`. They are still accepted. Use `backToDefault` and `statusShort` instead
 - **What runs is what loaded**: a chosen preview that could not start no longer shows as running
 - **Switching to a preview while a dev server is picked** now loads the preview
 - **A missing or relative bucket URL** now says which setting to fix
