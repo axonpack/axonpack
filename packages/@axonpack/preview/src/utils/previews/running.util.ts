@@ -160,20 +160,33 @@ type KindLabels = Pick<
   "kindBuiltIn" | "kindExpoDevServer" | "kindDevPreviewServer" | "kindPreview"
 >;
 
-/** The kind of thing running, by its label: what the hero card's chip and the banner say. */
-export function runningKind(running: Running, labels: KindLabels): string {
-  if (running.kind === "preview") return labels.kindPreview;
+/** Where a bundle comes from, the same for what runs now and for a server row. */
+export type BundleKind = DefaultSource | "preview";
+
+export function bundleKind(running: Running): BundleKind {
+  if (running.kind === "preview") return "preview";
   // A server picked from the scan that `preview start` never announced is a plain Expo one.
   if (running.kind === "local")
     return running.server && !running.server.announced
-      ? labels.kindExpoDevServer
-      : labels.kindDevPreviewServer;
-  return running.source === "built-in"
-    ? labels.kindBuiltIn
-    : running.source === "expo-dev-server"
-      ? labels.kindExpoDevServer
-      : labels.kindDevPreviewServer;
+      ? "expo-dev-server"
+      : "dev-preview-server";
+  return running.source;
 }
+
+const KIND_LABEL: Record<BundleKind, keyof KindLabels> = {
+  "built-in": "kindBuiltIn",
+  "expo-dev-server": "kindExpoDevServer",
+  "dev-preview-server": "kindDevPreviewServer",
+  preview: "kindPreview",
+};
+
+/** A kind's name: what its chip and the banner say. */
+export const kindLabel = (kind: BundleKind, labels: KindLabels): string =>
+  labels[KIND_LABEL[kind]];
+
+/** The kind of thing running, by its label: what the hero card's chip and the banner say. */
+export const runningKind = (running: Running, labels: KindLabels): string =>
+  kindLabel(bundleKind(running), labels);
 
 const LOOPBACK = new Set(["127.0.0.1", "::1", "[::1]"]);
 

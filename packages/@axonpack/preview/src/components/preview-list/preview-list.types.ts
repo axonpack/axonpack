@@ -30,6 +30,12 @@ export type PreviewListTheme = {
   dangerSurface: string;
   warning: string;
   success: string;
+  /** Three more hues, so chips of different kinds read apart: the Expo server chip and the branch. */
+  info: string;
+  /** The Preview server chip. */
+  accent2: string;
+  /** The environment chip. */
+  accent3: string;
   /** Card corner radius. Buttons scale from it. Default 14. */
   radius: number;
   fonts: PreviewListFonts;
@@ -52,6 +58,10 @@ export type DevtoolsPaletteLike = {
   /** Behind an error; the default theme's is used when it is missing. */
   errorSurface?: string;
   warning: string;
+  /** Mapped to `info`, `accent2` and `accent3` when present. */
+  codeKeyword?: string;
+  jsonNumber?: string;
+  jsonString?: string;
 };
 
 /** What the list's `theme` prop takes: nothing, a partial theme, or an expo-devtools palette. */
@@ -96,8 +106,10 @@ export type PreviewListLabels = {
   author: string;
   commit: string;
   published: string;
-  /** @deprecated No longer shown: the branch is a line under the address or title, unlabelled. */
+  /** The header card's Branch row, and what a screen reader says before a row's branch. */
   branch: string;
+  /** Before the branch name on a row's branch line. */
+  branchPrefix: string;
   previewId: string;
   /** The EAS environment a preview was published with. */
   environment: string;

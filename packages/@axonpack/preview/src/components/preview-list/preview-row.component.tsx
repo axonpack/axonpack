@@ -1,28 +1,20 @@
 import { Text, View } from "react-native";
 
-import type {
-  PreviewItem,
-  PreviewStatus,
-} from "../../utils/previews/preview-items.util";
+import {
+  ACTIVE_TONE,
+  ENVIRONMENT_TONE,
+  STATUS_TONE,
+} from "../../constants/preview-list/chip-tones.const";
+import type { PreviewItem } from "../../utils/previews/preview-items.util";
 import { font, formatSize } from "../../utils/preview-list/theme.util";
 import { timeAgo } from "../../utils/preview-list/time-ago.util";
 import { Changelog } from "./changelog.component";
 import { Button } from "./ui/button.ui";
 import { Card } from "./ui/card.ui";
-import { Chip, type ChipTone } from "./ui/chip.ui";
+import { BranchLine } from "./ui/branch-line.ui";
+import { Chip } from "./ui/chip.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
-
-// Colour only where QA has something to do or to know; the action button already tells
-// downloaded from not downloaded.
-const STATUS_TONE: Record<PreviewStatus, ChipTone> = {
-  available: "neutral",
-  downloading: "neutral",
-  downloaded: "neutral",
-  "update-available": "warning",
-  unpublished: "warning",
-  broken: "danger",
-};
 
 /**
  * One published preview: its title and branch, chips for its state and environment, the
@@ -71,10 +63,15 @@ export function PreviewRow(props: {
 
   return (
     <Card theme={theme} tinted={active} testID={`preview-${item.id}`}>
-      <TitleSubtitle theme={theme} title={entry.title} detail={entry.branch} />
+      <View style={{ gap: 6 }}>
+        <TitleSubtitle theme={theme} title={entry.title} />
+        {entry.branch ? (
+          <BranchLine theme={theme} labels={labels} name={entry.branch} />
+        ) : null}
+      </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
         {active ? (
-          <Chip theme={theme} text={labels.active} tone="success" />
+          <Chip theme={theme} text={labels.active} tone={ACTIVE_TONE} />
         ) : null}
         {/* Running means downloaded; saying both is noise. */}
         {active && status === "downloaded" ? null : (
@@ -85,7 +82,11 @@ export function PreviewRow(props: {
           />
         )}
         {entry.environment ? (
-          <Chip theme={theme} text={entry.environment} tone="success" />
+          <Chip
+            theme={theme}
+            text={entry.environment}
+            tone={ENVIRONMENT_TONE}
+          />
         ) : null}
       </View>
       {percent !== null ? (

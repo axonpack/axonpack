@@ -68,6 +68,19 @@ test("an expo-devtools palette is mapped token by token", () => {
   });
 });
 
+test("a palette's code colours give the chips' extra hues", () => {
+  expect(
+    fromDevtoolsPalette({
+      ...devtoolsDark,
+      codeKeyword: "#569cd6",
+      jsonNumber: "#b5cea8",
+      jsonString: "#ce9178",
+    }),
+  ).toMatchObject({ info: "#569cd6", accent2: "#b5cea8", accent3: "#ce9178" });
+  // Without them, the default theme's hues stay.
+  expect(resolveTheme(devtoolsDark, null).info).toBe(DARK_THEME.info);
+});
+
 test("a light palette with no sectionTint still maps, and white text goes on a dark accent", () => {
   const { sectionTint: _, ...light } = {
     ...devtoolsDark,

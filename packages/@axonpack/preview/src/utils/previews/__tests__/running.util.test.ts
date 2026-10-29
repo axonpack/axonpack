@@ -259,7 +259,7 @@ describe("runningLabel", () => {
   test("says what serves the app's own bundle, with no word for 'base'", () => {
     expect(label(onDefault(null))).toBe("Built into the app");
     expect(label(onDefault("http://127.0.0.1:8081/index.bundle"))).toBe(
-      "Expo dev server, localhost:8081",
+      "Expo server, localhost:8081",
     );
     expect(
       label(
@@ -267,7 +267,7 @@ describe("runningLabel", () => {
           metro("localhost:8082", { announced: true }),
         ]),
       ),
-    ).toBe("Dev preview server, Main-Branch, localhost:8082");
+    ).toBe("Preview server, Main-Branch, localhost:8082");
   });
 
   test("a picked server and a preview", () => {
@@ -278,7 +278,7 @@ describe("runningLabel", () => {
         hostPort: "127.0.0.1:8082",
         server: metro("127.0.0.1:8082", { announced: true }),
       }),
-    ).toBe("Dev preview server, Main-Branch, localhost:8082");
+    ).toBe("Preview server, Main-Branch, localhost:8082");
     expect(label({ kind: "preview", id: "t", title: "Login fix" })).toBe(
       "Preview, Login fix",
     );
@@ -295,7 +295,7 @@ describe("runningLabel", () => {
         },
         DEFAULT_LABELS,
       ),
-    ).toBe("Expo dev server");
+    ).toBe("Expo server");
   });
 
   test("custom labels are used", () => {

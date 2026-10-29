@@ -60,6 +60,12 @@ export function fromDevtoolsPalette(
     ...(palette.errorSurface ? { dangerSurface: palette.errorSurface } : {}),
     warning: palette.warning,
     success: palette.success,
+    // A palette has no colours meant for these, and reuses its few hues across its tokens. These
+    // three differ from its accent and status colours in more of the built-in palettes than any
+    // other tokens do, so chips stay apart where the palette allows it.
+    ...(palette.codeKeyword ? { info: palette.codeKeyword } : {}),
+    ...(palette.jsonNumber ? { accent2: palette.jsonNumber } : {}),
+    ...(palette.jsonString ? { accent3: palette.jsonString } : {}),
   };
 }
 

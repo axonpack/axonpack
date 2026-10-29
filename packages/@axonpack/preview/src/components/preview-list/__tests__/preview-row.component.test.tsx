@@ -102,10 +102,10 @@ beforeEach(() => jest.clearAllMocks());
 
 test.each([
   ["available", "Not downloaded", "neutral", ["Download"]],
-  ["downloading", "Downloading", "neutral", []],
-  ["downloaded", "Downloaded", "neutral", ["Delete", "Switch"]],
+  ["downloading", "Downloading", "primary", []],
+  ["downloaded", "Downloaded", "success", ["Delete", "Switch"]],
   ["update-available", "Update available", "warning", ["Delete", "Update"]],
-  ["unpublished", "Unpublished", "warning", ["Delete", "Switch"]],
+  ["unpublished", "Unpublished", "danger", ["Delete", "Switch"]],
   [
     "broken",
     "Broken: it stopped while starting",
@@ -113,7 +113,7 @@ test.each([
     ["Delete", "Switch"],
   ],
 ] as const)(
-  "%s: a %s chip, and only %j to press",
+  "%s: a %s chip in %s, and only %j to press",
   (status, text, tone, shown) => {
     const tree = render(item(status));
     expect(chip(tree, text)?.props.tone).toBe(tone);
@@ -163,19 +163,44 @@ test("the running preview with an update still offers Update", () => {
   expect(buttonTitles(tree)).toEqual(["Delete", "Update"]);
 });
 
-test("the branch is a quiet line right under the title, not a chip", () => {
+test("the branch is a quote line right under the title, not a chip", () => {
   const tree = render(item("downloaded"));
   const said = texts(tree.root);
-  expect(said[said.indexOf("Login fix") + 1]).toBe("task-1-login");
+  expect(said.slice(said.indexOf("Login fix") + 1).slice(0, 2)).toEqual([
+    "Branch: ",
+    "task-1-login",
+  ]);
   expect(chip(tree, "task-1-login")).toBeUndefined();
-  const branch = tree.root.find(
-    (n) => host(n, "Text") && n.props.children === "task-1-login",
+  const line = tree.root.find(
+    (n) =>
+      n.props.accessibilityLabel === "Branch task-1-login" && host(n, "View"),
   );
-  expect(branch.props.numberOfLines).toBe(1);
-  expect(branch.props.style).toMatchObject({
-    fontSize: 13,
-    color: LIGHT_THEME.muted,
-  });
+  // Bar and text share the branch's tone, which is not the muted grey.
+  const bar = line.find(
+    (n) => n.props.testID === "branch-bar" && host(n, "View"),
+  );
+  const text = line.findAll((n) => host(n, "Text"))[0];
+  expect(bar.props.style.backgroundColor).toBe(text.props.style.color);
+  expect(text.props.style.color).not.toBe(LIGHT_THEME.muted);
+  expect(text.props.style.fontSize).toBe(13);
+});
+
+test("a long branch name with no spaces wraps in full: no line limit, the bar runs its height", () => {
+  const name = "feature/very-long-branch-name-without-spaces-".repeat(4);
+  const tree = render(item("downloaded", {}, { branch: name }));
+  const line = tree.root.find(
+    (n) => n.props.accessibilityLabel === `Branch ${name}` && host(n, "View"),
+  );
+  const [text] = line.findAll((n) => host(n, "Text"));
+  expect(text.props.numberOfLines).toBeUndefined();
+  expect(text.props.ellipsizeMode).toBeUndefined();
+  // Bounded by the row, so a word longer than the line breaks instead of running out of the card.
+  expect(text.props.style.flex).toBe(1);
+  const bar = line.find(
+    (n) => n.props.testID === "branch-bar" && host(n, "View"),
+  );
+  expect(bar.props.style.alignSelf).toBe("stretch");
+  expect(texts(line)).toContain(name);
 });
 
 test("a long title wraps to two lines, then an ellipsis, a step below the section headings", () => {
@@ -191,7 +216,7 @@ test("a long title wraps to two lines, then an ellipsis, a step below the sectio
 
 test("the environment is a chip when the preview has one, and absent otherwise", () => {
   const withEnv = render(item("downloaded", {}, { environment: "staging" }));
-  expect(chip(withEnv, "staging")?.props.tone).toBe("success");
+  expect(chip(withEnv, "staging")?.props.tone).toBe("accent3");
   const without = render(item("downloaded"));
   expect(without.root.findAllByType(Chip).map((c) => c.props.text)).toEqual([
     "Downloaded",

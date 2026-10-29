@@ -8,8 +8,6 @@ export function TitleSubtitle(props: {
   title: string;
   subtitle?: string | null;
   size?: "large" | "medium";
-  /** A quieter line under the subtitle, or under the title when there is none: the branch. */
-  detail?: string | null;
 }) {
   const { theme, size = "medium" } = props;
   return (
@@ -33,15 +31,6 @@ export function TitleSubtitle(props: {
           style={{ ...font(theme, "regular", 15), color: theme.muted }}
         >
           {props.subtitle}
-        </Text>
-      ) : null}
-      {props.detail ? (
-        <Text
-          numberOfLines={1}
-          ellipsizeMode="tail"
-          style={{ ...font(theme, "regular", 13), color: theme.muted }}
-        >
-          {props.detail}
         </Text>
       ) : null}
     </View>

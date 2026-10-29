@@ -20,6 +20,9 @@ export const LIGHT_THEME: PreviewListTheme = {
   dangerSurface: "#fff6f6",
   warning: "#d97706",
   success: "#16a34a",
+  info: "#0e7490",
+  accent2: "#7c3aed",
+  accent3: "#be185d",
   radius: 14,
   fonts: {},
 };
@@ -42,6 +45,9 @@ export const DARK_THEME: PreviewListTheme = {
   dangerSurface: "#3b1d1d",
   warning: "#fbbf24",
   success: "#4ade80",
+  info: "#22d3ee",
+  accent2: "#a78bfa",
+  accent3: "#f472b6",
 };
 
 export const DEFAULT_LABELS: PreviewListLabels = {
@@ -50,8 +56,8 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   base: "Base",
   defaultBundle: "Default bundle",
   kindBuiltIn: "Built into the app",
-  kindExpoDevServer: "Expo dev server",
-  kindDevPreviewServer: "Dev preview server",
+  kindExpoDevServer: "Expo server",
+  kindDevPreviewServer: "Preview server",
   kindPreview: "Preview",
   active: "Active",
   defaultServerTitle: "Default",
@@ -70,6 +76,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   commit: "Commit",
   published: "Published",
   branch: "Branch",
+  branchPrefix: "Branch:",
   previewId: "Preview id",
   environment: "Environment",
   compatibilityKey: "Build key",

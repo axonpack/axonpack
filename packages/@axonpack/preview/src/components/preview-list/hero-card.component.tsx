@@ -9,7 +9,12 @@ import type {
 } from "../../utils/previews/layout.util";
 import { shortKey } from "../../utils/previews/layout.util";
 import {
+  ENVIRONMENT_TONE,
+  KIND_TONE,
+} from "../../constants/preview-list/chip-tones.const";
+import {
   type Running,
+  bundleKind,
   displayHostPort,
   runningKind,
   runningLabel,
@@ -65,11 +70,11 @@ export function HeroCard(props: {
       : running.kind === "default" && running.source === "expo-dev-server"
         ? labels.defaultServerTitle
         : (server?.title ?? kind);
+  // A preview has no address; its branch and id wait behind Show details.
   const where =
-    running.kind === "preview"
-      ? entry?.branch || running.id
-      : running.hostPort && displayHostPort(running.hostPort);
-  const branch = running.kind === "preview" ? where : server?.branch;
+    running.kind !== "preview" && running.hostPort
+      ? displayHostPort(running.hostPort)
+      : null;
   const version = app.version
     ? `${app.version}${app.buildNumber ? ` (${app.buildNumber})` : ""}`
     : null;
@@ -83,9 +88,10 @@ export function HeroCard(props: {
   ];
   const details: Row[] = [
     [
-      labels.previewId,
-      running.kind === "preview" && where !== running.id ? running.id : null,
+      labels.branch,
+      running.kind === "preview" ? entry?.branch : server?.branch,
     ],
+    [labels.previewId, running.kind === "preview" ? running.id : null],
     [labels.environment, entry?.environment],
     [labels.app, app.name],
     [labels.version, version],
@@ -124,15 +130,19 @@ export function HeroCard(props: {
         key="kind"
         theme={theme}
         text={kind}
-        // Filled only when something was switched in, so the default reads as calm.
-        tone={isDefault ? "neutral" : "primary"}
+        tone={KIND_TONE[bundleKind(running)]}
       />
     ),
     isDefault ? (
       <Chip key="default" theme={theme} text={labels.defaultBundle} />
     ) : null,
     entry?.environment ? (
-      <Chip key="env" theme={theme} text={entry.environment} tone="success" />
+      <Chip
+        key="env"
+        theme={theme}
+        text={entry.environment}
+        tone={ENVIRONMENT_TONE}
+      />
     ) : null,
   ].filter(Boolean);
   const hairline = { borderTopWidth: 1, borderColor: theme.border };
@@ -163,20 +173,13 @@ export function HeroCard(props: {
         >
           <View
             accessible
-            accessibilityLabel={[
-              `${labels.running}: ${runningLabel(running, labels)}`,
-              branch,
-            ]
-              .filter(Boolean)
-              .join(", ")}
+            accessibilityLabel={`${labels.running}: ${runningLabel(running, labels)}`}
             style={{ flex: 1, paddingTop: 2 }}
           >
             <TitleSubtitle
               theme={theme}
               title={name}
-              // A preview has no address: its branch sits right under the title.
-              subtitle={running.kind === "preview" ? null : where}
-              detail={branch}
+              subtitle={where}
               size="large"
             />
           </View>

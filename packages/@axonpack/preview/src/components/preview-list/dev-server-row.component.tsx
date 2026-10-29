@@ -2,10 +2,15 @@ import { Pressable, View } from "react-native";
 
 import type { DevPreviewServer } from "../../utils/dev-preview-servers/merge-servers.util";
 import type { GroupPosition } from "../../utils/preview-list/list-items.util";
-import { displayHostPort } from "../../utils/previews/running.util";
+import { displayHostPort, kindLabel } from "../../utils/previews/running.util";
+import {
+  ACTIVE_TONE,
+  KIND_TONE,
+} from "../../constants/preview-list/chip-tones.const";
+import { BranchLine } from "./ui/branch-line.ui";
 import { Card } from "./ui/card.ui";
 import { Chevron } from "./ui/chevron.ui";
-import { Chip } from "./ui/chip.ui";
+import { Chip, type ChipTone } from "./ui/chip.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
@@ -34,36 +39,37 @@ export function DevServerRow(props: {
       ? labels.defaultServerTitle
       : server.title;
   const address = displayHostPort(server.hostPort);
-  const chips = [
-    active ? { text: labels.active, tone: "success" as const } : null,
-    {
-      text: server.announced
-        ? labels.kindDevPreviewServer
-        : labels.kindExpoDevServer,
-    },
+  const kind = server.announced ? "dev-preview-server" : "expo-dev-server";
+  const chips: ({ text: string; tone?: ChipTone } | null)[] = [
+    active ? { text: labels.active, tone: ACTIVE_TONE } : null,
+    { text: kindLabel(kind, labels), tone: KIND_TONE[kind] },
     // Still switchable: the warning says why it may not start.
     server.compatible === false
-      ? { text: labels.localIncompatible, tone: "warning" as const }
+      ? { text: labels.localIncompatible, tone: "warning" }
       : server.compatible === null
         ? { text: labels.localUnknownBuild }
         : null,
-  ].filter((chip) => chip !== null);
+  ];
+  const shown = chips.filter((chip) => chip !== null);
   // The row's own label replaces what is inside it, so the branch and chips are read out after it.
-  const said = [server.branch, ...chips.map((chip) => chip.text)]
+  const said = [
+    server.branch && `${labels.branch} ${server.branch}`,
+    ...shown.map((chip) => chip.text),
+  ]
     .filter(Boolean)
     .join(", ");
 
   const body = (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
       <View style={{ flex: 1, gap: 10 }}>
-        <TitleSubtitle
-          theme={theme}
-          title={title}
-          subtitle={address}
-          detail={server.branch}
-        />
+        <View style={{ gap: 6 }}>
+          <TitleSubtitle theme={theme} title={title} subtitle={address} />
+          {server.branch ? (
+            <BranchLine theme={theme} labels={labels} name={server.branch} />
+          ) : null}
+        </View>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-          {chips.map((chip) => (
+          {shown.map((chip) => (
             <Chip
               key={chip.text}
               theme={theme}

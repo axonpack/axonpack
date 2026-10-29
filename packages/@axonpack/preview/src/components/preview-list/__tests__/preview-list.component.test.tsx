@@ -245,10 +245,12 @@ test("a preview: its title and branch, the environment, who published it, and th
     expect(all).toContain(text);
   expect(all).not.toContain("Stop server");
   expect(all).not.toContain("abc1234");
-  // A preview has no address: its branch sits right under the title.
-  const card = textsOf(tree.root.findByType(HeroCard));
-  expect(card[card.indexOf("Login fix") + 1]).toBe("task-1-login");
+  // The header keeps its top for the name; the branch waits in the details.
+  const hero = () => tree.root.findByType(HeroCard);
+  expect(textsOf(hero())).not.toContain("task-1-login");
   await showDetails(tree);
+  const card = textsOf(hero());
+  expect(card[card.indexOf("Branch") + 1]).toBe("task-1-login");
   expect(texts(tree)).toContain("abc1234");
   expect(texts(tree)).toContain("task-1");
   expect(texts(tree)).toContain("Environment");
@@ -279,7 +281,7 @@ test("a dev preview server picked by hand: its address, one way back, and no Met
   mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
   const tree = await render(true);
   const all = texts(tree);
-  expect(all).toContain("Dev preview server");
+  expect(all).toContain("Preview server");
   // One machine, one name.
   expect(all).toContain("localhost:8082");
   expect(all).not.toContain("127.0.0.1:8082");
@@ -321,11 +323,11 @@ test("the Metro the app starts on, picked by hand under another name, shows as t
   expect(all).toContain("Default bundle");
   expect(all).not.toContain("Use the default bundle");
   expect(byId(tree, "hero-actions")).toEqual([]);
-  // Not filled as something switched in.
+  // Each kind has its own hue, the default included.
   const chip = tree.root
     .findByType(HeroCard)
-    .find((node) => node.props.text === "Expo dev server");
-  expect(chip.props.tone).toBe("neutral");
+    .find((node) => node.props.text === "Expo server");
+  expect(chip.props.tone).toBe("info");
   await act(async () => tree.unmount());
 });
 
@@ -376,10 +378,10 @@ test("the default Metro, with nothing picked, is Active and titled Default", asy
   await settle();
   const row = serverRow(tree, 8081);
   expectActive(row);
-  for (const text of ["Default", "localhost:8081", "Expo dev server"])
+  for (const text of ["Default", "localhost:8081", "Expo server"])
     expect(textsOf(row)).toContain(text);
   expect(row.props.accessibilityLabel).toBe(
-    "Default, localhost:8081, Active, Expo dev server",
+    "Default, localhost:8081, Active, Expo server",
   );
   // Another server Metro found with no title of its own keeps the app's name.
   const other = serverRow(tree, 8083);
@@ -418,30 +420,30 @@ test("a server picked by hand is Active; pressing the default Metro's row switch
   const picked = serverRow(tree, 8082);
   expectActive(picked);
   expect(textsOf(picked)).toEqual(
-    expect.arrayContaining(["Main-Branch", "Dev preview server"]),
+    expect.arrayContaining(["Main-Branch", "Preview server"]),
   );
-  // The branch is a quiet line right under the address, not a chip.
+  // The branch is a quote line right under the address, not a chip.
   const said = textsOf(picked);
-  expect(said[said.indexOf("localhost:8082") + 1]).toBe("main");
-  expect(
-    picked.findAllByType(Chip).map((chip) => chip.props.text),
-  ).not.toContain("main");
-  const [branch] = picked.findAll(
-    (n) => n.props.children === "main" && n.props.numberOfLines !== undefined,
-  );
-  expect(branch.props.numberOfLines).toBe(1);
-  expect(branch.props.style).toMatchObject({ fontSize: 13 });
+  expect(said.slice(said.indexOf("localhost:8082") + 1).slice(0, 2)).toEqual([
+    "Branch: ",
+    "main",
+  ]);
+  const chips = picked.findAllByType(Chip);
+  expect(chips.map((chip) => [chip.props.text, chip.props.tone])).toEqual([
+    ["Active", "success"],
+    ["Preview server", "accent2"],
+  ]);
   expect(picked.props.accessibilityLabel).toBe(
-    "Main-Branch, localhost:8082, main, Active, Dev preview server",
+    "Main-Branch, localhost:8082, Branch main, Active, Preview server",
   );
-  expect(said).not.toContain("Expo dev server");
+  expect(said).not.toContain("Expo server");
   const fallback = serverRow(tree, 8081);
   expectSwitchable(fallback);
   expect(textsOf(fallback)).toEqual(
-    expect.arrayContaining(["Default", "Expo dev server"]),
+    expect.arrayContaining(["Default", "Expo server"]),
   );
   expect(fallback.props.accessibilityLabel).toBe(
-    "Switch to Default, localhost:8081, Expo dev server",
+    "Switch to Default, localhost:8081, Expo server",
   );
   expect(fallback.props.accessibilityHint).toBe(
     "Restarts the app on this server.",
@@ -463,7 +465,7 @@ test("a preview start server that is the default Metro keeps its own title", asy
   const row = serverRow(tree, 8082);
   expectActive(row);
   expect(textsOf(row)).toEqual(
-    expect.arrayContaining(["Main-Branch", "Dev preview server"]),
+    expect.arrayContaining(["Main-Branch", "Preview server"]),
   );
   expect(texts(tree)).not.toContain("Default");
   await act(async () => tree.unmount());
@@ -507,7 +509,7 @@ test("the app's own bundle from Expo's Metro names the server and its address", 
   mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
   const tree = await render(true);
   const all = texts(tree);
-  expect(all).toContain("Expo dev server");
+  expect(all).toContain("Expo server");
   expect(all).toContain("localhost:8081");
   expect(all).toContain("Default bundle");
   await act(async () => tree.unmount());
@@ -595,14 +597,15 @@ test("the app's own bundle from a preview start server uses its title and branch
   for (const text of [
     "Main-Branch",
     "localhost:8082",
-    "Dev preview server",
+    "Preview server",
     "Default bundle",
   ])
     expect(hero).toContain(text);
-  // The branch is a quiet line under the address, not a labelled fact.
+  // Not at the top of the header: the branch is a Branch row in the details.
+  expect(textsOf(tree.root.findByType(HeroCard))).not.toContain("main");
+  await showDetails(tree);
   const card = textsOf(tree.root.findByType(HeroCard));
-  expect(card[card.indexOf("localhost:8082") + 1]).toBe("main");
-  expect(card).not.toContain("Branch");
+  expect(card[card.indexOf("Branch") + 1]).toBe("main");
   await act(async () => tree.unmount());
 });
 

@@ -100,6 +100,10 @@ What the app passes to the provider. Nothing here is read from the environment.
 ## Theme
 
 `PreviewList`'s `theme` takes any of these. `LIGHT_THEME` and `DARK_THEME` are the defaults.
+A chip's text is its tone on a light wash of it; where the tone would be hard to read on the card
+or the header's tint, its text is darkened (or lightened, on a dark theme) just enough. A tone that
+is not a hex colour gets an outline instead of a wash. From an expo-devtools palette, `info`,
+`accent2` and `accent3` come from its `codeKeyword`, `jsonNumber` and `jsonString`.
 
 | Token         | What it colours                                            |
 | ------------- | ---------------------------------------------------------- |
@@ -115,10 +119,13 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `muted`       | Quiet text: branch, author, date, size                     |
 | `primary`     | Main buttons                                               |
 | `primaryText` | Text on main buttons                                       |
-| `danger`      | Delete, and errors                                         |
+| `danger`      | Delete, errors, Unpublished and Broken                     |
 | `dangerSurface` | Behind the error banner                                  |
-| `warning`     | Update available, unpublished, and the Metro note          |
-| `success`     | Downloaded                                                 |
+| `warning`     | Update available, a build warning, and the Metro note      |
+| `success`     | Active and Downloaded                                      |
+| `info`        | The Expo server chip and the branch line                   |
+| `accent2`     | The Preview server chip                                    |
+| `accent3`     | The environment chip                                       |
 | `radius`      | Card corner radius. Buttons scale from it. Default 14      |
 | `fonts`       | `{ regular, medium, bold }` font family names. Each falls back to the system font |
 
@@ -149,6 +156,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `update`                 | Update                                                                        |
 | `delete`                 | Delete                                                                        |
 | `status`                 | One per status: Not downloaded, Downloading, Downloaded, Update available, Unpublished, Broken: it stopped while starting |
+| `branchPrefix`           | Branch:. Before the branch name on a row                                      |
 | `byline`                 | {author}, {time}. Who published a preview and when                            |
 | `timeAgo`                | `now` Just now, `minute` 1 minute ago, `minutes` {n} minutes ago, `hour` 1 hour ago, `hours` {n} hours ago, `day` 1 day ago, `days` {n} days ago. Older than 30 days shows the date |
 | `showMore`               | Show more                                                                     |
