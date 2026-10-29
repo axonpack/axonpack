@@ -1,6 +1,7 @@
 import {
   FlatList,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TurboModuleRegistry,
@@ -18,6 +19,7 @@ import { PreviewList, type PreviewListProps } from "../preview-list.component";
 import { LIGHT_THEME } from "../../../constants/preview-list/theme.const";
 import { Card } from "../ui/card.ui";
 import { Chip } from "../ui/chip.ui";
+import { ChipRow } from "../ui/chip-row.ui";
 import { RowGap } from "../row-gap.component";
 import { Chevron } from "../ui/chevron.ui";
 import { HeroCard } from "../hero-card.component";
@@ -502,6 +504,33 @@ test("the default Metro's row says Default bundle whether it runs or not, and no
     ["server: Preview", "accent2"],
   ]);
   expect(chips(8083)).toEqual([["server: Expo", "info"]]);
+  await act(async () => tree.unmount());
+});
+
+test("the header's and the server rows' chips scroll sideways, and a server row still switches from anywhere", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
+  global.fetch = metros([8081, 8082], [8082]);
+  const tree = await render(true);
+  await settle();
+  const chipsIn = (row: ReactTestInstance) =>
+    row.findAllByType(Chip).map((chip) => chip.props.text);
+  const [heroRow] = tree.root.findByType(HeroCard).findAllByType(ChipRow);
+  expect(chipsIn(heroRow)).toEqual(["server: Preview"]);
+  expect(heroRow.findByType(ScrollView).props.horizontal).toBe(true);
+  // The switchable row is the button, the chips' line inside it included.
+  const fallback = serverRow(tree, 8081);
+  expectSwitchable(fallback);
+  const line = fallback.findByType(ChipRow);
+  expect(chipsIn(line)).toEqual(["server: Expo", "Default bundle"]);
+  const scroll = line.findByType(ScrollView);
+  expect(scroll.props.horizontal).toBe(true);
+  // It stops at the chevron instead of sliding under it.
+  expect(scroll.props.style.marginLeft).toBe(-16);
+  expect(scroll.props.style.marginRight).toBeCloseTo(0);
   await act(async () => tree.unmount());
 });
 
@@ -1030,6 +1059,10 @@ test("downloads for another build: one grouped card, and a quiet Delete all that
     ]),
   );
   expect(second).not.toContain("env: staging");
+  expect(
+    rows[0].findByType(ChipRow).findByType(ScrollView).props.horizontal,
+  ).toBe(true);
+  expect(rows[1].findAllByType(ChipRow)).toEqual([]);
   // Nothing to switch to on a row.
   expect(
     rows[0].findAll((n) => n.props.accessibilityRole === "button"),

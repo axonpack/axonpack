@@ -8,6 +8,7 @@ import { BranchLine } from "./ui/branch-line.ui";
 import { Card } from "./ui/card.ui";
 import { Chevron } from "./ui/chevron.ui";
 import { Chip, type ChipTone, ServerChip } from "./ui/chip.ui";
+import { ChipRow } from "./ui/chip-row.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
@@ -68,7 +69,7 @@ export function DevServerRow(props: {
             <BranchLine theme={theme} labels={labels} name={server.branch} />
           ) : null}
         </View>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        <ChipRow endBleed={0}>
           {shown.map((chip) =>
             chip.kind ? (
               <ServerChip
@@ -86,7 +87,7 @@ export function DevServerRow(props: {
               />
             ),
           )}
-        </View>
+        </ChipRow>
       </View>
       {active ? null : <Chevron color={theme.muted} open={false} />}
     </View>

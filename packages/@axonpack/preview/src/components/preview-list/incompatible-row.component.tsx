@@ -5,6 +5,7 @@ import type { GroupPosition } from "../../utils/preview-list/list-items.util";
 import { BranchLine } from "./ui/branch-line.ui";
 import { Card } from "./ui/card.ui";
 import { EnvironmentChip } from "./ui/chip.ui";
+import { ChipRow } from "./ui/chip-row.ui";
 import { PublishedFacts } from "./ui/published-facts.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
@@ -36,11 +37,13 @@ export function IncompatibleRow(props: {
         ) : null}
       </View>
       {entry.environment ? (
-        <EnvironmentChip
-          theme={theme}
-          labels={labels}
-          name={entry.environment}
-        />
+        <ChipRow>
+          <EnvironmentChip
+            theme={theme}
+            labels={labels}
+            name={entry.environment}
+          />
+        </ChipRow>
       ) : null}
       <PublishedFacts
         theme={theme}

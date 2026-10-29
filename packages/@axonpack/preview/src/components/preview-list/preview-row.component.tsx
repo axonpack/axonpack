@@ -7,6 +7,7 @@ import { Button } from "./ui/button.ui";
 import { Card } from "./ui/card.ui";
 import { BranchLine } from "./ui/branch-line.ui";
 import { Chip, EnvironmentChip, StatusChip } from "./ui/chip.ui";
+import { ChipRow } from "./ui/chip-row.ui";
 import { PublishedFacts } from "./ui/published-facts.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
@@ -48,7 +49,7 @@ export function PreviewRow(props: {
           <BranchLine theme={theme} labels={labels} name={entry.branch} />
         ) : null}
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+      <ChipRow>
         {active ? (
           <Chip theme={theme} text={labels.active} tone={ACTIVE_TONE} />
         ) : null}
@@ -63,7 +64,7 @@ export function PreviewRow(props: {
             name={entry.environment}
           />
         ) : null}
-      </View>
+      </ChipRow>
       {percent !== null ? (
         <View
           accessibilityRole="progressbar"

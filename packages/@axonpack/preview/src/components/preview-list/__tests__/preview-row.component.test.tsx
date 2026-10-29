@@ -1,3 +1,4 @@
+import { ScrollView } from "react-native";
 import {
   act,
   create,
@@ -18,6 +19,7 @@ import type { IndexEntry } from "../../../utils/previews/layout.util";
 import { PreviewRow } from "../preview-row.component";
 import { Card } from "../ui/card.ui";
 import { Chip } from "../ui/chip.ui";
+import { ChipRow } from "../ui/chip-row.ui";
 
 const PUBLISHED = "2026-10-01T10:00:00.000Z";
 const TWO_MINUTES_LATER = Date.parse(PUBLISHED) + 2 * 60_000;
@@ -166,6 +168,32 @@ test("the running preview with an update still offers Update", () => {
   expect(chip(tree, "Active")).toBeDefined();
   expect(chip(tree, "status: update available")).toBeDefined();
   expect(buttonTitles(tree)).toEqual(["Delete", "Update"]);
+});
+
+test("the chips sit on one line that scrolls sideways, starting under the text", () => {
+  const tree = render(
+    item("update-available", { active: true }, { environment: "staging" }),
+  );
+  const row = tree.root.findByType(ChipRow);
+  expect(row.findAllByType(Chip).map((c) => c.props.text)).toEqual([
+    "Active",
+    "status: update available",
+    "env: staging",
+  ]);
+  const scroll = row.findByType(ScrollView);
+  expect(scroll.props.horizontal).toBe(true);
+  expect(scroll.props.showsHorizontalScrollIndicator).toBe(false);
+  // Out to the card's edges, so chips scroll all the way across, and back in by its padding.
+  expect(scroll.props.style).toMatchObject({
+    flexGrow: 0,
+    marginLeft: -16,
+    marginRight: -16,
+  });
+  expect(scroll.props.contentContainerStyle).toEqual({
+    gap: 6,
+    paddingLeft: 16,
+    paddingRight: 16,
+  });
 });
 
 test("the branch is a quote line right under the title, not a chip", () => {

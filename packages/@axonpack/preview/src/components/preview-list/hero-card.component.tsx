@@ -20,6 +20,7 @@ import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
 import { Chevron } from "./ui/chevron.ui";
 import { Chip, EnvironmentChip, ServerChip } from "./ui/chip.ui";
+import { ChipRow } from "./ui/chip-row.ui";
 import { DetailRow } from "./ui/detail-row.ui";
 import { IconButton } from "./ui/icon-button.ui";
 import { RefreshIcon } from "./ui/refresh-icon.ui";
@@ -192,11 +193,7 @@ export function HeroCard(props: {
             )}
           </IconButton>
         </View>
-        {chips.length > 0 ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {chips}
-          </View>
-        ) : null}
+        {chips.length > 0 ? <ChipRow>{chips}</ChipRow> : null}
       </View>
       {factRows.length > 0 || hasToggle ? (
         <View
