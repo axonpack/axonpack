@@ -1,0 +1,48 @@
+import { createElement as h } from "react";
+import { Pressable, Text, type ViewStyle } from "react-native";
+
+import { font } from "../../../utils/preview-list/theme.util";
+import type { PreviewListTheme } from "../preview-list.types";
+
+export type ButtonKind = "primary" | "plain" | "danger";
+
+export function Button(props: {
+  title: string;
+  onPress: () => void;
+  kind?: ButtonKind;
+  theme: PreviewListTheme;
+}) {
+  const { theme, kind = "primary" } = props;
+  return h(
+    Pressable,
+    {
+      onPress: props.onPress,
+      accessibilityRole: "button",
+      style: ({ pressed }: { pressed: boolean }): ViewStyle => ({
+        minHeight: 44,
+        paddingHorizontal: 16,
+        justifyContent: "center",
+        borderRadius: theme.radius / 1.5,
+        opacity: pressed ? 0.7 : 1,
+        backgroundColor: kind === "primary" ? theme.primary : "transparent",
+        borderWidth: kind === "primary" ? 0 : 1,
+        borderColor: kind === "danger" ? theme.danger : theme.border,
+      }),
+    },
+    h(
+      Text,
+      {
+        style: {
+          ...font(theme, "medium", 15),
+          color:
+            kind === "primary"
+              ? theme.primaryText
+              : kind === "danger"
+                ? theme.danger
+                : theme.text,
+        },
+      },
+      props.title,
+    ),
+  );
+}
