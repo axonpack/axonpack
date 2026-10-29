@@ -1,5 +1,5 @@
 import { createElement as h } from "react";
-import { FlatList } from "react-native";
+import { FlatList, TurboModuleRegistry } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
@@ -10,6 +10,14 @@ jest.mock("expo-file-system", () =>
 );
 let mockSlug: string | undefined = "shop";
 let mockScriptUrl: string | null = null;
+const realGet = TurboModuleRegistry.get;
+jest
+  .spyOn(TurboModuleRegistry, "get")
+  .mockImplementation(((name: string) =>
+    name === "SourceCode"
+      ? { getConstants: () => ({ scriptURL: mockScriptUrl }) }
+      : realGet(name)) as typeof TurboModuleRegistry.get);
+// What discover.service reads for the host its servers are on.
 jest.mock(
   "react-native/Libraries/NativeModules/specs/NativeSourceCode",
   () => ({ default: { getConstants: () => ({ scriptURL: mockScriptUrl }) } }),
@@ -153,6 +161,8 @@ test("a dev preview server picked by hand is named, with Stop and no Metro note"
   const tree = await render(true);
   expect(texts(tree)).toContain("Dev preview server · localhost:8082");
   expect(texts(tree)).toContain("Stop using dev preview server");
+  // A preview is chosen too, so Back to base clears more than Stop does.
+  expect(texts(tree)).toContain("Back to base");
   expect(texts(tree)).not.toContain(METRO_NOTE);
   await act(async () => tree.unmount());
 });

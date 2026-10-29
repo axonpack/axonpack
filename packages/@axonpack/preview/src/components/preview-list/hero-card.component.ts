@@ -37,7 +37,7 @@ export function HeroCard(props: {
   entry: IndexEntry | null;
   error: string | null;
   loading: boolean;
-  /** A preview or server is chosen, so Back to base has work to do. */
+  /** A preview is chosen, so Back to base has work to do beyond what Stop does. */
   canGoBack: boolean;
   onBackToBase: () => void;
   onStopServer: () => void;

@@ -1,4 +1,5 @@
 import { requireOptionalNativeModule } from "expo";
+import { TurboModuleRegistry } from "react-native";
 
 export type NativeState = {
   bundle?: string | null;
@@ -36,10 +37,12 @@ export function markLaunched(): void {
  * or the file of the embedded bundle or a preview. Null where it cannot be read (tests, web).
  */
 export function scriptUrl(): string | null {
+  // Through the public registry, since a deep import of RN's own spec now logs a warning.
   try {
-    const sourceCode =
-      require("react-native/Libraries/NativeModules/specs/NativeSourceCode").default;
-    return sourceCode.getConstants().scriptURL || null;
+    const sourceCode = TurboModuleRegistry.get("SourceCode") as {
+      getConstants(): { scriptURL?: string | null };
+    } | null;
+    return sourceCode?.getConstants().scriptURL || null;
   } catch {
     return null;
   }
