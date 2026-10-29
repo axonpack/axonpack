@@ -17,6 +17,7 @@ export const LIGHT_THEME: PreviewListTheme = {
   primary: "#2563eb",
   primaryText: "#ffffff",
   danger: "#dc2626",
+  dangerSurface: "#fff6f6",
   warning: "#d97706",
   success: "#16a34a",
   radius: 14,
@@ -38,6 +39,7 @@ export const DARK_THEME: PreviewListTheme = {
   // White on this lighter blue is too faint to read.
   primaryText: "#0b1220",
   danger: "#f87171",
+  dangerSurface: "#3b1d1d",
   warning: "#fbbf24",
   success: "#4ade80",
 };
@@ -72,6 +74,16 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   backToBase: "Use the default bundle",
   metroBypassed:
     "Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again.",
+  errorUnreachable: "Can't reach the bucket at {host}.",
+  errorEmulatorHint:
+    "On the Android emulator, use 10.0.2.2, or run adb reverse tcp:{port} tcp:{port}.",
+  errorForbidden:
+    "The bucket refused access. Check the read key or the bucket's policy.",
+  errorNotFound:
+    "The bucket or the file was not found. Check the bucket URL in the preview config.",
+  errorGeneric: "Something went wrong.",
+  retry: "Retry",
+  dismiss: "Dismiss",
   refresh: "Refresh",
   empty: "No previews published for this build yet.",
   noBuildKey:

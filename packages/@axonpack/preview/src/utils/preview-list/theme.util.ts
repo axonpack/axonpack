@@ -57,6 +57,7 @@ export function fromDevtoolsPalette(
         ? "#ffffff"
         : "#000000",
     danger: palette.error,
+    ...(palette.errorSurface ? { dangerSurface: palette.errorSurface } : {}),
     warning: palette.warning,
     success: palette.success,
   };

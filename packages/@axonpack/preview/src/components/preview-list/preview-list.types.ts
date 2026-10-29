@@ -26,6 +26,8 @@ export type PreviewListTheme = {
   primary: string;
   primaryText: string;
   danger: string;
+  /** Behind the error banner, under danger text. */
+  dangerSurface: string;
   warning: string;
   success: string;
   /** Card corner radius. Buttons scale from it. Default 14. */
@@ -47,6 +49,8 @@ export type DevtoolsPaletteLike = {
   accent: string;
   success: string;
   error: string;
+  /** Behind an error; the default theme's is used when it is missing. */
+  errorSurface?: string;
   warning: string;
 };
 
@@ -95,6 +99,16 @@ export type PreviewListLabels = {
   backToBase: string;
   /** Shown in a debug build while a preview runs, since Metro is not used then. */
   metroBypassed: string;
+  /** The error banner. `{host}` and `{port}` are the bucket's. */
+  errorUnreachable: string;
+  /** Added to `errorUnreachable` on Android when the bucket is on localhost. */
+  errorEmulatorHint: string;
+  errorForbidden: string;
+  errorNotFound: string;
+  /** For a failure with no plainer words; the raw message follows it. */
+  errorGeneric: string;
+  retry: string;
+  dismiss: string;
   refresh: string;
   empty: string;
   noBuildKey: string;

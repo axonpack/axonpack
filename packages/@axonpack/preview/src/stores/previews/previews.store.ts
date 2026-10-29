@@ -118,6 +118,7 @@ export const previewsStore = {
     const native = nativeModule();
     const platform = currentPlatform();
     if (!native || !platform) return;
+    set({ error: null });
     if (
       id !== null &&
       !state.local.some((p) => p.id === id && p.key === state.buildKey)
@@ -148,6 +149,7 @@ export const previewsStore = {
     const platform = currentPlatform();
     if (!platform) return;
     const native = nativeModule();
+    set({ error: null });
     try {
       if (state.activeId === id && native) {
         native.select(null, null);
@@ -159,6 +161,8 @@ export const previewsStore = {
     }
     await readLocal();
   },
+
+  clearError: () => set({ error: null }),
 
   /** Deletes every download made for another native build. */
   async removeIncompatible() {

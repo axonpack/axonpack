@@ -1,9 +1,10 @@
-import { FlatList, TurboModuleRegistry, View } from "react-native";
+import { FlatList, Platform, TurboModuleRegistry, View } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
 import { PreviewList } from "../preview-list.component";
 import { Chevron } from "../ui/chevron.ui";
+import { HeroCard } from "../hero-card.component";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
 
 jest.mock("expo-file-system", () =>
@@ -478,6 +479,69 @@ test("the refresh button asks the bucket again and has a label for screen reader
   await act(async () => refresh.props.onPress());
   expect(fetch.mock.calls.length).toBeGreaterThan(before);
   await act(async () => tree.unmount());
+});
+
+const REFUSED =
+  "fetch failed: java.net.ConnectException: Failed to connect to localhost/127.0.0.1:9000";
+const refused = () =>
+  jest.fn(async () => {
+    throw new TypeError(REFUSED);
+  }) as unknown as typeof fetch;
+const EMULATOR_HINT = "On the Android emulator, use 10.0.2.2";
+
+test("a list error shows plainly in a banner above the header card, never in the card", async () => {
+  global.fetch = refused();
+  const tree = await render();
+  const [banner] = byId(tree, "list-error");
+  expect(banner.props.accessibilityRole).toBe("alert");
+  const said = banner
+    .findAll(() => true)
+    .flatMap((n) => n.children.filter((c) => typeof c === "string"));
+  expect(said).toContain("Can't reach the bucket at localhost:9000.");
+  // Not on iOS, where localhost is the computer.
+  expect(said.join(" ")).not.toContain(EMULATOR_HINT);
+  const all = texts(tree);
+  expect(all).not.toContain(REFUSED);
+  const card = tree.root.findByType(HeroCard);
+  expect(
+    card.findAll((n) =>
+      n.children.some((c) => typeof c === "string" && c.includes("bucket")),
+    ),
+  ).toEqual([]);
+  // Above the card: the banner's text comes first.
+  expect(all.indexOf("Can't reach the bucket at localhost:9000.")).toBeLessThan(
+    all.indexOf("Built into the app"),
+  );
+  await act(async () => tree.unmount());
+});
+
+test("Retry asks again and Dismiss puts the banner away", async () => {
+  global.fetch = refused();
+  const tree = await render();
+  const fetch = global.fetch as jest.Mock;
+  const before = fetch.mock.calls.length;
+  await act(async () => pressable(tree, "Retry").props.onPress());
+  expect(fetch.mock.calls.length).toBeGreaterThan(before);
+  expect(byId(tree, "list-error")).toHaveLength(1);
+  const dismiss = pressable(tree, "Dismiss");
+  expect(dismiss.props.accessibilityRole).toBe("button");
+  await act(async () => dismiss.props.onPress());
+  expect(byId(tree, "list-error")).toEqual([]);
+  await act(async () => tree.unmount());
+});
+
+test("on Android, a bucket on localhost gets the emulator hint", async () => {
+  const android = jest.replaceProperty(Platform, "OS", "android");
+  try {
+    global.fetch = refused();
+    const tree = await render();
+    expect(texts(tree).join(" ")).toContain(
+      `${EMULATOR_HINT}, or run adb reverse tcp:9000 tcp:9000.`,
+    );
+    await act(async () => tree.unmount());
+  } finally {
+    android.restore();
+  }
 });
 
 test("a build with no slug says so instead of listing other apps' servers", async () => {

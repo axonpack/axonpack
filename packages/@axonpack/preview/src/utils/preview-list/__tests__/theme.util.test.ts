@@ -62,6 +62,7 @@ test("an expo-devtools palette is mapped token by token", () => {
     // Black reads better than white on a yellow accent.
     primaryText: "#000000",
     danger: "#f85149",
+    dangerSurface: "#3b1d1d",
     warning: "#d29922",
     success: "#3fb950",
   });
@@ -80,6 +81,13 @@ test("a light palette with no sectionTint still maps, and white text goes on a d
     surface: "#f6f8fa",
     primaryText: "#ffffff",
   });
+});
+
+test("a palette without errorSurface keeps the default danger surface", () => {
+  const { errorSurface: _, ...palette } = devtoolsDark;
+  expect(resolveTheme(palette, "light").dangerSurface).toBe(
+    DARK_THEME.dangerSurface,
+  );
 });
 
 test("passing the palette as the theme gives the full mapped theme", () => {
@@ -102,6 +110,9 @@ test.each([
     }
     expect(
       contrastRatio(theme.primaryText, theme.primary),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(
+      contrastRatio(theme.danger, theme.dangerSurface),
     ).toBeGreaterThanOrEqual(4.5);
     // The tinted card's edge shows at least as well as a plain card's.
     expect(contrastRatio(theme.tintBorder, theme.tint)).toBeGreaterThanOrEqual(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   View,
@@ -19,6 +19,9 @@ import {
   buildSlug,
 } from "../../services/native/build-info.service";
 import { currentPlatform } from "../../utils/config/config.util";
+import { describeListError } from "../../utils/preview-list/list-error.util";
+import { previewsStore } from "../../stores/previews/previews.store";
+import { ConfigContext } from "../preview-provider/preview-provider.component";
 import { usePreview } from "../../services/previews/use-preview.service";
 import { useRunning } from "../../services/previews/use-running.service";
 import { DEFAULT_LABELS } from "../../constants/preview-list/theme.const";
@@ -30,6 +33,7 @@ import {
 import { Button } from "./ui/button.ui";
 import { SectionHeader } from "./ui/section-header.ui";
 import { DevServerRow } from "./dev-server-row.component";
+import { ErrorBanner } from "./error-banner.component";
 import { HeroCard } from "./hero-card.component";
 import { HintRow } from "./hint-row.component";
 import { IncompatibleRow } from "./incompatible-row.component";
@@ -68,6 +72,19 @@ export function PreviewList(props: PreviewListProps) {
     [showLocal, appSlug],
   );
   const [pulling, setPulling] = useState(false);
+  const bucketUrl = useContext(ConfigContext)?.url ?? "";
+  // What QA asked for last, so Retry asks again. The first load is a refresh.
+  const lastAction = useRef<() => unknown>(preview.refresh);
+  const run =
+    <A extends unknown[], R>(action: (...args: A) => R) =>
+    (...args: A): R => {
+      lastAction.current = () => action(...args);
+      return action(...args);
+    };
+  // The banner says it plainly; the raw text is for the developer.
+  useEffect(() => {
+    if (preview.error) console.log(`@axonpack/preview: ${preview.error}`);
+  }, [preview.error]);
   const theme = resolveTheme(props.theme, useColorScheme());
   const labels: PreviewListLabels = {
     ...DEFAULT_LABELS,
@@ -99,7 +116,7 @@ export function PreviewList(props: PreviewListProps) {
     <Button
       theme={theme}
       title={labels.deleteAll}
-      onPress={preview.removeIncompatible}
+      onPress={run(preview.removeIncompatible)}
       kind="danger"
     />
   );
@@ -138,9 +155,9 @@ export function PreviewList(props: PreviewListProps) {
             theme={theme}
             labels={labels}
             item={item.item}
-            onDownload={preview.download}
-            onSwitch={preview.switchTo}
-            onDelete={preview.remove}
+            onDownload={run(preview.download)}
+            onSwitch={run(preview.switchTo)}
+            onDelete={run(preview.remove)}
           />
         );
       case "incompatible-header":
@@ -161,8 +178,31 @@ export function PreviewList(props: PreviewListProps) {
     now.kind === "preview"
       ? (preview.items.find((i) => i.id === now.id)?.entry ?? null)
       : null;
+  const refreshAll = run(() =>
+    Promise.all([
+      preview.refresh(),
+      showLocal ? devPreviewServersStore.refresh() : null,
+    ]),
+  );
+  const failure = preview.error
+    ? describeListError(preview.error, {
+        bucketUrl,
+        platform: currentPlatform(),
+        labels,
+      })
+    : null;
   const header = (
     <View style={{ gap: 12 }}>
+      {failure ? (
+        <ErrorBanner
+          theme={theme}
+          labels={labels}
+          message={failure.message}
+          detail={failure.detail}
+          onRetry={() => lastAction.current()}
+          onDismiss={previewsStore.clearError}
+        />
+      ) : null}
       <HeroCard
         theme={theme}
         labels={labels}
@@ -174,14 +214,10 @@ export function PreviewList(props: PreviewListProps) {
           key: preview.buildKey ?? buildKey(),
         }}
         entry={runningEntry}
-        error={preview.error}
         loading={preview.loading}
         canGoBack={Boolean(preview.activeId)}
-        onBackToDefault={() => preview.switchTo(null)}
-        onRefresh={() => {
-          preview.refresh();
-          if (showLocal) devPreviewServersStore.refresh();
-        }}
+        onBackToDefault={run(() => preview.switchTo(null))}
+        onRefresh={refreshAll}
       />
     </View>
   );
@@ -197,10 +233,7 @@ export function PreviewList(props: PreviewListProps) {
       refreshing={pulling}
       onRefresh={() => {
         setPulling(true);
-        Promise.all([
-          preview.refresh(),
-          showLocal ? devPreviewServersStore.refresh() : null,
-        ]).finally(() => setPulling(false));
+        refreshAll().finally(() => setPulling(false));
       }}
       style={[{ backgroundColor: theme.background }, props.style]}
       contentContainerStyle={{ padding: 16, gap: 12 }}

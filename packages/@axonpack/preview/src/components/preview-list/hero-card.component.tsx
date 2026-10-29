@@ -43,7 +43,6 @@ export function HeroCard(props: {
   build: HeroBuild;
   /** The running preview's entry, when a preview runs and the list has it. */
   entry: IndexEntry | null;
-  error: string | null;
   loading: boolean;
   /** A preview is chosen, even one that could not load. */
   canGoBack: boolean;
@@ -135,7 +134,7 @@ export function HeroCard(props: {
   const showNote = __DEV__ && running.kind === "preview";
   const factRows = expanded ? [...visibleRows, ...detailRows] : visibleRows;
   const hasToggle = detailRows.length > 0;
-  const endsCard = !showNote && !props.error && !hasActions;
+  const endsCard = !showNote && !hasActions;
   // The toggle is 44 high for the finger but its text is 20. Alone, or as the card's last line, its
   // empty lower half only adds to the card's gap or padding, so it is pulled into them. Under rows
   // it keeps the room it has always had.
@@ -230,11 +229,6 @@ export function HeroCard(props: {
       {showNote ? (
         <Text style={{ ...font(theme, "regular", 14), color: theme.warning }}>
           {labels.metroBypassed}
-        </Text>
-      ) : null}
-      {props.error ? (
-        <Text style={{ ...font(theme, "regular", 14), color: theme.danger }}>
-          {props.error}
         </Text>
       ) : null}
       {hasActions ? (

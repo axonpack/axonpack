@@ -116,6 +116,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `primary`     | Main buttons                                               |
 | `primaryText` | Text on main buttons                                       |
 | `danger`      | Delete, and errors                                         |
+| `dangerSurface` | Behind the error banner                                  |
 | `warning`     | Update available, unpublished, and the Metro note          |
 | `success`     | Downloaded                                                 |
 | `radius`      | Card corner radius. Buttons scale from it. Default 14      |
@@ -133,6 +134,13 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `backToDefault`          | Use the default bundle                                                        |
 | `backToBase`             | Deprecated: use `backToDefault`. Still shown when `backToDefault` is not set  |
 | `metroBypassed`          | Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again. |
+| `errorUnreachable`       | Can't reach the bucket at {host}.                                             |
+| `errorEmulatorHint`      | On the Android emulator, use 10.0.2.2, or run adb reverse tcp:{port} tcp:{port}. Added on Android when the bucket is on localhost |
+| `errorForbidden`         | The bucket refused access. Check the read key or the bucket's policy.         |
+| `errorNotFound`          | The bucket or the file was not found. Check the bucket URL in the preview config. |
+| `errorGeneric`           | Something went wrong. The raw message follows it                              |
+| `retry`                  | Retry                                                                         |
+| `dismiss`                | Dismiss                                                                       |
 | `refresh`                | Refresh                                                                       |
 | `empty`                  | No previews published for this build yet.                                     |
 | `noBuildKey`             | This build has no compatibility key, so it cannot list previews. Add the config plugin and rebuild. |
