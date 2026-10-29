@@ -21,6 +21,7 @@ import { Chip } from "../ui/chip.ui";
 import { RowGap } from "../row-gap.component";
 import { Chevron } from "../ui/chevron.ui";
 import { HeroCard } from "../hero-card.component";
+import { RefreshIcon } from "../ui/refresh-icon.ui";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
 import {
   previewDirectory,
@@ -666,6 +667,15 @@ test("the refresh button asks the bucket again and has a label for screen reader
   expect(refresh.props.accessibilityRole).toBe("button");
   await act(async () => refresh.props.onPress());
   expect(fetch.mock.calls.length).toBeGreaterThan(before);
+  await act(async () => tree.unmount());
+});
+
+test("the refresh icon is drawn, not a font glyph, so it sits in the middle on Android too", async () => {
+  const tree = await render();
+  const refresh = pressable(tree, "Refresh");
+  expect(refresh.findAllByType(RefreshIcon)).toHaveLength(1);
+  expect(refresh.findAllByType(Text)).toEqual([]);
+  expect(texts(tree)).not.toContain("\u21bb");
   await act(async () => tree.unmount());
 });
 

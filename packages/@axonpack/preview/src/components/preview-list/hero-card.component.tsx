@@ -25,6 +25,7 @@ import { Chevron } from "./ui/chevron.ui";
 import { Chip } from "./ui/chip.ui";
 import { DetailRow } from "./ui/detail-row.ui";
 import { IconButton } from "./ui/icon-button.ui";
+import { RefreshIcon } from "./ui/refresh-icon.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
@@ -192,12 +193,7 @@ export function HeroCard(props: {
             {props.loading ? (
               <ActivityIndicator color={theme.primary} />
             ) : (
-              <Text
-                importantForAccessibility="no"
-                style={{ ...font(theme, "medium", 20), color: theme.text }}
-              >
-                {"\u21bb"}
-              </Text>
+              <RefreshIcon color={theme.text} />
             )}
           </IconButton>
         </View>

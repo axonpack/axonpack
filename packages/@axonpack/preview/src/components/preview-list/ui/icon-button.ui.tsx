@@ -3,7 +3,7 @@ import { Pressable, type ViewStyle } from "react-native";
 
 import type { PreviewListTheme } from "../preview-list.types";
 
-/** A round 44 x 44 button holding a glyph or a spinner; `label` is what a screen reader says. */
+/** A round 44 x 44 button holding a drawn icon or a spinner; `label` is what a screen reader says. */
 export function IconButton(props: {
   theme: PreviewListTheme;
   label: string;
