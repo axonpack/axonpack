@@ -1,6 +1,6 @@
 {
   "name": "@axonpack/preview",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Download and switch between preview JS bundles of an Expo app without a native rebuild",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
