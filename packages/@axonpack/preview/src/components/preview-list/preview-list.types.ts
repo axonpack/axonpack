@@ -53,18 +53,25 @@ export type PreviewListThemeInput =
   Partial<PreviewListTheme> | DevtoolsPaletteLike;
 
 export type PreviewListLabels = {
+  /** @deprecated No longer shown: the list opens with the card for what runs now. */
   title: string;
   /** What is running now. */
   running: string;
-  /** The app's own bundle, whatever serves it. */
+  /** @deprecated No longer shown: the app's own bundle is the "default bundle" now. */
   base: string;
-  /** Kinds of bundle source, on the hero card, the server rows and in "Base · <kind>". */
+  /** Chip on the app's own bundle, whatever serves it: what runs without any switch. */
+  defaultBundle: string;
+  /** Kinds of bundle source, on the hero card, the server rows and the banner. */
   kindBuiltIn: string;
   kindExpoDevServer: string;
   kindDevPreviewServer: string;
   kindPreview: string;
   /** On the server the app runs from. */
   active: string;
+  /** The hero card's Stop, short enough to sit beside the other action. */
+  stopServer: string;
+  showDetails: string;
+  hideDetails: string;
   /** Labels of the facts on the hero card. */
   app: string;
   version: string;
@@ -76,6 +83,11 @@ export type PreviewListLabels = {
   commit: string;
   published: string;
   branch: string;
+  previewId: string;
+  /** The EAS environment a preview was published with. */
+  environment: string;
+  compatibilityKey: string;
+  /** Goes back to the app's own bundle, stopping a dev preview server too. */
   backToBase: string;
   /** Shown in a debug build while a preview runs, since Metro is not used then. */
   metroBypassed: string;

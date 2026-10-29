@@ -2,6 +2,7 @@ import type { DevPreviewServer } from "../../dev-preview-servers/merge-servers.u
 import type { PreviewItem } from "../preview-items.util";
 import { DEFAULT_LABELS } from "../../../constants/preview-list/theme.const";
 import {
+  displayHostPort,
   runningKind,
   runningLabel,
   runningNow,
@@ -214,10 +215,10 @@ describe("runningLabel", () => {
   const label = (r: Parameters<typeof runningLabel>[0]) =>
     runningLabel(r, DEFAULT_LABELS);
 
-  test("names the base and what serves it", () => {
-    expect(label(onBase(null))).toBe("Base · built into the app");
-    expect(label(onBase("http://localhost:8081/index.bundle"))).toBe(
-      "Base · Expo dev server · localhost:8081",
+  test("says what serves the app's own bundle, with no word for 'base'", () => {
+    expect(label(onBase(null))).toBe("Built into the app");
+    expect(label(onBase("http://127.0.0.1:8081/index.bundle"))).toBe(
+      "Expo dev server, localhost:8081",
     );
     expect(
       label(
@@ -225,33 +226,55 @@ describe("runningLabel", () => {
           metro("localhost:8082", { announced: true }),
         ]),
       ),
-    ).toBe("Base · Dev preview server · Main-Branch · localhost:8082");
+    ).toBe("Dev preview server, Main-Branch, localhost:8082");
   });
 
-  test("a picked server and a preview are not the base", () => {
+  test("a picked server and a preview", () => {
     expect(
       label({
         kind: "local",
-        url: "http://localhost:8082/x",
-        hostPort: "localhost:8082",
-        server: metro("localhost:8082", { announced: true }),
+        url: "http://127.0.0.1:8082/x",
+        hostPort: "127.0.0.1:8082",
+        server: metro("127.0.0.1:8082", { announced: true }),
       }),
-    ).toBe("Dev preview server · Main-Branch · localhost:8082");
+    ).toBe("Dev preview server, Main-Branch, localhost:8082");
     expect(label({ kind: "preview", id: "t", title: "Login fix" })).toBe(
-      "Preview · Login fix",
+      "Preview, Login fix",
     );
   });
 
-  test("custom labels are used, base included", () => {
+  test("a picked server the registry never announced is a plain Expo one", () => {
+    expect(
+      runningKind(
+        {
+          kind: "local",
+          url: "http://localhost:8084/x",
+          hostPort: "localhost:8084",
+          server: metro("localhost:8084"),
+        },
+        DEFAULT_LABELS,
+      ),
+    ).toBe("Expo dev server");
+  });
+
+  test("custom labels are used", () => {
     expect(
       runningLabel(onBase(null), {
         ...DEFAULT_LABELS,
-        base: "Embedded bundle",
-        kindBuiltIn: "in the app",
+        kindBuiltIn: "In the app",
       }),
-    ).toBe("Embedded bundle · in the app");
-    expect(runningKind(onBase(null), DEFAULT_LABELS)).toBe(
-      "built into the app",
-    );
+    ).toBe("In the app");
+  });
+});
+
+describe("displayHostPort", () => {
+  test.each([
+    ["127.0.0.1:8083", "localhost:8083"],
+    ["[::1]:8081", "localhost:8081"],
+    ["localhost:8081", "localhost:8081"],
+    ["10.0.2.2:8081", "10.0.2.2:8081"],
+    ["192.168.1.5:8081", "192.168.1.5:8081"],
+  ])("%s reads as %s", (from, to) => {
+    expect(displayHostPort(from)).toBe(to);
   });
 });

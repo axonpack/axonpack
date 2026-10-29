@@ -1,7 +1,6 @@
 import { createElement as h, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
-  Text,
   View,
   useColorScheme,
   type ListRenderItemInfo,
@@ -23,7 +22,7 @@ import { currentPlatform } from "../../utils/config/config.util";
 import { usePreview } from "../../services/previews/use-preview.service";
 import { useRunning } from "../../services/previews/use-running.service";
 import { DEFAULT_LABELS } from "../../constants/preview-list/theme.const";
-import { font, resolveTheme } from "../../utils/preview-list/theme.util";
+import { resolveTheme } from "../../utils/preview-list/theme.util";
 import {
   type ListItem,
   buildListItems,
@@ -146,18 +145,6 @@ export function PreviewList(props: PreviewListProps) {
   const header = h(
     View,
     { style: { gap: 12 } },
-    h(
-      Text,
-      {
-        accessibilityRole: "header",
-        style: {
-          ...font(theme, "bold", 28),
-          color: theme.title,
-          paddingHorizontal: 4,
-        },
-      },
-      labels.title,
-    ),
     h(HeroCard, {
       theme,
       labels,

@@ -1,5 +1,5 @@
-import { createElement as h } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { createElement as h, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { BuildApp } from "../../services/native/build-info.service";
 import type {
@@ -10,13 +10,15 @@ import type {
 import { shortKey } from "../../utils/previews/layout.util";
 import {
   type Running,
+  displayHostPort,
   runningKind,
   runningLabel,
 } from "../../utils/previews/running.util";
 import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
 import { Chip } from "./ui/chip.ui";
-import { Fact } from "./ui/fact.ui";
+import { DetailRow } from "./ui/detail-row.ui";
+import { IconButton } from "./ui/icon-button.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
@@ -27,7 +29,12 @@ export type HeroBuild = {
   key: string | null;
 };
 
-/** What runs now and the build it runs on, with the actions that change it. */
+type Row = [label: string, value: string | null | undefined];
+
+/**
+ * What runs now and where it comes from, then the facts QA needs for a bug report (the rest of
+ * them, the app's own included, behind Show details), then the way back. Each fact shows once.
+ */
 export function HeroCard(props: {
   theme: PreviewListTheme;
   labels: PreviewListLabels;
@@ -37,35 +44,46 @@ export function HeroCard(props: {
   entry: IndexEntry | null;
   error: string | null;
   loading: boolean;
-  /** A preview is chosen, so Back to base has work to do beyond what Stop does. */
+  /** A preview is chosen, so going back does more than Stop does. */
   canGoBack: boolean;
   onBackToBase: () => void;
   onStopServer: () => void;
   onRefresh: () => void;
 }) {
   const { theme, labels, running, build, entry } = props;
+  const [expanded, setExpanded] = useState(false);
   const server = running.kind === "preview" ? null : running.server;
+  const app = build.app;
 
+  const kind = runningKind(running, labels);
+  // A preview or a server has a name of its own; the bundle built into the app is named by its kind.
   const name =
+    running.kind === "preview" ? running.title : (server?.title ?? kind);
+  const where =
     running.kind === "preview"
-      ? running.title
-      : (server?.title ?? build.app.name ?? labels.base);
-  const subtitle = [
-    running.kind === "preview" ? running.id : null,
-    entry?.branch ?? server?.branch,
-  ]
-    .filter((part, i, all) => part && all.indexOf(part) === i)
-    .join(" · ");
+      ? entry?.branch || running.id
+      : running.hostPort && displayHostPort(running.hostPort);
+  const version = app.version
+    ? `${app.version}${app.buildNumber ? ` (${app.buildNumber})` : ""}`
+    : null;
 
-  const facts: [string, string | null | undefined][] = [
-    [labels.app, build.app.name],
+  const rows: Row[] = [
+    [labels.branch, server?.branch],
+    [labels.author, entry?.author],
     [
-      labels.version,
-      build.app.version &&
-        (build.app.buildNumber
-          ? `${build.app.version} (${build.app.buildNumber})`
-          : build.app.version),
+      labels.published,
+      entry?.publishedAt ? new Date(entry.publishedAt).toLocaleString() : null,
     ],
+  ];
+  const details: Row[] = [
+    [
+      labels.previewId,
+      running.kind === "preview" && where !== running.id ? running.id : null,
+    ],
+    [labels.environment, entry?.environment],
+    [labels.app, app.name],
+    [labels.version, version],
+    [labels.commit, entry?.commit?.slice(0, 7)],
     [
       labels.platform,
       build.platform === "ios"
@@ -76,31 +94,42 @@ export function HeroCard(props: {
     ],
     [
       labels.compatibility,
-      build.key &&
-        [
-          build.compatibility === "fingerprint"
-            ? labels.compatibilityFingerprint
-            : build.compatibility === "appVersion"
-              ? labels.compatibilityAppVersion
-              : null,
-          shortKey(build.key),
-        ]
-          .filter(Boolean)
-          .join(" · "),
+      build.compatibility === "fingerprint"
+        ? labels.compatibilityFingerprint
+        : build.compatibility === "appVersion"
+          ? labels.compatibilityAppVersion
+          : null,
     ],
-    ...(entry
-      ? ([
-          [labels.author, entry.author],
-          [labels.commit, entry.commit?.slice(0, 7)],
-          [
-            labels.published,
-            entry.publishedAt
-              ? new Date(entry.publishedAt).toLocaleString()
-              : null,
-          ],
-        ] as [string, string | null | undefined][])
-      : []),
+    [labels.compatibilityKey, build.key && shortKey(build.key)],
   ];
+  const shown = (list: Row[]) =>
+    list
+      .filter((row): row is [string, string] => Boolean(row[1]))
+      .map(([label, value]) =>
+        h(DetailRow, { key: label, theme, label, value }),
+      );
+  const visibleRows = shown(rows);
+  const detailRows = shown(details);
+  const isDefault = running.kind === "base";
+  const chips = [
+    // The headline already says the kind when there is no other name.
+    name === kind
+      ? null
+      : h(Chip, {
+          key: "kind",
+          theme,
+          text: kind,
+          // Filled only when something was switched in, so the default reads as calm.
+          tone: isDefault ? "neutral" : "primary",
+        }),
+    isDefault
+      ? h(Chip, { key: "default", theme, text: labels.defaultBundle })
+      : null,
+    entry?.environment
+      ? h(Chip, { key: "env", theme, text: entry.environment, tone: "success" })
+      : null,
+  ].filter(Boolean);
+  const hairline = { borderTopWidth: 1, borderColor: theme.border };
 
   return h(
     View,
@@ -116,109 +145,119 @@ export function HeroCard(props: {
     },
     h(
       View,
-      {
-        style: {
-          flexDirection: "row",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 6,
-        },
-      },
-      running.kind === "base"
-        ? h(Chip, { key: "base", theme, text: labels.base, tone: "primary" })
-        : null,
-      h(Chip, {
-        key: "kind",
-        theme,
-        text: runningKind(running, labels),
-        tone: running.kind === "base" ? "neutral" : "primary",
-      }),
-      entry?.environment
-        ? h(Chip, {
-            key: "env",
+      { style: { gap: 10 } },
+      h(
+        View,
+        { style: { flexDirection: "row", alignItems: "flex-start", gap: 12 } },
+        h(
+          View,
+          {
+            accessible: true,
+            accessibilityLabel: `${labels.running}: ${runningLabel(running, labels)}`,
+            style: { flex: 1, paddingTop: 2 },
+          },
+          h(TitleSubtitle, {
             theme,
-            text: entry.environment,
-            tone: "success",
-          })
+            title: name,
+            subtitle: where,
+            size: "large",
+          }),
+        ),
+        h(
+          IconButton,
+          {
+            theme,
+            label: labels.refresh,
+            onPress: props.onRefresh,
+            busy: props.loading,
+          },
+          props.loading
+            ? h(ActivityIndicator, { color: theme.primary })
+            : h(
+                Text,
+                {
+                  importantForAccessibility: "no",
+                  style: { ...font(theme, "medium", 20), color: theme.text },
+                },
+                "\u21bb",
+              ),
+        ),
+      ),
+      chips.length > 0
+        ? h(
+            View,
+            { style: { flexDirection: "row", flexWrap: "wrap", gap: 6 } },
+            ...chips,
+          )
         : null,
-      props.loading
-        ? h(ActivityIndicator, {
-            key: "spinner",
-            color: theme.primary,
-            style: { marginLeft: "auto" },
-          })
-        : null,
-    ),
-    h(TitleSubtitle, {
-      theme,
-      title: name,
-      subtitle: subtitle || null,
-      size: "large",
-    }),
-    h(
-      Text,
-      {
-        accessibilityLabel: `${labels.running}: ${runningLabel(running, labels)}`,
-        style: { ...font(theme, "medium", 14), color: theme.text },
-      },
-      runningLabel(running, labels),
     ),
     h(
       View,
-      {
-        style: {
-          flexDirection: "row",
-          flexWrap: "wrap",
-          rowGap: 10,
-          columnGap: 12,
-        },
-      },
-      ...facts
-        .filter((fact): fact is [string, string] => Boolean(fact[1]))
-        .map(([label, value]) => h(Fact, { key: label, theme, label, value })),
+      { style: { ...hairline, paddingTop: 8 } },
+      ...visibleRows,
+      expanded ? detailRows : null,
+      detailRows.length > 0
+        ? h(
+            Pressable,
+            {
+              onPress: () => setExpanded(!expanded),
+              accessibilityRole: "button",
+              accessibilityState: { expanded },
+              style: { minHeight: 44, justifyContent: "center" },
+            },
+            h(
+              Text,
+              { style: { ...font(theme, "medium", 15), color: theme.primary } },
+              expanded ? labels.hideDetails : labels.showDetails,
+            ),
+          )
+        : null,
     ),
     // A dev preview server wins over a picked preview, so Metro is in use and the note would be wrong.
     __DEV__ && running.kind === "preview"
       ? h(
           Text,
-          { style: { ...font(theme, "medium", 13), color: theme.warning } },
+          { style: { ...font(theme, "regular", 14), color: theme.warning } },
           labels.metroBypassed,
         )
       : null,
     props.error
       ? h(
           Text,
-          { style: { ...font(theme, "regular", 13), color: theme.danger } },
+          { style: { ...font(theme, "regular", 14), color: theme.danger } },
           props.error,
         )
       : null,
-    h(
-      View,
-      { style: { flexDirection: "row", flexWrap: "wrap", gap: 8 } },
-      props.canGoBack
-        ? h(Button, {
-            key: "back",
-            theme,
-            title: labels.backToBase,
-            onPress: props.onBackToBase,
-          })
-        : null,
-      running.kind === "local"
-        ? h(Button, {
-            key: "stop",
-            theme,
-            title: labels.stopDevPreviewServer,
-            onPress: props.onStopServer,
-            kind: "plain",
-          })
-        : null,
-      h(Button, {
-        key: "refresh",
-        theme,
-        title: labels.refresh,
-        onPress: props.onRefresh,
-        kind: "plain",
-      }),
-    ),
+    props.canGoBack || running.kind === "local"
+      ? h(
+          View,
+          {
+            style: {
+              ...hairline,
+              paddingTop: 14,
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 8,
+            },
+          },
+          props.canGoBack
+            ? h(Button, {
+                key: "back",
+                theme,
+                title: labels.backToBase,
+                onPress: props.onBackToBase,
+              })
+            : null,
+          running.kind === "local"
+            ? h(Button, {
+                key: "stop",
+                theme,
+                title: labels.stopServer,
+                onPress: props.onStopServer,
+                kind: "plain",
+              })
+            : null,
+        )
+      : null,
   );
 }

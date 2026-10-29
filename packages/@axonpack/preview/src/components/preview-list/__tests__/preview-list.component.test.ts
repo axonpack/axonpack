@@ -4,6 +4,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
 import { PreviewList } from "../preview-list.component";
+import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
 
 jest.mock("expo-file-system", () =>
   require("../../../services/previews/__tests__/fake-file-system.test-helper"),
@@ -72,11 +73,13 @@ const registryWith8082 = () =>
 const notFound = () =>
   jest.fn(async () => new Response("", { status: 404 })) as typeof fetch;
 
-beforeEach(() => {
+beforeEach(async () => {
   mockNativeState = {};
   mockSlug = "shop";
   mockScriptUrl = null;
   global.fetch = notFound();
+  // The servers store lives for the whole file; one look clears a server an earlier test picked.
+  await devPreviewServersStore.refresh();
 });
 
 const texts = (tree: ReactTestRenderer) =>
@@ -113,7 +116,9 @@ beforeAll(async () => {
 
 test("the dev preview servers section is not there unless the app turns it on", async () => {
   const tree = await render();
-  expect(texts(tree)).toContain("Previews");
+  // The list opens with the card for what runs now, with no title above it.
+  expect(texts(tree)).not.toContain("Previews");
+  expect(texts(tree)).toContain("Published previews");
   expect(texts(tree)).not.toContain("Dev preview servers");
   await act(async () => tree.unmount());
 });
@@ -140,67 +145,183 @@ test("a release build never shows it", async () => {
 });
 
 const METRO_NOTE =
-  "Debug build: Metro is not used while a preview runs. Go back to base to load from Metro again.";
+  "Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again.";
 
-test("a preview running in a debug build says Metro is not used", async () => {
+/** The bucket lists one preview for this build, published with an EAS environment. */
+const bucketWithPreview = (environment: string | null = "staging") =>
+  jest.fn(async (input: RequestInfo | URL) =>
+    String(input).endsWith("/index/ios/version-1.0.0.json")
+      ? Response.json({
+          schema: 1,
+          platform: "ios",
+          key: "version-1.0.0",
+          compatibility: "appVersion",
+          updatedAt: "",
+          previews: [
+            {
+              id: "task-1",
+              title: "Login fix",
+              branch: "task-1-login",
+              commit: "abc1234def",
+              author: "Ana",
+              publishedAt: "2026-10-01T10:00:00.000Z",
+              appVersion: "1.0.0",
+              buildNumber: "7",
+              compatibility: "appVersion",
+              fingerprint: "fp",
+              environment: environment ?? undefined,
+              revision: "r1",
+              size: 1000,
+              changelog: "",
+              manifest: "previews/ios/version-1.0.0/task-1.json",
+            },
+          ],
+        })
+      : new Response("", { status: 404 }),
+  ) as typeof fetch;
+
+const pressable = (tree: ReactTestRenderer, text: string) =>
+  tree.root.find(
+    (node) =>
+      typeof node.props.onPress === "function" &&
+      (node.props.accessibilityLabel === text ||
+        node.findAll((n) => n.children.includes(text)).length > 0),
+  );
+
+async function showDetails(tree: ReactTestRenderer) {
+  await act(async () => pressable(tree, "Show details").props.onPress());
+}
+
+test("a preview: its title and branch, the environment, who published it, and the Metro note", async () => {
   mockNativeState = { bundle: "task-1/ios/main.jsbundle" };
   mockScriptUrl = "file:///data/Documents/preview/task-1/ios/main.jsbundle";
-  const tree = await render(true);
-  expect(texts(tree)).toContain("Preview · task-1");
-  expect(texts(tree)).toContain(METRO_NOTE);
-  expect(texts(tree)).toContain("Back to base");
-  await act(async () => tree.unmount());
-});
-
-test("a dev preview server picked by hand is named, with Stop and no Metro note", async () => {
-  mockNativeState = {
-    bundle: "task-1/ios/main.jsbundle",
-    localServer: "http://localhost:8082/index.bundle?platform=ios",
-  };
-  mockScriptUrl = "http://localhost:8082/index.bundle?platform=ios";
-  const tree = await render(true);
-  expect(texts(tree)).toContain("Dev preview server · localhost:8082");
-  expect(texts(tree)).toContain("Stop using dev preview server");
-  // A preview is chosen too, so Back to base clears more than Stop does.
-  expect(texts(tree)).toContain("Back to base");
-  expect(texts(tree)).not.toContain(METRO_NOTE);
-  await act(async () => tree.unmount());
-});
-
-test("a release-style start is the base built into the app, with the build's facts", async () => {
+  global.fetch = bucketWithPreview();
   const tree = await render(true);
   const all = texts(tree);
-  expect(all).toContain("Base · built into the app");
+  for (const text of [
+    "Login fix",
+    "task-1-login",
+    "Preview",
+    "staging",
+    "Ana",
+    METRO_NOTE,
+    "Use the default bundle",
+  ])
+    expect(all).toContain(text);
+  expect(all).not.toContain("Stop server");
+  expect(all).not.toContain("abc1234");
+  await showDetails(tree);
+  expect(texts(tree)).toContain("abc1234");
+  expect(texts(tree)).toContain("task-1");
+  expect(texts(tree)).toContain("Environment");
+  expect(texts(tree)).toContain("Shop");
+  expect(texts(tree)).toContain("1.0.0 (7)");
+  expect(texts(tree)).toContain("Hide details");
+  await act(async () => tree.unmount());
+});
+
+test("a preview published without an environment has no chip and no Environment row", async () => {
+  mockNativeState = { bundle: "task-1/ios/main.jsbundle" };
+  mockScriptUrl = "file:///data/Documents/preview/task-1/ios/main.jsbundle";
+  global.fetch = bucketWithPreview(null);
+  const tree = await render(true);
+  expect(texts(tree)).toContain("Login fix");
+  expect(texts(tree)).not.toContain("staging");
+  await showDetails(tree);
+  expect(texts(tree)).toContain("abc1234");
+  expect(texts(tree)).not.toContain("Environment");
+  await act(async () => tree.unmount());
+});
+
+test("a dev preview server picked by hand: its address, Stop, and no Metro note", async () => {
+  mockNativeState = {
+    bundle: "task-1/ios/main.jsbundle",
+    localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
+  };
+  mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
+  const tree = await render(true);
+  const all = texts(tree);
+  expect(all).toContain("Dev preview server");
+  // One machine, one name.
+  expect(all).toContain("localhost:8082");
+  expect(all).not.toContain("127.0.0.1:8082");
+  expect(all).toContain("Stop server");
+  // A preview is chosen too, so going back does more than Stop does.
+  expect(all).toContain("Use the default bundle");
   expect(all).not.toContain(METRO_NOTE);
-  expect(all).not.toContain("Back to base");
-  for (const fact of [
+  await act(async () => tree.unmount());
+});
+
+test("built into the app: the default bundle, no way back to offer, the build behind Show details", async () => {
+  const tree = await render(true);
+  const all = texts(tree);
+  for (const text of ["Built into the app", "Default bundle"])
+    expect(all).toContain(text);
+  // The app's own facts wait behind Show details.
+  expect(all).not.toContain("Shop");
+  expect(all).not.toContain("1.0.0 (7)");
+  expect(all).not.toContain(METRO_NOTE);
+  expect(all).not.toContain("Use the default bundle");
+  expect(all).not.toContain("Stop server");
+  await showDetails(tree);
+  for (const text of [
     "Shop",
     "1.0.0 (7)",
     "iOS",
-    "App version · version-1.0.0",
+    "App version",
+    "version-1.0.0",
   ])
-    expect(all).toContain(fact);
+    expect(texts(tree)).toContain(text);
+  expect(texts(tree)).not.toContain("Environment");
   await act(async () => tree.unmount());
 });
 
-test("the base on Expo's Metro says so, with its address", async () => {
+test("the app's own bundle from Expo's Metro names the server and its address", async () => {
   mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
   const tree = await render(true);
-  expect(texts(tree)).toContain("Base · Expo dev server · localhost:8081");
-  expect(texts(tree)).toContain("Expo dev server");
+  const all = texts(tree);
+  expect(all).toContain("Expo dev server");
+  expect(all).toContain("localhost:8081");
+  expect(all).toContain("Default bundle");
   await act(async () => tree.unmount());
 });
 
-test("the base on a preview start server names it as a dev preview server", async () => {
+test("the app's own bundle from a preview start server uses its title and branch", async () => {
   mockScriptUrl = "http://localhost:8082/index.bundle?platform=ios";
   global.fetch = registryWith8082();
   const tree = await render(true);
   await act(async () => {
     await new Promise((r) => setTimeout(r, 50));
   });
-  expect(texts(tree)).toContain(
-    "Base · Dev preview server · Main-Branch · localhost:8082",
-  );
+  const hero = texts(tree);
+  for (const text of [
+    "Main-Branch",
+    "localhost:8082",
+    "Dev preview server",
+    "Default bundle",
+    "main",
+  ])
+    expect(hero).toContain(text);
+  await act(async () => tree.unmount());
+});
+
+test("no state says 'Base' anywhere in the header", async () => {
+  for (const url of [null, "http://localhost:8081/index.bundle"]) {
+    mockScriptUrl = url;
+    const tree = await render(true);
+    expect(texts(tree).filter((t) => /\bBase\b/.test(t))).toEqual([]);
+    await act(async () => tree.unmount());
+  }
+});
+
+test("the refresh button asks the bucket again and has a label for screen readers", async () => {
+  const tree = await render();
+  const fetch = global.fetch as jest.Mock;
+  const before = fetch.mock.calls.length;
+  const refresh = pressable(tree, "Refresh");
+  expect(refresh.props.accessibilityRole).toBe("button");
+  await act(async () => refresh.props.onPress());
+  expect(fetch.mock.calls.length).toBeGreaterThan(before);
   await act(async () => tree.unmount());
 });
 
@@ -239,5 +360,18 @@ test("pulling the list down asks the bucket again", async () => {
   const before = fetch.mock.calls.length;
   await act(async () => tree.root.findByType(FlatList).props.onRefresh());
   expect(fetch.mock.calls.length).toBeGreaterThan(before);
+  await act(async () => tree.unmount());
+});
+
+test("a long name wraps to two lines at most, then ends with an ellipsis", async () => {
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  const tree = await render(true);
+  const name = tree.root.find(
+    (node) =>
+      node.props.accessibilityRole === "header" &&
+      node.props.numberOfLines !== undefined,
+  );
+  expect(name.props.numberOfLines).toBe(2);
+  expect(name.props.ellipsizeMode).toBe("tail");
   await act(async () => tree.unmount());
 });

@@ -40,6 +40,6 @@ export function Chip(props: {
         alignSelf: "flex-start",
       },
     },
-    h(Text, { style: { ...font(theme, "medium", 12), color } }, props.text),
+    h(Text, { style: { ...font(theme, "medium", 13), color } }, props.text),
   );
 }

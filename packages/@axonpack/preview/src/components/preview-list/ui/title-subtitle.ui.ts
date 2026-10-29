@@ -17,8 +17,12 @@ export function TitleSubtitle(props: {
     h(
       Text,
       {
+        accessibilityRole: size === "large" ? "header" : undefined,
+        numberOfLines: 2,
+        ellipsizeMode: "tail",
         style: {
-          ...font(theme, "bold", size === "large" ? 22 : 17),
+          // One step above the section headings (17), so it leads the card without shouting.
+          ...font(theme, "bold", size === "large" ? 20 : 17),
           color: theme.title,
         },
       },
@@ -27,7 +31,10 @@ export function TitleSubtitle(props: {
     props.subtitle
       ? h(
           Text,
-          { style: { ...font(theme, "regular", 14), color: theme.muted } },
+          {
+            selectable: true,
+            style: { ...font(theme, "regular", 15), color: theme.muted },
+          },
           props.subtitle,
         )
       : null,

@@ -141,17 +141,17 @@ export function runningNow(input: {
 
 type KindLabels = Pick<
   PreviewListLabels,
-  | "base"
-  | "kindBuiltIn"
-  | "kindExpoDevServer"
-  | "kindDevPreviewServer"
-  | "kindPreview"
+  "kindBuiltIn" | "kindExpoDevServer" | "kindDevPreviewServer" | "kindPreview"
 >;
 
-/** The kind of thing running, by its label: what the chip on the hero card and banner says. */
+/** The kind of thing running, by its label: what the hero card's chip and the banner say. */
 export function runningKind(running: Running, labels: KindLabels): string {
   if (running.kind === "preview") return labels.kindPreview;
-  if (running.kind === "local") return labels.kindDevPreviewServer;
+  // A server picked from the scan that `preview start` never announced is a plain Expo one.
+  if (running.kind === "local")
+    return running.server && !running.server.announced
+      ? labels.kindExpoDevServer
+      : labels.kindDevPreviewServer;
   return running.source === "built-in"
     ? labels.kindBuiltIn
     : running.source === "expo-dev-server"
@@ -159,23 +159,39 @@ export function runningKind(running: Running, labels: KindLabels): string {
       : labels.kindDevPreviewServer;
 }
 
+const LOOPBACK = new Set(["127.0.0.1", "::1", "[::1]"]);
+
 /**
- * One line for what runs now, such as "Base · Expo dev server · localhost:8081" or
- * "Preview · Login fix". The same words are used on the hero card, the rows and the banner.
+ * `host:port` as people read it: the loopback addresses become localhost, so one machine is not
+ * shown as localhost in one place and 127.0.0.1 in another.
+ */
+export function displayHostPort(hostPort: string): string {
+  const { host, port } = splitHostPort(hostPort);
+  return LOOPBACK.has(host) ? `localhost:${port}` : hostPort;
+}
+
+/** Where what runs comes from, in one short line: a server's address or a preview's branch or id. */
+export function runningWhere(running: Running): string | null {
+  if (running.kind === "preview") return running.id;
+  return running.hostPort ? displayHostPort(running.hostPort) : null;
+}
+
+/**
+ * A sentence for what runs now, such as "Expo dev server, localhost:8081" or "Preview, Login
+ * fix": what a screen reader says for the hero card, and the example's banner.
  */
 export function runningLabel(running: Running, labels: KindLabels): string {
-  const parts =
+  const name =
     running.kind === "preview"
-      ? [labels.kindPreview, running.title]
-      : running.kind === "local"
-        ? [labels.kindDevPreviewServer, running.server?.title, running.hostPort]
-        : [
-            labels.base,
-            runningKind(running, labels),
-            running.source === "dev-preview-server"
-              ? running.server?.title
-              : null,
-            running.hostPort,
-          ];
-  return parts.filter(Boolean).join(" · ");
+      ? running.title
+      : running.server?.announced
+        ? running.server.title
+        : null;
+  return [
+    runningKind(running, labels),
+    name,
+    running.kind === "preview" ? null : runningWhere(running),
+  ]
+    .filter(Boolean)
+    .join(", ");
 }
