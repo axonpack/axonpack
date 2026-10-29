@@ -83,4 +83,5 @@ jobs:
             ./packages/@axonpack/expo-devtools \
             ./packages/@axonpack/react-native-devtools-tab \
             ./packages/@axonpack/react-pretty-print \
-            ./packages/@axonpack/in-app-updates
+            ./packages/@axonpack/in-app-updates \
+            ./packages/@axonpack/preview
