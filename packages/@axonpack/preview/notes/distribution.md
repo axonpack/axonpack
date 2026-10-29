@@ -7,6 +7,7 @@ Publishing a preview so installed apps can find it.
 - [x] Gives every preview a changelog, from the branch's commits unless one is passed in
 - [x] Keeps one list per native build for the app, and one list of everything for people
 - [x] Removes a preview, and cleans up files nothing uses any more
+- [x] Records the EAS environment a preview was built with, so the app can show it
 - [x] Runs against a local S3 server while developing
 
 Previews go to an S3-compatible bucket: S3, R2, MinIO or any other host with the S3 API. The app

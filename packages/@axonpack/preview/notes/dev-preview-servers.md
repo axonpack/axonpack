@@ -7,7 +7,9 @@ between them live.
 - [x] Finds plain `expo start` servers, and servers started with `preview start` with their branch
 - [x] Shows a new server within about two seconds, and drops one that stopped
 - [x] Leaves out other apps' servers; keeps the same app built for other native code, marked
-- [x] Switches the running app to a server, and back, with no rebuild
+- [x] Switches the running app to a server with a tap on its row, and back, with no rebuild
+- [x] Marks the server the app runs from as Active, and the one it starts on as the default
+- [x] Says whether each server is a plain Expo server or one started with `preview start`
 - [x] Starts Metro on a free port and announces it with one command, `preview start`
 - [x] Asks for the name the app shows, prefilled from the branch (`--title` or no terminal skips it)
 - [x] Off unless the app turns it on, and never in a release build
@@ -58,8 +60,11 @@ on Wi-Fi was started from the computer's LAN address, so the same rule finds the
 **Switching.** The choice is stored next to the preview choice and never changes it. On every start
 of a debug build the dev preview server wins, then a downloaded preview, then the default Metro. Android
 points React Native's dev support at the server (and puts the developer's own dev-menu host back
-afterwards); iOS starts from the server's bundle URL. "Stop using dev preview server" brings back what ran
-before, a chosen preview included; "Back to base" stops both.
+afterwards); iOS starts from the server's bundle URL. Switching to a preview clears the picked server, since
+native would load the server first; "Use the default bundle" clears both. A picked server that is the
+Metro the app starts on anyway counts as the default. The server the app runs from is read from what the
+app actually loaded, so the default's Metro shows Active too, not only one picked by hand.
+Loopback names (`localhost`, `127.0.0.1`, the emulator's `10.0.2.2`) count as one machine.
 
 ## Won't do
 

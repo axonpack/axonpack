@@ -27,9 +27,9 @@ the key is made, with one option in the app config that the build and `publish` 
 The trade-off of `appVersion`: a native change without a version bump is not detected, so a preview
 built on the old native code is still offered. Two things catch most of the damage: a preview whose
 Hermes bytecode version differs from the build's is not loaded, and a preview that fails while
-starting falls back to the base bundle and is marked broken. `publish` prints a one-line warning in
+starting falls back to the default bundle and is marked broken. `publish` prints a one-line warning in
 this mode. With `fingerprint`, any native change (a new native dependency, a config plugin change,
 a prebuild with different settings) makes older previews incompatible.
 
 A preview chosen on one build is not started by a later build with another key; the app starts the
-base bundle and the download moves to Incompatible.
+default bundle and the download moves to Incompatible.
