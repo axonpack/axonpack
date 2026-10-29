@@ -149,6 +149,10 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `update`                 | Update                                                                        |
 | `delete`                 | Delete                                                                        |
 | `status`                 | One per status: Not downloaded, Downloading, Downloaded, Update available, Unpublished, Broken: it stopped while starting |
+| `byline`                 | {author}, {time}. Who published a preview and when                            |
+| `timeAgo`                | `now` Just now, `minute` 1 minute ago, `minutes` {n} minutes ago, `hour` 1 hour ago, `hours` {n} hours ago, `day` 1 day ago, `days` {n} days ago. Older than 30 days shows the date |
+| `showMore`               | Show more                                                                     |
+| `showLess`               | Show less                                                                     |
 | `incompatibleTitle`      | Incompatible                                                                  |
 | `incompatibleHint`       | Made for another native build. They can't run on this one.                    |
 | `deleteAll`              | Delete all                                                                    |
@@ -164,7 +168,8 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `localIncompatible`      | Made for another native build                                                 |
 | `localUnknownBuild`      | Native build unknown                                                          |
 
-`status` is merged per key, so `labels={{ status: { broken: 'Crashed' } }}` changes only that one.
+`status` and `timeAgo` are merged per key, so `labels={{ status: { broken: 'Crashed' } }}` changes
+only that one.
 
 ## Config plugin
 

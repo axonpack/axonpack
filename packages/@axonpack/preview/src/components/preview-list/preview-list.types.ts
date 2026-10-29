@@ -126,6 +126,21 @@ export type PreviewListLabels = {
   update: string;
   delete: string;
   status: Record<PreviewStatus, string>;
+  /** Under a preview's title: who published it and when. `{author}` and `{time}` are filled in. */
+  byline: string;
+  /** How long ago a preview was published. `{n}` is the count. Older than 30 days shows the date. */
+  timeAgo: {
+    now: string;
+    minute: string;
+    minutes: string;
+    hour: string;
+    hours: string;
+    day: string;
+    days: string;
+  };
+  /** Open and close a long changelog. */
+  showMore: string;
+  showLess: string;
   incompatibleTitle: string;
   incompatibleHint: string;
   deleteAll: string;

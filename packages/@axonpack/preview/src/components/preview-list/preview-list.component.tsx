@@ -75,6 +75,8 @@ export function PreviewList(props: PreviewListProps) {
     [showLocal, appSlug],
   );
   const [pulling, setPulling] = useState(false);
+  // What "2 minutes ago" counts from: when the list opened, then each refresh QA asks for.
+  const [shownAt, setShownAt] = useState(Date.now);
   const bucketUrl = useContext(ConfigContext)?.url ?? "";
   // What QA asked for last, so Retry asks again. The first load is a refresh.
   const lastAction = useRef<() => unknown>(preview.refresh);
@@ -98,6 +100,7 @@ export function PreviewList(props: PreviewListProps) {
       props.labels?.backToBase ??
       DEFAULT_LABELS.backToDefault,
     status: { ...DEFAULT_LABELS.status, ...props.labels?.status },
+    timeAgo: { ...DEFAULT_LABELS.timeAgo, ...props.labels?.timeAgo },
   };
 
   // What runs now when that is the default, else what native says it starts on.
@@ -168,6 +171,7 @@ export function PreviewList(props: PreviewListProps) {
             theme={theme}
             labels={labels}
             item={item.item}
+            now={shownAt}
             onDownload={run(preview.download)}
             onSwitch={run(preview.switchTo)}
             onDelete={run(preview.remove)}
@@ -191,12 +195,15 @@ export function PreviewList(props: PreviewListProps) {
     now.kind === "preview"
       ? (preview.items.find((i) => i.id === now.id)?.entry ?? null)
       : null;
-  const refreshAll = run(() =>
-    Promise.all([
+  const refreshAll = run(() => {
+    // As an updater, so the time is read when React applies it. The linter can't tell this
+    // function only runs on a press, and takes a direct call for a read during render.
+    setShownAt(Date.now);
+    return Promise.all([
       preview.refresh(),
       showLocal ? devPreviewServersStore.refresh() : null,
-    ]),
-  );
+    ]);
+  });
   const failure = preview.error
     ? describeListError(preview.error, {
         bucketUrl,

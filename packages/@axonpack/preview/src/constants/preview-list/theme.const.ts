@@ -103,6 +103,18 @@ export const DEFAULT_LABELS: PreviewListLabels = {
     unpublished: "Unpublished",
     broken: "Broken: it stopped while starting",
   },
+  byline: "{author}, {time}",
+  timeAgo: {
+    now: "Just now",
+    minute: "1 minute ago",
+    minutes: "{n} minutes ago",
+    hour: "1 hour ago",
+    hours: "{n} hours ago",
+    day: "1 day ago",
+    days: "{n} days ago",
+  },
+  showMore: "Show more",
+  showLess: "Show less",
   incompatibleTitle: "Incompatible",
   incompatibleHint:
     "Made for another native build. They can't run on this one.",

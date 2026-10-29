@@ -69,8 +69,9 @@ Put it on a screen QA can reach: a tab in internal builds, a settings row, or a 
 shows:
 
 - **Running:** what this start runs (the default bundle or a preview), and **Use the default bundle**.
-- **The previews for this build**, each with its title, app version, branch, author, date, size,
-  changelog and state, and **Download**, **Switch**, **Update** or **Delete**.
+- **The previews for this build**, each with its title, branch, state, environment, who published
+  it and when, size and changelog, one action (**Download**, **Switch** or **Update**) and
+  **Delete**. The one that runs says Active.
 - **Incompatible:** downloads made for another native build, with **Delete all**.
 - **Dev preview servers**, in a debug build with that option on. See
   [Dev preview servers](/docs/preview/dev-preview-servers).
@@ -84,8 +85,8 @@ shows:
 | Unpublished      | Still on the device, but no longer in the bucket                         |
 | Broken           | It stopped while starting, so the default bundle loaded                  |
 
-**Switch** downloads first when the preview is not on the device, then restarts into it. Deleting the
-preview that runs goes back to the default bundle first.
+**Download** puts a preview on the device and **Switch** restarts into it. Deleting the preview that
+runs goes back to the default bundle first.
 
 ### Theme and labels
 
