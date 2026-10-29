@@ -1,0 +1,165 @@
+---
+title: Reference
+description: Every export, config field, hook result, label and theme token.
+icon: BookOpen
+---
+
+Use this page to look up a name. If you are new, start with the
+[Quick start](/docs/preview/quick-start). Every command of the CLI is on [CLI](/docs/preview/cli).
+
+## Components and hooks
+
+| Export                         | What it is                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `PreviewProvider`              | `{ config: PreviewConfig, children }`. Mount it near the root, on every start |
+| `PreviewList`                  | The ready-made list. Props: `theme`, `labels`, `style`                        |
+| `usePreview()`                 | The list and its actions. Needs the provider above it                         |
+| `useRunning()`                 | What this start runs, as a [`Running`](#running). Needs the provider          |
+| `usePreviewsState()`           | The raw [store state](#usepreview), without the provider                      |
+| `useDevPreviewServersState()`  | `{ servers, activeUrl, error }` for dev preview servers                       |
+
+## PreviewConfig
+
+What the app passes to the provider. Nothing here is read from the environment.
+
+| Field                 | Needed | What it is                                                                          |
+| --------------------- | ------ | ----------------------------------------------------------------------------------- |
+| `enabled`             | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
+| `url`                 | Yes    | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN |
+| `readAccessKeyId`     | No     | A read-only key, for a private bucket. Never the write key                          |
+| `readSecretAccessKey` | No     | Its secret                                                                          |
+| `region`              | No     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
+| `headers`             | No     | Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket      |
+| `devPreviewServers`   | No     | Lists this app's Metro servers in a debug build. Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
+| `buildKey`            | No     | This build's key, only when the config plugin is not used to bake it in             |
+
+## usePreview
+
+| Field                  | What it is                                                                 |
+| ---------------------- | -------------------------------------------------------------------------- |
+| `enabled`              | `config.enabled`                                                           |
+| `devPreviewServers`    | Whether dev preview servers are on                                         |
+| `items`                | [`PreviewItem[]`](#previewitem): this build's previews, and downloads it no longer lists |
+| `incompatible`         | Downloads made for another native build                                    |
+| `loading`              | A refresh is running                                                       |
+| `error`                | The last error, as text, or null                                           |
+| `buildKey`             | This build's key, or null without the plugin                               |
+| `remote`               | What the bucket lists for this build. Null until it has answered once      |
+| `local`                | Every download on the device                                               |
+| `downloading`          | Download progress by id, from 0 to 1                                       |
+| `activeId`             | The preview the next start loads, or null for the base bundle             |
+| `broken`               | Ids of previews that stopped before they finished starting                 |
+
+| Action                   | What it does                                                             |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `refresh()`              | Reads the downloads, then asks the bucket for this build's list          |
+| `download(id)`           | Downloads a preview, or its update                                       |
+| `switchTo(id)`           | Restarts into a preview, downloading it first if needed                  |
+| `switchTo(null)`         | Back to base. Also stops a dev preview server                            |
+| `remove(id)`             | Deletes a download. If it runs, goes back to base first                  |
+| `removeIncompatible()`   | Deletes every download made for another native build                     |
+
+### PreviewItem
+
+| Field      | What it is                                                                       |
+| ---------- | -------------------------------------------------------------------------------- |
+| `id`       | The preview's id                                                                 |
+| `entry`    | The bucket's entry: `title`, `branch`, `commit`, `author`, `publishedAt`, `appVersion`, `buildNumber`, `compatibility`, `fingerprint`, `size`, `changelog`, `revision`, `manifest` |
+| `status`   | `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken` |
+| `progress` | 0 to 1 while downloading, else null                                              |
+| `active`   | It is the one the next start loads                                               |
+| `local`    | The download on the device, or null                                              |
+
+### Running
+
+| `kind`     | Fields                                                             |
+| ---------- | ------------------------------------------------------------------ |
+| `base`     | none                                                               |
+| `preview`  | `id`, `title`                                                      |
+| `local`    | `url`, `hostPort`, `server` (null until the list has found it)     |
+
+## Functions
+
+| Function                      | What it does                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| `selectPreview(id, key?)`     | Chooses what the next start or `reload()` loads: a preview id, or null for the base bundle. False where the native module is missing |
+| `reload()`                    | Restarts JS, so a new choice takes effect. False where the native module is missing |
+| `previewBundlePath(id)`       | Where a preview's bundle sits, relative to the preview folder                |
+| `markLaunched()`              | Tells the native side this start worked. The provider calls it               |
+| `buildKey()`                  | The key the plugin baked into this build, or null                            |
+| `buildCompatibility()`        | `appVersion` or `fingerprint`, as baked in, or null                          |
+| `buildSlug()`                 | The app's slug, as baked in, or null                                         |
+| `previewTitle(id)`            | The readable title for an id: `task-1-login-fix` becomes "Task 1 login fix"  |
+| `previewItems(state)`         | `{ items, incompatible }` from the store state                               |
+| `runningNow(input)`           | The pure form of `useRunning()`                                              |
+| `resolveTheme(theme, scheme)` | A full list theme from a partial one and the device's colour scheme         |
+
+`previewsStore` and `devPreviewServersStore` are the stores behind the hooks, with `getState()` and
+`subscribe()`, for use outside React.
+
+## Theme
+
+`PreviewList`'s `theme` takes any of these. `LIGHT_THEME` and `DARK_THEME` are the defaults.
+
+| Token         | What it colours                                            |
+| ------------- | ---------------------------------------------------------- |
+| `mode`        | `auto` (follows the device), `light` or `dark`. Default `auto` |
+| `background`  | Behind the list                                            |
+| `card`        | Each card                                                  |
+| `surface`     | Behind the changelog and the progress track                |
+| `border`      | Card and button borders                                    |
+| `title`       | Headings                                                   |
+| `text`        | Body text                                                  |
+| `muted`       | Quiet text: branch, author, date, size                     |
+| `primary`     | Main buttons                                               |
+| `primaryText` | Text on main buttons                                       |
+| `danger`      | Delete, and errors                                         |
+| `warning`     | Update available, unpublished, and the Metro note          |
+| `success`     | Downloaded                                                 |
+| `radius`      | Card corner radius. Buttons scale from it. Default 14      |
+| `fonts`       | `{ regular, medium, bold }` font family names. Each falls back to the system font |
+
+## Labels
+
+`PreviewList`'s `labels` takes any of these. `DEFAULT_LABELS` has the defaults.
+
+| Label                    | Default                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `title`                  | Previews                                                                      |
+| `running`                | Running                                                                       |
+| `base`                   | Embedded bundle                                                               |
+| `backToBase`             | Back to base                                                                  |
+| `metroBypassed`          | Debug build: Metro is not used while a preview runs. Go back to base to load from Metro again. |
+| `refresh`                | Refresh                                                                       |
+| `empty`                  | No previews published for this build yet.                                     |
+| `noBuildKey`             | This build has no compatibility key, so it cannot list previews. Add the config plugin and rebuild. |
+| `download`               | Download                                                                      |
+| `switchTo`               | Switch                                                                        |
+| `update`                 | Update                                                                        |
+| `delete`                 | Delete                                                                        |
+| `status`                 | One per status: Not downloaded, Downloading, Downloaded, Update available, Unpublished, Broken: it stopped while starting |
+| `incompatibleTitle`      | Incompatible                                                                  |
+| `incompatibleHint`       | Made for another native build. They can't run on this one.                    |
+| `deleteAll`              | Delete all                                                                    |
+| `devPreviewServersTitle` | Dev preview servers                                                           |
+| `devPreviewServersHint`  | Metro servers for this app on your computer. Debug builds only.               |
+| `noDevPreviewServers`    | No Metro server found. Start one with npx preview start.                      |
+| `noBuildSlug`            | This build has no app slug, so it cannot tell its servers from other apps'. Add the config plugin and rebuild. |
+| `stopDevPreviewServer`   | Stop using dev preview server                                                 |
+| `localSuffix`            | local                                                                         |
+| `localIncompatible`      | Made for another native build                                                 |
+| `localUnknownBuild`      | Native build unknown                                                          |
+
+`status` is merged per key, so `labels={{ status: { broken: 'Crashed' } }}` changes only that one.
+
+## Config plugin
+
+```json
+["@axonpack/preview", { "compatibility": "appVersion" }]
+```
+
+| Option          | Default      | Values                       |
+| --------------- | ------------ | ---------------------------- |
+| `compatibility` | `appVersion` | `appVersion` or `fingerprint` |
+
+See [Compatibility](/docs/preview/compatibility) for what it writes into the build.

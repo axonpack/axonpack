@@ -1,0 +1,10 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["AxonpackPreviewModule"],
+    "reactDelegateHandlers": ["PreviewReactDelegateHandler"]
+  },
+  "android": {
+    "modules": ["expo.modules.axonpackpreview.AxonpackPreviewModule"]
+  }
+}

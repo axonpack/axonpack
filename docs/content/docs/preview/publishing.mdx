@@ -1,0 +1,108 @@
+---
+title: Publishing
+description: Publish a preview, replace it, remove it, and clean up the bucket.
+icon: Upload
+---
+
+Run the CLI from your app's root, or pass `--project <dir>`. It needs the
+[publish settings](/docs/preview/environment) and a git checkout.
+
+```sh
+npx preview publish                  # id = git branch, both platforms; asks for the title
+npx preview publish --id task-1 --changelog="- Fixes the login"
+npx preview unpublish task-1
+npx preview prune
+```
+
+With bun, use `bunx preview`; with pnpm, `pnpm exec preview`; with yarn, `yarn preview`.
+
+## What publish does
+
+For each platform, Android then iOS:
+
+1. **Builds** with `expo export:embed --dev false --bytecode`, the same step a release build runs.
+   The result is Hermes bytecode with its images beside it, in the folders the native build uses.
+2. **Works out the key** from the `compatibility` option in your app config, the same way the
+   [config plugin](/docs/preview/compatibility) did for the build. It records the app version and the
+   native fingerprint either way.
+3. **Uploads each file once**, under its sha256. Files already in the bucket are skipped.
+4. **Writes the manifest**: the files, their hashes and sizes, the changelog and the versions.
+5. **Adds the preview to the lists**, last. An app never sees a preview whose files are not all
+   there yet.
+
+It prints the URL of the list it wrote, so you can open it and check.
+
+## The id and the title
+
+The id is the git branch unless you pass `--id`. QA sees a readable title made from it: `-`, `_` and
+`/` become spaces and the first letter is a capital, so `task-1-login-fix` becomes
+"Task 1 login fix".
+
+In a terminal, publish asks for the title, prefilled with that; Enter keeps it. `--title` skips the
+question, and so does a run with no terminal, such as CI.
+
+On a detached HEAD there is no branch, so pass `--id`.
+
+## The changelog
+
+Every preview has a changelog QA can read in the list. By default it is the commit subjects since the
+branch left the base branch. The base is `--base <branch>`, or else the remote's default branch
+(`origin/HEAD`), or else `main` or `master`.
+
+To write it yourself:
+
+```sh
+npx preview publish --changelog="- Fixes the login
+- New empty state"
+npx preview publish --changelog-file CHANGES.md
+```
+
+Use `=` with `--changelog` when the text starts with a dash, as a list does.
+
+## Replace, unpublish, prune
+
+**Replace.** Publishing the same id again overwrites its manifest and its entry in the list. A
+device that downloaded the old one shows **Update available**.
+
+**Unpublish.** `preview unpublish <id>` removes the preview from every build's list and deletes its
+manifests. A copy already downloaded stays on the device until QA deletes it, shown as
+**Unpublished**. The files stay in the bucket.
+
+**Prune.** `preview prune` deletes every file no manifest refers to any more. Run it now and then
+after unpublishing. Nothing runs it on a schedule.
+
+There is no time limit. A preview stays published for as long as you leave it.
+
+## One platform, another entry file
+
+```sh
+npx preview publish --platform android
+npx preview publish --entry-file src/main.tsx
+```
+
+`--entry-file` is passed to `expo export:embed`. Leave it out when Expo finds your entry on its own.
+
+## Compatibility override
+
+`--compatibility appVersion` or `--compatibility fingerprint` overrides the plugin option, with a
+warning. A build made with the other setting would not list the preview, so use it only when you know
+the build was made that way.
+
+In `appVersion` mode publish also prints a one-line warning: a native change without a version bump
+is not detected. See [Compatibility](/docs/preview/compatibility).
+
+## The lists in the bucket
+
+| File                                  | Who reads it                                        |
+| ------------------------------------- | --------------------------------------------------- |
+| `index/<platform>/<key>.json`         | The app. Only the previews this native build can run |
+| `index.json`                          | People. Every native build and its previews         |
+| `previews/<platform>/<key>/<id>.json` | The app, when it downloads that preview             |
+| `files/<sha256>`                      | The app, when it downloads that preview             |
+
+Two publishes at the same time both end up listed. The lists are written only if nobody wrote in
+between, and a clash reads again and retries.
+
+Every flag is on [CLI](/docs/preview/cli).
+
+**Next:** [CI](/docs/preview/ci)

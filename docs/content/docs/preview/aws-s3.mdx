@@ -1,0 +1,70 @@
+---
+title: AWS S3
+description: The values and permissions this package needs on AWS, with links to AWS's own guides.
+icon: Cloud
+---
+
+AWS documents how to create buckets, keys and policies, and its pages are the source of truth. This
+page only says what this package needs. What the bucket and the keys must allow is on
+[Storage](/docs/preview/storage#the-two-keys).
+
+## AWS's guides
+
+| Task                                   | AWS's page                                                                                                           |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| S3 in general                          | [What is Amazon S3?](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html)                             |
+| Create a bucket                        | [Creating a general purpose bucket](https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html) |
+| Allow public reads, or keep it private | [Blocking public access](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html) and [bucket policy examples](https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-bucket-policies.html) |
+| Make the write key and the read key    | [Manage access keys for IAM users](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) |
+| Path-style URLs                        | [Virtual hosting of buckets](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html)              |
+| Conditional writes                     | [How to prevent object overwrites with conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) |
+
+## What this package needs
+
+- **The write key:** an IAM user limited to the one bucket, with `s3:GetObject`, `s3:PutObject` and
+  `s3:DeleteObject` on its objects and `s3:ListBucket` on the bucket.
+- **A public bucket:** anonymous `s3:GetObject` on the bucket's objects, and Block Public Access
+  turned off far enough for that bucket policy to apply.
+- **A private bucket:** a second IAM user with only `s3:GetObject` and `s3:ListBucket` on the bucket.
+  This key ends up inside the app.
+- **Conditional PUT:** supported. AWS's page says to "add the HTTP `If-None-Match` or `If-Match`
+  header" to a write, and that a mismatch fails with `412 Precondition Failed`.
+
+## Settings
+
+The package uses path-style URLs: `https://s3.<region>.amazonaws.com/<bucket>`. AWS still serves
+them in every region, but has said it plans to end them one day; see its virtual hosting page.
+
+Publish settings, from CI secrets or `.env.local`:
+
+```sh
+PREVIEW_S3_URL=https://s3.<region>.amazonaws.com/<bucket>
+PREVIEW_S3_ACCESS_KEY_ID=<write key id>
+PREVIEW_S3_SECRET_ACCESS_KEY=<write key secret>
+PREVIEW_S3_REGION=<region>
+```
+
+Set `PREVIEW_S3_REGION` to the bucket's region. The default, `us-east-1`, is only right for buckets
+there.
+
+The app, public bucket:
+
+```sh title=".env"
+EXPO_PUBLIC_PREVIEW_S3_URL=https://s3.<region>.amazonaws.com/<bucket>
+```
+
+The app, private bucket:
+
+```sh title=".env"
+EXPO_PUBLIC_PREVIEW_S3_URL=https://s3.<region>.amazonaws.com/<bucket>
+EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID=<read key id>
+EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY=<read key secret>
+EXPO_PUBLIC_PREVIEW_S3_REGION=<region>
+```
+
+A CDN in front of a public bucket works too: put its address in the app's URL, and keep publishing
+to the bucket's own URL.
+
+Then run a [test publish](/docs/preview/s3-compatible#setup-checklist).
+
+**Next:** [Cloudflare R2](/docs/preview/cloudflare-r2)

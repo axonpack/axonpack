@@ -48,7 +48,7 @@ package on npmjs.com, under **Settings** → **Trusted publishing** → **GitHub
 - Environment: leave empty
 
 Do this for `@axonpack/expo-devtools`, `@axonpack/react-pretty-print`,
-`@axonpack/react-native-devtools-tab` and `@axonpack/in-app-updates`, and for any new package after its first publish. npm only
+`@axonpack/react-native-devtools-tab`, `@axonpack/in-app-updates` and `@axonpack/preview`, and for any new package after its first publish. npm only
 offers the setting on a package that already exists, so a brand-new package goes out once by hand
 (see below). Until the setting is in place the publish step fails with
 `403 OIDC permission denied`.

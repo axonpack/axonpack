@@ -1,0 +1,88 @@
+---
+title: CLI
+description: Every command and option of the preview CLI.
+icon: Terminal
+---
+
+The CLI comes with the package as `preview`. Run it from your app's root with your package manager:
+`npx preview`, `bunx preview`, `pnpm exec preview` or `yarn preview`. `preview --help` prints the
+same list.
+
+```
+preview <command> [options]
+```
+
+## publish
+
+Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/preview/publishing).
+
+| Option                     | Default                     | What it does                                                                   |
+| -------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
+| `--id <id>`                | the git branch              | The preview's id. Publishing an id again replaces it                           |
+| `--title <title>`          | asked, prefilled from the id | The name QA sees. Without it a terminal asks; Enter keeps the readable id. No prompt without a terminal |
+| `--platform <p>`           | `all`                       | `android`, `ios` or `all`                                                      |
+| `--base <branch>`          | the repo's default branch   | The branch the changelog counts commits from                                   |
+| `--changelog=<text>`       | the commit subjects         | Changelog text. Use `=` when it starts with a dash, as a `- item` list does    |
+| `--changelog-file <path>`  |                             | Read the changelog from a file                                                 |
+| `--entry-file <path>`      | Expo's own                  | Passed to `expo export:embed`                                                  |
+| `--compatibility <c>`      | the plugin option           | `appVersion` or `fingerprint`. Overrides the app config, with a warning        |
+| `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
+
+## unpublish
+
+```sh
+preview unpublish <id>
+```
+
+Removes a preview from every build's list and deletes its manifests. Its files stay until `prune`.
+A copy already on a device stays there, shown as Unpublished.
+
+## prune
+
+```sh
+preview prune
+```
+
+Deletes every file in the bucket that no preview uses any more.
+
+## start
+
+```sh
+preview start [--title <title>] [--ports <from>-<to>] [-- <expo start args>]
+```
+
+Runs Metro on a free port and announces it to the app's Dev preview servers. See
+[Dev preview servers](/docs/preview/dev-preview-servers).
+
+| Option                 | Default                         | What it does                                                   |
+| ---------------------- | ------------------------------- | -------------------------------------------------------------- |
+| `--title <title>`      | asked, prefilled from the branch | The name the app's list shows. Asked like `publish`           |
+| `--ports <from>-<to>`  | `8081-8099`                     | The ports to pick from                                         |
+| `-- <args>`            |                                 | Everything after `--` goes to `expo start` untouched           |
+
+## Every command
+
+| Option            | Default            | What it does    |
+| ----------------- | ------------------ | --------------- |
+| `--project <dir>` | the current folder | The app's root  |
+| `-h`, `--help`    |                    | Print the help  |
+
+## Settings
+
+`publish`, `unpublish` and `prune` need the bucket and the write key. They come from the environment
+(the shell, or CI secrets). For local use they can also go in the app's `.env.local`, or any env file
+Expo loads for a release build; the environment wins over them. Keep the write key out of a committed
+`.env`.
+
+| Variable                       | Needed | What it is                                                                 |
+| ------------------------------ | ------ | -------------------------------------------------------------------------- |
+| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>[/<folder>]`, for example `http://localhost:9000/previews-public` |
+| `PREVIEW_S3_ACCESS_KEY_ID`     | Yes    | The write key                                                              |
+| `PREVIEW_S3_SECRET_ACCESS_KEY` | Yes    | Its secret                                                                 |
+| `PREVIEW_S3_REGION`            | No     | Default `us-east-1`                                                        |
+
+`start` needs none of them.
+
+## Exit codes
+
+A command that fails prints `preview: <message>` and exits with 1.

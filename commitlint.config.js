@@ -27,6 +27,7 @@ module.exports = {
       [
         "@axonpack/expo-devtools",
         "@axonpack/in-app-updates",
+        "@axonpack/preview",
         "@axonpack/react-native-devtools-tab",
         "@axonpack/react-pretty-print",
         "linter",

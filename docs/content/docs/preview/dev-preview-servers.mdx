@@ -1,0 +1,97 @@
+---
+title: Dev preview servers
+description: Several Metro servers for one app, one per task or worktree, switched live from one debug build.
+icon: MonitorSmartphone
+---
+
+When you or an AI agent work on several tasks at once, each in its own git worktree with its own
+Metro, one installed debug build can list every running Metro for the app and switch between them
+live. No rebuild per task.
+
+## Turn it on
+
+One switch in the provider's config:
+
+```ts
+<PreviewProvider config={{ ...previewConfig, devPreviewServers: true }}>
+```
+
+It is off by default, and it only shows in a debug build. A release build ignores it, even if a
+server choice is in the saved state. The app also needs the [config plugin](/docs/preview/compatibility),
+which bakes in the app's slug.
+
+## Start a server per worktree
+
+In each worktree:
+
+```sh
+npx preview start                    # a free port in 8081-8099, announced to the app
+npx preview start -- --clear         # after --, the arguments go to expo start
+npx preview start --title "Login fix"
+npx preview start --ports 8100-8120
+```
+
+With bun scripts, `bun run` eats the first `--`, so it is `bun run start:preview -- -- --clear`.
+
+In a terminal, `start` asks for the name the app shows, prefilled with the branch's readable title;
+Enter keeps it. `--title` skips the question, and so does a run with no terminal, such as an AI
+agent's shell, which takes the branch title.
+
+A plain `npx expo start --port 8085` is found too, with less detail: no branch.
+
+## Switch servers in the app
+
+Open the list. **Dev preview servers** shows each server for this app within about two seconds,
+with its title, branch, port and version. **Switch** runs that server. **Stop using dev preview
+server** goes back. Stop a server with Ctrl+C and it leaves the list on its own.
+
+On every start of a debug build the order is: the chosen dev preview server, then a downloaded
+preview, then the default Metro. **Stop using dev preview server** brings back what ran before, a
+chosen preview included. **Back to base** stops both.
+
+## Which servers are listed
+
+Only servers for this app's slug, the one the config plugin baked in. A build made without the plugin
+has no slug, and the section says so instead of listing other apps' servers.
+
+A server for the same app but another native key (another app version, or another fingerprint) is
+listed and marked "Made for another native build", since you may still want it. A plain
+`expo start` server in fingerprint mode shows "Native build unknown", because its manifest carries no
+fingerprint.
+
+## How the app finds them
+
+Two sources, merged by port:
+
+- **The registry.** `preview start` runs `expo start` on a free port and announces it to a small
+  registry on your computer, on port 19150, with the branch, the worktree and the native key
+  `publish` would use. The first `start` starts the registry, and it exits once no server is left.
+  A heartbeat every 5 seconds keeps a server listed; it drops out 15 seconds after the last, so a
+  killed process goes too.
+- **A port scan.** The app asks each port from 8081 to 8099 for Metro's `/status`, then reads the
+  Expo manifest of each one it finds for the slug, name, version and bundle URL.
+
+A server found both ways uses the registry's details. The app looks only while the list is on
+screen, every 2 seconds, and never starts a look while the last one runs.
+
+## Reaching the servers
+
+The app looks on the host its own Metro is on.
+
+| Device                 | What to do                                                                 |
+| ---------------------- | -------------------------------------------------------------------------- |
+| iOS simulator          | Nothing                                                                    |
+| Android emulator       | Nothing: the app also tries `10.0.2.2`, which reaches the computer        |
+| Phone on USB (Android) | `adb reverse` for each port. `preview start` does it when `adb` is on the PATH |
+| Phone on Wi-Fi         | Nothing: it was started from the computer's LAN address, so the others are found there too |
+
+Android 17 asks before an app may reach the local network. If that is denied, the app can't reach any
+Metro. Allow it in the app's settings, or on the emulator run
+`adb shell pm grant <package> android.permission.ACCESS_LOCAL_NETWORK`.
+
+## Limits
+
+- **Debug builds only.** A release build has no Metro to switch to.
+- **This app only.** Servers for another slug are never listed.
+
+**Next:** [expo-updates](/docs/preview/expo-updates)

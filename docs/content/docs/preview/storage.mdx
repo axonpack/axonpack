@@ -1,0 +1,104 @@
+---
+title: Storage
+description: One S3-compatible bucket holds every preview. Public or private, and the two keys.
+icon: Database
+---
+
+Previews live in one S3-compatible bucket: AWS S3, Cloudflare R2, MinIO, or
+[any other host with the S3 API](/docs/preview/s3-compatible). There is no server of your own and no provider switch. The CLI writes to the bucket with a
+write key, and the app reads from it.
+
+| Host                                        | Guide                                       |
+| ------------------------------------------- | ------------------------------------------- |
+| AWS S3                                      | [AWS S3](/docs/preview/aws-s3)              |
+| Cloudflare R2                               | [Cloudflare R2](/docs/preview/cloudflare-r2) |
+| MinIO on your own server, or on your laptop | [MinIO](/docs/preview/minio)                |
+| MinIO AIStor                                | [MinIO AIStor](/docs/preview/aistor)        |
+| Any other S3-compatible host                | [Any S3-compatible host](/docs/preview/s3-compatible) |
+
+## The URL
+
+Both sides take one URL: `<endpoint>/<bucket>`, plus a folder inside the bucket if you add more
+path segments. Requests are path-style.
+
+| Example                                                        | Endpoint                                   | Bucket     | Folder   |
+| -------------------------------------------------------------- | ------------------------------------------ | ---------- | -------- |
+| `http://localhost:9000/previews-public`                        | `http://localhost:9000`                    | `previews-public` | none |
+| `https://s3.eu-west-1.amazonaws.com/acme-previews`             | `https://s3.eu-west-1.amazonaws.com`       | `acme-previews` | none |
+| `https://<account>.r2.cloudflarestorage.com/previews/my-app`   | `https://<account>.r2.cloudflarestorage.com` | `previews` | `my-app` |
+
+A folder lets several apps share one bucket. Everything for that app goes under it.
+
+## Public or private
+
+Pick one per bucket.
+
+| Mode    | Who can read                   | What the app gets                                  |
+| ------- | ------------------------------ | -------------------------------------------------- |
+| Public  | Anyone with the URL            | The URL only. Reads are plain HTTPS GETs           |
+| Private | Only requests signed with a key | The URL and a **read-only** key. The app signs each read with SigV4 |
+
+Either way, only the write key can write. A public bucket is the simpler setup: nothing secret is in
+the app at all. A private bucket keeps strangers from downloading your previews, but the read key is
+inside the app binary, and anyone with the binary can pull it out. So the read key must be
+read-only, and limited to the preview bucket.
+
+For a public bucket the app's URL can be any address the files are public under: the same
+`<endpoint>/<bucket>` URL, R2's `https://pub-<id>.r2.dev`, your own domain, or a CDN in front. With
+a read key it must be the real `<endpoint>/<bucket>` URL, because the app signs for that bucket.
+
+## The two keys
+
+| Key       | Used by                          | Needs                                                        |
+| --------- | -------------------------------- | ------------------------------------------------------------ |
+| Write key | `preview publish`, `unpublish`, `prune` | Read, write, delete and list objects in the bucket     |
+| Read key  | The app, for a private bucket only | Read and list objects in the bucket. Nothing else          |
+
+As an S3 policy, the write key needs `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` and
+`s3:ListBucket` on the bucket. The read key needs `s3:GetObject` and `s3:ListBucket`.
+
+`s3:ListBucket` matters on the read key too. Without it, S3 answers a missing file with 403 instead
+of 404. A build with nothing published yet would then show an error instead of an empty list.
+
+<Callout type="error" title="The write key never goes in the app">
+Expo builds every `EXPO_PUBLIC_*` value into the app. The write key belongs in CI secrets or a
+gitignored `.env.local`, and the CLI reads it under a name with no `EXPO_PUBLIC_` prefix. See
+[Settings and env files](/docs/preview/environment).
+</Callout>
+
+## What is in the bucket
+
+```
+index.json                            every native build and its previews, for people
+index/<platform>/<key>.json           what one native build can run; the app reads this
+previews/<platform>/<key>/<id>.json   one preview's manifest: files, changelog, versions
+files/<sha256>                        bundle and image blobs, shared between previews
+```
+
+`<key>` is `version-1.0.0` or `fingerprint-<hash>`, as on [Compatibility](/docs/preview/compatibility).
+The app downloads one small file, `index/<platform>/<key>.json`, and gets only what it can run.
+A native change starts a new, empty list on its own, so there is nothing to clean up on the server.
+
+Files are stored once under their sha256. A rebuild that only changed JS uploads one new bundle and
+reuses every image.
+
+Both lists are updated only if nobody wrote in between: the CLI sends `If-Match` with the ETag, or
+`If-None-Match: *` for a new file. On a clash it reads again and retries, so two publishes at the same
+time both end up listed. The host has to honour those headers on a PUT.
+
+## HTTPS
+
+Use HTTPS for a real bucket. Every file is also checked against its sha256 before it is used, but
+the list itself is only as safe as the connection it came over.
+
+Plain HTTP works where the platform allows it, which is mostly for testing:
+
+- **Android:** a release build refuses plain HTTP to any host unless the app allows cleartext
+  traffic (`expo-build-properties`, `android.usesCleartextTraffic`). A debug build allows it.
+- **iOS:** App Transport Security blocks plain HTTP to named hosts. It does not apply to IP
+  addresses or `localhost`.
+
+The package never turns cleartext on by itself. If you do, do it in your own app config, and
+preferably only in builds that point at a test server.
+
+**Next:** [AWS S3](/docs/preview/aws-s3)

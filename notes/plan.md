@@ -57,6 +57,13 @@ Checks the App Store and Play Store for a newer version of the app and shows an 
 soft and forced updates and skipping a version. Its docs:
 [docs/content/docs/in-app-updates](../docs/content/docs/in-app-updates/index.mdx).
 
+## @axonpack/preview
+
+_Shipped._
+
+Download and switch between preview JS bundles of an app, one per task branch, without a native
+rebuild. Its docs: [docs/content/docs/preview](../docs/content/docs/preview/index.mdx).
+
 ## @axonpack/api-kit
 
 _Planned — no package yet._

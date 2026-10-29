@@ -1,0 +1,218 @@
+---
+title: Any S3-compatible host
+description: What a storage host must support for this package, and a setup checklist for any of them.
+icon: Plug
+---
+
+The package talks plain S3 over HTTP, with its own small SigV4 signer. It has no code per provider.
+So any host that supports the requests below should work. AWS S3, Cloudflare R2 and MinIO have
+their own pages; this one is for everything else.
+
+## What the host must support
+
+| Need                  | Used for                                                                 |
+| --------------------- | ------------------------------------------------------------------------ |
+| Path-style URLs       | Every request goes to `<endpoint>/<bucket>/<key>`                        |
+| SigV4, service `s3`   | Every request the CLI makes, and the app's reads from a private bucket   |
+| `GET`, `HEAD`, `PUT`, `DELETE` on objects | Reading, checking, uploading and removing files       |
+| `ListObjectsV2`       | `preview prune` (`GET /<bucket>?list-type=2`)                            |
+| Conditional `PUT`     | Updating the two lists safely (`If-Match`, `If-None-Match: *`)          |
+| Anonymous `GET`       | A public bucket only                                                     |
+
+### Path-style URLs
+
+The bucket is the first path segment of the URL: `https://<endpoint>/<bucket>`. The package never
+puts the bucket in the host name (virtual-hosted style). A host that only serves virtual-hosted URLs
+works for a public bucket's reads, since those take any address, but not for publishing or for a
+private bucket.
+
+### SigV4 and the region
+
+Signed requests use AWS Signature Version 4 with the service `s3`, the region you set, and an
+`x-amz-content-sha256` header holding the body's hash. The host name is part of the signature, so a
+proxy in front must pass the `Host` header through unchanged.
+
+The region is `PREVIEW_S3_REGION` for the CLI and `region` in the app. Both default to `us-east-1`.
+Use whatever region your host expects; many accept `us-east-1` or `auto`.
+
+### Conditional PUT
+
+The two lists, `index.json` and `index/<platform>/<key>.json`, are read, changed and written back.
+The write sends `If-Match` with the ETag it read, or `If-None-Match: *` when the file is new. If the
+host answers 412 or 409, someone else wrote first: the CLI reads again and retries, up to 8 times.
+That is what lets two publishes at the same time both end up listed.
+
+If a host ignores those headers, publishing still works, but two publishes that overlap can lose
+one of the entries: the later write wins. Files and manifests are not affected. Publishing one at a
+time, as one CI job per pull request mostly does, avoids it. If an entry goes missing, publish that
+preview again.
+
+### Reads from the app
+
+A public bucket needs anonymous `GET` on its objects. The app reads `<url>/<key>` with no
+signature, so `url` can be any address the files are public under, such as a CDN.
+
+A private bucket needs a read-only key. The app signs each `GET` with it, so `url` must be the real
+`<endpoint>/<bucket>` address. Give the key `ListBucket` as well as `GetObject` if the host has
+that distinction: without it, many hosts answer a missing file with 403 instead of 404, and a build
+with nothing published yet shows an error instead of an empty list.
+
+Missing files are expected: an app asks for its own build's list before anything is published for
+it. The package treats 404 as "nothing yet", and also 403 on an unsigned read, since a public bucket
+often answers that way.
+
+### CORS is not needed
+
+CORS is a browser rule. The app's requests come from React Native's native networking on Android and
+iOS, which does not apply it, and the package does not run on the web. The CLI runs in Node, which
+does not apply it either. So the bucket needs no CORS settings.
+
+## Setup checklist
+
+1. **Create a bucket.** One bucket per app, or one shared bucket with a folder per app in the URL.
+2. **Make the write key.** Read, write, delete and list on that bucket only. In S3 policy terms:
+   `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` and `s3:ListBucket`.
+3. **Choose public or private.**
+   - Public: allow anonymous read on the bucket's objects, and nothing else.
+   - Private: make a read key with read and list only (`s3:GetObject`, `s3:ListBucket`).
+4. **Set the publish settings** in CI secrets or a gitignored `.env.local`:
+   ```sh
+   PREVIEW_S3_URL=https://<endpoint>/<bucket>
+   PREVIEW_S3_ACCESS_KEY_ID=...
+   PREVIEW_S3_SECRET_ACCESS_KEY=...
+   PREVIEW_S3_REGION=<the host's region>
+   ```
+5. **Set the app's settings**: the bucket's public address, or the same URL plus the read key and
+   region. See [Settings and env files](/docs/preview/environment#the-apps-settings).
+6. **Test a publish** with one platform to keep it quick:
+   ```sh
+   npx preview publish --id storage-test --platform android
+   ```
+   It prints the URL of the list it wrote. Open it, or `curl` it for a public bucket: you should see
+   `storage-test`. Then check the app lists it, and clean up with
+   `npx preview unpublish storage-test` and `npx preview prune`.
+
+## Other hosts
+
+<Callout type="warn" title="Not tested with this package">
+None of the hosts below has been run against this package. Each entry says what its own docs say
+about the needs above, with links. Their docs are the source of truth for creating buckets, keys and
+access rules, and for prices.
+</Callout>
+
+AWS S3, Cloudflare R2, MinIO and MinIO AIStor have their own pages:
+[AWS S3](/docs/preview/aws-s3), [Cloudflare R2](/docs/preview/cloudflare-r2),
+[MinIO](/docs/preview/minio), [MinIO AIStor](/docs/preview/aistor).
+
+Where a host's docs don't say it honours conditional `PUT`, assume it doesn't: publish one preview at a
+time, as described [above](#conditional-put).
+
+### Garage (self-hosted)
+
+- **Licence:** AGPL v3 ([introduction](https://garagehq.deuxfleurs.fr/intro.html)).
+- **Settings:** `PREVIEW_S3_URL=http(s)://<host>:3900/<bucket>`. Path-style is always on. Sign with
+  the `s3_region` from Garage's config (`garage` in its sample), not `us-east-1`
+  ([configuration](https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/)).
+- **Buckets and keys:** [quick start](https://garagehq.deuxfleurs.fr/documentation/quick-start/).
+- **Public reads:** Garage serves public buckets as websites on a separate endpoint
+  ([exposing websites](https://garagehq.deuxfleurs.fr/documentation/cookbook/exposing-websites/)).
+  Anonymous reads on the S3 API are not documented, so a read key is the documented path.
+- **Conditional PUT:** not documented. The
+  [S3 compatibility page](https://garagehq.deuxfleurs.fr/documentation/reference-manual/s3-compatibility/)
+  marks PutObject as implemented, with no word on `If-Match` or `If-None-Match`.
+
+### SeaweedFS (self-hosted)
+
+- **Licence:** Apache 2.0 ([repository](https://github.com/seaweedfs/seaweedfs)).
+- **Settings:** `PREVIEW_S3_URL=http(s)://<host>:8333/<bucket>`, the port in its examples. Its AWS CLI
+  example signs with `us-east-1`
+  ([AWS CLI with SeaweedFS](https://github.com/seaweedfs/seaweedfs/wiki/AWS-CLI-with-SeaweedFS)).
+- **Keys:** actions can be limited to one bucket
+  ([S3 credentials](https://github.com/seaweedfs/seaweedfs/wiki/S3-Credentials)).
+- **Public reads:** a bucket policy
+  ([S3 bucket policies](https://github.com/seaweedfs/seaweedfs/wiki/S3-Bucket-Policies)). Check
+  [S3 configuration](https://github.com/seaweedfs/seaweedfs/wiki/S3-Configuration) too: without
+  configured credentials it allows open access.
+- **Conditional PUT:** documented. Its
+  [conditional operations page](https://github.com/seaweedfs/seaweedfs/wiki/S3-Conditional-Operations)
+  says a read-modify-write cycle "that fails with 412 means another writer changed the object", and
+  that with `If-None-Match: "*"` the losing concurrent PUTs "return 412 Precondition Failed".
+
+### Ceph RADOS Gateway (self-hosted)
+
+- **Licence:** see the [Ceph docs](https://docs.ceph.com/).
+- **Settings:** `PREVIEW_S3_URL=https://<gateway>/<bucket>`. Path-style is the form its
+  [bucket operations](https://docs.ceph.com/en/latest/radosgw/s3/bucketops/) use. The signing region
+  is not documented; use the zonegroup's API name if you set one.
+- **Users and keys:** [`radosgw-admin`](https://docs.ceph.com/en/latest/radosgw/admin/), limited per
+  bucket with [bucket policies](https://docs.ceph.com/en/latest/radosgw/bucketpolicy/).
+- **Public reads:** a `public-read` ACL on the bucket (bucket operations page) or a bucket policy.
+- **Conditional PUT:** not documented. The
+  [object operations page](https://docs.ceph.com/en/latest/radosgw/s3/objectops/) lists `if-match` and
+  `if-none-match` only for GET, not for PUT.
+
+### Backblaze B2 (hosted)
+
+- **Pricing:** [B2 pricing](https://www.backblaze.com/cloud-storage/pricing).
+- **Settings:** `PREVIEW_S3_URL=https://s3.<region>.backblazeb2.com/<bucket>`, HTTPS only
+  ([calling the S3 API](https://www.backblaze.com/docs/cloud-storage-call-the-s3-compatible-api)). The
+  region is the part of the endpoint between `s3.` and `.backblazeb2.com`.
+- **Keys:** application keys can be limited to one bucket, read and write or read only
+  ([application keys](https://www.backblaze.com/docs/cloud-storage-application-keys)).
+- **Public reads:** a bucket set to public
+  ([buckets](https://www.backblaze.com/docs/cloud-storage-buckets)).
+- **Conditional PUT:** not documented. The
+  [PutObject reference](https://www.backblaze.com/apidocs/s3-put-object) lists neither `If-Match` nor
+  `If-None-Match`.
+
+### Wasabi (hosted)
+
+- **Pricing:** [Wasabi's pricing pages](https://docs.wasabi.com/docs/may-2026-wasabi-pricing).
+- **Settings:** `PREVIEW_S3_URL=https://s3.<region>.wasabisys.com/<bucket>`
+  ([API examples](https://docs.wasabi.com/apidocs/core-api-operation-examples),
+  [region URLs](https://docs.wasabi.com/docs/what-are-the-service-urls-for-wasabi-s-different-storage-regions)).
+  Sign with the bucket's region code.
+- **Keys:** a sub-user limited to one bucket
+  ([separate access by bucket](https://docs.wasabi.com/docs/how-to-separate-access-at-a-bucket-level)).
+- **Public reads:** newer accounts can't turn on public access
+  ([change in public access](https://docs.wasabi.com/docs/change-in-ability-to-configure-public-access-to-objects-and-buckets)),
+  so plan on a private bucket with a read key.
+- **Conditional PUT:** not documented. Its
+  [HTTP methods page](https://docs.wasabi.com/apidocs/http-methods-compatibility-and-error-handling)
+  does not list 412.
+
+### DigitalOcean Spaces (hosted)
+
+- **Pricing:** [Spaces pricing](https://docs.digitalocean.com/products/spaces/details/pricing/).
+- **Settings:** `PREVIEW_S3_URL=https://<region>.digitaloceanspaces.com/<bucket>`. Path-style is
+  supported ([limits](https://docs.digitalocean.com/products/spaces/details/limits/)). Sign with
+  `us-east-1`; the endpoint picks the datacenter
+  ([AWS SDKs](https://docs.digitalocean.com/products/spaces/reference/aws-sdks/)).
+- **Keys:** per-bucket keys, read or read/write/delete
+  ([manage access](https://docs.digitalocean.com/products/spaces/how-to/manage-access/)).
+- **Public reads:** files are private unless made public one by one
+  ([file permissions](https://docs.digitalocean.com/products/spaces/how-to/set-file-permissions/)).
+  The package uploads with no ACL, so plan on a private bucket with a read key.
+- **Conditional PUT:** not documented, on the
+  [S3 compatibility page](https://docs.digitalocean.com/products/spaces/reference/s3-compatibility/)
+  or the limits page.
+
+### Google Cloud Storage, XML API (hosted)
+
+- **Pricing:** [Cloud Storage pricing](https://cloud.google.com/storage/pricing).
+- **Settings:** `PREVIEW_S3_URL=https://storage.googleapis.com/<bucket>`
+  ([request endpoints](https://docs.cloud.google.com/storage/docs/request-endpoints)), with
+  [HMAC keys](https://docs.cloud.google.com/storage/docs/authentication/hmackeys) of a service
+  account. Sign with the bucket's location
+  ([signatures](https://docs.cloud.google.com/storage/docs/authentication/signatures)).
+- **Keys:** bucket-level IAM roles on the service account
+  ([IAM permissions](https://docs.cloud.google.com/storage/docs/access-control/using-iam-permissions)).
+- **Public reads:** Storage Object Viewer for `allUsers` on the bucket
+  ([making data public](https://docs.cloud.google.com/storage/docs/access-control/making-data-public)).
+- **Conditional PUT:** not with the headers this package sends. The
+  [request preconditions page](https://docs.cloud.google.com/storage/docs/request-preconditions) says
+  `If-Match` and `If-None-Match` are "applicable for requests that retrieve data", and uses
+  `x-goog-if-generation-match` for writes, which the package does not send. So treat the lists as
+  unprotected and publish one at a time.
+
+**Next:** [Settings and env files](/docs/preview/environment)

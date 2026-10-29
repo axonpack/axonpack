@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   // The override is for a preview deploy on some other origin.
   metadataBase: new URL(siteUrl),
   // Long name when the site names itself, short as a suffix on a page that already has a title.
-  title: { default: appLongName, template: `%s — ${appName}` },
+  title: { default: appLongName, template: `%s | ${appName}` },
   description: appTagline,
   icons: { icon: '/logo.png' },
   // Inherited by every page, so a page only states what differs. `openGraph.title` is left out on

@@ -1,0 +1,101 @@
+---
+title: Troubleshooting
+description: The most common problems, with the cause and the fix for each.
+icon: LifeBuoy
+---
+
+Start here if something does not work. Each item has the symptom, the cause and the fix. The list
+shows the last error under its header, so read that first.
+
+## The list is empty
+
+**Cause.** Nothing is published for this build's key. The app only asks for its own key.
+**Fix.** With the default `compatibility: "appVersion"` the key is the app version, so publish again
+after a version bump. With `"fingerprint"`, a prebuild or any native or app config change gives a
+new key, so publish again from the code the installed build was made from. `publish` prints the URL
+of the list it wrote; compare its key with the build's.
+
+## "This build has no compatibility key"
+
+**Cause.** The build was made without the config plugin.
+**Fix.** Add `"@axonpack/preview"` to `plugins` in the app config and make a new native build. Or pass
+`buildKey` in the config. See [Compatibility](/docs/preview/compatibility#without-the-plugin).
+
+## "Expected JSON from ... but got text/html"
+
+**Cause.** Something other than the bucket answered. The URL is not public, a tunnel or proxy is
+showing its login page, or the URL points at the wrong place.
+**Fix.** Open the URL from the message in a browser. Make the bucket or the tunnel public, give the
+app the read key, or pass the headers the proxy wants with the `headers` option.
+
+## The bucket answers 403
+
+**Cause.** In the app: a private bucket without a read key, a read key without `s3:ListBucket`, or a
+signing region that does not match the bucket. In the CLI: the write key lacks one of the actions it
+needs.
+**Fix.** Check the key's policy against [Storage](/docs/preview/storage#the-two-keys), and set the
+region (`PREVIEW_S3_REGION` for the CLI, `region` in the app) for an AWS bucket outside `us-east-1`.
+
+## Publish says to set PREVIEW_S3_URL
+
+**Cause.** A required publish setting is missing.
+**Fix.** Set it in the shell or CI secrets, or in `.env.local` in the app's root. See
+[Settings and env files](/docs/preview/environment).
+
+## "No git branch to name the preview after"
+
+**Cause.** A detached HEAD, which is normal on CI.
+**Fix.** Pass `--id`. The sample workflows pass the pull request's branch name.
+
+## Downloads fail with a cleartext error on Android
+
+**Cause.** A release build refuses plain HTTP.
+**Fix.** Use HTTPS. For a local test server only, turn on `android.usesCleartextTraffic` with
+`expo-build-properties` in your app config.
+
+## Android cannot reach the local server
+
+**Cause.** The `adb reverse` was lost when the emulator or phone restarted, or Android 17 refused the
+app local network access.
+**Fix.** Run `adb reverse tcp:9000 tcp:9000` again, or allow the permission in the app's settings.
+
+## "did not match its checksum"
+
+**Cause.** A file came back different from what was published: a proxy changed it, or the bucket's
+file was replaced by hand.
+**Fix.** Publish the preview again. The half download was deleted, so nothing broken is left on the
+device.
+
+## A preview shows as Broken
+
+**Cause.** It failed before the app had mounted the provider, so the next start loaded the base
+bundle. On Android that happens straight away. On iOS the failed start leaves a blank screen until the
+app is closed and opened again.
+**Fix.** Look at the error in that branch's code. Also check that the provider is mounted on every
+start, not behind a login or a lazy screen: a start that never mounts it counts as a failure.
+
+## Switch does nothing, or says the native side is older
+
+**Cause.** The app's native code was not rebuilt after the package was added or updated.
+**Fix.** Make a new native build (`npx expo run:ios`, `npx expo run:android`, or EAS Build). Expo Go
+can't run this package.
+
+## The selected preview is ignored
+
+**Cause.** The app runs on the old architecture, a preview was made with another Hermes version, or
+the preview was made for another native build.
+**Fix.** Turn on the New Architecture. Publish again from the code the installed build was made from.
+The device log has a warning for the first two cases.
+
+## Dev preview servers lists nothing
+
+**Cause.** The build is a release build, `devPreviewServers` is off, the build has no slug, or the
+device can't reach the computer.
+**Fix.** Use a debug build with the plugin and `devPreviewServers: true`. On a USB phone, run
+`adb reverse` for each port, or start the servers with `preview start` with `adb` on the PATH. See
+[Dev preview servers](/docs/preview/dev-preview-servers#reaching-the-servers).
+
+## npx preview fails with a 404 in a bun project
+
+**Cause.** `npx` can't read bun's install, so it looks for a `preview` package on npm.
+**Fix.** Use `bunx preview` with bun. An app installed with npm uses `npx`.

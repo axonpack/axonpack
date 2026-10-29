@@ -1,0 +1,171 @@
+---
+title: App setup
+description: The provider, the ready-made list, your own screen with usePreview, and a banner that says what runs.
+icon: Smartphone
+---
+
+Three pieces, all from the package's main entry:
+
+| Piece             | What it does                                                                 |
+| ----------------- | ---------------------------------------------------------------------------- |
+| `PreviewProvider` | Holds the config, reads the downloads and the bucket's list, and confirms each start |
+| `PreviewList`     | The ready-made screen for QA                                                 |
+| `usePreview()`    | The same list and actions, for a screen of your own                          |
+
+## The provider
+
+Put it near the root of the app, around everything:
+
+```tsx
+import { PreviewProvider } from '@axonpack/preview';
+import { previewConfig } from './preview-config';
+
+export default function Root() {
+  return (
+    <PreviewProvider config={previewConfig}>
+      <App />
+    </PreviewProvider>
+  );
+}
+```
+
+The config is on [Settings and env files](/docs/preview/environment#the-apps-settings), and every
+field is on [Reference](/docs/preview/reference#previewconfig).
+
+<Callout type="warn" title="Mount it on every start">
+Once the provider has mounted, it tells the native side that this start worked. The crash fallback
+waits for that: a preview that never gets that far is marked broken, and the next start loads the
+base bundle. So mount the provider on every start, also in builds where `enabled` is false, and not
+behind a login or a lazy screen.
+</Callout>
+
+## enabled
+
+`enabled: true` turns previews on. The package does no build-type or store detection: you decide per
+build. With `false` the provider never reads the downloads or asks the bucket. The list does not hide
+itself, so leave it out of builds where previews are off; `usePreview().enabled` tells you which.
+
+A common setup is an internal build with previews on and a store build with them off, from one env
+value:
+
+```ts
+enabled: process.env.EXPO_PUBLIC_PREVIEWS === 'on',
+```
+
+It applies to debug builds too. A preview chosen in a debug build loads instead of Metro, and the
+list says Metro is bypassed. **Back to base** returns to Metro.
+
+## The ready-made list
+
+```tsx
+import { PreviewList } from '@axonpack/preview';
+
+export default function PreviewsScreen() {
+  return <PreviewList style={{ flex: 1 }} />;
+}
+```
+
+Put it on a screen QA can reach: a tab in internal builds, a settings row, or a hidden gesture. It
+shows:
+
+- **Running:** what this start runs (the base bundle or a preview), and **Back to base**.
+- **The previews for this build**, each with its title, app version, branch, author, date, size,
+  changelog and state, and **Download**, **Switch**, **Update** or **Delete**.
+- **Incompatible:** downloads made for another native build, with **Delete all**.
+- **Dev preview servers**, in a debug build with that option on. See
+  [Dev preview servers](/docs/preview/dev-preview-servers).
+
+| State            | Meaning                                                                  |
+| ---------------- | ------------------------------------------------------------------------ |
+| Not downloaded   | Published for this build, not on the device                              |
+| Downloading      | With a progress bar                                                      |
+| Downloaded       | On the device and up to date                                             |
+| Update available | Published again since it was downloaded                                  |
+| Unpublished      | Still on the device, but no longer in the bucket                         |
+| Broken           | It stopped while starting, so the base bundle loaded                     |
+
+**Switch** downloads first when the preview is not on the device, then restarts into it. Deleting the
+preview that runs goes back to the base bundle first.
+
+### Theme and labels
+
+The list follows the device's light or dark mode. Change any colour, the radius or the fonts, and any
+text:
+
+```tsx
+<PreviewList
+  theme={{ mode: 'dark', primary: '#16a34a', radius: 8, fonts: { bold: 'Inter-Bold' } }}
+  labels={{ title: 'QA builds', backToBase: 'Back to the store build' }}
+/>
+```
+
+Every token and label is on [Reference](/docs/preview/reference#theme). `LIGHT_THEME`, `DARK_THEME`
+and `DEFAULT_LABELS` are exported to build on.
+
+## Your own screen
+
+`usePreview()` gives the same data and actions. It needs the provider above it.
+
+```tsx
+import { usePreview } from '@axonpack/preview';
+import { Button, FlatList, Text, View } from 'react-native';
+
+export function MyPreviews() {
+  const preview = usePreview();
+  if (!preview.enabled) return null;
+  return (
+    <FlatList
+      data={preview.items}
+      refreshing={preview.loading}
+      onRefresh={preview.refresh}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <View>
+          <Text>{item.entry.title} ({item.status})</Text>
+          <Button title="Switch" onPress={() => preview.switchTo(item.id)} />
+        </View>
+      )}
+      ListFooterComponent={<Button title="Back to base" onPress={() => preview.switchTo(null)} />}
+    />
+  );
+}
+```
+
+The fields and actions are on [Reference](/docs/preview/reference#usepreview).
+
+## A banner that says what runs
+
+So QA always knows what they are looking at, and how to get back. `useRunning()` says what this
+start runs: a dev preview server, a preview, or the base bundle.
+
+```tsx
+import { useRunning } from '@axonpack/preview';
+import { Text, View } from 'react-native';
+
+export function BundleBanner() {
+  const running = useRunning();
+  if (running.kind === 'base') return null;
+  const label =
+    running.kind === 'preview'
+      ? `Preview: ${running.title}`
+      : `Dev server: ${running.server?.title ?? running.hostPort}`;
+  return (
+    <View style={{ backgroundColor: '#1d4ed8', padding: 8 }}>
+      <Text style={{ color: 'white' }}>{label}</Text>
+    </View>
+  );
+}
+```
+
+Render it inside the provider, above your navigation. The example app shows one on every tab.
+
+## Example app
+
+The repository's
+[`example/`](https://github.com/axonpack/axonpack/tree/main/packages/@axonpack/preview/example) is
+the default `create-expo-app` template with the list on a Previews tab and a banner on every tab. It
+also opens links that run the same code as the list's buttons, for scripting a run from a
+terminal: `previewexample://download/<id>`, `switch/<id>`, `switch/embedded`, `refresh`,
+`delete/<id>`, `deleteincompatible`, `local/<port>` and `localstop`.
+
+**Next:** [Dev preview servers](/docs/preview/dev-preview-servers)
