@@ -101,22 +101,25 @@ const chip = (tree: ReactTestRenderer, text: string) =>
 beforeEach(() => jest.clearAllMocks());
 
 test.each([
-  ["available", "Not downloaded", "neutral", ["Download"]],
-  ["downloading", "Downloading", "primary", []],
-  ["downloaded", "Downloaded", "success", ["Delete", "Switch"]],
-  ["update-available", "Update available", "warning", ["Delete", "Update"]],
-  ["unpublished", "Unpublished", "danger", ["Delete", "Switch"]],
+  ["available", "not downloaded", "neutral", ["Download"]],
+  ["downloading", "downloading", "primary", []],
+  ["downloaded", "downloaded", "success", ["Delete", "Switch"]],
+  ["update-available", "update available", "warning", ["Delete", "Update"]],
+  ["unpublished", "unpublished", "danger", ["Delete", "Switch"]],
   [
     "broken",
-    "Broken: it stopped while starting",
+    "broken: it stopped while starting",
     "danger",
     ["Delete", "Switch"],
   ],
 ] as const)(
-  "%s: a %s chip in %s, and only %j to press",
+  "%s: a 'status: %s' chip in %s, and only %j to press",
   (status, text, tone, shown) => {
     const tree = render(item(status));
-    expect(chip(tree, text)?.props.tone).toBe(tone);
+    const statusChip = chip(tree, `status: ${text}`);
+    expect(statusChip?.props.tone).toBe(tone);
+    // A screen reader hears the word, not "status colon".
+    expect(statusChip?.props.accessibilityLabel).toBe(`Status ${text}`);
     expect(buttonTitles(tree)).toEqual(shown);
     expect(tree.root.findByType(Card).props.tinted).toBeFalsy();
   },
@@ -150,16 +153,18 @@ test("a download in progress shows its bar", () => {
 test("the running preview is tinted and says Active instead of Switch", () => {
   const tree = render(item("downloaded", { active: true }));
   expect(tree.root.findByType(Card).props.tinted).toBe(true);
+  // The Active chip has no prefix.
   expect(chip(tree, "Active")?.props.tone).toBe("success");
+  expect(chip(tree, "Active")?.props.accessibilityLabel).toBeUndefined();
   // Running means downloaded.
-  expect(chip(tree, "Downloaded")).toBeUndefined();
+  expect(chip(tree, "status: downloaded")).toBeUndefined();
   expect(buttonTitles(tree)).toEqual(["Delete"]);
 });
 
 test("the running preview with an update still offers Update", () => {
   const tree = render(item("update-available", { active: true }));
   expect(chip(tree, "Active")).toBeDefined();
-  expect(chip(tree, "Update available")).toBeDefined();
+  expect(chip(tree, "status: update available")).toBeDefined();
   expect(buttonTitles(tree)).toEqual(["Delete", "Update"]);
 });
 
@@ -221,7 +226,7 @@ test("the environment is a chip when the preview has one, and absent otherwise",
   expect(env?.props.accessibilityLabel).toBe("Environment staging");
   const without = render(item("downloaded"));
   expect(without.root.findAllByType(Chip).map((c) => c.props.text)).toEqual([
-    "Downloaded",
+    "status: downloaded",
   ]);
 });
 

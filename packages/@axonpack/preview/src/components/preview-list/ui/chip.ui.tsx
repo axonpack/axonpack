@@ -1,8 +1,17 @@
 import { Text, View } from "react-native";
 
-import { ENVIRONMENT_TONE } from "../../../constants/preview-list/chip-tones.const";
+import {
+  ENVIRONMENT_TONE,
+  KIND_TONE,
+  STATUS_TONE,
+} from "../../../constants/preview-list/chip-tones.const";
 import { toneColors } from "../../../utils/preview-list/color.util";
 import { font } from "../../../utils/preview-list/theme.util";
+import type { PreviewStatus } from "../../../utils/previews/preview-items.util";
+import {
+  type DefaultSource,
+  kindLabel,
+} from "../../../utils/previews/running.util";
 import type {
   PreviewListLabels,
   PreviewListTheme,
@@ -67,6 +76,45 @@ export function EnvironmentChip(props: {
       text={`${labels.environmentPrefix} ${name}`}
       accessibilityLabel={`${labels.environment} ${name}`}
       tone={ENVIRONMENT_TONE}
+    />
+  );
+}
+
+/** "status: downloaded" on the chip, and a screen reader hears "Status downloaded". */
+export function StatusChip(props: {
+  theme: PreviewListTheme;
+  labels: PreviewListLabels;
+  status: PreviewStatus;
+}) {
+  const { labels, status } = props;
+  // After the prefix the status reads as one phrase, like the environment's name does.
+  const label = labels.status[status];
+  const text = label.charAt(0).toLowerCase() + label.slice(1);
+  return (
+    <Chip
+      theme={props.theme}
+      text={`${labels.statusPrefix} ${text}`}
+      accessibilityLabel={`${labels.statusName} ${text}`}
+      tone={STATUS_TONE[status]}
+    />
+  );
+}
+
+/** "server: Expo" on the chip, but a screen reader hears the kind's whole name, "Expo server". */
+export function ServerChip(props: {
+  theme: PreviewListTheme;
+  labels: PreviewListLabels;
+  kind: Exclude<DefaultSource, "built-in">;
+}) {
+  const { labels, kind } = props;
+  const name =
+    kind === "expo-dev-server" ? labels.serverExpo : labels.serverPreview;
+  return (
+    <Chip
+      theme={props.theme}
+      text={`${labels.serverPrefix} ${name}`}
+      accessibilityLabel={kindLabel(kind, labels)}
+      tone={KIND_TONE[kind]}
     />
   );
 }

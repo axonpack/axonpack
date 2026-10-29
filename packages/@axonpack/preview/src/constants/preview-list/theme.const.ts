@@ -59,6 +59,9 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   kindExpoDevServer: "Expo server",
   kindDevPreviewServer: "Preview server",
   kindPreview: "Preview",
+  serverPrefix: "server:",
+  serverExpo: "Expo",
+  serverPreview: "Preview",
   active: "Active",
   defaultServerTitle: "Default",
   switchToServer: "Switch to {title}, {address}",
@@ -103,6 +106,8 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   switchTo: "Switch",
   update: "Update",
   delete: "Delete",
+  statusName: "Status",
+  statusPrefix: "status:",
   status: {
     available: "Not downloaded",
     downloading: "Downloading",

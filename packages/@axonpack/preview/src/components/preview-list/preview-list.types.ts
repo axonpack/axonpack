@@ -77,11 +77,19 @@ export type PreviewListLabels = {
   base: string;
   /** Chip on the app's own bundle, whatever serves it: what runs without any switch. */
   defaultBundle: string;
-  /** Kinds of bundle source, on the hero card, the server rows and the banner. */
+  /**
+   * Kinds of bundle source: the hero card's chip for a preview, the banner, and what a screen
+   * reader says for a server's chip.
+   */
   kindBuiltIn: string;
   kindExpoDevServer: string;
   kindDevPreviewServer: string;
   kindPreview: string;
+  /** Before a server's kind on its chip, as in "server: Expo". */
+  serverPrefix: string;
+  /** A server's kind on its chip, after `serverPrefix`. */
+  serverExpo: string;
+  serverPreview: string;
   /** On the server or preview the app runs from. */
   active: string;
   /**
@@ -146,6 +154,10 @@ export type PreviewListLabels = {
   switchTo: string;
   update: string;
   delete: string;
+  /** What a screen reader says before a preview's status. */
+  statusName: string;
+  /** Before a preview's status on its chip, as in "status: downloaded". */
+  statusPrefix: string;
   status: Record<PreviewStatus, string>;
   /** Under a preview's title: who published it and when. `{author}` and `{time}` are filled in. */
   byline: string;

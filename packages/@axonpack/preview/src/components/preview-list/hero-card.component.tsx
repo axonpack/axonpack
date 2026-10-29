@@ -19,7 +19,7 @@ import {
 import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
 import { Chevron } from "./ui/chevron.ui";
-import { Chip, EnvironmentChip } from "./ui/chip.ui";
+import { Chip, EnvironmentChip, ServerChip } from "./ui/chip.ui";
 import { DetailRow } from "./ui/detail-row.ui";
 import { IconButton } from "./ui/icon-button.ui";
 import { RefreshIcon } from "./ui/refresh-icon.ui";
@@ -121,15 +121,13 @@ export function HeroCard(props: {
   const visibleRows = shown(rows);
   const detailRows = shown(details);
   const isDefault = running.kind === "default";
+  const kindKey = bundleKind(running);
   const chips = [
     // The headline already says the kind when there is no other name.
-    name === kind ? null : (
-      <Chip
-        key="kind"
-        theme={theme}
-        text={kind}
-        tone={KIND_TONE[bundleKind(running)]}
-      />
+    name === kind ? null : kindKey === "preview" || kindKey === "built-in" ? (
+      <Chip key="kind" theme={theme} text={kind} tone={KIND_TONE[kindKey]} />
+    ) : (
+      <ServerChip key="kind" theme={theme} labels={labels} kind={kindKey} />
     ),
     isDefault ? (
       <Chip key="default" theme={theme} text={labels.defaultBundle} />

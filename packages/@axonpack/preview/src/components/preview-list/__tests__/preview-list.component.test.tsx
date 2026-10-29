@@ -300,6 +300,7 @@ test("a dev preview server picked by hand: its address, one way back, and no Met
   mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
   const tree = await render(true);
   const all = texts(tree);
+  // Not found by the scan yet, so its kind is its title.
   expect(all).toContain("Preview server");
   // One machine, one name.
   expect(all).toContain("localhost:8082");
@@ -345,8 +346,9 @@ test("the Metro the app starts on, picked by hand under another name, shows as t
   // Each kind has its own hue, the default included.
   const chip = tree.root
     .findByType(HeroCard)
-    .find((node) => node.props.text === "Expo server");
+    .find((node) => node.props.text === "server: Expo");
   expect(chip.props.tone).toBe("info");
+  expect(chip.props.accessibilityLabel).toBe("Expo server");
   await act(async () => tree.unmount());
 });
 
@@ -397,10 +399,10 @@ test("the default Metro, with nothing picked, is Active and titled Default", asy
   await settle();
   const row = serverRow(tree, 8081);
   expectActive(row);
-  for (const text of ["Default", "localhost:8081", "Expo server"])
+  for (const text of ["Default", "localhost:8081", "server: Expo"])
     expect(textsOf(row)).toContain(text);
   expect(row.props.accessibilityLabel).toBe(
-    "Default, localhost:8081, Active, Expo server",
+    "Default, localhost:8081, Active, Expo server, Default bundle",
   );
   // Another server Metro found with no title of its own keeps the app's name.
   const other = serverRow(tree, 8083);
@@ -439,7 +441,7 @@ test("a server picked by hand is Active; pressing the default Metro's row switch
   const picked = serverRow(tree, 8082);
   expectActive(picked);
   expect(textsOf(picked)).toEqual(
-    expect.arrayContaining(["Main-Branch", "Preview server"]),
+    expect.arrayContaining(["Main-Branch", "server: Preview"]),
   );
   // The branch is a quote line right under the address, not a chip.
   const said = textsOf(picked);
@@ -450,19 +452,19 @@ test("a server picked by hand is Active; pressing the default Metro's row switch
   const chips = picked.findAllByType(Chip);
   expect(chips.map((chip) => [chip.props.text, chip.props.tone])).toEqual([
     ["Active", "success"],
-    ["Preview server", "accent2"],
+    ["server: Preview", "accent2"],
   ]);
   expect(picked.props.accessibilityLabel).toBe(
     "Main-Branch, localhost:8082, Branch main, Active, Preview server",
   );
-  expect(said).not.toContain("Expo server");
+  expect(said).not.toContain("server: Expo");
   const fallback = serverRow(tree, 8081);
   expectSwitchable(fallback);
   expect(textsOf(fallback)).toEqual(
-    expect.arrayContaining(["Default", "Expo server"]),
+    expect.arrayContaining(["Default", "server: Expo"]),
   );
   expect(fallback.props.accessibilityLabel).toBe(
-    "Switch to Default, localhost:8081, Expo server",
+    "Switch to Default, localhost:8081, Expo server, Default bundle",
   );
   expect(fallback.props.accessibilityHint).toBe(
     "Restarts the app on this server.",
@@ -476,6 +478,33 @@ test("a server picked by hand is Active; pressing the default Metro's row switch
   await act(async () => tree.unmount());
 });
 
+test("the default Metro's row says Default bundle whether it runs or not, and no other row does", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
+  global.fetch = metros([8081, 8082, 8083], [8082]);
+  const tree = await render(true);
+  await settle();
+  const chips = (port: number) =>
+    serverRow(tree, port)
+      .findAllByType(Chip)
+      .map((chip) => [chip.props.text, chip.props.tone]);
+  // Not running, but still the default: Metro knows no name for it, so it is titled Default.
+  expect(textsOf(serverRow(tree, 8081))).toContain("Default");
+  expect(chips(8081)).toEqual([
+    ["server: Expo", "info"],
+    ["Default bundle", undefined],
+  ]);
+  expect(chips(8082)).toEqual([
+    ["Active", "success"],
+    ["server: Preview", "accent2"],
+  ]);
+  expect(chips(8083)).toEqual([["server: Expo", "info"]]);
+  await act(async () => tree.unmount());
+});
+
 test("a preview start server that is the default Metro keeps its own title", async () => {
   mockScriptUrl = "http://localhost:8082/index.bundle?platform=ios";
   global.fetch = registryWith8082();
@@ -484,7 +513,7 @@ test("a preview start server that is the default Metro keeps its own title", asy
   const row = serverRow(tree, 8082);
   expectActive(row);
   expect(textsOf(row)).toEqual(
-    expect.arrayContaining(["Main-Branch", "Preview server"]),
+    expect.arrayContaining(["Main-Branch", "server: Preview"]),
   );
   expect(texts(tree)).not.toContain("Default");
   await act(async () => tree.unmount());
@@ -583,7 +612,7 @@ test("the app's own bundle from Expo's Metro names the server and its address", 
   mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
   const tree = await render(true);
   const all = texts(tree);
-  expect(all).toContain("Expo server");
+  expect(all).toContain("server: Expo");
   expect(all).toContain("localhost:8081");
   expect(all).toContain("Default bundle");
   await act(async () => tree.unmount());
@@ -671,7 +700,7 @@ test("the app's own bundle from a preview start server uses its title and branch
   for (const text of [
     "Main-Branch",
     "localhost:8082",
-    "Preview server",
+    "server: Preview",
     "Default bundle",
   ])
     expect(hero).toContain(text);

@@ -3,14 +3,11 @@ import { Pressable, View } from "react-native";
 import type { DevPreviewServer } from "../../utils/dev-preview-servers/merge-servers.util";
 import type { GroupPosition } from "../../utils/preview-list/list-items.util";
 import { displayHostPort, kindLabel } from "../../utils/previews/running.util";
-import {
-  ACTIVE_TONE,
-  KIND_TONE,
-} from "../../constants/preview-list/chip-tones.const";
+import { ACTIVE_TONE } from "../../constants/preview-list/chip-tones.const";
 import { BranchLine } from "./ui/branch-line.ui";
 import { Card } from "./ui/card.ui";
 import { Chevron } from "./ui/chevron.ui";
-import { Chip, type ChipTone } from "./ui/chip.ui";
+import { Chip, type ChipTone, ServerChip } from "./ui/chip.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
@@ -40,9 +37,12 @@ export function DevServerRow(props: {
       : server.title;
   const address = displayHostPort(server.hostPort);
   const kind = server.announced ? "dev-preview-server" : "expo-dev-server";
-  const chips: ({ text: string; tone?: ChipTone } | null)[] = [
+  // The kind chip is drawn as a ServerChip; `text` is what a screen reader says for it.
+  const chips: ({ text: string; tone?: ChipTone; kind?: boolean } | null)[] = [
     active ? { text: labels.active, tone: ACTIVE_TONE } : null,
-    { text: kindLabel(kind, labels), tone: KIND_TONE[kind] },
+    { text: kindLabel(kind, labels), kind: true },
+    // Whether it runs or not, so the default is always easy to find.
+    props.isDefault ? { text: labels.defaultBundle } : null,
     // Still switchable: the warning says why it may not start.
     server.compatible === false
       ? { text: labels.localIncompatible, tone: "warning" }
@@ -69,14 +69,23 @@ export function DevServerRow(props: {
           ) : null}
         </View>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-          {shown.map((chip) => (
-            <Chip
-              key={chip.text}
-              theme={theme}
-              text={chip.text}
-              tone={chip.tone}
-            />
-          ))}
+          {shown.map((chip) =>
+            chip.kind ? (
+              <ServerChip
+                key={chip.text}
+                theme={theme}
+                labels={labels}
+                kind={kind}
+              />
+            ) : (
+              <Chip
+                key={chip.text}
+                theme={theme}
+                text={chip.text}
+                tone={chip.tone}
+              />
+            ),
+          )}
         </View>
       </View>
       {active ? null : <Chevron color={theme.muted} open={false} />}

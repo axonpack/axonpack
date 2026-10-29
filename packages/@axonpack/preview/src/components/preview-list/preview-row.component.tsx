@@ -1,15 +1,12 @@
 import { View } from "react-native";
 
-import {
-  ACTIVE_TONE,
-  STATUS_TONE,
-} from "../../constants/preview-list/chip-tones.const";
+import { ACTIVE_TONE } from "../../constants/preview-list/chip-tones.const";
 import type { PreviewItem } from "../../utils/previews/preview-items.util";
 import { Changelog } from "./changelog.component";
 import { Button } from "./ui/button.ui";
 import { Card } from "./ui/card.ui";
 import { BranchLine } from "./ui/branch-line.ui";
-import { Chip, EnvironmentChip } from "./ui/chip.ui";
+import { Chip, EnvironmentChip, StatusChip } from "./ui/chip.ui";
 import { PublishedFacts } from "./ui/published-facts.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
@@ -57,11 +54,7 @@ export function PreviewRow(props: {
         ) : null}
         {/* Running means downloaded; saying both is noise. */}
         {active && status === "downloaded" ? null : (
-          <Chip
-            theme={theme}
-            text={labels.status[status]}
-            tone={STATUS_TONE[status]}
-          />
+          <StatusChip theme={theme} labels={labels} status={status} />
         )}
         {entry.environment ? (
           <EnvironmentChip
