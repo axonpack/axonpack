@@ -1,4 +1,4 @@
-import { getPageImageUrl, getPageMarkdownUrl, source } from '@/lib/source';
+import { getPageImageUrl, getPageMarkdownUrl, getPagePackage, source } from '@/lib/source';
 import {
   DocsBody,
   DocsDescription,
@@ -61,16 +61,24 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const pkg = getPagePackage(page);
+  const url = canonicalPath(page.url);
+
   return {
-    title: page.data.title,
+    // Every package's index page is called "Overview", so the package name is what tells them
+    // apart in a tab or a search result. The root template adds the site name after it.
+    title: pkg ? `${page.data.title} - ${pkg.title}` : page.data.title,
     description: page.data.description,
-    alternates: { canonical: canonicalPath(page.url) },
-    // Next replaces the parent's `openGraph` rather than merging into it, so the site name has to
-    // be restated here or a docs page's card loses it.
+    keywords: pkg ? [pkg.npmName, pkg.title] : undefined,
+    alternates: { canonical: url },
+    // Next replaces the parent's `openGraph` rather than merging into it, so the site name and
+    // locale have to be restated here or a docs page's card loses them. Twitter falls back to
+    // these, so it needs nothing of its own.
     openGraph: {
       type: 'article',
       siteName: appLongName,
-      url: canonicalPath(page.url),
+      locale: 'en_US',
+      url,
       images: getPageImageUrl(page).url,
     },
   };
