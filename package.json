@@ -12,7 +12,7 @@
     "prepare": "husky",
     "changeset": "changeset",
     "version-packages": "changeset version && bun install --lockfile-only",
-    "release": "turbo run prepare && changeset publish"
+    "release": "turbo run prepare && env ${NPM_TOKEN:+NPM_CONFIG_USERCONFIG=$PWD/.npmrc.token} changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
