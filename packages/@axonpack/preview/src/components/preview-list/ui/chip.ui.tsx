@@ -1,8 +1,12 @@
 import { Text, View } from "react-native";
 
+import { ENVIRONMENT_TONE } from "../../../constants/preview-list/chip-tones.const";
 import { toneColors } from "../../../utils/preview-list/color.util";
 import { font } from "../../../utils/preview-list/theme.util";
-import type { PreviewListTheme } from "../preview-list.types";
+import type {
+  PreviewListLabels,
+  PreviewListTheme,
+} from "../preview-list.types";
 
 export type ChipTone =
   | "primary"
@@ -19,11 +23,15 @@ export function Chip(props: {
   theme: PreviewListTheme;
   text: string;
   tone?: ChipTone;
+  /** What a screen reader says instead of the text. */
+  accessibilityLabel?: string;
 }) {
   const { theme, tone = "neutral" } = props;
   const colors = toneColors(theme, tone);
   return (
     <View
+      accessible={props.accessibilityLabel ? true : undefined}
+      accessibilityLabel={props.accessibilityLabel}
       style={{
         paddingHorizontal: 10,
         paddingVertical: 4,
@@ -43,5 +51,22 @@ export function Chip(props: {
         {props.text}
       </Text>
     </View>
+  );
+}
+
+/** "env: name" on the chip, but a screen reader hears "Environment name", not "env colon". */
+export function EnvironmentChip(props: {
+  theme: PreviewListTheme;
+  labels: PreviewListLabels;
+  name: string;
+}) {
+  const { labels, name } = props;
+  return (
+    <Chip
+      theme={props.theme}
+      text={`${labels.environmentPrefix} ${name}`}
+      accessibilityLabel={`${labels.environment} ${name}`}
+      tone={ENVIRONMENT_TONE}
+    />
   );
 }

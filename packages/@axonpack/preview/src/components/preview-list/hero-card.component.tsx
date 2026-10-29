@@ -8,10 +8,7 @@ import type {
   Platform,
 } from "../../utils/previews/layout.util";
 import { shortKey } from "../../utils/previews/layout.util";
-import {
-  ENVIRONMENT_TONE,
-  KIND_TONE,
-} from "../../constants/preview-list/chip-tones.const";
+import { KIND_TONE } from "../../constants/preview-list/chip-tones.const";
 import {
   type Running,
   bundleKind,
@@ -22,7 +19,7 @@ import {
 import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
 import { Chevron } from "./ui/chevron.ui";
-import { Chip } from "./ui/chip.ui";
+import { Chip, EnvironmentChip } from "./ui/chip.ui";
 import { DetailRow } from "./ui/detail-row.ui";
 import { IconButton } from "./ui/icon-button.ui";
 import { RefreshIcon } from "./ui/refresh-icon.ui";
@@ -138,11 +135,11 @@ export function HeroCard(props: {
       <Chip key="default" theme={theme} text={labels.defaultBundle} />
     ) : null,
     entry?.environment ? (
-      <Chip
+      <EnvironmentChip
         key="env"
         theme={theme}
-        text={entry.environment}
-        tone={ENVIRONMENT_TONE}
+        labels={labels}
+        name={entry.environment}
       />
     ) : null,
   ].filter(Boolean);

@@ -79,6 +79,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   branchPrefix: "Branch:",
   previewId: "Preview id",
   environment: "Environment",
+  environmentPrefix: "env:",
   compatibilityKey: "Build key",
   backToDefault: "Use the default bundle",
   backToBase: "Use the default bundle",

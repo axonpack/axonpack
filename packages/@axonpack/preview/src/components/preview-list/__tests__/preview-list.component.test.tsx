@@ -252,7 +252,7 @@ test("a preview: its title and branch, the environment, who published it, and th
     "Login fix",
     "task-1-login",
     "Preview",
-    "staging",
+    "env: staging",
     "Ana",
     METRO_NOTE,
     "Use the default bundle",
@@ -266,6 +266,8 @@ test("a preview: its title and branch, the environment, who published it, and th
   await showDetails(tree);
   const card = textsOf(hero());
   expect(card[card.indexOf("Branch") + 1]).toBe("task-1-login");
+  // The details row keeps the bare name; only the chip says "env:".
+  expect(card[card.indexOf("Environment") + 1]).toBe("staging");
   expect(texts(tree)).toContain("abc1234");
   expect(texts(tree)).toContain("task-1");
   expect(texts(tree)).toContain("Environment");
@@ -281,7 +283,7 @@ test("a preview published without an environment has no chip and no Environment 
   global.fetch = bucketWithPreview(null);
   const tree = await render(true);
   expect(texts(tree)).toContain("Login fix");
-  expect(texts(tree)).not.toContain("staging");
+  expect(texts(tree)).not.toContain("env: staging");
   await showDetails(tree);
   expect(texts(tree)).toContain("abc1234");
   expect(texts(tree)).not.toContain("Environment");
@@ -934,9 +936,14 @@ test("downloads for another build: one grouped card, and a quiet Delete all that
   expect(rows.map((r) => r.props.position)).toEqual(["first", "last"]);
   const [first, second] = rows.map((r) => textsOf(r));
   expect(first).toEqual(
-    expect.arrayContaining(["Checkout v1", "old-1-branch", "staging", "2 KB"]),
+    expect.arrayContaining([
+      "Checkout v1",
+      "old-1-branch",
+      "env: staging",
+      "2 KB",
+    ]),
   );
-  expect(second).not.toContain("staging");
+  expect(second).not.toContain("env: staging");
   // Nothing to switch to on a row.
   expect(
     rows[0].findAll((n) => n.props.accessibilityRole === "button"),

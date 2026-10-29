@@ -2,7 +2,6 @@ import { View } from "react-native";
 
 import {
   ACTIVE_TONE,
-  ENVIRONMENT_TONE,
   STATUS_TONE,
 } from "../../constants/preview-list/chip-tones.const";
 import type { PreviewItem } from "../../utils/previews/preview-items.util";
@@ -10,7 +9,7 @@ import { Changelog } from "./changelog.component";
 import { Button } from "./ui/button.ui";
 import { Card } from "./ui/card.ui";
 import { BranchLine } from "./ui/branch-line.ui";
-import { Chip } from "./ui/chip.ui";
+import { Chip, EnvironmentChip } from "./ui/chip.ui";
 import { PublishedFacts } from "./ui/published-facts.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
@@ -65,10 +64,10 @@ export function PreviewRow(props: {
           />
         )}
         {entry.environment ? (
-          <Chip
+          <EnvironmentChip
             theme={theme}
-            text={entry.environment}
-            tone={ENVIRONMENT_TONE}
+            labels={labels}
+            name={entry.environment}
           />
         ) : null}
       </View>

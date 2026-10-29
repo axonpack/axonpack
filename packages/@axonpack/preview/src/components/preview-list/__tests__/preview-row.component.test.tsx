@@ -216,7 +216,9 @@ test("a long title wraps to two lines, then an ellipsis, a step below the sectio
 
 test("the environment is a chip when the preview has one, and absent otherwise", () => {
   const withEnv = render(item("downloaded", {}, { environment: "staging" }));
-  expect(chip(withEnv, "staging")?.props.tone).toBe("accent3");
+  const env = chip(withEnv, "env: staging");
+  expect(env?.props.tone).toBe("accent3");
+  expect(env?.props.accessibilityLabel).toBe("Environment staging");
   const without = render(item("downloaded"));
   expect(without.root.findAllByType(Chip).map((c) => c.props.text)).toEqual([
     "Downloaded",

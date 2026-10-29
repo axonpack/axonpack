@@ -1,11 +1,10 @@
 import { View } from "react-native";
 
-import { ENVIRONMENT_TONE } from "../../constants/preview-list/chip-tones.const";
 import type { LocalPreview } from "../../services/previews/local-previews.service";
 import type { GroupPosition } from "../../utils/preview-list/list-items.util";
 import { BranchLine } from "./ui/branch-line.ui";
 import { Card } from "./ui/card.ui";
-import { Chip } from "./ui/chip.ui";
+import { EnvironmentChip } from "./ui/chip.ui";
 import { PublishedFacts } from "./ui/published-facts.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
@@ -37,7 +36,11 @@ export function IncompatibleRow(props: {
         ) : null}
       </View>
       {entry.environment ? (
-        <Chip theme={theme} text={entry.environment} tone={ENVIRONMENT_TONE} />
+        <EnvironmentChip
+          theme={theme}
+          labels={labels}
+          name={entry.environment}
+        />
       ) : null}
       <PublishedFacts
         theme={theme}

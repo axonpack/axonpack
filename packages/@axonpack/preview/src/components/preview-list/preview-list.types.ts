@@ -111,8 +111,10 @@ export type PreviewListLabels = {
   /** Before the branch name on a row's branch line. */
   branchPrefix: string;
   previewId: string;
-  /** The EAS environment a preview was published with. */
+  /** The EAS environment a preview was published with, and what a screen reader says before it. */
   environment: string;
+  /** Before the environment name on its chip. */
+  environmentPrefix: string;
   compatibilityKey: string;
   /** Goes back to the default bundle, stopping a dev preview server too. */
   backToDefault: string;
