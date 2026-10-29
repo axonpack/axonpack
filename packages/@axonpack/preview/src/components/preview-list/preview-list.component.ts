@@ -28,10 +28,17 @@ import { HeroCard } from "./hero-card.component";
 import { HintRow } from "./hint-row.component";
 import { IncompatibleRow } from "./incompatible-row.component";
 import { PreviewRow } from "./preview-row.component";
-import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
+import type {
+  PreviewListLabels,
+  PreviewListThemeInput,
+} from "./preview-list.types";
 
 export type PreviewListProps = {
-  theme?: Partial<PreviewListTheme>;
+  /**
+   * Nothing for the built-in light or dark, a partial theme, or the palette the app passes
+   * expo-devtools, so both look the same.
+   */
+  theme?: PreviewListThemeInput;
   labels?: Partial<PreviewListLabels>;
   style?: StyleProp<ViewStyle>;
 };

@@ -32,13 +32,18 @@ export type {
   PreviewListLabels,
   PreviewListTheme,
   PreviewListFonts,
+  PreviewListThemeInput,
+  DevtoolsPaletteLike,
 } from "./components/preview-list/preview-list.types";
 export {
   DEFAULT_LABELS,
   DARK_THEME,
   LIGHT_THEME,
 } from "./constants/preview-list/theme.const";
-export { resolveTheme } from "./utils/preview-list/theme.util";
+export {
+  fromDevtoolsPalette,
+  resolveTheme,
+} from "./utils/preview-list/theme.util";
 export {
   devPreviewServersStore,
   useDevPreviewServersState,

@@ -14,6 +14,8 @@ export type PreviewListTheme = {
   card: string;
   /** Behind the changelog and the progress track. */
   surface: string;
+  /** A wash of the primary colour: the hero card and chips. */
+  tint: string;
   border: string;
   title: string;
   text: string;
@@ -28,6 +30,27 @@ export type PreviewListTheme = {
   radius: number;
   fonts: PreviewListFonts;
 };
+
+/**
+ * The colours an app already hands `@axonpack/expo-devtools` (its `Palette`), so one palette can
+ * style both. Typed by shape only, so this package does not depend on expo-devtools.
+ */
+export type DevtoolsPaletteLike = {
+  background: string;
+  surface: string;
+  sectionTint?: string;
+  border: string;
+  textPrimary: string;
+  textSecondary: string;
+  accent: string;
+  success: string;
+  error: string;
+  warning: string;
+};
+
+/** What the list's `theme` prop takes: nothing, a partial theme, or an expo-devtools palette. */
+export type PreviewListThemeInput =
+  Partial<PreviewListTheme> | DevtoolsPaletteLike;
 
 export type PreviewListLabels = {
   title: string;
