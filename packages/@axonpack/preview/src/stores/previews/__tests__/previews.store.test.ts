@@ -167,3 +167,14 @@ test("back to the default bundle also stops a local Metro server", async () => {
   expect(mockNative.select).toHaveBeenCalledWith(null, null);
   expect(mockNative.reload).toHaveBeenCalled();
 });
+
+test("switching to a preview stops using a picked server first", async () => {
+  saveDownload("a", "fp");
+  await previewsStore.refresh(config);
+  await previewsStore.switchTo(config, "a");
+  expect(mockNative.selectLocalServer).toHaveBeenCalledWith(null, null);
+  expect(mockNative.selectLocalServer.mock.invocationCallOrder[0]).toBeLessThan(
+    mockNative.reload.mock.invocationCallOrder[0],
+  );
+  expect(mockNative.select).toHaveBeenCalledWith("a/ios/main.jsbundle", "fp");
+});

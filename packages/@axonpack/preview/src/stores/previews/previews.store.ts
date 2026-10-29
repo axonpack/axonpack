@@ -144,8 +144,9 @@ export const previewsStore = {
     // A native side older than this JS (an app not rebuilt since the package changed) throws here.
     // The list shows the reason instead of the button silently doing nothing.
     try {
-      // Going back to the default bundle also stops a local Metro server.
-      if (id === null && typeof native.selectLocalServer === "function") {
+      // Native loads a picked server before any preview, so a server left picked would keep
+      // running instead of the preview or the default bundle chosen here.
+      if (typeof native.selectLocalServer === "function") {
         native.selectLocalServer(null, null);
       }
       native.select(
