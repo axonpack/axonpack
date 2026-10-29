@@ -7,6 +7,7 @@ import android.util.Log
 import com.facebook.react.ReactHost
 import com.facebook.react.common.build.ReactBuildConfig
 import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
+import com.facebook.react.modules.systeminfo.AndroidInfoHelpers
 import com.facebook.react.packagerconnection.PackagerConnectionSettings
 import java.io.File
 import java.util.UUID
@@ -115,6 +116,19 @@ internal object PreviewState {
   // The dev menu's "Change bundle location" lives in the same preference, so the developer's own
   // value is kept aside while a local server is in use, and put back when it stops.
   private const val DEBUG_HOST_PREF = "debug_http_host"
+
+  /**
+   * `host:port` of the Metro the app starts on with nothing chosen: the developer's own "Change
+   * bundle location" (kept aside while a local server is in use), or the build's default. Null in a
+   * release build.
+   */
+  private fun defaultServer(context: Context, json: JSONObject): String? {
+    if (!ReactBuildConfig.DEBUG) return null
+    val own =
+      if (json.has("savedDebugHost")) json.optString("savedDebugHost")
+      else PreferenceManager.getDefaultSharedPreferences(context).getString(DEBUG_HOST_PREF, null)
+    return own?.ifEmpty { null } ?: AndroidInfoHelpers.getServerHost(context)
+  }
 
   private fun saveDebugHost(context: Context) {
     val json = readJson(context)
@@ -269,6 +283,7 @@ internal object PreviewState {
       "bundle" to json.optString("bundle").ifEmpty { null },
       "broken" to brokenIds(json),
       "localServer" to json.optJSONObject("localServer")?.optString("url")?.ifEmpty { null },
+      "defaultServer" to defaultServer(context, json),
     )
   }
 

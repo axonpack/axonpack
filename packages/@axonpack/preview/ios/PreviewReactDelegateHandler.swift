@@ -21,6 +21,8 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
   private static weak var rootViewFactory: NSObject?
   /// What the block handed React last, to tell whether the running bundle is the selected one.
   private static var lastServed: URL?
+  /// React's own URL at the last start, when it was read: Metro's in a debug build.
+  private(set) static var defaultURL: URL?
 
   public override func createReactRootView(
     reactDelegate: ExpoReactDelegate,
@@ -53,7 +55,12 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
     let base = unsafeBitCast(current as AnyObject, to: BundleURLBlock.self)
     let block: BundleURLBlock = {
       // A local Metro server wins over a downloaded preview and the default (debug builds only).
-      let url = PreviewState.localServerURL ?? PreviewState.bundleToLoad() ?? base()
+      // React's own URL is read under a local server too, so JS can tell a picked server that is
+      // the same Metro. Not under a preview, which starts without asking Metro.
+      let local = PreviewState.localServerURL
+      let preview = local == nil ? PreviewState.bundleToLoad() : nil
+      Self.defaultURL = preview == nil ? base() : nil
+      let url = local ?? preview ?? Self.defaultURL
       Self.lastServed = url
       return url
     }

@@ -35,5 +35,8 @@ export function useRunning(): Running {
     localUrl,
     servers: local.servers,
     scriptUrl: loadedFrom,
+    defaultServer: localUrl
+      ? (nativeModule()?.state().defaultServer ?? null)
+      : null,
   });
 }

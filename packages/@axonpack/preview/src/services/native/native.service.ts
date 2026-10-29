@@ -6,6 +6,8 @@ export type NativeState = {
   broken?: string[];
   /** The chosen local Metro server's bundle URL (debug builds only). */
   localServer?: string | null;
+  /** `host:port` of the Metro the app starts on with nothing chosen (debug builds only). */
+  defaultServer?: string | null;
 };
 
 type NativeModule = {

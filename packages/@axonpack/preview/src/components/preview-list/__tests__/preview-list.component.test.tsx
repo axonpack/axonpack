@@ -23,7 +23,11 @@ jest.mock(
   "react-native/Libraries/NativeModules/specs/NativeSourceCode",
   () => ({ default: { getConstants: () => ({ scriptURL: mockScriptUrl }) } }),
 );
-let mockNativeState: { bundle?: string; localServer?: string } = {};
+let mockNativeState: {
+  bundle?: string;
+  localServer?: string;
+  defaultServer?: string;
+} = {};
 const mockSelectLocalServer = jest.fn();
 jest.mock("expo", () => ({
   requireOptionalNativeModule: () => ({
@@ -268,6 +272,39 @@ test("a server picked by hand, with no preview chosen, offers Use the default bu
     pressable(tree, "Use the default bundle").props.onPress(),
   );
   expect(mockSelectLocalServer).toHaveBeenCalledWith(null, null);
+  await act(async () => tree.unmount());
+});
+
+test("the Metro the app starts on, picked by hand under another name, shows as the default", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8081/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  mockScriptUrl = "http://127.0.0.1:8081/index.bundle?platform=ios";
+  // Metro answers on 8081 as this app, so the scan finds it and names it.
+  global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith(":8081/status"))
+      return new Response("packager-status:running");
+    if (url.endsWith(":8081/"))
+      return Response.json({
+        launchAsset: { url: mockScriptUrl },
+        extra: { expoClient: { slug: "shop", name: "Shop", version: "1.0.0" } },
+      });
+    return new Response("", { status: 404 });
+  }) as typeof fetch;
+  const tree = await render(true);
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+  const all = texts(tree);
+  expect(all).toContain("Shop");
+  expect(all).toContain("Default bundle");
+  expect(all).not.toContain("Use the default bundle");
+  expect(byId(tree, "hero-actions")).toEqual([]);
+  // Not filled as something switched in.
+  const chip = tree.root.find((node) => node.props.text === "Expo dev server");
+  expect(chip.props.tone).toBe("neutral");
   await act(async () => tree.unmount());
 });
 

@@ -192,6 +192,23 @@ enum PreviewState {
     #endif
   }
 
+  /// `host:port` of the Metro the app starts on with nothing chosen; always nil in a release build.
+  static var defaultServer: String? {
+    #if DEBUG
+    guard
+      let url = PreviewReactDelegateHandler.defaultURL,
+      url.scheme?.hasPrefix("http") == true,
+      let host = url.host,
+      let port = url.port
+    else {
+      return nil
+    }
+    return "\(host):\(port)"
+    #else
+    return nil
+    #endif
+  }
+
   static func selectLocalServer(_ url: String?) {
     var json = readJson()
     if let url {
@@ -209,6 +226,7 @@ enum PreviewState {
       "bundle": json["bundle"] as? String,
       "broken": json["broken"] as? [String] ?? [],
       "localServer": (json["localServer"] as? [String: Any])?["url"] as? String,
+      "defaultServer": defaultServer,
     ]
   }
 

@@ -88,8 +88,10 @@ export function runningNow(input: {
    * native side holds is known, and the base counts as built in.
    */
   scriptUrl?: string | null;
+  /** `host:port` of the Metro the app starts on with nothing picked, from the native state. */
+  defaultServer?: string | null;
 }): Running {
-  const { localUrl, scriptUrl = null } = input;
+  const { localUrl, scriptUrl = null, defaultServer = null } = input;
   const metro = scriptUrl && isHttp(scriptUrl) ? scriptUrl : null;
   // A dev preview server wins over a picked preview on the native side, so it wins here too.
   if (localUrl) {
@@ -99,12 +101,14 @@ export function runningNow(input: {
     const server =
       input.servers.find((s) => s.url === localUrl) ??
       findServer(input.servers, hostPort);
-    return {
-      kind: "local",
-      url: localUrl,
-      hostPort: server?.hostPort ?? hostPort,
-      server,
-    };
+    // Picked by hand but the same Metro the app starts on anyway, it changes nothing: the base.
+    if (!defaultServer || !sameServer(hostPort, defaultServer))
+      return {
+        kind: "local",
+        url: localUrl,
+        hostPort: server?.hostPort ?? hostPort,
+        server,
+      };
   }
   // A preview that could not load (another Hermes, the crash fallback) leaves the base running,
   // so when the loaded file is known it must be the preview's own.

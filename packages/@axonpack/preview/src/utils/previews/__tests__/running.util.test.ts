@@ -211,6 +211,43 @@ test("a picked dev preview server takes its host and port from what loaded", () 
   });
 });
 
+describe("a server picked by hand", () => {
+  const pick = (url: string, defaultServer: string | null) =>
+    runningNow({
+      items: [],
+      activeId: null,
+      localUrl: url,
+      servers: [metro("localhost:8081")],
+      scriptUrl: url,
+      defaultServer,
+    });
+
+  test("that is the Metro the app starts on anyway is the base", () => {
+    expect(
+      pick("http://127.0.0.1:8081/index.bundle?platform=ios", "localhost:8081"),
+    ).toMatchObject({
+      kind: "base",
+      source: "expo-dev-server",
+      hostPort: "127.0.0.1:8081",
+    });
+    expect(
+      pick(
+        "http://localhost:8081/index.bundle?platform=android",
+        "10.0.2.2:8081",
+      ),
+    ).toMatchObject({ kind: "base" });
+  });
+
+  test("on another port, or with the default unknown, is what runs", () => {
+    expect(
+      pick("http://127.0.0.1:8082/index.bundle", "localhost:8081"),
+    ).toMatchObject({ kind: "local", hostPort: "127.0.0.1:8082" });
+    expect(pick("http://127.0.0.1:8081/index.bundle", null)).toMatchObject({
+      kind: "local",
+    });
+  });
+});
+
 describe("runningLabel", () => {
   const label = (r: Parameters<typeof runningLabel>[0]) =>
     runningLabel(r, DEFAULT_LABELS);
