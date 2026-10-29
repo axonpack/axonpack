@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 import {
   ACTIVE_TONE,
@@ -6,13 +6,12 @@ import {
   STATUS_TONE,
 } from "../../constants/preview-list/chip-tones.const";
 import type { PreviewItem } from "../../utils/previews/preview-items.util";
-import { font, formatSize } from "../../utils/preview-list/theme.util";
-import { timeAgo } from "../../utils/preview-list/time-ago.util";
 import { Changelog } from "./changelog.component";
 import { Button } from "./ui/button.ui";
 import { Card } from "./ui/card.ui";
 import { BranchLine } from "./ui/branch-line.ui";
 import { Chip } from "./ui/chip.ui";
+import { PublishedFacts } from "./ui/published-facts.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
@@ -33,22 +32,6 @@ export function PreviewRow(props: {
 }) {
   const { theme, labels, item } = props;
   const { entry, status, active } = item;
-  const when = entry.publishedAt
-    ? timeAgo(entry.publishedAt, props.now, labels.timeAgo)
-    : "";
-  const byline =
-    entry.author && when
-      ? labels.byline.replace("{author}", entry.author).replace("{time}", when)
-      : entry.author || when;
-  const bylineLabel = [
-    entry.author ? `${labels.author}: ${entry.author}` : null,
-    when
-      ? `${labels.published}: ${new Date(entry.publishedAt).toLocaleString()}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(". ");
-
   const main =
     status === "available"
       ? { title: labels.download, onPress: () => props.onDownload(item.id) }
@@ -120,19 +103,12 @@ export function PreviewRow(props: {
           gap: 8,
         }}
       >
-        <View style={{ flexShrink: 1, gap: 2 }}>
-          {byline ? (
-            <Text
-              accessibilityLabel={bylineLabel}
-              style={{ ...font(theme, "regular", 13), color: theme.muted }}
-            >
-              {byline}
-            </Text>
-          ) : null}
-          <Text style={{ ...font(theme, "regular", 13), color: theme.muted }}>
-            {formatSize(entry.size)}
-          </Text>
-        </View>
+        <PublishedFacts
+          theme={theme}
+          labels={labels}
+          entry={entry}
+          now={props.now}
+        />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           {canDelete ? (
             <Button

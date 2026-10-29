@@ -31,7 +31,12 @@ export type ListItem =
   | { type: "previews-header"; key: string }
   | { type: "preview"; key: string; item: PreviewItem }
   | { type: "incompatible-header"; key: string }
-  | { type: "incompatible"; key: string; preview: LocalPreview };
+  | {
+      type: "incompatible";
+      key: string;
+      preview: LocalPreview;
+      position: GroupPosition;
+    };
 
 export function buildListItems(state: {
   /** Debug build with dev preview servers turned on. */
@@ -85,12 +90,14 @@ export function buildListItems(state: {
   }
   if (state.incompatible.length > 0) {
     list.push({ type: "incompatible-header", key: "incompatible" });
-    for (const preview of state.incompatible)
+    state.incompatible.forEach((preview, index) =>
       list.push({
         type: "incompatible",
         key: `incompatible:${preview.id}`,
         preview,
-      });
+        position: positionOf(index, state.incompatible.length),
+      }),
+    );
   }
   return list;
 }

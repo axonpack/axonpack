@@ -128,8 +128,10 @@ export function PreviewList(props: PreviewListProps) {
     <Button
       theme={theme}
       title={labels.deleteAll}
+      accessibilityLabel={`${labels.deleteAll}, ${labels.incompatibleTitle}`}
       onPress={run(preview.removeIncompatible)}
       kind="danger"
+      quiet
     />
   );
 
@@ -187,7 +189,15 @@ export function PreviewList(props: PreviewListProps) {
           />
         );
       case "incompatible":
-        return <IncompatibleRow theme={theme} preview={item.preview} />;
+        return (
+          <IncompatibleRow
+            theme={theme}
+            labels={labels}
+            preview={item.preview}
+            position={item.position}
+            now={shownAt}
+          />
+        );
     }
   };
 

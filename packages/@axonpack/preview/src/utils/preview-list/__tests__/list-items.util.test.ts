@@ -97,3 +97,13 @@ test.each([
     list.flatMap((i) => (i.type === "dev-server" ? [i.position] : [])),
   ).toEqual(positions);
 });
+
+test("downloads for another build are one group too", () => {
+  const list = buildListItems({
+    ...base,
+    incompatible: [old("x"), old("y"), old("z")],
+  });
+  expect(
+    list.flatMap((i) => (i.type === "incompatible" ? [i.position] : [])),
+  ).toEqual(["first", "middle", "last"]);
+});

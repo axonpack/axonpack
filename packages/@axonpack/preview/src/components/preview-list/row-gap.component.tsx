@@ -9,7 +9,8 @@ import type { ListItem } from "../../utils/preview-list/list-items.util";
 export function RowGap(props: { leadingItem?: ListItem }) {
   const item = props.leadingItem;
   const grouped =
-    item?.type === "dev-server" &&
+    item !== undefined &&
+    "position" in item &&
     (item.position === "first" || item.position === "middle");
   return grouped ? null : <View style={{ height: 12 }} />;
 }

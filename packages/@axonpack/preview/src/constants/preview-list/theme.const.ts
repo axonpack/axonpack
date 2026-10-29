@@ -123,8 +123,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   showMore: "Show more",
   showLess: "Show less",
   incompatibleTitle: "Incompatible",
-  incompatibleHint:
-    "Made for another native build. They can't run on this one.",
+  incompatibleHint: "Made for another native build, so they can't run here.",
   deleteAll: "Delete all",
   previewsTitle: "Published previews",
   devPreviewServersTitle: "Dev preview servers",

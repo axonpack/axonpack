@@ -14,6 +14,12 @@ import { RowGap } from "../row-gap.component";
 import { Chevron } from "../ui/chevron.ui";
 import { HeroCard } from "../hero-card.component";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
+import {
+  previewDirectory,
+  writeLocalPreview,
+} from "../../../services/previews/local-previews.service";
+import type { IndexEntry } from "../../../utils/previews/layout.util";
+import { IncompatibleRow } from "../incompatible-row.component";
 
 jest.mock("expo-file-system", () =>
   require("../../../services/previews/__tests__/fake-file-system.test-helper"),
@@ -765,5 +771,61 @@ test("a long name wraps to two lines at most, then ends with an ellipsis", async
   );
   expect(name.props.numberOfLines).toBe(2);
   expect(name.props.ellipsizeMode).toBe("tail");
+  await act(async () => tree.unmount());
+});
+
+/** A download kept from an older native build. */
+async function downloadedForOldBuild(id: string, title: string) {
+  previewDirectory(id, "ios").create({ intermediates: true });
+  await writeLocalPreview({
+    id,
+    platform: "ios",
+    key: "version-0.9.0",
+    revision: "r1",
+    downloadedAt: "2026-09-01T10:00:00.000Z",
+    entry: {
+      id,
+      title,
+      branch: `${id}-branch`,
+      author: "Ana",
+      publishedAt: "2026-09-01T09:00:00.000Z",
+      size: 2048,
+      changelog: "",
+      environment: id === "old-1" ? "staging" : undefined,
+    } as IndexEntry,
+  });
+}
+
+test("downloads for another build: one grouped card, and a quiet Delete all that clears them", async () => {
+  await downloadedForOldBuild("old-1", "Checkout v1");
+  await downloadedForOldBuild("old-2", "Search v1");
+  const tree = await render();
+  expect(texts(tree)).toContain("Incompatible");
+  expect(texts(tree)).toContain(
+    "Made for another native build, so they can't run here.",
+  );
+  const rows = tree.root.findAllByType(IncompatibleRow);
+  expect(rows.map((r) => r.props.position)).toEqual(["first", "last"]);
+  const [first, second] = rows.map((r) => textsOf(r));
+  expect(first).toEqual(
+    expect.arrayContaining(["Checkout v1", "old-1-branch", "staging", "2 KB"]),
+  );
+  expect(second).not.toContain("staging");
+  // Nothing to switch to on a row.
+  expect(
+    rows[0].findAll((n) => n.props.accessibilityRole === "button"),
+  ).toEqual([]);
+  const [deleteAll] = tree.root.findAll(
+    (n) =>
+      n.props.accessibilityLabel === "Delete all, Incompatible" &&
+      n.props.accessibilityRole === "button",
+  );
+  expect(deleteAll.props.style({ pressed: false })).toMatchObject({
+    minHeight: 44,
+    borderWidth: 0,
+  });
+  await act(async () => deleteAll.props.onPress());
+  expect(tree.root.findAllByType(IncompatibleRow)).toEqual([]);
+  expect(texts(tree)).not.toContain("Incompatible");
   await act(async () => tree.unmount());
 });
