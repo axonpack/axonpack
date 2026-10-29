@@ -65,8 +65,8 @@ export default function PreviewsScreen() {
 }
 ```
 
-Put it on a screen QA can reach: a tab in internal builds, a settings row, or a hidden gesture. It
-shows:
+Put it on a screen QA can reach: a tab in internal builds, a settings row, or a hidden gesture. See
+[Show the list anywhere](#show-the-list-anywhere). It shows:
 
 - **Running:** what this start runs (the default bundle or a preview), and **Use the default bundle**.
 - **The previews for this build**, each with its title, branch, state, environment, who published
@@ -121,6 +121,94 @@ the header card with `ListHeaderComponent`, or after the last row with `ListFoot
 
 Every prop, and the few the list keeps for itself, are on
 [Reference](/docs/preview/reference#previewlist-props).
+
+## Show the list anywhere
+
+`PreviewList` is an ordinary React Native component. It brings no navigation and no screen of its
+own, so put it wherever QA can reach it: its own screen, a tab, a stack screen, a `Modal`, a bottom
+sheet, a hidden debug screen, or behind a shake or a long press.
+
+What it needs:
+
+- **The provider above it.** Without one it throws `usePreview needs a <PreviewProvider> above it.`
+  A provider at the root covers every screen and modal. If a bottom sheet or portal library renders
+  its content somewhere else in the tree, that place has to be inside the provider too.
+- **A bounded height.** It is a FlatList, so give it `style={{ flex: 1 }}` inside a parent that has
+  a height: a screen, or a view with `flex: 1`. Never put it inside a vertical `ScrollView`. Nested
+  lists warn and stop virtualizing. Add your own content with `ListHeaderComponent` and
+  `ListFooterComponent` instead.
+- **Your own way to open and close it.** There is no ready-made modal, and `usePreview()` has no show
+  or hide. The screen, tab or modal that holds the list decides when it shows.
+
+It can be mounted in more than one place at once, and mounted and unmounted as often as you like.
+Its state lives in module stores, so every copy shows the same list. Opening it does not ask the
+bucket again: the provider did that at start, and a pull down or **Refresh** asks again. Dev preview
+servers are looked for only while a list is mounted, and the search stops when the last one
+unmounts.
+
+The list does not hide itself when `enabled` is false, so hiding the tab, button or gesture that
+opens it in store builds is the app's job. `usePreview().enabled` tells you when.
+
+### A screen with expo-router
+
+```tsx
+// app/previews.tsx
+import { PreviewList } from '@axonpack/preview';
+
+export default function PreviewsScreen() {
+  return <PreviewList style={{ flex: 1 }} />;
+}
+```
+
+Open it from a settings row or a debug menu with `router.push('/previews')`.
+
+### A modal
+
+The app keeps the open state. The close button is the list's own `ListHeaderComponent`, above the
+header card:
+
+```tsx
+import { PreviewList, usePreview } from '@axonpack/preview';
+import { useState } from 'react';
+import { Button, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export function PreviewsButton() {
+  const { enabled } = usePreview();
+  const [open, setOpen] = useState(false);
+  if (!enabled) return null;
+  return (
+    <>
+      <Button title="Previews" onPress={() => setOpen(true)} />
+      <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <PreviewList
+            style={{ flex: 1 }}
+            ListHeaderComponent={<Button title="Close" onPress={() => setOpen(false)} />}
+          />
+        </SafeAreaView>
+      </Modal>
+    </>
+  );
+}
+```
+
+A bottom sheet, a shake or a gesture works the same way: whatever opens it sets `open`.
+
+### A tab with a floating tab bar
+
+By default the end of the list leaves room for iOS 26's floating tab bar. For a tab bar of your own
+that floats over the content, set `paddingBottom` to fit it:
+
+```tsx
+// app/(tabs)/previews.tsx
+import { PreviewList } from '@axonpack/preview';
+
+export default function PreviewsTab() {
+  // Your tab bar's height, the space under it, and a gap.
+  return <PreviewList style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }} />;
+}
+```
 
 ## Your own screen
 

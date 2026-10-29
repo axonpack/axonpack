@@ -62,6 +62,10 @@ export default function App() {
 }
 ```
 
+`PreviewList` is a plain component, so it can also go in a tab, a stack screen, a `Modal` or a
+bottom sheet, anywhere under the provider. See
+[Show the list anywhere](https://axonpack.dev/docs/preview/app-setup#show-the-list-anywhere).
+
 Publish the current branch from the app's root. The bucket and the write key come from the
 environment, or from a gitignored `.env.local`:
 
