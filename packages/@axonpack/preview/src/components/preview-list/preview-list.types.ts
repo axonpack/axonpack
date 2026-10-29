@@ -120,13 +120,20 @@ export type PreviewListLabels = {
   backToBase: string;
   /** Shown in a debug build while a preview runs, since Metro is not used then. */
   metroBypassed: string;
-  /** The error banner. `{host}` and `{port}` are the bucket's. */
+  /**
+   * The error banner: what went wrong on the first line, what to try on a second (the `*Hint`
+   * labels). `{host}` and `{port}` are the bucket's. Text between backticks shows in a code font.
+   */
   errorUnreachable: string;
-  /** Added to `errorUnreachable` on Android when the bucket is on localhost. */
+  /** Under `errorUnreachable` on Android when the bucket is on localhost. */
   errorEmulatorHint: string;
   errorForbidden: string;
+  /** Under `errorForbidden`. None when an app sets `errorForbidden` but not this. */
+  errorForbiddenHint: string;
   errorNotFound: string;
-  /** For a failure with no plainer words; the raw message follows it. */
+  /** Under `errorNotFound`. None when an app sets `errorNotFound` but not this. */
+  errorNotFoundHint: string;
+  /** For a failure with no plainer words; the raw message goes under it. */
   errorGeneric: string;
   retry: string;
   dismiss: string;

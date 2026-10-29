@@ -9,7 +9,7 @@ export function Button(props: {
   title: string;
   onPress: () => void;
   kind?: ButtonKind;
-  /** Text only, no border: for an action that should not compete with the main one. */
+  /** Text only, no border or fill: for an action that should not compete with the main one. */
   quiet?: boolean;
   /** What a screen reader says, when the title alone is not enough (one of many "Switch"). */
   accessibilityLabel?: string;
@@ -27,7 +27,8 @@ export function Button(props: {
         justifyContent: "center",
         borderRadius: theme.radius / 1.5,
         opacity: pressed ? 0.7 : 1,
-        backgroundColor: kind === "primary" ? theme.primary : "transparent",
+        backgroundColor:
+          kind === "primary" && !quiet ? theme.primary : "transparent",
         borderWidth: kind === "primary" || quiet ? 0 : 1,
         borderColor: kind === "danger" ? theme.danger : theme.border,
       })}
@@ -37,7 +38,9 @@ export function Button(props: {
           ...font(theme, "medium", 15),
           color:
             kind === "primary"
-              ? theme.primaryText
+              ? quiet
+                ? theme.primary
+                : theme.primaryText
               : kind === "danger"
                 ? theme.danger
                 : theme.text,

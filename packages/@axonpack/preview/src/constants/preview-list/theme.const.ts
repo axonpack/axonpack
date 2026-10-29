@@ -86,11 +86,11 @@ export const DEFAULT_LABELS: PreviewListLabels = {
     "Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again.",
   errorUnreachable: "Can't reach the bucket at {host}.",
   errorEmulatorHint:
-    "On the Android emulator, use 10.0.2.2, or run adb reverse tcp:{port} tcp:{port}.",
-  errorForbidden:
-    "The bucket refused access. Check the read key or the bucket's policy.",
-  errorNotFound:
-    "The bucket or the file was not found. Check the bucket URL in the preview config.",
+    "On the Android emulator, use `10.0.2.2`, or run `adb reverse tcp:{port} tcp:{port}`.",
+  errorForbidden: "The bucket refused access.",
+  errorForbiddenHint: "Check the read key or the bucket's policy.",
+  errorNotFound: "The bucket or the file was not found.",
+  errorNotFoundHint: "Check the bucket URL in the preview config.",
   errorGeneric: "Something went wrong.",
   retry: "Retry",
   dismiss: "Dismiss",

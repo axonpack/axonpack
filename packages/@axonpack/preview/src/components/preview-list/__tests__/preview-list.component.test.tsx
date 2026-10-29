@@ -676,6 +676,13 @@ const refused = () =>
     throw new TypeError(REFUSED);
   }) as unknown as typeof fetch;
 const EMULATOR_HINT = "On the Android emulator, use 10.0.2.2";
+/** A node's text in order, nested spans included, as one string. */
+const flat = (node: ReactTestInstance | string): string =>
+  typeof node === "string" ? node : node.children.map(flat).join("");
+const bannerButtons = (tree: ReactTestRenderer) =>
+  byId(tree, "list-error")[0]
+    .findAll((n) => n.props.accessibilityRole === "button", { deep: false })
+    .map(flat);
 
 test("a list error shows plainly in a banner above the header card, never in the card", async () => {
   global.fetch = refused();
@@ -703,33 +710,55 @@ test("a list error shows plainly in a banner above the header card, never in the
   await act(async () => tree.unmount());
 });
 
-test("Retry asks again and Dismiss puts the banner away", async () => {
+test("Dismiss then Retry, at the end of the banner: Retry asks again and Dismiss puts it away", async () => {
   global.fetch = refused();
   const tree = await render();
+  expect(bannerButtons(tree)).toEqual(["Dismiss", "Retry"]);
   const fetch = global.fetch as jest.Mock;
   const before = fetch.mock.calls.length;
   await act(async () => pressable(tree, "Retry").props.onPress());
   expect(fetch.mock.calls.length).toBeGreaterThan(before);
   expect(byId(tree, "list-error")).toHaveLength(1);
-  const dismiss = pressable(tree, "Dismiss");
-  expect(dismiss.props.accessibilityRole).toBe("button");
-  await act(async () => dismiss.props.onPress());
+  await act(async () => pressable(tree, "Dismiss").props.onPress());
   expect(byId(tree, "list-error")).toEqual([]);
   await act(async () => tree.unmount());
 });
 
-test("on Android, a bucket on localhost gets the emulator hint", async () => {
+test("on Android, a bucket on localhost gets the emulator hint on its own line, with the command set apart", async () => {
   const android = jest.replaceProperty(Platform, "OS", "android");
   try {
     global.fetch = refused();
     const tree = await render();
-    expect(texts(tree).join(" ")).toContain(
+    const [banner] = byId(tree, "list-error");
+    const [message] = banner.findAllByType(Text);
+    const [hint] = byId(tree, "list-error-hint");
+    expect(flat(message)).toBe("Can't reach the bucket at localhost:9000.");
+    expect(flat(hint)).toBe(
       `${EMULATOR_HINT}, or run adb reverse tcp:9000 tcp:9000.`,
+    );
+    const command = hint
+      .findAllByType(Text)
+      .find((t) => flat(t) === "adb reverse tcp:9000 tcp:9000");
+    expect(StyleSheet.flatten(command?.props.style).fontFamily).toBe(
+      "monospace",
     );
     await act(async () => tree.unmount());
   } finally {
     android.restore();
   }
+});
+
+test("an app's labels from before the split still show, with no second line under them", async () => {
+  global.fetch = jest.fn(async () => {
+    throw new Error("AccessDenied");
+  }) as unknown as typeof fetch;
+  const tree = await renderWith({
+    labels: { errorForbidden: "Kein Zugriff.", dismiss: "Schließen" },
+  });
+  expect(texts(tree)).toContain("Kein Zugriff.");
+  expect(byId(tree, "list-error-hint")).toEqual([]);
+  expect(bannerButtons(tree)).toEqual(["Schließen", "Retry"]);
+  await act(async () => tree.unmount());
 });
 
 test("a build with no slug says so instead of listing other apps' servers", async () => {
@@ -754,9 +783,10 @@ test("a build with no bucket URL says which setting is missing", async () => {
       </PreviewProvider>,
     );
   });
-  expect(texts(tree).join("\n")).toContain(
-    "No bucket URL. Set `url` in the preview config",
-  );
+  const [hint] = byId(tree, "list-error-hint");
+  expect(flat(hint)).toContain("No bucket URL. Set url in the preview config");
+  // Asking again can't help: the URL is in the build.
+  expect(bannerButtons(tree)).toEqual(["Dismiss"]);
   await act(async () => tree.unmount());
 });
 

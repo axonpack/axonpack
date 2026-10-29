@@ -1,4 +1,5 @@
 import type { PreviewListLabels } from "../../components/preview-list/preview-list.types";
+import { checkBucketUrl } from "../config/config.util";
 import { hostPortOf } from "../previews/running.util";
 
 type ErrorLabels = Pick<
@@ -6,7 +7,9 @@ type ErrorLabels = Pick<
   | "errorUnreachable"
   | "errorEmulatorHint"
   | "errorForbidden"
+  | "errorForbiddenHint"
   | "errorNotFound"
+  | "errorNotFoundHint"
   | "errorGeneric"
 >;
 
@@ -18,31 +21,49 @@ const NOT_FOUND = /\b404\b|nosuchbucket|nosuchkey|not found/i;
 // On the emulator these are the emulator itself, not the computer.
 const LOOPBACK = new Set(["localhost", "127.0.0.1"]);
 
+const badBucketUrl = (url: string) => {
+  try {
+    checkBucketUrl(url);
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /**
- * A list error in words QA can act on. `detail` is the raw text, kept only when no plainer words
- * fit; otherwise it belongs in the console.
+ * A list error in words QA can act on: what went wrong, then what to try. The hint is the raw
+ * text only when no plainer words fit; otherwise that belongs in the console. A bad bucket URL is
+ * baked into the build, so asking again can't help and there is no Retry.
  */
 export function describeListError(
   raw: string,
   input: { bucketUrl: string; platform: string | null; labels: ErrorLabels },
-): { message: string; detail: string | null } {
+): { message: string; hint: string | null; retryable: boolean } {
   const { labels } = input;
+  const retryable = !badBucketUrl(input.bucketUrl);
   if (UNREACHABLE.test(raw)) {
     const authority = /^\w+:\/\/([^/?#]+)/.exec(input.bucketUrl)?.[1] ?? "";
     const hostPort = hostPortOf(input.bucketUrl) ?? authority;
     const at = hostPort.lastIndexOf(":");
     const host = hostPort.slice(0, at).toLowerCase();
     const port = hostPort.slice(at + 1);
-    const unreachable = labels.errorUnreachable.replace("{host}", authority);
-    const hint =
-      input.platform === "android" && LOOPBACK.has(host)
-        ? ` ${labels.errorEmulatorHint.replaceAll("{port}", port)}`
-        : "";
-    return { message: unreachable + hint, detail: null };
+    return {
+      message: labels.errorUnreachable.replace("{host}", authority),
+      hint:
+        input.platform === "android" && LOOPBACK.has(host)
+          ? labels.errorEmulatorHint.replaceAll("{port}", port)
+          : null,
+      retryable,
+    };
   }
+  const hinted = (message: string, hint: string) => ({
+    message,
+    hint: hint || null,
+    retryable,
+  });
   if (FORBIDDEN.test(raw))
-    return { message: labels.errorForbidden, detail: null };
+    return hinted(labels.errorForbidden, labels.errorForbiddenHint);
   if (NOT_FOUND.test(raw))
-    return { message: labels.errorNotFound, detail: null };
-  return { message: labels.errorGeneric, detail: raw };
+    return hinted(labels.errorNotFound, labels.errorNotFoundHint);
+  return hinted(labels.errorGeneric, raw);
 }

@@ -150,6 +150,13 @@ export function PreviewList(props: PreviewListProps) {
       labelsInput?.backToDefault ??
       labelsInput?.backToBase ??
       DEFAULT_LABELS.backToDefault,
+    // An app's own text from before the hint labels holds both sentences, so it gets no hint.
+    errorForbiddenHint:
+      labelsInput?.errorForbiddenHint ??
+      (labelsInput?.errorForbidden ? "" : DEFAULT_LABELS.errorForbiddenHint),
+    errorNotFoundHint:
+      labelsInput?.errorNotFoundHint ??
+      (labelsInput?.errorNotFound ? "" : DEFAULT_LABELS.errorNotFoundHint),
     status: { ...DEFAULT_LABELS.status, ...labelsInput?.status },
     timeAgo: { ...DEFAULT_LABELS.timeAgo, ...labelsInput?.timeAgo },
   };
@@ -284,8 +291,8 @@ export function PreviewList(props: PreviewListProps) {
           theme={theme}
           labels={labels}
           message={failure.message}
-          detail={failure.detail}
-          onRetry={() => lastAction.current()}
+          hint={failure.hint}
+          onRetry={failure.retryable ? () => lastAction.current() : undefined}
           onDismiss={previewsStore.clearError}
         />
       ) : null}

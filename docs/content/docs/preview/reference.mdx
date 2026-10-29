@@ -162,10 +162,12 @@ is not a hex colour gets an outline instead of a wash. From an expo-devtools pal
 | `backToBase`             | Deprecated: use `backToDefault`. Still shown when `backToDefault` is not set  |
 | `metroBypassed`          | Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again. |
 | `errorUnreachable`       | Can't reach the bucket at {host}.                                             |
-| `errorEmulatorHint`      | On the Android emulator, use 10.0.2.2, or run adb reverse tcp:{port} tcp:{port}. Added on Android when the bucket is on localhost |
-| `errorForbidden`         | The bucket refused access. Check the read key or the bucket's policy.         |
-| `errorNotFound`          | The bucket or the file was not found. Check the bucket URL in the preview config. |
-| `errorGeneric`           | Something went wrong. The raw message follows it                              |
+| `errorEmulatorHint`      | On the Android emulator, use \`10.0.2.2\`, or run \`adb reverse tcp:{port} tcp:{port}\`. The second line, on Android when the bucket is on localhost. Text between backticks shows in a code font |
+| `errorForbidden`         | The bucket refused access.                                                    |
+| `errorForbiddenHint`     | Check the read key or the bucket's policy. None when you set `errorForbidden` and not this |
+| `errorNotFound`          | The bucket or the file was not found.                                         |
+| `errorNotFoundHint`      | Check the bucket URL in the preview config. None when you set `errorNotFound` and not this |
+| `errorGeneric`           | Something went wrong. The raw message goes on the second line                 |
 | `retry`                  | Retry                                                                         |
 | `dismiss`                | Dismiss                                                                       |
 | `refresh`                | Refresh                                                                       |
