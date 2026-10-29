@@ -54,6 +54,9 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   kindDevPreviewServer: "Dev preview server",
   kindPreview: "Preview",
   active: "Active",
+  defaultServerTitle: "Default",
+  switchToServer: "Switch to {title}, {address}",
+  switchToServerHint: "Restarts the app on this server.",
   stopServer: "Stop server",
   showDetails: "Show details",
   hideDetails: "Hide details",
@@ -106,8 +109,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   deleteAll: "Delete all",
   previewsTitle: "Published previews",
   devPreviewServersTitle: "Dev preview servers",
-  devPreviewServersHint:
-    "Metro servers for this app on your computer. Debug builds only.",
+  devPreviewServersHint: "Metro servers for this app on your computer.",
   noDevPreviewServers:
     "No Metro server found. Start one with npx preview start.",
   noBuildSlug:

@@ -18,7 +18,9 @@ import {
   buildKey,
   buildSlug,
 } from "../../services/native/build-info.service";
+import { nativeModule } from "../../services/native/native.service";
 import { currentPlatform } from "../../utils/config/config.util";
+import { runsFromServer, sameServer } from "../../utils/previews/running.util";
 import { describeListError } from "../../utils/preview-list/list-error.util";
 import { previewsStore } from "../../stores/previews/previews.store";
 import { ConfigContext } from "../preview-provider/preview-provider.component";
@@ -38,6 +40,7 @@ import { HeroCard } from "./hero-card.component";
 import { HintRow } from "./hint-row.component";
 import { IncompatibleRow } from "./incompatible-row.component";
 import { PreviewRow } from "./preview-row.component";
+import { RowGap } from "./row-gap.component";
 import type {
   PreviewListLabels,
   PreviewListThemeInput,
@@ -97,6 +100,12 @@ export function PreviewList(props: PreviewListProps) {
     status: { ...DEFAULT_LABELS.status, ...props.labels?.status },
   };
 
+  // What runs now when that is the default, else what native says it starts on.
+  const defaultMetro =
+    (now.kind === "default" ? now.hostPort : null) ??
+    nativeModule()?.state().defaultServer ??
+    null;
+
   const items = useMemo(
     () =>
       buildListItems({
@@ -138,9 +147,13 @@ export function PreviewList(props: PreviewListProps) {
             theme={theme}
             labels={labels}
             server={item.server}
-            running={item.server.url === local.activeUrl}
+            active={runsFromServer(now, item.server.hostPort)}
+            isDefault={
+              defaultMetro !== null &&
+              sameServer(item.server.hostPort, defaultMetro)
+            }
+            position={item.position}
             onSwitch={devPreviewServersStore.switchTo}
-            onStop={() => devPreviewServersStore.switchTo(null)}
           />
         );
       case "hint":
@@ -192,7 +205,7 @@ export function PreviewList(props: PreviewListProps) {
       })
     : null;
   const header = (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: 12, marginBottom: 12 }}>
       {failure ? (
         <ErrorBanner
           theme={theme}
@@ -227,6 +240,7 @@ export function PreviewList(props: PreviewListProps) {
       data={items}
       keyExtractor={keyOf}
       renderItem={renderItem}
+      ItemSeparatorComponent={RowGap}
       ListHeaderComponent={header}
       // Only a pull shows the pull spinner. Tied to every load, iOS shifts the list down by the
       // spinner's height when the first load starts, and the top of the list is cut off.
@@ -236,7 +250,7 @@ export function PreviewList(props: PreviewListProps) {
         refreshAll().finally(() => setPulling(false));
       }}
       style={[{ backgroundColor: theme.background }, props.style]}
-      contentContainerStyle={{ padding: 16, gap: 12 }}
+      contentContainerStyle={{ padding: 16 }}
     />
   );
 }

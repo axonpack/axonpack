@@ -57,18 +57,24 @@ export function HeroCard(props: {
 
   const kind = runningKind(running, labels);
   // A preview or a server has a name of its own; the bundle built into the app is named by its kind.
+  // Metro only knows the app's name, so the Metro the app starts on, when `preview start` gave it
+  // no title, is called by its role.
   const name =
-    running.kind === "preview" ? running.title : (server?.title ?? kind);
+    running.kind === "preview"
+      ? running.title
+      : running.kind === "default" && running.source === "expo-dev-server"
+        ? labels.defaultServerTitle
+        : (server?.title ?? kind);
   const where =
     running.kind === "preview"
       ? entry?.branch || running.id
       : running.hostPort && displayHostPort(running.hostPort);
+  const branch = running.kind === "preview" ? where : server?.branch;
   const version = app.version
     ? `${app.version}${app.buildNumber ? ` (${app.buildNumber})` : ""}`
     : null;
 
   const rows: Row[] = [
-    [labels.branch, server?.branch],
     [labels.author, entry?.author],
     [
       labels.published,
@@ -157,13 +163,20 @@ export function HeroCard(props: {
         >
           <View
             accessible
-            accessibilityLabel={`${labels.running}: ${runningLabel(running, labels)}`}
+            accessibilityLabel={[
+              `${labels.running}: ${runningLabel(running, labels)}`,
+              branch,
+            ]
+              .filter(Boolean)
+              .join(", ")}
             style={{ flex: 1, paddingTop: 2 }}
           >
             <TitleSubtitle
               theme={theme}
               title={name}
-              subtitle={where}
+              // A preview has no address: its branch sits right under the title.
+              subtitle={running.kind === "preview" ? null : where}
+              detail={branch}
               size="large"
             />
           </View>

@@ -6,10 +6,27 @@ import type { PreviewItem } from "../previews/preview-items.util";
 export type ListHint =
   "noBuildSlug" | "noDevPreviewServers" | "empty" | "noBuildKey";
 
+/** Where a row sits in a group drawn as one card: it decides the corners and the separator. */
+export type GroupPosition = "first" | "middle" | "last" | "only";
+
+const positionOf = (index: number, count: number): GroupPosition =>
+  count === 1
+    ? "only"
+    : index === 0
+      ? "first"
+      : index === count - 1
+        ? "last"
+        : "middle";
+
 /** One row of the list's FlatList. `key` is stable across refreshes. */
 export type ListItem =
   | { type: "dev-servers-header"; key: string; error: string | null }
-  | { type: "dev-server"; key: string; server: DevPreviewServer }
+  | {
+      type: "dev-server";
+      key: string;
+      server: DevPreviewServer;
+      position: GroupPosition;
+    }
   | { type: "hint"; key: string; hint: ListHint; tone: "muted" | "danger" }
   | { type: "previews-header"; key: string }
   | { type: "preview"; key: string; item: PreviewItem }
@@ -49,12 +66,14 @@ export function buildListItems(state: {
         tone: "muted",
       });
     else
-      for (const server of state.servers)
+      state.servers.forEach((server, index) =>
         list.push({
           type: "dev-server",
           key: `server:${server.hostPort}`,
           server,
-        });
+          position: positionOf(index, state.servers.length),
+        }),
+      );
   }
   list.push({ type: "previews-header", key: "previews" });
   for (const item of state.items)

@@ -72,8 +72,16 @@ export type PreviewListLabels = {
   kindExpoDevServer: string;
   kindDevPreviewServer: string;
   kindPreview: string;
-  /** On the server the app runs from. */
+  /** On the server or preview the app runs from. */
   active: string;
+  /**
+   * The title of the Metro the app starts on when `preview start` gave it none. Metro only knows
+   * the app's name, which every server of the app shares.
+   */
+  defaultServerTitle: string;
+  /** What a screen reader says for a server row. `{title}` and `{address}` are filled in. */
+  switchToServer: string;
+  switchToServerHint: string;
   /** @deprecated No longer shown: the header's Use the default bundle stops a picked server too. */
   stopServer: string;
   showDetails: string;
@@ -88,6 +96,7 @@ export type PreviewListLabels = {
   author: string;
   commit: string;
   published: string;
+  /** @deprecated No longer shown: the branch is a line under the address or title, unlabelled. */
   branch: string;
   previewId: string;
   /** The EAS environment a preview was published with. */
@@ -127,6 +136,7 @@ export type PreviewListLabels = {
   noDevPreviewServers: string;
   /** In place of the servers, when the build has no slug baked in by the config plugin. */
   noBuildSlug: string;
+  /** @deprecated No longer shown: the header's Use the default bundle stops a picked server. */
   stopDevPreviewServer: string;
   /** @deprecated No longer shown: the running line names the kind instead. */
   localSuffix: string;

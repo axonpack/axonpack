@@ -1,8 +1,16 @@
 import { FlatList, Platform, TurboModuleRegistry, View } from "react-native";
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import {
+  act,
+  create,
+  type ReactTestInstance,
+  type ReactTestRenderer,
+} from "react-test-renderer";
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
 import { PreviewList } from "../preview-list.component";
+import { Card } from "../ui/card.ui";
+import { Chip } from "../ui/chip.ui";
+import { RowGap } from "../row-gap.component";
 import { Chevron } from "../ui/chevron.ui";
 import { HeroCard } from "../hero-card.component";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
@@ -48,36 +56,46 @@ jest.mock("expo", () => ({
   }),
 }));
 
-/** The registry announces 8082, and Metro answers there as this app ("shop"). */
-const registryWith8082 = () =>
+/**
+ * Metro answers as this app ("shop", named "Shop") on each of `ports`, and the registry announces
+ * the `announced` ones as `preview start` servers titled "Main-Branch" on branch main.
+ */
+const metros = (ports: number[], announced: number[] = []) =>
   jest.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url.endsWith(":19150/servers"))
       return Response.json({
-        servers: [
-          {
-            id: "a",
-            port: 8082,
-            title: "Main-Branch",
-            branch: "main",
-            worktree: "/w",
-            slug: "shop",
-            name: "Shop",
-            compatibility: "appVersion",
-            keys: { ios: "version-1.0.0" },
-            startedAt: "",
+        servers: announced.map((port) => ({
+          id: String(port),
+          port,
+          title: "Main-Branch",
+          branch: "main",
+          worktree: "/w",
+          slug: "shop",
+          name: "Shop",
+          compatibility: "appVersion",
+          keys: { ios: "version-1.0.0" },
+          startedAt: "",
+        })),
+      });
+    for (const port of ports) {
+      if (url.endsWith(`:${port}/status`))
+        return new Response("packager-status:running");
+      if (url.endsWith(`:${port}/`))
+        return Response.json({
+          launchAsset: {
+            url: `http://localhost:${port}/index.bundle?platform=ios`,
           },
-        ],
-      });
-    if (url.endsWith(":8082/status"))
-      return new Response("packager-status:running");
-    if (url.endsWith(":8082/"))
-      return Response.json({
-        launchAsset: { url: "http://localhost:8082/index.bundle?platform=ios" },
-        extra: { expoClient: { slug: "shop", name: "Shop", version: "1.0.0" } },
-      });
+          extra: {
+            expoClient: { slug: "shop", name: "Shop", version: "1.0.0" },
+          },
+        });
+    }
     return new Response("", { status: 404 });
   }) as typeof fetch;
+
+/** The registry announces 8082, and Metro answers there as this app ("shop"). */
+const registryWith8082 = () => metros([8082], [8082]);
 
 const notFound = () =>
   jest.fn(async () => new Response("", { status: 404 })) as typeof fetch;
@@ -90,6 +108,13 @@ beforeEach(async () => {
   // The servers store lives for the whole file; one look clears a server an earlier test picked.
   await devPreviewServersStore.refresh();
 });
+
+const textsOf = (node: ReactTestInstance) =>
+  node
+    .findAll(() => true)
+    .flatMap((child) =>
+      child.children.filter((c) => typeof c === "string"),
+    ) as string[];
 
 const texts = (tree: ReactTestRenderer) =>
   tree.root
@@ -220,6 +245,9 @@ test("a preview: its title and branch, the environment, who published it, and th
     expect(all).toContain(text);
   expect(all).not.toContain("Stop server");
   expect(all).not.toContain("abc1234");
+  // A preview has no address: its branch sits right under the title.
+  const card = textsOf(tree.root.findByType(HeroCard));
+  expect(card[card.indexOf("Login fix") + 1]).toBe("task-1-login");
   await showDetails(tree);
   expect(texts(tree)).toContain("abc1234");
   expect(texts(tree)).toContain("task-1");
@@ -282,30 +310,172 @@ test("the Metro the app starts on, picked by hand under another name, shows as t
     defaultServer: "localhost:8081",
   };
   mockScriptUrl = "http://127.0.0.1:8081/index.bundle?platform=ios";
-  // Metro answers on 8081 as this app, so the scan finds it and names it.
-  global.fetch = jest.fn(async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url.endsWith(":8081/status"))
-      return new Response("packager-status:running");
-    if (url.endsWith(":8081/"))
-      return Response.json({
-        launchAsset: { url: mockScriptUrl },
-        extra: { expoClient: { slug: "shop", name: "Shop", version: "1.0.0" } },
-      });
-    return new Response("", { status: 404 });
-  }) as typeof fetch;
+  // Metro answers on 8081 as this app, so the scan finds it.
+  global.fetch = metros([8081]);
   const tree = await render(true);
-  await act(async () => {
-    await new Promise((r) => setTimeout(r, 50));
-  });
-  const all = texts(tree);
-  expect(all).toContain("Shop");
+  await settle();
+  const all = textsOf(tree.root.findByType(HeroCard));
+  // Metro only knows the app's name, so the default is called by its role.
+  expect(all).toContain("Default");
+  expect(all).not.toContain("Shop");
   expect(all).toContain("Default bundle");
   expect(all).not.toContain("Use the default bundle");
   expect(byId(tree, "hero-actions")).toEqual([]);
   // Not filled as something switched in.
-  const chip = tree.root.find((node) => node.props.text === "Expo dev server");
+  const chip = tree.root
+    .findByType(HeroCard)
+    .find((node) => node.props.text === "Expo dev server");
   expect(chip.props.tone).toBe("neutral");
+  await act(async () => tree.unmount());
+});
+
+/** Lets the first look for servers land. */
+const settle = () =>
+  act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+
+/** The row of the server on `port`, whatever host the scan found it on. */
+const serverRow = (tree: ReactTestRenderer, port: number) => {
+  const [row] = tree.root.findAll(
+    (node) =>
+      typeof node.props.testID === "string" &&
+      node.props.testID.startsWith("server-") &&
+      node.props.testID.endsWith(`:${port}`),
+    { deep: false },
+  );
+  return row;
+};
+
+const separators = (row: ReactTestInstance) =>
+  row.findAll((n) => n.props.testID === "group-separator", { deep: false })
+    .length;
+
+/** The server the app runs from: tinted and selected, with no chevron and nothing to press. */
+const expectActive = (row: ReactTestInstance) => {
+  expect(row.findByType(Card).props.tinted).toBe(true);
+  expect(row.props.accessibilityState).toEqual({ selected: true });
+  expect(row.props.onPress).toBeUndefined();
+  expect(row.findAllByType(Chevron)).toEqual([]);
+  expect(textsOf(row)).toContain("Active");
+};
+
+/** Any other server: the whole row is a button, with a chevron. */
+const expectSwitchable = (row: ReactTestInstance) => {
+  expect(row.findByType(Card).props.tinted).toBeFalsy();
+  expect(row.props.accessibilityRole).toBe("button");
+  expect(typeof row.props.onPress).toBe("function");
+  expect(row.findAllByType(Chevron)).toHaveLength(1);
+  expect(textsOf(row)).not.toContain("Active");
+};
+
+test("the default Metro, with nothing picked, is Active and titled Default", async () => {
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  global.fetch = metros([8081, 8083]);
+  const tree = await render(true);
+  await settle();
+  const row = serverRow(tree, 8081);
+  expectActive(row);
+  for (const text of ["Default", "localhost:8081", "Expo dev server"])
+    expect(textsOf(row)).toContain(text);
+  expect(row.props.accessibilityLabel).toBe(
+    "Default, localhost:8081, Active, Expo dev server",
+  );
+  // Another server Metro found with no title of its own keeps the app's name.
+  const other = serverRow(tree, 8083);
+  expectSwitchable(other);
+  expect(textsOf(other)).toEqual(
+    expect.arrayContaining(["Shop", "localhost:8083"]),
+  );
+  expect(textsOf(other)).not.toContain("Default");
+  expect(textsOf(tree.root.findByType(HeroCard))).toContain("Default");
+  // One grouped card: square where the rows meet, a hairline only between them, no gap.
+  expect(row.findByType(Card).props.position).toBe("first");
+  expect(other.findByType(Card).props.position).toBe("last");
+  expect(separators(row)).toBe(0);
+  expect(separators(other)).toBe(1);
+  const gaps = tree.root.findAllByType(RowGap);
+  const after = (port: number) =>
+    gaps.find(
+      (g) =>
+        g.props.leadingItem?.type === "dev-server" &&
+        g.props.leadingItem.server.port === port,
+    );
+  expect(after(8081)?.children).toEqual([]);
+  expect(after(8083)?.children).toHaveLength(1);
+  await act(async () => tree.unmount());
+});
+
+test("a server picked by hand is Active; pressing the default Metro's row switches to it", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
+  global.fetch = metros([8081, 8082], [8082]);
+  const tree = await render(true);
+  await settle();
+  const picked = serverRow(tree, 8082);
+  expectActive(picked);
+  expect(textsOf(picked)).toEqual(
+    expect.arrayContaining(["Main-Branch", "Dev preview server"]),
+  );
+  // The branch is a quiet line right under the address, not a chip.
+  const said = textsOf(picked);
+  expect(said[said.indexOf("localhost:8082") + 1]).toBe("main");
+  expect(
+    picked.findAllByType(Chip).map((chip) => chip.props.text),
+  ).not.toContain("main");
+  const [branch] = picked.findAll(
+    (n) => n.props.children === "main" && n.props.numberOfLines !== undefined,
+  );
+  expect(branch.props.numberOfLines).toBe(1);
+  expect(branch.props.style).toMatchObject({ fontSize: 13 });
+  expect(picked.props.accessibilityLabel).toBe(
+    "Main-Branch, localhost:8082, main, Active, Dev preview server",
+  );
+  expect(said).not.toContain("Expo dev server");
+  const fallback = serverRow(tree, 8081);
+  expectSwitchable(fallback);
+  expect(textsOf(fallback)).toEqual(
+    expect.arrayContaining(["Default", "Expo dev server"]),
+  );
+  expect(fallback.props.accessibilityLabel).toBe(
+    "Switch to Default, localhost:8081, Expo dev server",
+  );
+  expect(fallback.props.accessibilityHint).toBe(
+    "Restarts the app on this server.",
+  );
+  mockSelectLocalServer.mockClear();
+  await act(async () => fallback.props.onPress());
+  expect(mockSelectLocalServer).toHaveBeenCalledWith(
+    expect.stringContaining(":8081/"),
+    expect.stringMatching(/:8081$/),
+  );
+  await act(async () => tree.unmount());
+});
+
+test("a preview start server that is the default Metro keeps its own title", async () => {
+  mockScriptUrl = "http://localhost:8082/index.bundle?platform=ios";
+  global.fetch = registryWith8082();
+  const tree = await render(true);
+  await settle();
+  const row = serverRow(tree, 8082);
+  expectActive(row);
+  expect(textsOf(row)).toEqual(
+    expect.arrayContaining(["Main-Branch", "Dev preview server"]),
+  );
+  expect(texts(tree)).not.toContain("Default");
+  await act(async () => tree.unmount());
+});
+
+test("no server is Active while a preview runs", async () => {
+  mockNativeState = { bundle: "task-1/ios/main.jsbundle" };
+  mockScriptUrl = "file:///data/Documents/preview/task-1/ios/main.jsbundle";
+  global.fetch = metros([8081]);
+  const tree = await render(true);
+  await settle();
+  expectSwitchable(serverRow(tree, 8081));
   await act(async () => tree.unmount());
 });
 
@@ -420,18 +590,19 @@ test("the app's own bundle from a preview start server uses its title and branch
   mockScriptUrl = "http://localhost:8082/index.bundle?platform=ios";
   global.fetch = registryWith8082();
   const tree = await render(true);
-  await act(async () => {
-    await new Promise((r) => setTimeout(r, 50));
-  });
+  await settle();
   const hero = texts(tree);
   for (const text of [
     "Main-Branch",
     "localhost:8082",
     "Dev preview server",
     "Default bundle",
-    "main",
   ])
     expect(hero).toContain(text);
+  // The branch is a quiet line under the address, not a labelled fact.
+  const card = textsOf(tree.root.findByType(HeroCard));
+  expect(card[card.indexOf("localhost:8082") + 1]).toBe("main");
+  expect(card).not.toContain("Branch");
   await act(async () => tree.unmount());
 });
 

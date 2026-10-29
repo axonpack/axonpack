@@ -85,3 +85,15 @@ test("incompatible downloads get their header and a row each, last", () => {
     "incompatible:y",
   ]);
 });
+
+test.each([
+  [1, ["only"]],
+  [2, ["first", "last"]],
+  [3, ["first", "middle", "last"]],
+])("%d dev servers are one group: %j", (count, positions) => {
+  const servers = Array.from({ length: count }, (_, i) => server(8081 + i));
+  const list = buildListItems({ ...base, showDevServers: true, servers });
+  expect(
+    list.flatMap((i) => (i.type === "dev-server" ? [i.position] : [])),
+  ).toEqual(positions);
+});

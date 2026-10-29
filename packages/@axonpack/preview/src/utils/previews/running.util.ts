@@ -74,6 +74,18 @@ export function sameServer(a: string, b: string): boolean {
   );
 }
 
+/**
+ * Whether the app runs from the server at `hostPort` now: one picked by hand, or the Metro the
+ * app started on with nothing picked. Never while a preview runs, since Metro is not used then.
+ */
+export function runsFromServer(running: Running, hostPort: string): boolean {
+  return (
+    running.kind !== "preview" &&
+    running.hostPort !== null &&
+    sameServer(hostPort, running.hostPort)
+  );
+}
+
 const findServer = (servers: DevPreviewServer[], hostPort: string) =>
   servers.find((s) => sameServer(s.hostPort, hostPort)) ?? null;
 
