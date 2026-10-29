@@ -1,6 +1,7 @@
-import { createElement as h, useEffect, useMemo } from "react";
+import { createElement as h, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  Text,
   View,
   useColorScheme,
   type ListRenderItemInfo,
@@ -12,11 +13,17 @@ import {
   devPreviewServersStore,
   useDevPreviewServersState,
 } from "../../stores/dev-preview-servers/dev-preview-servers.store";
-import { buildSlug } from "../../services/native/build-info.service";
+import {
+  buildApp,
+  buildCompatibility,
+  buildKey,
+  buildSlug,
+} from "../../services/native/build-info.service";
+import { currentPlatform } from "../../utils/config/config.util";
 import { usePreview } from "../../services/previews/use-preview.service";
 import { useRunning } from "../../services/previews/use-running.service";
 import { DEFAULT_LABELS } from "../../constants/preview-list/theme.const";
-import { resolveTheme } from "../../utils/preview-list/theme.util";
+import { font, resolveTheme } from "../../utils/preview-list/theme.util";
 import {
   type ListItem,
   buildListItems,
@@ -61,6 +68,7 @@ export function PreviewList(props: PreviewListProps) {
     () => (showLocal && appSlug ? devPreviewServersStore.watch() : undefined),
     [showLocal, appSlug],
   );
+  const [pulling, setPulling] = useState(false);
   const theme = resolveTheme(props.theme, useColorScheme());
   const labels: PreviewListLabels = {
     ...DEFAULT_LABELS,
@@ -131,18 +139,45 @@ export function PreviewList(props: PreviewListProps) {
     }
   };
 
+  const runningEntry =
+    now.kind === "preview"
+      ? (preview.items.find((i) => i.id === now.id)?.entry ?? null)
+      : null;
   const header = h(
     View,
     { style: { gap: 12 } },
+    h(
+      Text,
+      {
+        accessibilityRole: "header",
+        style: {
+          ...font(theme, "bold", 28),
+          color: theme.title,
+          paddingHorizontal: 4,
+        },
+      },
+      labels.title,
+    ),
     h(HeroCard, {
       theme,
       labels,
       running: now,
+      build: {
+        app: buildApp(),
+        platform: currentPlatform(),
+        compatibility: buildCompatibility(),
+        key: preview.buildKey ?? buildKey(),
+      },
+      entry: runningEntry,
       error: preview.error,
       loading: preview.loading,
       canGoBack: Boolean(preview.activeId || (showLocal && local.activeUrl)),
       onBackToBase: () => preview.switchTo(null),
-      onRefresh: () => preview.refresh(),
+      onStopServer: () => devPreviewServersStore.switchTo(null),
+      onRefresh: () => {
+        preview.refresh();
+        if (showLocal) devPreviewServersStore.refresh();
+      },
     }),
   );
 
@@ -151,10 +186,15 @@ export function PreviewList(props: PreviewListProps) {
     keyExtractor: keyOf,
     renderItem,
     ListHeaderComponent: header,
-    refreshing: preview.loading,
+    // Only a pull shows the pull spinner. Tied to every load, iOS shifts the list down by the
+    // spinner's height when the first load starts, and the top of the list is cut off.
+    refreshing: pulling,
     onRefresh: () => {
-      preview.refresh();
-      if (showLocal) devPreviewServersStore.refresh();
+      setPulling(true);
+      Promise.all([
+        preview.refresh(),
+        showLocal ? devPreviewServersStore.refresh() : null,
+      ]).finally(() => setPulling(false));
     },
     style: [{ backgroundColor: theme.background }, props.style],
     contentContainerStyle: { padding: 16, gap: 12 },

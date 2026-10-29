@@ -1,4 +1,4 @@
-import { useRunning } from "@axonpack/preview";
+import { DEFAULT_LABELS, runningLabel, useRunning } from "@axonpack/preview";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -13,17 +13,10 @@ export function BundleBanner() {
   const { top } = useSafeAreaInsets();
   const running = useRunning();
   const look = LOOKS[running.kind];
-  const [title, detail] =
-    running.kind === "local"
-      ? [
-          running.server?.title ?? "Dev preview server",
-          [running.server?.branch, running.hostPort]
-            .filter(Boolean)
-            .join(" · "),
-        ]
-      : running.kind === "preview"
-        ? [running.title, running.id]
-        : ["Base bundle", null];
+  // The package's own words, so the banner and the list never disagree.
+  const title = runningLabel(running, DEFAULT_LABELS);
+  const detail =
+    running.kind === "preview" ? running.id : (running.server?.branch ?? null);
   return (
     <View
       style={[
@@ -43,6 +36,6 @@ export function BundleBanner() {
 
 const styles = StyleSheet.create({
   banner: { paddingBottom: 12, paddingHorizontal: 16 },
-  title: { fontSize: 20, fontWeight: "700" },
+  title: { fontSize: 16, fontWeight: "700" },
   detail: { fontSize: 13, marginTop: 2 },
 });

@@ -23,8 +23,13 @@ export type {
 } from "./utils/previews/preview-items.util";
 export { PreviewProvider } from "./components/preview-provider/preview-provider.component";
 export { usePreview } from "./services/previews/use-preview.service";
-export { runningNow } from "./utils/previews/running.util";
-export type { Running } from "./utils/previews/running.util";
+export {
+  runningKind,
+  runningLabel,
+  runningNow,
+  sameServer,
+} from "./utils/previews/running.util";
+export type { BaseSource, Running } from "./utils/previews/running.util";
 export { useRunning } from "./services/previews/use-running.service";
 export { PreviewList } from "./components/preview-list/preview-list.component";
 export type { PreviewListProps } from "./components/preview-list/preview-list.component";

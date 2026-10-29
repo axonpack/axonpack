@@ -30,3 +30,17 @@ export const selectedPreviewId = (state: NativeState): string | null =>
 export function markLaunched(): void {
   nativeModule()?.markLaunched();
 }
+
+/**
+ * The URL the running JS was loaded from, as React Native reports it: Metro's `http://` bundle URL,
+ * or the file of the embedded bundle or a preview. Null where it cannot be read (tests, web).
+ */
+export function scriptUrl(): string | null {
+  try {
+    const sourceCode =
+      require("react-native/Libraries/NativeModules/specs/NativeSourceCode").default;
+    return sourceCode.getConstants().scriptURL || null;
+  } catch {
+    return null;
+  }
+}

@@ -9,10 +9,19 @@ jest.mock("expo-file-system", () =>
   require("../../../services/previews/__tests__/fake-file-system.test-helper"),
 );
 let mockSlug: string | undefined = "shop";
+let mockScriptUrl: string | null = null;
+jest.mock(
+  "react-native/Libraries/NativeModules/specs/NativeSourceCode",
+  () => ({ default: { getConstants: () => ({ scriptURL: mockScriptUrl }) } }),
+);
 let mockNativeState: { bundle?: string; localServer?: string } = {};
 jest.mock("expo", () => ({
   requireOptionalNativeModule: () => ({
     key: "version-1.0.0",
+    compatibility: "appVersion",
+    appName: "Shop",
+    appVersion: "1.0.0",
+    buildNumber: "7",
     get slug() {
       return mockSlug;
     },
@@ -21,12 +30,44 @@ jest.mock("expo", () => ({
   }),
 }));
 
+/** The registry announces 8082, and Metro answers there as this app ("shop"). */
+const registryWith8082 = () =>
+  jest.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith(":19150/servers"))
+      return Response.json({
+        servers: [
+          {
+            id: "a",
+            port: 8082,
+            title: "Main-Branch",
+            branch: "main",
+            worktree: "/w",
+            slug: "shop",
+            name: "Shop",
+            compatibility: "appVersion",
+            keys: { ios: "version-1.0.0" },
+            startedAt: "",
+          },
+        ],
+      });
+    if (url.endsWith(":8082/status"))
+      return new Response("packager-status:running");
+    if (url.endsWith(":8082/"))
+      return Response.json({
+        launchAsset: { url: "http://localhost:8082/index.bundle?platform=ios" },
+        extra: { expoClient: { slug: "shop", name: "Shop", version: "1.0.0" } },
+      });
+    return new Response("", { status: 404 });
+  }) as typeof fetch;
+
 const notFound = () =>
   jest.fn(async () => new Response("", { status: 404 })) as typeof fetch;
 
 beforeEach(() => {
   mockNativeState = {};
   mockSlug = "shop";
+  mockScriptUrl = null;
   global.fetch = notFound();
 });
 
@@ -95,27 +136,61 @@ const METRO_NOTE =
 
 test("a preview running in a debug build says Metro is not used", async () => {
   mockNativeState = { bundle: "task-1/ios/main.jsbundle" };
+  mockScriptUrl = "file:///data/Documents/preview/task-1/ios/main.jsbundle";
   const tree = await render(true);
-  expect(texts(tree)).toContain("Running: task-1");
+  expect(texts(tree)).toContain("Preview · task-1");
   expect(texts(tree)).toContain(METRO_NOTE);
+  expect(texts(tree)).toContain("Back to base");
   await act(async () => tree.unmount());
 });
 
-test("a dev preview server in use names the server and drops the Metro note", async () => {
+test("a dev preview server picked by hand is named, with Stop and no Metro note", async () => {
   mockNativeState = {
     bundle: "task-1/ios/main.jsbundle",
     localServer: "http://localhost:8082/index.bundle?platform=ios",
   };
+  mockScriptUrl = "http://localhost:8082/index.bundle?platform=ios";
   const tree = await render(true);
-  expect(texts(tree)).toContain("Running: localhost:8082 (local)");
+  expect(texts(tree)).toContain("Dev preview server · localhost:8082");
+  expect(texts(tree)).toContain("Stop using dev preview server");
   expect(texts(tree)).not.toContain(METRO_NOTE);
   await act(async () => tree.unmount());
 });
 
-test("the base bundle shows no note", async () => {
+test("a release-style start is the base built into the app, with the build's facts", async () => {
   const tree = await render(true);
-  expect(texts(tree)).toContain("Running: Embedded bundle");
-  expect(texts(tree)).not.toContain(METRO_NOTE);
+  const all = texts(tree);
+  expect(all).toContain("Base · built into the app");
+  expect(all).not.toContain(METRO_NOTE);
+  expect(all).not.toContain("Back to base");
+  for (const fact of [
+    "Shop",
+    "1.0.0 (7)",
+    "iOS",
+    "App version · version-1.0.0",
+  ])
+    expect(all).toContain(fact);
+  await act(async () => tree.unmount());
+});
+
+test("the base on Expo's Metro says so, with its address", async () => {
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  const tree = await render(true);
+  expect(texts(tree)).toContain("Base · Expo dev server · localhost:8081");
+  expect(texts(tree)).toContain("Expo dev server");
+  await act(async () => tree.unmount());
+});
+
+test("the base on a preview start server names it as a dev preview server", async () => {
+  mockScriptUrl = "http://localhost:8082/index.bundle?platform=ios";
+  global.fetch = registryWith8082();
+  const tree = await render(true);
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+  expect(texts(tree)).toContain(
+    "Base · Dev preview server · Main-Branch · localhost:8082",
+  );
   await act(async () => tree.unmount());
 });
 

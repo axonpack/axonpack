@@ -56,7 +56,26 @@ export type PreviewListLabels = {
   title: string;
   /** What is running now. */
   running: string;
+  /** The app's own bundle, whatever serves it. */
   base: string;
+  /** Kinds of bundle source, on the hero card, the server rows and in "Base · <kind>". */
+  kindBuiltIn: string;
+  kindExpoDevServer: string;
+  kindDevPreviewServer: string;
+  kindPreview: string;
+  /** On the server the app runs from. */
+  active: string;
+  /** Labels of the facts on the hero card. */
+  app: string;
+  version: string;
+  platform: string;
+  compatibility: string;
+  compatibilityAppVersion: string;
+  compatibilityFingerprint: string;
+  author: string;
+  commit: string;
+  published: string;
+  branch: string;
   backToBase: string;
   /** Shown in a debug build while a preview runs, since Metro is not used then. */
   metroBypassed: string;
@@ -79,7 +98,7 @@ export type PreviewListLabels = {
   /** In place of the servers, when the build has no slug baked in by the config plugin. */
   noBuildSlug: string;
   stopDevPreviewServer: string;
-  /** After the title in the header line, for a dev preview server. */
+  /** @deprecated No longer shown: the running line names the kind instead. */
   localSuffix: string;
   localIncompatible: string;
   localUnknownBuild: string;

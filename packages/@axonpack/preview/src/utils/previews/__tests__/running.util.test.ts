@@ -1,6 +1,12 @@
 import type { DevPreviewServer } from "../../dev-preview-servers/merge-servers.util";
 import type { PreviewItem } from "../preview-items.util";
-import { runningNow } from "../running.util";
+import { DEFAULT_LABELS } from "../../../constants/preview-list/theme.const";
+import {
+  runningKind,
+  runningLabel,
+  runningNow,
+  sameServer,
+} from "../running.util";
 
 const item = (id: string, title: string, active: boolean) =>
   ({ id, entry: { title }, active }) as unknown as PreviewItem;
@@ -14,7 +20,13 @@ const server = {
 test("nothing picked is the base bundle", () => {
   expect(
     runningNow({ items: [], activeId: null, localUrl: null, servers: [] }),
-  ).toEqual({ kind: "base" });
+  ).toEqual({
+    kind: "base",
+    source: "built-in",
+    url: null,
+    hostPort: null,
+    server: null,
+  });
 });
 
 test("a picked preview gives its title and id", () => {
@@ -63,5 +75,183 @@ test("a dev preview server not found yet still gives its host and port", () => {
     url: "http://localhost:8083/index.bundle?platform=ios",
     hostPort: "localhost:8083",
     server: null,
+  });
+});
+
+const metro = (hostPort: string, extra: Partial<DevPreviewServer> = {}) =>
+  ({
+    hostPort,
+    host: hostPort.split(":")[0],
+    port: Number(hostPort.split(":")[1]),
+    url: `http://${hostPort}/index.bundle?platform=ios`,
+    title: "Main-Branch",
+    branch: "main",
+    announced: false,
+    ...extra,
+  }) as DevPreviewServer;
+
+const onBase = (scriptUrl: string | null, servers: DevPreviewServer[] = []) =>
+  runningNow({ items: [], activeId: null, localUrl: null, servers, scriptUrl });
+
+describe("sameServer", () => {
+  test.each([
+    ["localhost:8081", "127.0.0.1:8081"],
+    ["127.0.0.1:8081", "10.0.2.2:8081"],
+    ["10.0.2.2:8081", "localhost:8081"],
+    ["[::1]:8081", "localhost:8081"],
+    ["LOCALHOST:8081", "localhost:8081"],
+    ["192.168.1.5:8081", "192.168.1.5:8081"],
+  ])("%s is the same server as %s", (a, b) => {
+    expect(sameServer(a, b)).toBe(true);
+  });
+
+  test("another port is another server, even on the same computer", () => {
+    expect(sameServer("localhost:8081", "localhost:8082")).toBe(false);
+    expect(sameServer("10.0.2.2:8081", "127.0.0.1:8082")).toBe(false);
+  });
+
+  test("a LAN address is not taken for the computer's local names", () => {
+    expect(sameServer("192.168.1.5:8081", "localhost:8081")).toBe(false);
+  });
+});
+
+describe("the base's source", () => {
+  test("a release build with no Metro runs the bundle built into the app", () => {
+    expect(onBase("file:///app/Main.app/main.jsbundle")).toMatchObject({
+      kind: "base",
+      source: "built-in",
+      hostPort: null,
+    });
+    expect(onBase("assets://index.android.bundle")).toMatchObject({
+      source: "built-in",
+    });
+  });
+
+  test("Metro that the registry does not know is Expo's dev server", () => {
+    const scan = metro("localhost:8081");
+    expect(
+      onBase("http://localhost:8081/index.bundle?platform=ios", [scan]),
+    ).toEqual({
+      kind: "base",
+      source: "expo-dev-server",
+      url: "http://localhost:8081/index.bundle?platform=ios",
+      hostPort: "localhost:8081",
+      server: scan,
+    });
+  });
+
+  test("Metro not found by the scan yet is still Expo's dev server", () => {
+    expect(onBase("http://192.168.1.5:8081/index.bundle")).toMatchObject({
+      source: "expo-dev-server",
+      hostPort: "192.168.1.5:8081",
+      server: null,
+    });
+  });
+
+  test("an announced Metro is a dev preview server, matched under another host name", () => {
+    const announced = metro("10.0.2.2:8082", { announced: true });
+    expect(
+      onBase("http://localhost:8082/index.bundle?platform=android", [
+        metro("10.0.2.2:8081"),
+        announced,
+      ]),
+    ).toMatchObject({ source: "dev-preview-server", server: announced });
+  });
+
+  test("a server on another port is not taken for the base", () => {
+    expect(
+      onBase("http://localhost:8081/index.bundle", [
+        metro("localhost:8082", { announced: true }),
+      ]),
+    ).toMatchObject({ source: "expo-dev-server", server: null });
+  });
+});
+
+describe("a preview", () => {
+  test("runs when its own file is what loaded", () => {
+    expect(
+      runningNow({
+        items: [item("task-1", "Task 1", true)],
+        activeId: "task-1",
+        localUrl: null,
+        servers: [],
+        scriptUrl: "file:///Users/x/Documents/preview/task-1/ios/main.jsbundle",
+      }),
+    ).toEqual({ kind: "preview", id: "task-1", title: "Task 1" });
+  });
+
+  test("picked but not loaded (the fallback ran) leaves the base", () => {
+    expect(
+      runningNow({
+        items: [item("task-1", "Task 1", true)],
+        activeId: "task-1",
+        localUrl: null,
+        servers: [],
+        scriptUrl: "http://localhost:8081/index.bundle",
+      }),
+    ).toMatchObject({ kind: "base", source: "expo-dev-server" });
+  });
+});
+
+test("a picked dev preview server takes its host and port from what loaded", () => {
+  const picked = metro("127.0.0.1:8082", { announced: true });
+  expect(
+    runningNow({
+      items: [],
+      activeId: null,
+      localUrl: "http://other-name:8082/index.bundle",
+      servers: [picked],
+      scriptUrl: "http://localhost:8082/index.bundle",
+    }),
+  ).toMatchObject({
+    kind: "local",
+    hostPort: "127.0.0.1:8082",
+    server: picked,
+  });
+});
+
+describe("runningLabel", () => {
+  const label = (r: Parameters<typeof runningLabel>[0]) =>
+    runningLabel(r, DEFAULT_LABELS);
+
+  test("names the base and what serves it", () => {
+    expect(label(onBase(null))).toBe("Base · built into the app");
+    expect(label(onBase("http://localhost:8081/index.bundle"))).toBe(
+      "Base · Expo dev server · localhost:8081",
+    );
+    expect(
+      label(
+        onBase("http://localhost:8082/index.bundle", [
+          metro("localhost:8082", { announced: true }),
+        ]),
+      ),
+    ).toBe("Base · Dev preview server · Main-Branch · localhost:8082");
+  });
+
+  test("a picked server and a preview are not the base", () => {
+    expect(
+      label({
+        kind: "local",
+        url: "http://localhost:8082/x",
+        hostPort: "localhost:8082",
+        server: metro("localhost:8082", { announced: true }),
+      }),
+    ).toBe("Dev preview server · Main-Branch · localhost:8082");
+    expect(label({ kind: "preview", id: "t", title: "Login fix" })).toBe(
+      "Preview · Login fix",
+    );
+  });
+
+  test("custom labels are used, base included", () => {
+    expect(
+      runningLabel(onBase(null), {
+        ...DEFAULT_LABELS,
+        base: "Embedded bundle",
+        kindBuiltIn: "in the app",
+      }),
+    ).toBe("Embedded bundle · in the app");
+    expect(runningKind(onBase(null), DEFAULT_LABELS)).toBe(
+      "built into the app",
+    );
   });
 });

@@ -40,6 +40,12 @@ export const compatibilityKey = (
 export const compatibilityOfKey = (key: string): Compatibility =>
   key.startsWith("version-") ? "appVersion" : "fingerprint";
 
+/** A key short enough for one line: a fingerprint hash is cut to 8 characters. */
+export const shortKey = (key: string): string =>
+  key.startsWith("fingerprint-")
+    ? key.slice(0, "fingerprint-".length + 8)
+    : key;
+
 /** What `expo export:embed` names the bundle, so a preview folder matches what a build embeds. */
 export const BUNDLE_FILE: Record<Platform, string> = {
   android: "index.android.bundle",
