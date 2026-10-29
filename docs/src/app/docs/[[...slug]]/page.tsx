@@ -12,7 +12,7 @@ import { getMDXComponents } from '@/components/mdx';
 import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { findNeighbour } from 'fumadocs-core/page-tree';
-import { appLongName, canonicalPath, pageSourceUrl } from '@/lib/shared';
+import { appLongName, canonicalPath, docsRoute, gitConfig, pageSourceUrl, siteUrl } from '@/lib/shared';
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   const params = await props.params;
@@ -31,6 +31,14 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
       breadcrumb={{ enabled: true }}
       footer={{ enabled: true, items: neighbours }}
     >
+      {jsonLd(page).map((data) => (
+        <script
+          key={data['@type']}
+          type="application/ld+json"
+          // `<` is escaped so a title can never close the script tag early.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, '\\u003c') }}
+        />
+      ))}
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
       <div className="flex flex-row gap-2 items-center border-b pb-6">
@@ -82,4 +90,43 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
       images: getPageImageUrl(page).url,
     },
   };
+}
+
+/** A breadcrumb on every package page, and the package itself on its index page. */
+function jsonLd(page: (typeof source)['$inferPage']) {
+  const pkg = getPagePackage(page);
+  if (!pkg) return [];
+
+  const absolute = (path: string) => new URL(canonicalPath(path), siteUrl).href;
+  const trail = [
+    { name: 'Docs', path: docsRoute },
+    { name: pkg.title, path: pkg.url },
+    ...(page.url === pkg.url ? [] : [{ name: page.data.title, path: page.url }]),
+  ];
+
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: absolute(item.path),
+    })),
+  };
+  if (page.url !== pkg.url) return [breadcrumb];
+
+  return [
+    breadcrumb,
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareSourceCode',
+      name: pkg.npmName,
+      alternateName: pkg.title,
+      description: pkg.description ?? page.data.description,
+      url: absolute(pkg.url),
+      codeRepository: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
+      programmingLanguage: 'TypeScript',
+    },
+  ];
 }
