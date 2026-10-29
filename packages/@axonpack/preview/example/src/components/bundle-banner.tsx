@@ -1,4 +1,4 @@
-import { DEFAULT_LABELS, runningLabel, useRunning } from "@axonpack/preview";
+import { usePreviewStatus } from "@axonpack/preview";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,12 +11,10 @@ const LOOKS = {
 /** What this start runs, on every tab, so a switch is obvious. */
 export function BundleBanner() {
   const { top } = useSafeAreaInsets();
-  const running = useRunning();
-  const look = LOOKS[running.kind];
-  // The package's own words, so the banner and the list never disagree.
-  const title = runningLabel(running, DEFAULT_LABELS);
-  const detail =
-    running.kind === "preview" ? running.id : (running.server?.branch ?? null);
+  // What the list's header card reads, so the banner and the list never disagree.
+  const status = usePreviewStatus();
+  const look = LOOKS[status.kind];
+  const detail = status.id ?? status.branch;
   return (
     <View
       style={[
@@ -25,7 +23,7 @@ export function BundleBanner() {
       ]}
     >
       <Text testID="bundle-label" style={[styles.title, { color: look.text }]}>
-        {title}
+        {status.label}
       </Text>
       {detail ? (
         <Text style={[styles.detail, { color: look.text }]}>{detail}</Text>

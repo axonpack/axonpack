@@ -1,21 +1,10 @@
 import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import type { BuildApp } from "../../services/native/build-info.service";
-import type {
-  Compatibility,
-  IndexEntry,
-  Platform,
-} from "../../utils/previews/layout.util";
+import type { PreviewStatusInfo } from "../../services/previews/use-preview-status.service";
 import { shortKey } from "../../utils/previews/layout.util";
 import { KIND_TONE } from "../../constants/preview-list/chip-tones.const";
-import {
-  type Running,
-  bundleKind,
-  displayHostPort,
-  runningKind,
-  runningLabel,
-} from "../../utils/previews/running.util";
+import { kindLabel } from "../../utils/previews/running.util";
 import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
 import { Chevron } from "./ui/chevron.ui";
@@ -27,13 +16,6 @@ import { RefreshIcon } from "./ui/refresh-icon.ui";
 import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
-export type HeroBuild = {
-  app: BuildApp;
-  platform: Platform | null;
-  compatibility: Compatibility | null;
-  key: string | null;
-};
-
 type Row = [label: string, value: string | null | undefined];
 
 /**
@@ -43,75 +25,55 @@ type Row = [label: string, value: string | null | undefined];
 export function HeroCard(props: {
   theme: PreviewListTheme;
   labels: PreviewListLabels;
-  running: Running;
-  build: HeroBuild;
-  /** The running preview's entry, when a preview runs and the list has it. */
-  entry: IndexEntry | null;
-  loading: boolean;
-  /** A preview is chosen, even one that could not load. */
-  canGoBack: boolean;
-  /** Back to the default bundle: clears the chosen preview and the picked server. */
+  /** From `usePreviewStatus`, given the same labels. */
+  status: PreviewStatusInfo;
   onBackToDefault: () => void;
   onRefresh: () => void;
 }) {
-  const { theme, labels, running, build, entry } = props;
+  const { theme, labels, status } = props;
   const [expanded, setExpanded] = useState(false);
-  const server = running.kind === "preview" ? null : running.server;
-  const app = build.app;
+  const { app, compatibility } = status;
 
-  const kind = runningKind(running, labels);
-  // A preview or a server has a name of its own; the bundle built into the app is named by its kind.
-  // Metro only knows the app's name, so the Metro the app starts on, when `preview start` gave it
-  // no title, is called by its role.
-  const name =
-    running.kind === "preview"
-      ? running.title
-      : running.kind === "default" && running.source === "expo-dev-server"
-        ? labels.defaultServerTitle
-        : (server?.title ?? kind);
+  const kindKey = status.bundleKind;
+  const kind = kindLabel(kindKey, labels);
+  const name = status.title;
   // A preview has no address; its branch and id wait behind Show details.
-  const where =
-    running.kind !== "preview" && running.hostPort
-      ? displayHostPort(running.hostPort)
-      : null;
+  const where = status.address;
   const version = app.version
     ? `${app.version}${app.buildNumber ? ` (${app.buildNumber})` : ""}`
     : null;
 
   const rows: Row[] = [
-    [labels.author, entry?.author],
+    [labels.author, status.author],
     [
       labels.published,
-      entry?.publishedAt ? new Date(entry.publishedAt).toLocaleString() : null,
+      status.publishedAt ? new Date(status.publishedAt).toLocaleString() : null,
     ],
   ];
   const details: Row[] = [
-    [
-      labels.branch,
-      running.kind === "preview" ? entry?.branch : server?.branch,
-    ],
-    [labels.previewId, running.kind === "preview" ? running.id : null],
-    [labels.environment, entry?.environment],
+    [labels.branch, status.branch],
+    [labels.previewId, status.id],
+    [labels.environment, status.environment],
     [labels.app, app.name],
     [labels.version, version],
-    [labels.commit, entry?.commit?.slice(0, 7)],
+    [labels.commit, status.commit?.slice(0, 7)],
     [
       labels.platform,
-      build.platform === "ios"
+      app.platform === "ios"
         ? "iOS"
-        : build.platform === "android"
+        : app.platform === "android"
           ? "Android"
           : null,
     ],
     [
       labels.compatibility,
-      build.compatibility === "fingerprint"
+      compatibility.mode === "fingerprint"
         ? labels.compatibilityFingerprint
-        : build.compatibility === "appVersion"
+        : compatibility.mode === "appVersion"
           ? labels.compatibilityAppVersion
           : null,
     ],
-    [labels.compatibilityKey, build.key && shortKey(build.key)],
+    [labels.compatibilityKey, compatibility.key && shortKey(compatibility.key)],
   ];
   const shown = (list: Row[]) =>
     list
@@ -121,8 +83,6 @@ export function HeroCard(props: {
       ));
   const visibleRows = shown(rows);
   const detailRows = shown(details);
-  const isDefault = running.kind === "default";
-  const kindKey = bundleKind(running);
   const chips = [
     // The headline already says the kind when there is no other name.
     name === kind ? null : kindKey === "preview" || kindKey === "built-in" ? (
@@ -130,21 +90,21 @@ export function HeroCard(props: {
     ) : (
       <ServerChip key="kind" theme={theme} labels={labels} kind={kindKey} />
     ),
-    isDefault ? (
+    status.isDefault ? (
       <Chip key="default" theme={theme} text={labels.defaultBundle} />
     ) : null,
-    entry?.environment ? (
+    status.environment ? (
       <EnvironmentChip
         key="env"
         theme={theme}
         labels={labels}
-        name={entry.environment}
+        name={status.environment}
       />
     ) : null,
   ].filter(Boolean);
   const hairline = { borderTopWidth: 1, borderColor: theme.border };
-  const hasActions = props.canGoBack || running.kind === "local";
-  const showNote = __DEV__ && running.kind === "preview";
+  const hasActions = status.canGoBack;
+  const showNote = __DEV__ && status.kind === "preview";
   const factRows = expanded ? [...visibleRows, ...detailRows] : visibleRows;
   const hasToggle = detailRows.length > 0;
   const endsCard = !showNote && !hasActions;
@@ -170,7 +130,7 @@ export function HeroCard(props: {
         >
           <View
             accessible
-            accessibilityLabel={`${labels.running}: ${runningLabel(running, labels)}`}
+            accessibilityLabel={`${labels.running}: ${status.label}`}
             style={{ flex: 1, paddingTop: 2 }}
           >
             <TitleSubtitle
@@ -184,9 +144,9 @@ export function HeroCard(props: {
             theme={theme}
             label={labels.refresh}
             onPress={props.onRefresh}
-            busy={props.loading}
+            busy={status.loading}
           >
-            {props.loading ? (
+            {status.loading ? (
               <ActivityIndicator color={theme.primary} />
             ) : (
               <RefreshIcon color={theme.text} />

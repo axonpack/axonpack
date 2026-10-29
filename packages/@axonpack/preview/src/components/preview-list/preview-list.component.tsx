@@ -21,12 +21,7 @@ import {
   devPreviewServersStore,
   useDevPreviewServersState,
 } from "../../stores/dev-preview-servers/dev-preview-servers.store";
-import {
-  buildApp,
-  buildCompatibility,
-  buildKey,
-  buildSlug,
-} from "../../services/native/build-info.service";
+import { buildSlug } from "../../services/native/build-info.service";
 import { nativeModule } from "../../services/native/native.service";
 import { currentPlatform } from "../../utils/config/config.util";
 import { runsFromServer, sameServer } from "../../utils/previews/running.util";
@@ -34,7 +29,7 @@ import { describeListError } from "../../utils/preview-list/list-error.util";
 import { previewsStore } from "../../stores/previews/previews.store";
 import { ConfigContext } from "../preview-provider/preview-provider.component";
 import { usePreview } from "../../services/previews/use-preview.service";
-import { useRunning } from "../../services/previews/use-running.service";
+import { usePreviewStatus } from "../../services/previews/use-preview-status.service";
 import { DEFAULT_LABELS } from "../../constants/preview-list/theme.const";
 import { resolveTheme } from "../../utils/preview-list/theme.util";
 import {
@@ -116,7 +111,6 @@ export function PreviewList(props: PreviewListProps) {
   } = props;
   const preview = usePreview();
   const local = useDevPreviewServersState();
-  const now = useRunning();
   const showLocal = __DEV__ && preview.devPreviewServers;
   // Without the slug the plugin bakes in, other apps' servers can't be told apart, so none are listed.
   const appSlug = buildSlug();
@@ -166,6 +160,8 @@ export function PreviewList(props: PreviewListProps) {
     },
     timeAgo: { ...DEFAULT_LABELS.timeAgo, ...labelsInput?.timeAgo },
   };
+  const status = usePreviewStatus(labels);
+  const now = status.running;
 
   // What runs now when that is the default, else what native says it starts on.
   const defaultMetro =
@@ -265,18 +261,11 @@ export function PreviewList(props: PreviewListProps) {
     }
   };
 
-  const runningEntry =
-    now.kind === "preview"
-      ? (preview.items.find((i) => i.id === now.id)?.entry ?? null)
-      : null;
   const refreshAll = run(() => {
     // As an updater, so the time is read when React applies it. The linter can't tell this
     // function only runs on a press, and takes a direct call for a read during render.
     setShownAt(Date.now);
-    return Promise.all([
-      preview.refresh(),
-      showLocal ? devPreviewServersStore.refresh() : null,
-    ]);
+    return status.refresh();
   });
   const failure = preview.error
     ? describeListError(preview.error, {
@@ -305,17 +294,8 @@ export function PreviewList(props: PreviewListProps) {
       <HeroCard
         theme={theme}
         labels={labels}
-        running={now}
-        build={{
-          app: buildApp(),
-          platform: currentPlatform(),
-          compatibility: buildCompatibility(),
-          key: preview.buildKey ?? buildKey(),
-        }}
-        entry={runningEntry}
-        loading={preview.loading}
-        canGoBack={Boolean(preview.activeId)}
-        onBackToDefault={run(() => preview.switchTo(null))}
+        status={status}
+        onBackToDefault={run(status.backToDefault)}
         onRefresh={refreshAll}
       />
     </View>

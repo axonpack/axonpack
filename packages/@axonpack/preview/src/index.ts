@@ -29,8 +29,14 @@ export {
   runningNow,
   sameServer,
 } from "./utils/previews/running.util";
-export type { DefaultSource, Running } from "./utils/previews/running.util";
+export type {
+  BundleKind,
+  DefaultSource,
+  Running,
+} from "./utils/previews/running.util";
 export { useRunning } from "./services/previews/use-running.service";
+export { usePreviewStatus } from "./services/previews/use-preview-status.service";
+export type { PreviewStatusInfo } from "./services/previews/use-preview-status.service";
 export { PreviewList } from "./components/preview-list/preview-list.component";
 export type { PreviewListProps } from "./components/preview-list/preview-list.component";
 export type {
