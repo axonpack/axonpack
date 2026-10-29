@@ -16,6 +16,8 @@ export type PreviewListTheme = {
   surface: string;
   /** A wash of the primary colour: the hero card and chips. */
   tint: string;
+  /** The border of a tinted card. `border` all but vanishes on the tint. */
+  tintBorder: string;
   border: string;
   title: string;
   text: string;
@@ -68,7 +70,7 @@ export type PreviewListLabels = {
   kindPreview: string;
   /** On the server the app runs from. */
   active: string;
-  /** The hero card's Stop, short enough to sit beside the other action. */
+  /** @deprecated No longer shown: the header's Use the default bundle stops a picked server too. */
   stopServer: string;
   showDetails: string;
   hideDetails: string;

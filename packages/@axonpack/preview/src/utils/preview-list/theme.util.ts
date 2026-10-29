@@ -44,6 +44,7 @@ export function fromDevtoolsPalette(
     card: palette.surface,
     surface: tint,
     tint,
+    tintBorder: palette.border,
     border: palette.border,
     title: palette.textPrimary,
     text: palette.textPrimary,

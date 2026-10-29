@@ -1,8 +1,9 @@
-import { FlatList, TurboModuleRegistry } from "react-native";
+import { FlatList, TurboModuleRegistry, View } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
 import { PreviewList } from "../preview-list.component";
+import { Chevron } from "../ui/chevron.ui";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
 
 jest.mock("expo-file-system", () =>
@@ -23,6 +24,7 @@ jest.mock(
   () => ({ default: { getConstants: () => ({ scriptURL: mockScriptUrl }) } }),
 );
 let mockNativeState: { bundle?: string; localServer?: string } = {};
+const mockSelectLocalServer = jest.fn();
 jest.mock("expo", () => ({
   requireOptionalNativeModule: () => ({
     key: "version-1.0.0",
@@ -35,6 +37,9 @@ jest.mock("expo", () => ({
     },
     state: () => mockNativeState,
     markLaunched: () => undefined,
+    selectLocalServer: mockSelectLocalServer,
+    select: () => undefined,
+    reload: () => undefined,
   }),
 }));
 
@@ -233,7 +238,7 @@ test("a preview published without an environment has no chip and no Environment 
   await act(async () => tree.unmount());
 });
 
-test("a dev preview server picked by hand: its address, Stop, and no Metro note", async () => {
+test("a dev preview server picked by hand: its address, one way back, and no Metro note", async () => {
   mockNativeState = {
     bundle: "task-1/ios/main.jsbundle",
     localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
@@ -245,10 +250,24 @@ test("a dev preview server picked by hand: its address, Stop, and no Metro note"
   // One machine, one name.
   expect(all).toContain("localhost:8082");
   expect(all).not.toContain("127.0.0.1:8082");
-  expect(all).toContain("Stop server");
-  // A preview is chosen too, so going back does more than Stop does.
-  expect(all).toContain("Use the default bundle");
+  expect(all).not.toContain("Stop server");
+  expect(all.filter((t) => t === "Use the default bundle")).toHaveLength(1);
   expect(all).not.toContain(METRO_NOTE);
+  await act(async () => tree.unmount());
+});
+
+test("a server picked by hand, with no preview chosen, offers Use the default bundle, which clears it", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
+  };
+  mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
+  const tree = await render(true);
+  expect(texts(tree)).not.toContain("Stop server");
+  mockSelectLocalServer.mockClear();
+  await act(async () =>
+    pressable(tree, "Use the default bundle").props.onPress(),
+  );
+  expect(mockSelectLocalServer).toHaveBeenCalledWith(null, null);
   await act(async () => tree.unmount());
 });
 
@@ -283,6 +302,79 @@ test("the app's own bundle from Expo's Metro names the server and its address", 
   expect(all).toContain("Expo dev server");
   expect(all).toContain("localhost:8081");
   expect(all).toContain("Default bundle");
+  await act(async () => tree.unmount());
+});
+
+// Not deep: a View and the native view under it carry the same testID.
+const byId = (tree: ReactTestRenderer, testID: string) =>
+  tree.root.findAll((node) => node.props.testID === testID, { deep: false });
+
+test("with a dev server and no rows, Show details takes no room it does not draw", async () => {
+  const states = [
+    // Expo's Metro: nothing after the toggle.
+    () => {
+      mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+    },
+    // A dev preview server picked by hand that the list has not found: Stop after it.
+    () => {
+      mockNativeState = {
+        localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
+      };
+      mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
+    },
+  ];
+  for (const [i, setUp] of states.entries()) {
+    setUp();
+    const tree = await render(true);
+    const [facts] = byId(tree, "hero-facts");
+    // No padding under the divider, and the toggle's empty lower half goes into the gap or padding.
+    expect(facts.props.style).toMatchObject({
+      borderTopWidth: 1,
+      paddingTop: 0,
+      marginBottom: -12,
+    });
+    expect(byId(tree, "hero-actions")).toHaveLength(i);
+    await act(async () => tree.unmount());
+  }
+});
+
+test("Show details is one button, 44 high, whose chevron turns from right to down", async () => {
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  const tree = await render(true);
+  const toggle = () => byId(tree, "hero-details-toggle")[0];
+  const turn = () =>
+    toggle().findByType(Chevron).findByType(View).props.style.transform;
+  expect(toggle().props.accessibilityRole).toBe("button");
+  expect(toggle().props.style.minHeight).toBeGreaterThanOrEqual(44);
+  expect(toggle().props.accessibilityState).toEqual({ expanded: false });
+  expect(turn()).toEqual([{ rotate: "-45deg" }]);
+  const label = toggle().findByProps({ children: "Show details" });
+  expect(toggle().findByType(Chevron).props.color).toBe(
+    label.props.style.color,
+  );
+  await showDetails(tree);
+  expect(toggle().props.accessibilityState).toEqual({ expanded: true });
+  expect(turn()).toEqual([{ rotate: "45deg" }]);
+  // Rows are in now, so they get their room under the divider.
+  expect(byId(tree, "hero-facts")[0].props.style.paddingTop).toBe(8);
+  await act(async () => tree.unmount());
+});
+
+test("a preview keeps its spacing: rows under the divider, the toggle, then the actions", async () => {
+  mockNativeState = { bundle: "task-1/ios/main.jsbundle" };
+  mockScriptUrl = "file:///data/Documents/preview/task-1/ios/main.jsbundle";
+  global.fetch = bucketWithPreview();
+  const tree = await render(true);
+  expect(byId(tree, "hero-facts")[0].props.style).toMatchObject({
+    borderTopWidth: 1,
+    paddingTop: 8,
+    marginBottom: 0,
+  });
+  expect(byId(tree, "hero-details-toggle")[0].props.style.minHeight).toBe(44);
+  expect(byId(tree, "hero-actions")[0].props.style).toMatchObject({
+    borderTopWidth: 1,
+    paddingTop: 14,
+  });
   await act(async () => tree.unmount());
 });
 

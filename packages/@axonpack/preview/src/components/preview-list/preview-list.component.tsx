@@ -171,10 +171,8 @@ export function PreviewList(props: PreviewListProps) {
         entry={runningEntry}
         error={preview.error}
         loading={preview.loading}
-        // With only a server picked, Stop does the same, so one button is enough.
         canGoBack={Boolean(preview.activeId)}
         onBackToBase={() => preview.switchTo(null)}
-        onStopServer={() => devPreviewServersStore.switchTo(null)}
         onRefresh={() => {
           preview.refresh();
           if (showLocal) devPreviewServersStore.refresh();

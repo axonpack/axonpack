@@ -53,6 +53,7 @@ test("an expo-devtools palette is mapped token by token", () => {
     card: "#1a2027",
     surface: "#222a33",
     tint: "#222a33",
+    tintBorder: "#2c3540",
     border: "#2c3540",
     title: "#e6edf3",
     text: "#e6edf3",
@@ -102,5 +103,9 @@ test.each([
     expect(
       contrastRatio(theme.primaryText, theme.primary),
     ).toBeGreaterThanOrEqual(4.5);
+    // The tinted card's edge shows at least as well as a plain card's.
+    expect(contrastRatio(theme.tintBorder, theme.tint)).toBeGreaterThanOrEqual(
+      contrastRatio(theme.border, theme.card),
+    );
   },
 );

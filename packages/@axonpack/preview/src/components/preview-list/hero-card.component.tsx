@@ -16,6 +16,7 @@ import {
 } from "../../utils/previews/running.util";
 import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
+import { Chevron } from "./ui/chevron.ui";
 import { Chip } from "./ui/chip.ui";
 import { DetailRow } from "./ui/detail-row.ui";
 import { IconButton } from "./ui/icon-button.ui";
@@ -44,10 +45,10 @@ export function HeroCard(props: {
   entry: IndexEntry | null;
   error: string | null;
   loading: boolean;
-  /** A preview is chosen, so going back does more than Stop does. */
+  /** A preview is chosen, even one that could not load. */
   canGoBack: boolean;
+  /** Back to the default bundle: clears the chosen preview and the picked server. */
   onBackToBase: () => void;
-  onStopServer: () => void;
   onRefresh: () => void;
 }) {
   const { theme, labels, running, build, entry } = props;
@@ -130,6 +131,15 @@ export function HeroCard(props: {
     ) : null,
   ].filter(Boolean);
   const hairline = { borderTopWidth: 1, borderColor: theme.border };
+  const hasActions = props.canGoBack || running.kind === "local";
+  const showNote = __DEV__ && running.kind === "preview";
+  const factRows = expanded ? [...visibleRows, ...detailRows] : visibleRows;
+  const hasToggle = detailRows.length > 0;
+  const endsCard = !showNote && !props.error && !hasActions;
+  // The toggle is 44 high for the finger but its text is 20. Alone, or as the card's last line, its
+  // empty lower half only adds to the card's gap or padding, so it is pulled into them. Under rows
+  // it keeps the room it has always had.
+  const overhang = hasToggle && (factRows.length === 0 || endsCard) ? -12 : 0;
 
   return (
     <View
@@ -137,7 +147,7 @@ export function HeroCard(props: {
         backgroundColor: theme.tint,
         borderRadius: theme.radius,
         borderWidth: 1,
-        borderColor: theme.border,
+        borderColor: theme.tintBorder,
         padding: 16,
         gap: 14,
       }}
@@ -182,26 +192,42 @@ export function HeroCard(props: {
           </View>
         ) : null}
       </View>
-      <View style={{ ...hairline, paddingTop: 8 }}>
-        {visibleRows}
-        {expanded ? detailRows : null}
-        {detailRows.length > 0 ? (
-          <Pressable
-            onPress={() => setExpanded(!expanded)}
-            accessibilityRole="button"
-            accessibilityState={{ expanded }}
-            style={{ minHeight: 44, justifyContent: "center" }}
-          >
-            <Text
-              style={{ ...font(theme, "medium", 15), color: theme.primary }}
+      {factRows.length > 0 || hasToggle ? (
+        <View
+          testID="hero-facts"
+          style={{
+            ...hairline,
+            // Room under the divider for rows; the toggle already has its own inside its 44.
+            paddingTop: factRows.length > 0 ? 8 : 0,
+            marginBottom: overhang,
+          }}
+        >
+          {factRows}
+          {hasToggle ? (
+            <Pressable
+              testID="hero-details-toggle"
+              onPress={() => setExpanded(!expanded)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              style={{
+                minHeight: 44,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
             >
-              {expanded ? labels.hideDetails : labels.showDetails}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
+              <Text
+                style={{ ...font(theme, "medium", 15), color: theme.primary }}
+              >
+                {expanded ? labels.hideDetails : labels.showDetails}
+              </Text>
+              <Chevron color={theme.primary} open={expanded} />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {/* A dev preview server wins over a picked preview, so Metro is in use and the note would be wrong. */}
-      {__DEV__ && running.kind === "preview" ? (
+      {showNote ? (
         <Text style={{ ...font(theme, "regular", 14), color: theme.warning }}>
           {labels.metroBypassed}
         </Text>
@@ -211,8 +237,9 @@ export function HeroCard(props: {
           {props.error}
         </Text>
       ) : null}
-      {props.canGoBack || running.kind === "local" ? (
+      {hasActions ? (
         <View
+          testID="hero-actions"
           style={{
             ...hairline,
             paddingTop: 14,
@@ -221,21 +248,11 @@ export function HeroCard(props: {
             gap: 8,
           }}
         >
-          {props.canGoBack ? (
-            <Button
-              theme={theme}
-              title={labels.backToBase}
-              onPress={props.onBackToBase}
-            />
-          ) : null}
-          {running.kind === "local" ? (
-            <Button
-              theme={theme}
-              title={labels.stopServer}
-              onPress={props.onStopServer}
-              kind="plain"
-            />
-          ) : null}
+          <Button
+            theme={theme}
+            title={labels.backToBase}
+            onPress={props.onBackToBase}
+          />
         </View>
       ) : null}
     </View>
