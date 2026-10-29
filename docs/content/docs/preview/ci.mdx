@@ -30,7 +30,8 @@ The yarn file is for Yarn 2 and later. For Yarn 1, change the install to
 
 ## What it does
 
-The workflow runs on `pull_request`: `opened`, `synchronize`, `reopened` and `closed`.
+The workflow runs on `pull_request`: `opened`, `synchronize`, `reopened` and `closed`. It can also
+be run by hand (see [Run by hand](#run-by-hand)).
 
 **`publish`** runs on every event but `closed`:
 
@@ -40,16 +41,35 @@ The workflow runs on `pull_request`: `opened`, `synchronize`, `reopened` and `cl
 3. Installs, then runs:
 
    ```sh
-   preview publish --id "$PREVIEW_ID" --base "origin/$BASE_BRANCH" --environment preview
+   preview publish --id "$PREVIEW_ID" --base "origin/$BASE_BRANCH" --platform "$PLATFORM" \
+     ${EAS_ENVIRONMENT:+--environment "$EAS_ENVIRONMENT"}
    ```
 
-   with the branch name as the id and the pull request's base branch for the changelog. The branch
+   with the branch name as the id, the pull request's base branch for the changelog, all
+   platforms, and `--environment preview`. The branch
    names go through `env`, not straight into the script, so a branch name can never run as shell
    code.
 
 Pushing to the pull request publishes it again under the same id, so QA sees **Update available**.
 
 **`unpublish`** runs on `closed`, merged or not, and runs `preview unpublish "$PREVIEW_ID"`.
+
+## Run by hand
+
+Each workflow also has a `workflow_dispatch` trigger, for publishing any branch, or removing a
+preview, without a pull request. Run it from your repository's **Actions** tab, as in
+[GitHub's guide to running a workflow manually](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/manually-running-a-workflow).
+
+| Input      | Values                            | Meaning                                                       |
+| ---------- | --------------------------------- | ------------------------------------------------------------- |
+| `action`   | `publish` (default), `unpublish`  | Which job runs                                                |
+| `id`       | Any, optional                     | The preview id. Empty means the branch the run was started on |
+| `platform` | `all` (default), `android`, `ios` | Which platforms to publish. Publish only                      |
+| `environment` | `preview` (default), or any EAS environment: `development`, `production` or a custom one | Passed as `--environment`. Empty means no `--environment` |
+
+A dispatched publish checks out the branch the run was started on and counts the changelog from the
+repository's default branch. A pull request run always uses `--environment preview`. The inputs
+reach the script through `env`, like the branch names.
 
 ## Secrets
 
@@ -64,7 +84,7 @@ Add these under your repository's **Settings**, **Secrets and variables**, **Act
 | `EXPO_TOKEN`                   | Only with `--environment`: an Expo access token, from your account settings on expo.dev |
 
 If your app keeps no variables on EAS, remove the `expo/expo-github-action` step, `EXPO_TOKEN` and
-`--environment preview`. Then give the job any `EXPO_PUBLIC_*` values the bundle needs as `env`,
+`EAS_ENVIRONMENT`. Then give the job any `EXPO_PUBLIC_*` values the bundle needs as `env`,
 since a preview is built with what the CI job has. See
 [A preview's own env values](/docs/preview/environment#a-previews-own-env-values).
 
@@ -78,9 +98,11 @@ workflow works for branches in your own repository.
 The `unpublish` job is optional. To keep previews after a pull request closes, do one of these in
 your copy of the workflow:
 
+- remove `closed` from the trigger's `types` (a dispatch can still unpublish)
 - delete the `unpublish` job
-- remove `closed` from the trigger's `types`
 - change the job's condition to `if: false`
+
+The last two also turn off unpublishing by dispatch.
 
 Then remove previews by hand with `preview unpublish <id>`, and delete the files no preview uses
 any more with `preview prune`.

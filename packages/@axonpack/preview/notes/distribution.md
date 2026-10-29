@@ -83,7 +83,23 @@ Repository secrets it reads:
 | `PREVIEW_S3_REGION`            | no, default `us-east-1`                         |
 | `EXPO_TOKEN`                   | only for `--environment` (an Expo access token) |
 
-Without EAS variables, drop the `expo/expo-github-action` step, `EXPO_TOKEN` and `--environment`.
+Without EAS variables, drop the `expo/expo-github-action` step, `EXPO_TOKEN` and `EAS_ENVIRONMENT`.
+
+### Run by hand
+
+Each workflow also has a `workflow_dispatch` trigger, for publishing any branch, or removing a
+preview, without a pull request. Run it from the Actions tab
+([GitHub's guide](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/manually-running-a-workflow)). Its inputs:
+
+| Input         | Values                                      | Meaning                                                       |
+| ------------- | ------------------------------------------- | ------------------------------------------------------------- |
+| `action`      | `publish` (default), `unpublish`            | Which job runs                                                |
+| `id`          | any, optional                               | The preview id. Empty means the branch the run was started on |
+| `platform`    | `all` (default), `android`, `ios`           | Publish only                                                  |
+| `environment` | `preview` (default), or any EAS environment | Passed as `--environment`. Empty means no `--environment`     |
+
+A dispatched publish counts the changelog from the repository's default branch. A pull request
+run always uses `--environment preview`.
 
 ### Unpublish on close (optional)
 
@@ -91,9 +107,11 @@ When a pull request closes, merged or not, the `unpublish` job removes its previ
 build's list. The job is optional. To keep previews after close, do one of these in your copy of
 the workflow:
 
+- remove `closed` from the trigger's `types` (a dispatch can still unpublish)
 - delete the `unpublish` job
-- remove `closed` from the trigger's `types`
 - change the job's condition to `if: false`
+
+The last two also turn off unpublishing by dispatch.
 
 Then remove previews by hand with `preview unpublish <id>`, and delete the files no preview uses
 any more with `preview prune`.

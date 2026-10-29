@@ -1,6 +1,7 @@
 # Sample workflow for @axonpack/preview, for an app installed with pnpm (pnpm-lock.yaml).
 # Copy it into your app's .github/workflows/. GitHub does not run it from this package.
 # Publishes each pull request as a preview, and removes it when the pull request closes.
+# It can also be run by hand from the Actions tab (workflow_dispatch, below).
 #
 # Secrets: PREVIEW_S3_URL, PREVIEW_S3_ACCESS_KEY_ID, PREVIEW_S3_SECRET_ACCESS_KEY, and
 # PREVIEW_S3_REGION if your bucket needs one. EXPO_TOKEN only with --environment.
@@ -10,15 +11,42 @@ name: Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  # For publishing any branch by hand, or removing a preview, from the Actions tab.
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Publish or unpublish
+        type: choice
+        options: [publish, unpublish]
+        default: publish
+      id:
+        description: Preview id. Empty means the branch the run was started on
+        type: string
+        required: false
+      platform:
+        description: Platforms to publish (publish only)
+        type: choice
+        options: [all, android, ios]
+        default: all
+      environment:
+        description: >-
+          EAS environment to build with (development, preview, production or a custom one).
+          Empty means no --environment
+        type: string
+        required: false
+        default: preview
 
 jobs:
   publish:
-    if: github.event.action != 'closed'
+    if: >-
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'publish')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           # The PR's own commit, not the merge commit, and the full history for the changelog.
+          # Empty on a dispatch, which checks out the branch the run was started on.
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
@@ -29,8 +57,9 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      # Only needed for --environment, which reads the EAS environment's variables.
-      # Drop this step, EXPO_TOKEN and --environment if the app keeps none on EAS.
+      # Only needed for --environment, which reads the EAS environment's variables. A pull
+      # request always uses it; a dispatch only when its environment input is not empty.
+      # Drop this step, EXPO_TOKEN and EAS_ENVIRONMENT if the app keeps none on EAS.
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -38,24 +67,34 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # The branch names go through env, not straight into the script, so a branch name
-      # can never run as shell code.
+      # Branch names and inputs go through env, not straight into the script, so none of them
+      # can ever run as shell code. A pull request uses its branch and base branch; a dispatch
+      # uses the id input (else its branch) and the repository's default branch.
       - run: >-
           pnpm exec preview publish --id "$PREVIEW_ID" --base "origin/$BASE_BRANCH"
-          --environment preview
+          --platform "$PLATFORM"
+          ${EAS_ENVIRONMENT:+--environment "$EAS_ENVIRONMENT"}
         env:
-          PREVIEW_ID: ${{ github.head_ref }}
-          BASE_BRANCH: ${{ github.base_ref }}
+          PREVIEW_ID: ${{ github.head_ref || inputs.id || github.ref_name }}
+          BASE_BRANCH: ${{ github.base_ref || github.event.repository.default_branch }}
+          PLATFORM: ${{ inputs.platform || 'all' }}
+          # Not `inputs.environment || 'preview'`: that turns a cleared field back into preview.
+          # An empty value drops --environment.
+          EAS_ENVIRONMENT: ${{ github.event_name == 'pull_request' && 'preview' || inputs.environment }}
           PREVIEW_S3_URL: ${{ secrets.PREVIEW_S3_URL }}
           PREVIEW_S3_ACCESS_KEY_ID: ${{ secrets.PREVIEW_S3_ACCESS_KEY_ID }}
           PREVIEW_S3_SECRET_ACCESS_KEY: ${{ secrets.PREVIEW_S3_SECRET_ACCESS_KEY }}
           PREVIEW_S3_REGION: ${{ secrets.PREVIEW_S3_REGION }}
 
-  # Optional: removes the preview when the pull request closes, merged or not. To keep previews
-  # after close, delete this job, remove `closed` from the trigger's types, or change the
-  # condition below to `if: false`. Then remove them by hand with preview unpublish <id>.
+  # Optional: removes the preview when the pull request closes, merged or not, and on a dispatch
+  # with action unpublish. To keep previews after close, remove `closed` from the trigger's
+  # types (a dispatch can still unpublish), or delete this job or change the condition below to
+  # `if: false` (which also turn off unpublish by dispatch). Then remove them by hand with
+  # preview unpublish <id>.
   unpublish:
-    if: github.event.action == 'closed'
+    if: >-
+      (github.event_name == 'pull_request' && github.event.action == 'closed') ||
+      (github.event_name == 'workflow_dispatch' && inputs.action == 'unpublish')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +110,7 @@ jobs:
 
       - run: pnpm exec preview unpublish "$PREVIEW_ID"
         env:
-          PREVIEW_ID: ${{ github.head_ref }}
+          PREVIEW_ID: ${{ github.head_ref || inputs.id || github.ref_name }}
           PREVIEW_S3_URL: ${{ secrets.PREVIEW_S3_URL }}
           PREVIEW_S3_ACCESS_KEY_ID: ${{ secrets.PREVIEW_S3_ACCESS_KEY_ID }}
           PREVIEW_S3_SECRET_ACCESS_KEY: ${{ secrets.PREVIEW_S3_SECRET_ACCESS_KEY }}
