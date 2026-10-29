@@ -36,9 +36,13 @@ export function Chip(props: {
               : color,
         backgroundColor: tone === "primary" ? theme.primary : theme.card,
         alignSelf: "flex-start",
+        // A long branch name ends in an ellipsis instead of running out of its row.
+        maxWidth: "100%",
       }}
     >
-      <Text style={{ ...font(theme, "medium", 13), color }}>{props.text}</Text>
+      <Text numberOfLines={1} style={{ ...font(theme, "medium", 13), color }}>
+        {props.text}
+      </Text>
     </View>
   );
 }

@@ -18,7 +18,9 @@ import {
   buildKey,
   buildSlug,
 } from "../../services/native/build-info.service";
+import { nativeModule } from "../../services/native/native.service";
 import { currentPlatform } from "../../utils/config/config.util";
+import { runsFromServer, sameServer } from "../../utils/previews/running.util";
 import { describeListError } from "../../utils/preview-list/list-error.util";
 import { previewsStore } from "../../stores/previews/previews.store";
 import { ConfigContext } from "../preview-provider/preview-provider.component";
@@ -97,6 +99,12 @@ export function PreviewList(props: PreviewListProps) {
     status: { ...DEFAULT_LABELS.status, ...props.labels?.status },
   };
 
+  // What runs now when that is the default, else what native says it starts on.
+  const defaultMetro =
+    (now.kind === "default" ? now.hostPort : null) ??
+    nativeModule()?.state().defaultServer ??
+    null;
+
   const items = useMemo(
     () =>
       buildListItems({
@@ -138,9 +146,12 @@ export function PreviewList(props: PreviewListProps) {
             theme={theme}
             labels={labels}
             server={item.server}
-            running={item.server.url === local.activeUrl}
+            active={runsFromServer(now, item.server.hostPort)}
+            isDefault={
+              defaultMetro !== null &&
+              sameServer(item.server.hostPort, defaultMetro)
+            }
             onSwitch={devPreviewServersStore.switchTo}
-            onStop={() => devPreviewServersStore.switchTo(null)}
           />
         );
       case "hint":

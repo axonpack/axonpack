@@ -6,6 +6,7 @@ import {
   runningKind,
   runningLabel,
   runningNow,
+  runsFromServer,
   sameServer,
 } from "../running.util";
 
@@ -316,5 +317,39 @@ describe("displayHostPort", () => {
     ["192.168.1.5:8081", "192.168.1.5:8081"],
   ])("%s reads as %s", (from, to) => {
     expect(displayHostPort(from)).toBe(to);
+  });
+});
+
+describe("runsFromServer", () => {
+  test("the default Metro the app started on, under another name", () => {
+    const running = onDefault("http://127.0.0.1:8081/index.bundle");
+    expect(runsFromServer(running, "localhost:8081")).toBe(true);
+    expect(runsFromServer(running, "10.0.2.2:8081")).toBe(true);
+    expect(runsFromServer(running, "localhost:8082")).toBe(false);
+  });
+
+  test("a server picked by hand, and not the default Metro", () => {
+    const running = runningNow({
+      items: [],
+      activeId: null,
+      localUrl: "http://127.0.0.1:8082/index.bundle",
+      servers: [],
+      scriptUrl: "http://127.0.0.1:8082/index.bundle",
+      defaultServer: "localhost:8081",
+    });
+    expect(runsFromServer(running, "localhost:8082")).toBe(true);
+    expect(runsFromServer(running, "localhost:8081")).toBe(false);
+  });
+
+  test("none while a preview runs or the bundle is built in", () => {
+    const preview = runningNow({
+      items: [],
+      activeId: "task-1",
+      localUrl: null,
+      servers: [],
+      scriptUrl: "file:///data/preview/task-1/ios/main.jsbundle",
+    });
+    expect(runsFromServer(preview, "localhost:8081")).toBe(false);
+    expect(runsFromServer(onDefault(null), "localhost:8081")).toBe(false);
   });
 });

@@ -13,7 +13,8 @@ export function SectionHeader(props: {
 }) {
   const { theme } = props;
   return (
-    <View style={{ gap: 4, paddingTop: 12, paddingHorizontal: 4 }}>
+    // Text starts where the cards' text does, so headings and rows read down one edge.
+    <View style={{ gap: 2, paddingTop: 12, paddingHorizontal: 16 }}>
       <View
         style={{
           flexDirection: "row",
@@ -35,12 +36,12 @@ export function SectionHeader(props: {
         {props.action ?? null}
       </View>
       {props.hint ? (
-        <Text style={{ ...font(theme, "regular", 13), color: theme.muted }}>
+        <Text style={{ ...font(theme, "regular", 15), color: theme.muted }}>
           {props.hint}
         </Text>
       ) : null}
       {props.error ? (
-        <Text style={{ ...font(theme, "regular", 13), color: theme.danger }}>
+        <Text style={{ ...font(theme, "regular", 15), color: theme.danger }}>
           {props.error}
         </Text>
       ) : null}

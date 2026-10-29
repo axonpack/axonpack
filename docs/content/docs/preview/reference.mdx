@@ -153,10 +153,11 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `incompatibleHint`       | Made for another native build. They can't run on this one.                    |
 | `deleteAll`              | Delete all                                                                    |
 | `devPreviewServersTitle` | Dev preview servers                                                           |
-| `devPreviewServersHint`  | Metro servers for this app on your computer. Debug builds only.               |
+| `devPreviewServersHint`  | Metro servers for this app on your computer.                                  |
+| `defaultServerTitle`     | Default. The title of the Metro the app starts on, when `preview start` gave it none |
 | `noDevPreviewServers`    | No Metro server found. Start one with npx preview start.                      |
 | `noBuildSlug`            | This build has no app slug, so it cannot tell its servers from other apps'. Add the config plugin and rebuild. |
-| `stopDevPreviewServer`   | Stop using dev preview server                                                 |
+| `stopDevPreviewServer`   | Deprecated: no longer shown. Use the default bundle stops a picked server     |
 | `localSuffix`            | local                                                                         |
 | `localIncompatible`      | Made for another native build                                                 |
 | `localUnknownBuild`      | Native build unknown                                                          |

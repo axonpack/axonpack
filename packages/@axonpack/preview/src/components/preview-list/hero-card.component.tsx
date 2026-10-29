@@ -57,8 +57,14 @@ export function HeroCard(props: {
 
   const kind = runningKind(running, labels);
   // A preview or a server has a name of its own; the bundle built into the app is named by its kind.
+  // Metro only knows the app's name, so the Metro the app starts on, when `preview start` gave it
+  // no title, is called by its role.
   const name =
-    running.kind === "preview" ? running.title : (server?.title ?? kind);
+    running.kind === "preview"
+      ? running.title
+      : running.kind === "default" && running.source === "expo-dev-server"
+        ? labels.defaultServerTitle
+        : (server?.title ?? kind);
   const where =
     running.kind === "preview"
       ? entry?.branch || running.id

@@ -17,8 +17,9 @@ export function TitleSubtitle(props: {
         numberOfLines={2}
         ellipsizeMode="tail"
         style={{
-          // One step above the section headings (17), so it leads the card without shouting.
-          ...font(theme, "bold", size === "large" ? 20 : 17),
+          // Large leads the header card, one step above the section headings (17). Medium is a
+          // row's title, one step below them, so a heading still leads its rows.
+          ...font(theme, "bold", size === "large" ? 20 : 16),
           color: theme.title,
         }}
       >

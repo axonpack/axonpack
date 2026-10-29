@@ -1,81 +1,72 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 import type { DevPreviewServer } from "../../utils/dev-preview-servers/merge-servers.util";
-import { font } from "../../utils/preview-list/theme.util";
+import { displayHostPort } from "../../utils/previews/running.util";
 import { Button } from "./ui/button.ui";
 import { Card } from "./ui/card.ui";
+import { Chip } from "./ui/chip.ui";
+import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
+/**
+ * One Metro server: its name and address, then chips for what it is. The one the app runs from
+ * takes the header card's tint and says Active instead of offering Switch.
+ */
 export function DevServerRow(props: {
   theme: PreviewListTheme;
   labels: PreviewListLabels;
   server: DevPreviewServer;
-  running: boolean;
+  /** The app runs from this server now. */
+  active: boolean;
+  /** The Metro the app starts on with nothing picked. */
+  isDefault: boolean;
   onSwitch: (server: DevPreviewServer) => void;
-  onStop: () => void;
 }) {
-  const { theme, labels, server, running } = props;
-  const meta = [
-    server.branch,
-    server.hostPort,
-    server.version ? `v${server.version}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const badge =
-    server.compatible === false
-      ? { text: labels.localIncompatible, color: theme.warning }
-      : server.compatible === null
-        ? { text: labels.localUnknownBuild, color: theme.muted }
-        : null;
+  const { theme, labels, server, active } = props;
+  // Metro only knows the app's name, the same on every server of this app, so the one the app
+  // starts on is called by its role. A title from `preview start` is a real name and stays.
+  const title =
+    !server.announced && props.isDefault
+      ? labels.defaultServerTitle
+      : server.title;
+  const compatibility =
+    server.compatible === false ? (
+      <Chip theme={theme} text={labels.localIncompatible} tone="warning" />
+    ) : server.compatible === null ? (
+      <Chip theme={theme} text={labels.localUnknownBuild} />
+    ) : null;
   return (
-    <Card theme={theme}>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          gap: 8,
-        }}
-      >
-        <Text
-          style={{
-            ...font(theme, "bold", 16),
-            color: theme.title,
-            flexShrink: 1,
-          }}
-        >
-          {server.title}
-        </Text>
-        {running ? (
-          <Text style={{ ...font(theme, "medium", 13), color: theme.success }}>
-            {labels.running}
-          </Text>
+    <Card theme={theme} tinted={active} testID={`server-${server.hostPort}`}>
+      <TitleSubtitle
+        theme={theme}
+        title={title}
+        subtitle={displayHostPort(server.hostPort)}
+      />
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        {active ? (
+          <Chip theme={theme} text={labels.active} tone="success" />
         ) : null}
+        <Chip
+          theme={theme}
+          text={
+            server.announced
+              ? labels.kindDevPreviewServer
+              : labels.kindExpoDevServer
+          }
+        />
+        {server.branch ? <Chip theme={theme} text={server.branch} /> : null}
+        {compatibility}
       </View>
-      <Text style={{ ...font(theme, "regular", 13), color: theme.muted }}>
-        {meta}
-      </Text>
-      {badge ? (
-        <Text style={{ ...font(theme, "medium", 13), color: badge.color }}>
-          {badge.text}
-        </Text>
-      ) : null}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        {running ? (
-          <Button
-            theme={theme}
-            title={labels.stopDevPreviewServer}
-            onPress={props.onStop}
-            kind="plain"
-          />
-        ) : (
+      {active ? null : (
+        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
           <Button
             theme={theme}
             title={labels.switchTo}
+            accessibilityLabel={`${labels.switchTo}, ${title}`}
             onPress={() => props.onSwitch(server)}
           />
-        )}
-      </View>
+        </View>
+      )}
     </Card>
   );
 }

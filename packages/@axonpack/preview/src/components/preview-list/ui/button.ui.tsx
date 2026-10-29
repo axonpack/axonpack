@@ -9,6 +9,8 @@ export function Button(props: {
   title: string;
   onPress: () => void;
   kind?: ButtonKind;
+  /** What a screen reader says, when the title alone is not enough (one of many "Switch"). */
+  accessibilityLabel?: string;
   theme: PreviewListTheme;
 }) {
   const { theme, kind = "primary" } = props;
@@ -16,6 +18,7 @@ export function Button(props: {
     <Pressable
       onPress={props.onPress}
       accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel}
       style={({ pressed }: { pressed: boolean }): ViewStyle => ({
         minHeight: 44,
         paddingHorizontal: 16,
