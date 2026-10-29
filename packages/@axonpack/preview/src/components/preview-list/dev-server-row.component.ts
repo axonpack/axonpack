@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import type { DevPreviewServer } from "../../utils/dev-preview-servers/merge-servers.util";
 import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
+import { Card } from "./ui/card.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
 export function DevServerRow(props: {
@@ -29,15 +30,8 @@ export function DevServerRow(props: {
         ? { text: labels.localUnknownBuild, color: theme.muted }
         : null;
   return h(
-    View,
-    {
-      style: {
-        gap: 6,
-        paddingTop: 8,
-        borderTopWidth: 1,
-        borderColor: theme.border,
-      },
-    },
+    Card,
+    { theme },
     h(
       View,
       {

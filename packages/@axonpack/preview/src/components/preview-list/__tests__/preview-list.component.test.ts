@@ -1,4 +1,5 @@
 import { createElement as h } from "react";
+import { FlatList } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
@@ -144,5 +145,14 @@ test("a build with no bucket URL says which setting is missing", async () => {
   expect(texts(tree).join("\n")).toContain(
     "No bucket URL. Set `url` in the preview config",
   );
+  await act(async () => tree.unmount());
+});
+
+test("pulling the list down asks the bucket again", async () => {
+  const tree = await render();
+  const fetch = global.fetch as jest.Mock;
+  const before = fetch.mock.calls.length;
+  await act(async () => tree.root.findByType(FlatList).props.onRefresh());
+  expect(fetch.mock.calls.length).toBeGreaterThan(before);
   await act(async () => tree.unmount());
 });

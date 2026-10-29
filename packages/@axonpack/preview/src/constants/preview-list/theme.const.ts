@@ -63,6 +63,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   incompatibleHint:
     "Made for another native build. They can't run on this one.",
   deleteAll: "Delete all",
+  previewsTitle: "Published previews",
   devPreviewServersTitle: "Dev preview servers",
   devPreviewServersHint:
     "Metro servers for this app on your computer. Debug builds only.",

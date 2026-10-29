@@ -48,6 +48,8 @@ export type PreviewListLabels = {
   incompatibleTitle: string;
   incompatibleHint: string;
   deleteAll: string;
+  /** Above the published previews. */
+  previewsTitle: string;
   devPreviewServersTitle: string;
   devPreviewServersHint: string;
   noDevPreviewServers: string;
