@@ -91,8 +91,9 @@ runs in, or at none.
 
 ## Building with an EAS environment
 
-If your app keeps its variables on EAS, `--environment <name>` builds the preview with them, like
-`eas update --environment`:
+If your app keeps its variables on
+[EAS environment variables](https://docs.expo.dev/eas/environment-variables/), `--environment <name>`
+builds the preview with them, like `eas update --environment`:
 
 ```sh
 npx preview publish --environment preview
@@ -104,6 +105,9 @@ npx preview publish --environment preview
   (app version, slug), the fingerprint and `expo export:embed`. So the preview's key matches a build
   made in that environment.
 - A variable already set in your shell wins over the EAS one.
+- The environment's name is recorded in the preview's manifest and list entry. The app shows it as an
+  `env: <name>` chip on the preview's row and on the header card while it runs. Previews published
+  before this, or without the flag, have no chip.
 - Without the flag nothing changes, and eas-cli is never called.
 
 It needs eas-cli installed (`npm install -g eas-cli`), a login (`eas login`, or `EXPO_TOKEN` in CI)

@@ -5,7 +5,9 @@ icon: LifeBuoy
 ---
 
 Start here if something does not work. Each item has the symptom, the cause and the fix. The list
-shows the last error under its header, so read that first.
+shows the last error in a snackbar above its header card, in plain words with what to try, so read
+that first. The raw error goes to the console. The messages are listed under
+[Errors](/docs/preview/app-setup#errors).
 
 ## The list is empty
 
@@ -29,6 +31,8 @@ showing its login page, or the URL points at the wrong place.
 app the read key, or pass the headers the proxy wants with the `headers` option.
 
 ## The bucket answers 403
+
+The list says "The bucket refused access."
 
 **Cause.** In the app: a private bucket without a read key, a read key without `s3:ListBucket`, or a
 signing region that does not match the bucket. In the CLI: the write key lacks one of the actions it
@@ -55,9 +59,13 @@ region (`PREVIEW_S3_REGION` for the CLI, `region` in the app) for an AWS bucket 
 
 ## Android cannot reach the local server
 
-**Cause.** The `adb reverse` was lost when the emulator or phone restarted, or Android 17 refused the
-app local network access.
-**Fix.** Run `adb reverse tcp:9000 tcp:9000` again, or allow the permission in the app's settings.
+The list says "Can't reach the bucket at localhost:9000." On Android it also says to use `10.0.2.2`
+or `adb reverse`, with the bucket's port.
+
+**Cause.** On the emulator, `localhost` is the emulator itself, not your computer. On a phone, the
+`adb reverse` was lost when it restarted. Or Android 17 refused the app local network access.
+**Fix.** Use `10.0.2.2` for the bucket's host on the emulator, or run `adb reverse tcp:9000 tcp:9000`
+(again). Allow the local network permission in the app's settings.
 
 ## "did not match its checksum"
 

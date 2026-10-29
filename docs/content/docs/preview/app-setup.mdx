@@ -1,16 +1,17 @@
 ---
 title: App setup
-description: The provider, the ready-made list, your own screen with usePreview, and a banner that says what runs.
+description: The provider, the ready-made list and its theme, your own screen, and a banner that says what runs.
 icon: Smartphone
 ---
 
-Three pieces, all from the package's main entry:
+Four pieces, all from the package's main entry:
 
-| Piece             | What it does                                                                 |
-| ----------------- | ---------------------------------------------------------------------------- |
-| `PreviewProvider` | Holds the config, reads the downloads and the bucket's list, and confirms each start |
-| `PreviewList`     | The ready-made screen for QA                                                 |
-| `usePreview()`    | The same list and actions, for a screen of your own                          |
+| Piece                | What it does                                                                 |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `PreviewProvider`    | Holds the config, reads the downloads and the bucket's list, and confirms each start |
+| `PreviewList`        | The ready-made screen for QA                                                 |
+| `usePreview()`       | The same list and actions, for a screen of your own                          |
+| `usePreviewStatus()` | What runs now and the build it runs in, for a banner or badge of your own    |
 
 ## The provider
 
@@ -66,44 +67,134 @@ export default function PreviewsScreen() {
 ```
 
 Put it on a screen QA can reach: a tab in internal builds, a settings row, or a hidden gesture. See
-[Show the list anywhere](#show-the-list-anywhere). It shows:
+[Show the list anywhere](#show-the-list-anywhere). From the top, it shows:
 
-- **Running:** what this start runs (the default bundle or a preview), and **Use the default bundle**.
-- **The previews for this build**, each with its title, branch, state, environment, who published
-  it and when, size and changelog, one action (**Download**, **Switch** or **Update**) and
-  **Delete**. The one that runs says Active.
+- **An error snackbar**, only when something went wrong. See [Errors](#errors).
+- **The header card:** what runs now, and **Use the default bundle**.
+- **Dev preview servers**, in a debug build with that option on.
+- **Published previews** for this build.
 - **Incompatible:** downloads made for another native build, with **Delete all**.
-- **Dev preview servers**, in a debug build with that option on. See
-  [Dev preview servers](/docs/preview/dev-preview-servers).
 
-| State            | Meaning                                                                  |
-| ---------------- | ------------------------------------------------------------------------ |
-| Not downloaded   | Published for this build, not on the device                              |
-| Downloading      | With a progress bar                                                      |
-| Downloaded       | On the device and up to date                                             |
-| Update available | Published again since it was downloaded                                  |
-| Unpublished      | Still on the device, but no longer in the bucket                         |
-| Broken           | It stopped while starting, so the default bundle loaded                  |
+Pull the list down, or tap the Refresh icon on the header card, to ask the bucket again. A row of
+chips that does not fit scrolls sideways.
 
-**Download** puts a preview on the device and **Switch** restarts into it. Deleting the preview that
-runs goes back to the default bundle first.
+![The header card for a dev preview server, then the dev preview servers in one grouped card](/preview/screenshots/list-header-servers.png)
 
-### Theme and labels
+### The header card
 
-The list follows the device's light or dark mode. Change any colour, the radius or the fonts, and any
-text:
+The title names what runs now: a preview's title, a server's title, **Default** for the Metro the
+app starts on when `preview start` gave it no title, or **Built into the app**. A server's address,
+such as `localhost:8081`, is under it. Chips say what it is:
+
+| Chip              | When                                                                      |
+| ----------------- | ------------------------------------------------------------------------- |
+| `Preview`         | A published preview runs                                                  |
+| `server: Expo`    | A Metro started with `expo start` or `expo run`                           |
+| `server: Preview` | A Metro started with `preview start`                                      |
+| `Default bundle`  | Nothing is switched in. This is what the app starts on anyway             |
+| `env: <name>`     | The preview was published with `--environment`                            |
+
+A preview also shows who published it and when. **Show details** opens the rest: the branch, the
+preview id, the environment, the app's name, version and build, the commit, the platform, what the
+build is matched by (app version or fingerprint) and its build key.
+
+When a preview or a picked server runs, **Use the default bundle** restarts on the bundle the app
+starts on, and stops using the server. In a debug build a running preview also says that Metro is
+not used.
+
+### Errors
+
+When a refresh or an action fails, a snackbar above the header card says what went wrong, in plain
+words, and what to try:
+
+| Message                                 | Second line                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------------- |
+| Can't reach the bucket at `<host>`.     | On Android, when the bucket is on localhost: use `10.0.2.2`, or run `adb reverse tcp:<port> tcp:<port>` |
+| The bucket refused access.              | Check the read key or the bucket's policy.                                      |
+| The bucket or the file was not found.   | Check the bucket URL in the preview config.                                     |
+| Something went wrong.                   | The error itself                                                                |
+
+**Retry** does again what was tapped last; the first load counts as a refresh. It is left out when
+the bucket URL in the config is empty or not a full URL, since asking again can't help. **Dismiss**
+hides the snackbar. The raw error also goes to the console. More fixes are on
+[Troubleshooting](/docs/preview/troubleshooting).
+
+### Dev preview servers
+
+In a debug build with `devPreviewServers` on, this app's Metro servers are one grouped card. Each row
+has the server's title, its address, its branch, and chips:
+
+- **Active:** the app runs from this server now. The row takes the header card's tint.
+- **`server: Expo`** or **`server: Preview`:** a plain Expo server, or one started with `preview start`.
+- **Default bundle:** the Metro the app starts on with nothing picked. Without a title from
+  `preview start` it is called **Default**.
+- **Made for another native build** or **Native build unknown:** it may not run on this build.
+
+Tap a row to restart the app on that server. The Active row does nothing. See
+[Dev preview servers](/docs/preview/dev-preview-servers).
+
+### Published previews
+
+![Published previews with status and environment chips, changelogs, and Delete, Switch and Update](/preview/screenshots/list-published-previews.png)
+
+Each preview is a card: its title, its branch, chips, the changelog (cut to three lines with **Show
+more**), who published it and how long ago, its size, **Delete** and one main action. The one that
+runs takes the header card's tint and has an **Active** chip. `env: <name>` shows when it was
+published with `--environment`.
+
+| Status chip                | Meaning                                                  | Action     |
+| -------------------------- | -------------------------------------------------------- | ---------- |
+| `status: not downloaded`   | Published for this build, not on the device              | Download   |
+| `status: downloading`      | With a progress bar                                      | None       |
+| `status: downloaded`       | On the device and up to date                             | Switch     |
+| `status: update available` | Published again since it was downloaded                  | Update     |
+| `status: unpublished`      | Still on the device, but no longer in the bucket         | Switch     |
+| `status: broken`           | It stopped while starting. A line under it says the default bundle loaded instead | Switch |
+
+The one that runs shows no Switch, and no `status: downloaded` next to Active. **Download** puts a
+preview on the device and **Switch** restarts into it. Deleting the preview that runs goes back to the
+default bundle first.
+
+**Incompatible** lists downloads made for another native build in one grouped card, with their title,
+branch, environment, who published them and when, and size. They can't run here. **Delete all**
+removes them.
+
+### Theme
+
+`theme` takes one of three things:
+
+- **Nothing.** The built-in light or dark theme, following the device. These are the only two built in.
+- **A partial theme, by hand.** Any of the [theme keys](/docs/preview/reference#theme). The rest come
+  from light or dark.
+- **An expo-devtools palette.** The same colours object your app gives
+  [`@axonpack/expo-devtools`](/docs/expo-devtools/themes), so the two look alike. It is told apart by
+  its `textPrimary` and `accent` keys and mapped by `fromDevtoolsPalette`. This package does not
+  depend on expo-devtools.
 
 ```tsx
-<PreviewList
-  theme={{ mode: 'dark', primary: '#16a34a', radius: 8, fonts: { bold: 'Inter-Bold' } }}
-  labels={{ title: 'QA builds', backToDefault: 'Back to the store build' }}
-/>
+// By hand
+<PreviewList theme={{ mode: 'dark', primary: '#16a34a', radius: 8, fonts: { bold: 'Inter-Bold' } }} />
+
+// The palette your app gives expo-devtools, typed as its `Palette`
+<PreviewList theme={brandPalette} />
 ```
 
-`backToBase` still works but is deprecated. It is used only when `backToDefault` is not set.
+`LIGHT_THEME` and `DARK_THEME` are exported to build on. Every key and its defaults are on
+[Reference](/docs/preview/reference#theme).
 
-Every token and label is on [Reference](/docs/preview/reference#theme). `LIGHT_THEME`, `DARK_THEME`
-and `DEFAULT_LABELS` are exported to build on.
+### Labels
+
+Change any text with `labels`:
+
+```tsx
+<PreviewList labels={{ backToDefault: 'Back to the store build', previewsTitle: 'QA builds' }} />
+```
+
+`status`, `statusShort` and `timeAgo` are merged per key, so `labels={{ statusShort: { broken:
+'Crashed' } }}` changes only that one. Some labels are deprecated: `title`, `base`, `stopServer`,
+`stopDevPreviewServer` and `localSuffix` are no longer shown, `backToBase` is used only when
+`backToDefault` is not set, and `status` still shows for any status `statusShort` does not set. Every
+label and its default is on [Reference](/docs/preview/reference#labels). `DEFAULT_LABELS` is exported.
 
 ### Layout and your own content
 
@@ -148,6 +239,9 @@ unmounts.
 
 The list does not hide itself when `enabled` is false, so hiding the tab, button or gesture that
 opens it in store builds is the app's job. `usePreview().enabled` tells you when.
+
+To show only what runs, such as a strip on every screen, you don't need the list. See
+[Show the status anywhere](#show-the-status-anywhere).
 
 ### A screen with expo-router
 
@@ -241,31 +335,37 @@ export function MyPreviews() {
 
 The fields and actions are on [Reference](/docs/preview/reference#usepreview).
 
-## A banner that says what runs
+## Show the status anywhere
 
-So QA always knows what they are looking at, and how to get back. `useRunning()` says what this
-start runs: a dev preview server, a preview, or the default bundle.
+So QA always knows what they are looking at, and how to get back. `usePreviewStatus()` returns what
+the list's header card shows, so a banner, a badge or a debug screen of your own says the same thing
+the list does. It needs the provider above it.
 
 ```tsx
-import { useRunning } from '@axonpack/preview';
-import { Text, View } from 'react-native';
+import { usePreviewStatus } from '@axonpack/preview';
+import { Button, Text, View } from 'react-native';
 
 export function BundleBanner() {
-  const running = useRunning();
-  if (running.kind === 'default') return null;
-  const label =
-    running.kind === 'preview'
-      ? `Preview: ${running.title}`
-      : `Dev server: ${running.server?.title ?? running.hostPort}`;
+  const status = usePreviewStatus();
+  if (status.isDefault) return null;
   return (
     <View style={{ backgroundColor: '#1d4ed8', padding: 8 }}>
-      <Text style={{ color: 'white' }}>{label}</Text>
+      <Text style={{ color: 'white' }}>{status.label}</Text>
+      {status.environment ? <Text style={{ color: 'white' }}>env: {status.environment}</Text> : null}
+      <Button title="Use the default bundle" onPress={status.backToDefault} />
     </View>
   );
 }
 ```
 
-Render it inside the provider, above your navigation. The example app shows one on every tab.
+`status.label` is one sentence, such as "Preview, Login fix" or "Expo server, localhost:8081". Render
+the banner inside the provider, above your navigation. The example app shows one on every tab. Pass
+the same `labels` as the list (`usePreviewStatus(labels)`) and the kind names match.
+
+Every field and action is on [Reference](/docs/preview/reference#usepreviewstatus).
+
+`useRunning()` still works, and returns what `status.running` holds. The default bundle is now
+`kind: 'default'`, with `source` saying where it comes from. 0.1.0 said `kind: 'base'`.
 
 ## Example app
 
