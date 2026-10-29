@@ -9,7 +9,11 @@ public final class AxonpackPreviewModule: Module {
     Constants([
       "compatibility": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewCompatibility") as? String,
       "key": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewKey") as? String,
-      "slug": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewSlug") as? String
+      "slug": Bundle.main.object(forInfoDictionaryKey: "AxonpackPreviewSlug") as? String,
+      // For the list's header; read from the app itself so no other module is needed.
+      "appName": (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName")) as? String,
+      "appVersion": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+      "buildNumber": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
     ])
 
     OnCreate {

@@ -41,7 +41,8 @@ const HELP = `preview <command> [options]
     --entry-file <path>
     --compatibility <c> appVersion or fingerprint; overrides the app config's plugin option
     --environment <name> build with this EAS environment's variables, like eas update
-                       (needs eas-cli and a project linked to EAS; shell variables win)
+                       (needs eas-cli and a project linked to EAS; shell variables win).
+                       The app shows its name on the preview.
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
   start [-- <expo start args>]
@@ -132,6 +133,7 @@ async function main() {
       ...git,
       changelog,
       entryFile: values["entry-file"],
+      environment: values.environment,
     });
   } else if (command === "unpublish") {
     if (!arg) throw new Error("Which preview? preview unpublish <id>");

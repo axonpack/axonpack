@@ -14,6 +14,13 @@ class AxonpackPreviewModule : Module() {
       "compatibility" to metaData("COMPATIBILITY"),
       "key" to metaData("KEY"),
       "slug" to metaData("SLUG"),
+      // For the list's header; read from the app itself so no other module is needed.
+      "appName" to appInfo { it.applicationInfo.loadLabel(it.packageManager).toString() },
+      "appVersion" to appInfo { it.packageManager.getPackageInfo(it.packageName, 0).versionName },
+      "buildNumber" to appInfo {
+        @Suppress("DEPRECATION")
+        it.packageManager.getPackageInfo(it.packageName, 0).versionCode.toString()
+      },
     )
 
     Function("select") { bundle: String?, key: String? ->
@@ -54,6 +61,15 @@ class AxonpackPreviewModule : Module() {
       BundleLoaderOverride.apply(it, host)
     }
     host.reload("preview: switch bundle")
+  }
+
+  private fun appInfo(read: (android.content.Context) -> String?): String? {
+    val context = appContext.reactContext ?: return null
+    return try {
+      read(context)
+    } catch (e: Exception) {
+      null
+    }
   }
 
   /** What the config plugin wrote at prebuild; null when the plugin is not in the app config. */

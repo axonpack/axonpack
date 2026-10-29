@@ -61,7 +61,15 @@ export type PreviewInfo = {
   compatibility: Compatibility;
   /** The native build's fingerprint when it was published, whatever the compatibility setting. */
   fingerprint: string;
+  /** The EAS environment it was built with (`publish --environment`). Absent on older entries. */
+  environment?: string;
 };
+
+/** Leaves `environment` out when there is none, so entries without it look as they always did. */
+export const previewInfo = (
+  info: Omit<PreviewInfo, "environment">,
+  environment?: string,
+): PreviewInfo => (environment ? { ...info, environment } : info);
 
 export type Manifest = PreviewInfo & {
   schema: number;

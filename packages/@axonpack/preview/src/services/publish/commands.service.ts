@@ -15,6 +15,7 @@ import {
   fileKey,
   manifestKey,
   platformIndexKey,
+  previewInfo,
 } from "../../utils/previews/layout.util";
 import {
   S3Config,
@@ -81,6 +82,8 @@ export type PublishOptions = {
   author: string;
   changelog: string;
   entryFile?: string;
+  /** The EAS environment the bundle was built with, recorded for the app to show. */
+  environment?: string;
 };
 
 export async function publish(options: PublishOptions) {
@@ -114,18 +117,21 @@ export async function publish(options: PublishOptions) {
     }
     log(`${platform}: ${files.length} files, ${uploaded} new`);
 
-    const info = {
-      id,
-      title,
-      branch: options.branch,
-      commit: options.commit,
-      author: options.author,
-      publishedAt,
-      appVersion: version,
-      buildNumber: buildNumberOf(options.config, platform),
-      compatibility: options.compatibility,
-      fingerprint: fp,
-    };
+    const info = previewInfo(
+      {
+        id,
+        title,
+        branch: options.branch,
+        commit: options.commit,
+        author: options.author,
+        publishedAt,
+        appVersion: version,
+        buildNumber: buildNumberOf(options.config, platform),
+        compatibility: options.compatibility,
+        fingerprint: fp,
+      },
+      options.environment,
+    );
     const manifest: Manifest = {
       schema: SCHEMA,
       ...info,
