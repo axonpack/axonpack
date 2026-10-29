@@ -41,7 +41,26 @@ export type PreviewConfig = {
   buildKey?: string;
 };
 
+/**
+ * A build made without its `.env` passes an empty URL, and the bucket path then fails deep inside
+ * the request as "Invalid URL: /index/ios/...". This says which setting is missing instead.
+ */
+export function checkBucketUrl(url: string): void {
+  const value = url.trim();
+  if (!value) {
+    throw new Error(
+      "No bucket URL. Set `url` in the preview config (for example from EXPO_PUBLIC_PREVIEW_S3_URL in .env) and rebuild.",
+    );
+  }
+  if (!/^https?:\/\/[^/?#]+/i.test(value)) {
+    throw new Error(
+      `The bucket URL "${value}" is not a full address. Set \`url\` in the preview config (for example from EXPO_PUBLIC_PREVIEW_S3_URL in .env) to one starting with https:// or http://.`,
+    );
+  }
+}
+
 export function toS3Config(config: PreviewConfig): S3Config {
+  checkBucketUrl(config.url);
   const region = config.region ?? DEFAULT_REGION;
   const { headers } = config;
   // Signing needs the bucket apart from the endpoint; a plain read only needs the base address.

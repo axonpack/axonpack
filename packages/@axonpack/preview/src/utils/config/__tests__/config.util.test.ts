@@ -77,3 +77,19 @@ test("extra headers go with every read", async () => {
   );
   expect(seen[0]["X-Tunnel-Skip-AntiPhishing-Page"]).toBe("True");
 });
+
+test("an empty bucket URL names the setting instead of failing on the path", () => {
+  for (const url of ["", "  "]) {
+    expect(() => toS3Config({ enabled: true, url })).toThrow(
+      /No bucket URL\. Set `url` in the preview config/,
+    );
+  }
+});
+
+test("a relative bucket URL says it is not a full address", () => {
+  for (const url of ["/previews", "localhost:9000/previews"]) {
+    expect(() => toS3Config({ enabled: true, url })).toThrow(
+      /is not a full address\. Set `url` in the preview config/,
+    );
+  }
+});

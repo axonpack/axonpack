@@ -130,3 +130,19 @@ test("a build with no slug says so instead of listing other apps' servers", asyn
   );
   await act(async () => tree.unmount());
 });
+
+test("a build with no bucket URL says which setting is missing", async () => {
+  let tree!: ReactTestRenderer;
+  await act(async () => {
+    tree = create(
+      h(PreviewProvider, {
+        config: { enabled: true, url: "" },
+        children: h(PreviewList),
+      }),
+    );
+  });
+  expect(texts(tree).join("\n")).toContain(
+    "No bucket URL. Set `url` in the preview config",
+  );
+  await act(async () => tree.unmount());
+});
