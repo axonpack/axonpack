@@ -1,11 +1,19 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
+import { ENV, readConfig } from "../../cli/config.service";
 import { buildBundle } from "../bundle.service";
 import { applyEasEnv, pullEasEnv } from "../eas-env.service";
 
 jest.mock("node:child_process", () => ({ execFileSync: jest.fn() }));
+jest.mock("../../cli/project.service", () => ({
+  appRequire: () =>
+    jest
+      .requireActual<typeof import("node:module")>("node:module")
+      .createRequire(require.resolve("expo/package.json")),
+}));
 const run = execFileSync as unknown as jest.Mock;
 
 const pulledFile = () => {
@@ -134,3 +142,22 @@ test("without --environment the build never calls eas", () => {
   expect(run.mock.calls.map(([cmd]) => cmd)).toEqual(["npx"]);
 });
 
+test("publish settings: the shell wins over EAS, and EAS over Expo's env files", () => {
+  const project = mkdtempSync(join(tmpdir(), "preview-precedence-"));
+  writeFileSync(
+    join(project, ".env.local"),
+    `${ENV.url}=http://file/from-file\n${ENV.accessKeyId}=file-id\n${ENV.secretAccessKey}=file-secret\n${ENV.region}=file-region\n`,
+  );
+  pullWrites(
+    `${ENV.url}=http://eas/from-eas\n${ENV.accessKeyId}=eas-id\n${ENV.secretAccessKey}=eas-secret\n`,
+  );
+  const env: Record<string, string | undefined> = {
+    [ENV.secretAccessKey]: "shell-secret",
+  };
+  applyEasEnv(project, "preview", env);
+  expect(readConfig(project, env)).toMatchObject({
+    bucket: "from-eas",
+    region: "file-region",
+    credentials: { accessKeyId: "eas-id", secretAccessKey: "shell-secret" },
+  });
+});

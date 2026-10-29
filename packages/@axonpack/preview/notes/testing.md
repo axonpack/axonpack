@@ -16,11 +16,11 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
    ```sh
    bun run storage:local
    ```
-3. Copy the two settings files. `.env` is read when the app is bundled; `.env.preview` is read
-   only by the publish command and holds the write key.
+3. Copy the two settings files. `.env` holds the app's settings. `.env.local` holds the publish
+   settings with the write key; uncomment its lines after copying. Both are gitignored.
    ```sh
    cp example/.env.example example/.env
-   cp example/.env.preview.example example/.env.preview
+   cp example/.env.local.example example/.env.local
    ```
 4. Build and run the example, in a debug or a release build:
    ```sh

@@ -1,8 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseEnv } from "node:util";
 
 import { DEFAULT_REGION, S3Config, parseBucketUrl } from "../s3/s3.service";
+import { appRequire } from "./project.service";
 
 export const ENV = {
   url: "PREVIEW_S3_URL",
@@ -12,29 +11,35 @@ export const ENV = {
 } as const;
 
 /**
- * The publish settings' own file. Not `.env`: Expo loads `.env`, `.env.local` and `.env.<mode>`
- * into the bundler's environment, and the write key must never get near an app build.
+ * The `.env*` files the release bundle sees, read by the app's own `@expo/env`.
+ * `export:embed --dev false` loads them in mode `production`, so this picks the same files, in the
+ * same order, with the same expansion. `EXPO_NO_DOTENV` turns them off here too.
  */
-export const ENV_FILE = ".env.preview";
+const expoEnvFiles = (
+  projectRoot: string,
+  env: Record<string, string | undefined>,
+): Record<string, string> =>
+  appRequire(projectRoot)("@expo/env").parseProjectEnv(projectRoot, {
+    mode: "production",
+    silent: true,
+    systemEnv: env,
+  }).env;
 
 /**
- * Reads where to publish and the write key from `.env.preview` in the app's root, then the
- * environment. A variable already set in the environment wins over the file, so CI can pass its
- * secrets without one. Nothing else is read: not `.env`, not `EXPO_PUBLIC_*`.
+ * Reads where to publish and the write key from the environment, then the env files Expo loads
+ * for a release build. The environment wins, so CI needs no file. Nothing else is read.
  */
 export function readConfig(
   projectRoot: string,
   env: Record<string, string | undefined> = process.env,
 ): S3Config {
-  const file = join(projectRoot, ENV_FILE);
-  const fromFile = existsSync(file) ? parseEnv(readFileSync(file, "utf8")) : {};
-  env = { ...fromFile, ...env };
+  env = { ...expoEnvFiles(projectRoot, env), ...env };
   const missing = [ENV.url, ENV.accessKeyId, ENV.secretAccessKey].filter(
     (name) => !env[name],
   );
   if (missing.length > 0) {
     throw new Error(
-      `Set ${missing.join(", ")} in ${file} or in the environment.`,
+      `Set ${missing.join(", ")} in the environment (CI secrets), or locally in ${join(projectRoot, ".env.local")}. Any env file Expo loads for a release build works, but keep the write key out of a committed .env.`,
     );
   }
   return {

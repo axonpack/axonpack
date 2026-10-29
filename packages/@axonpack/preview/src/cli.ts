@@ -50,9 +50,11 @@ const HELP = `preview <command> [options]
                        readable form of the branch
     --ports <from>-<to> ports to pick from (default 8081-8099)
 
-  --project <dir>    the app's root, where .env.preview lives (default: the current folder)
+  --project <dir>    the app's root (default: the current folder)
 
-Where to publish comes from .env.preview in the app's root, or the environment (CI):
+Where to publish comes from the environment (the shell, or CI secrets). For local use they can
+also go in the app's .env.local, or any env file Expo loads for a release build; the environment
+wins over them. Keep the write key out of a committed .env:
   PREVIEW_S3_URL                 <endpoint>/<bucket>[/<folder>], e.g. http://localhost:9000/previews-public
   PREVIEW_S3_ACCESS_KEY_ID       the write key
   PREVIEW_S3_SECRET_ACCESS_KEY

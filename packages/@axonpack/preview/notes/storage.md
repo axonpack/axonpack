@@ -12,21 +12,37 @@ been checked.
 
 ## Settings
 
-Publishing and the app never share a file, so the write key cannot end up inside an app.
+Publishing reads its settings the way Expo reads the app's: from the environment, then the same
+`.env*` files Expo loads for a release bundle. Only `EXPO_PUBLIC_*` values are built into the app,
+so the write key, which has no such prefix, never ends up inside it.
 
-| File           | Read by                             | What goes there                                                                            |
-| -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| `.env.preview` | `preview publish`, and nothing else | The bucket URL and the **write** key (`PREVIEW_S3_*`). Gitignore it                        |
-| `.env`         | Expo, when it bundles the app       | The bucket URL and, for a private bucket, a **read-only** key (`EXPO_PUBLIC_PREVIEW_S3_*`) |
+| Variable                   | Read by                       | What it holds                                                                     |
+| -------------------------- | ----------------------------- | --------------------------------------------------------------------------------- |
+| `PREVIEW_S3_*`             | `preview publish` only        | The bucket URL and the **write** key                                              |
+| `EXPO_PUBLIC_PREVIEW_S3_*` | Expo, when it bundles the app | The bucket URL and, for a private bucket, a **read-only** key. Built into the app |
 
-Expo loads `.env`, `.env.local` and `.env.<mode>` when it bundles and builds `EXPO_PUBLIC_*` values
-into the app. `.env.preview` is none of those, so Expo never reads it. The CLI reads only that
-file and the environment, never `.env` or `EXPO_PUBLIC_*`. The example has
-`example/.env.preview.example` and `example/.env.example` with the local values.
+The CLI never reads `EXPO_PUBLIC_*`. The example has `example/.env.example` (the app's settings)
+and `example/.env.local.example` (the publish settings) with the local values.
 
 ### Publish settings
 
-A variable set in the environment wins over the file, so CI can pass its secrets without one.
+CI has no settings file, so the environment comes first: the shell, or the CI job's secrets. For
+publishing from your own machine they can go in an env file instead. Publish loads the files
+`expo export:embed --dev false` loads (mode `production`), through the app's own `@expo/env`, so the
+order and the `${VAR}` expansion are Expo's:
+
+1. `.env.production.local`
+2. `.env.local`
+3. `.env.production`
+4. `.env`
+
+A variable set in the environment wins over every file, and the first file in the list wins over
+the ones after it. `.env.development*` and other modes are not read. `EXPO_NO_DOTENV` turns the
+files off here too.
+
+Put the write key in `.env.local` or `.env.production.local`, which Expo's project template
+gitignores (`.env*.local`), or in CI secrets. Never put it in a committed `.env`: anyone with the
+repo could then write to the bucket.
 
 | Variable                       | Needed | What it is                                                                                                                                                                               |
 | ------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
