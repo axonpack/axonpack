@@ -1,6 +1,7 @@
-import { View } from "react-native";
+import { Text, View } from "react-native";
 
 import { ACTIVE_TONE } from "../../constants/preview-list/chip-tones.const";
+import { font } from "../../utils/preview-list/theme.util";
 import type { PreviewItem } from "../../utils/previews/preview-items.util";
 import { Changelog } from "./changelog.component";
 import { Button } from "./ui/button.ui";
@@ -65,6 +66,11 @@ export function PreviewRow(props: {
           />
         ) : null}
       </ChipRow>
+      {status === "broken" ? (
+        <Text style={{ ...font(theme, "regular", 13), color: theme.muted }}>
+          {labels.brokenHint}
+        </Text>
+      ) : null}
       {percent !== null ? (
         <View
           accessibilityRole="progressbar"

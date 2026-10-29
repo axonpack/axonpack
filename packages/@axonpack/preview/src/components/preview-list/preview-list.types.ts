@@ -158,6 +158,14 @@ export type PreviewListLabels = {
   statusName: string;
   /** Before a preview's status on its chip, as in "status: downloaded". */
   statusPrefix: string;
+  /** A preview's status on its chip, kept to a word or two. */
+  statusShort: Record<PreviewStatus, string>;
+  /** Under the chips of a preview that stopped while starting, saying what happened. */
+  brokenHint: string;
+  /**
+   * @deprecated Use `statusShort`. An app's own text here still shows on the chip for any status
+   * it sets no `statusShort` for.
+   */
   status: Record<PreviewStatus, string>;
   /** Under a preview's title: who published it and when. `{author}` and `{time}` are filled in. */
   byline: string;

@@ -108,6 +108,16 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   delete: "Delete",
   statusName: "Status",
   statusPrefix: "status:",
+  statusShort: {
+    available: "Not downloaded",
+    downloading: "Downloading",
+    downloaded: "Downloaded",
+    "update-available": "Update available",
+    unpublished: "Unpublished",
+    broken: "Broken",
+  },
+  brokenHint:
+    "It stopped while starting, so the default bundle loaded instead.",
   status: {
     available: "Not downloaded",
     downloading: "Downloading",

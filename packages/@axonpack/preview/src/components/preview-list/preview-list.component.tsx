@@ -158,6 +158,12 @@ export function PreviewList(props: PreviewListProps) {
       labelsInput?.errorNotFoundHint ??
       (labelsInput?.errorNotFound ? "" : DEFAULT_LABELS.errorNotFoundHint),
     status: { ...DEFAULT_LABELS.status, ...labelsInput?.status },
+    // An app's own status text from before the short names still shows on the chip.
+    statusShort: {
+      ...DEFAULT_LABELS.statusShort,
+      ...labelsInput?.status,
+      ...labelsInput?.statusShort,
+    },
     timeAgo: { ...DEFAULT_LABELS.timeAgo, ...labelsInput?.timeAgo },
   };
 

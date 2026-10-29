@@ -88,7 +88,7 @@ export function StatusChip(props: {
 }) {
   const { labels, status } = props;
   // After the prefix the status reads as one phrase, like the environment's name does.
-  const label = labels.status[status];
+  const label = labels.statusShort[status];
   const text = label.charAt(0).toLowerCase() + label.slice(1);
   return (
     <Chip

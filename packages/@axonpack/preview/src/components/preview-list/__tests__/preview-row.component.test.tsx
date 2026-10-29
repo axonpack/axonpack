@@ -108,12 +108,7 @@ test.each([
   ["downloaded", "downloaded", "success", ["Delete", "Switch"]],
   ["update-available", "update available", "warning", ["Delete", "Update"]],
   ["unpublished", "unpublished", "danger", ["Delete", "Switch"]],
-  [
-    "broken",
-    "broken: it stopped while starting",
-    "danger",
-    ["Delete", "Switch"],
-  ],
+  ["broken", "broken", "danger", ["Delete", "Switch"]],
 ] as const)(
   "%s: a 'status: %s' chip in %s, and only %j to press",
   (status, text, tone, shown) => {
@@ -126,6 +121,13 @@ test.each([
     expect(tree.root.findByType(Card).props.tinted).toBeFalsy();
   },
 );
+
+test("only a broken preview says, under its chips, what happened", () => {
+  const hint = DEFAULT_LABELS.brokenHint;
+  expect(texts(render(item("broken")).root)).toContain(hint);
+  for (const status of ["downloaded", "unpublished"] as const)
+    expect(texts(render(item(status)).root)).not.toContain(hint);
+});
 
 test("one main action, filled, and a quiet Delete, each 44 high and named for a screen reader", () => {
   const tree = render(item("update-available"));

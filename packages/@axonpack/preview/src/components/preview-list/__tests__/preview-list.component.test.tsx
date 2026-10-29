@@ -16,6 +16,7 @@ import {
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
 import { PreviewList, type PreviewListProps } from "../preview-list.component";
+import type { PreviewListLabels } from "../preview-list.types";
 import { LIGHT_THEME } from "../../../constants/preview-list/theme.const";
 import { Card } from "../ui/card.ui";
 import { Chip } from "../ui/chip.ui";
@@ -1080,4 +1081,17 @@ test("downloads for another build: one grouped card, and a quiet Delete all that
   expect(tree.root.findAllByType(IncompatibleRow)).toEqual([]);
   expect(texts(tree)).not.toContain("Incompatible");
   await act(async () => tree.unmount());
+});
+
+test("an app's own status labels still show on the chip, and statusShort wins over them", async () => {
+  global.fetch = bucketWithPreview();
+  const status = { available: "Nicht geladen" } as PreviewListLabels["status"];
+  for (const [labels, shown] of [
+    [{ status }, "status: nicht geladen"],
+    [{ status, statusShort: { ...status, available: "Neu" } }, "status: neu"],
+  ] as const) {
+    const tree = await renderWith({ labels });
+    expect(texts(tree)).toContain(shown);
+    await act(async () => tree.unmount());
+  }
 });
