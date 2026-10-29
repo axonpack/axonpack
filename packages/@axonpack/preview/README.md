@@ -89,7 +89,7 @@ Everything else is on the docs site.
 | [Publishing](https://axonpack.dev/docs/preview/publishing)                   | Publish, replace, unpublish and prune                                   |
 | [CI](https://axonpack.dev/docs/preview/ci)                                   | Publish every pull request with GitHub Actions                          |
 | [Compatibility](https://axonpack.dev/docs/preview/compatibility)             | The config plugin, and app version or fingerprint                       |
-| [In the app](https://axonpack.dev/docs/preview/app-setup)                    | The provider, the list, your own screen and a "what runs" banner        |
+| [App setup](https://axonpack.dev/docs/preview/app-setup)                     | The provider, the list, your own screen and a "what runs" banner        |
 | [Dev preview servers](https://axonpack.dev/docs/preview/dev-preview-servers) | Several Metro servers, one per worktree, switched live in a debug build |
 | [expo-updates](https://axonpack.dev/docs/preview/expo-updates)               | How previews sit on top of a build that expo-updates manages            |
 | [Troubleshooting](https://axonpack.dev/docs/preview/troubleshooting)         | An empty list, a failed download, and what to check                     |
