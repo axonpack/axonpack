@@ -59,12 +59,10 @@ soft and forced updates and skipping a version. Its docs:
 
 ## @axonpack/preview
 
-_Planned. Being built, not on npm yet._
+_Shipped._
 
 Download and switch between preview JS bundles of an app, one per task branch, without a native
-rebuild. QA lists the previews built for the installed native build, downloads one into the
-documents folder and restarts into it. expo-updates keeps working underneath. Its notes, area by
-area: [packages/@axonpack/preview/notes](../packages/@axonpack/preview/notes/README.md).
+rebuild. Its docs: [docs/content/docs/preview](../docs/content/docs/preview/index.mdx).
 
 ## @axonpack/api-kit
 

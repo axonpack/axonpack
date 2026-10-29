@@ -43,6 +43,7 @@ here, so you install only what you need.
 | [`@axonpack/react-native-devtools-tab`](./packages/@axonpack/react-native-devtools-tab)<br/>[Docs](https://axonpack.dev/docs/react-native-devtools-tab) | Your own tab in React Native DevTools, drawn from a component that runs in the app                          | [![npm](https://img.shields.io/npm/v/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) |
 | [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print)<br/>[Docs](https://axonpack.dev/docs/react-pretty-print)                      | Collapsible JSON and XML trees and a syntax highlighter, for React and React Native from one implementation | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               |
 | [`@axonpack/in-app-updates`](./packages/@axonpack/in-app-updates)<br/>[Docs](https://axonpack.dev/docs/in-app-updates)                                  | Store version checks, force updates and a ready-made update modal for React Native and Expo                 | [![npm](https://img.shields.io/npm/v/@axonpack/in-app-updates.svg)](https://www.npmjs.com/package/@axonpack/in-app-updates)                       | [![downloads](https://img.shields.io/npm/dm/@axonpack/in-app-updates.svg)](https://www.npmjs.com/package/@axonpack/in-app-updates)                       |
+| [`@axonpack/preview`](./packages/@axonpack/preview)<br/>[Docs](https://axonpack.dev/docs/preview)                                                       | Publish a JS bundle per branch and switch to it in the installed app, with no native rebuild                | [![npm](https://img.shields.io/npm/v/@axonpack/preview.svg)](https://www.npmjs.com/package/@axonpack/preview)                                     | [![downloads](https://img.shields.io/npm/dm/@axonpack/preview.svg)](https://www.npmjs.com/package/@axonpack/preview)                                     |
 
 ### @axonpack/expo-devtools
 
@@ -131,6 +132,27 @@ import { UpdatePrompt } from "@axonpack/in-app-updates";
 ```
 
 [Installation](https://axonpack.dev/docs/in-app-updates/installation) · [Quick start](https://axonpack.dev/docs/in-app-updates/quick-start) · [The update modal](https://axonpack.dev/docs/in-app-updates/modal) · [Reference](https://axonpack.dev/docs/in-app-updates/reference)
+
+### @axonpack/preview
+
+Hand QA the JS of every branch inside the build they already have. Publish one bundle per branch to
+your own S3-compatible bucket (S3, R2, MinIO); QA picks it from a list in the app, and the app
+restarts into it. No native rebuild, and the base build is one tap away. expo-updates keeps working
+underneath.
+
+```sh
+npx expo install @axonpack/preview expo-file-system
+```
+
+```tsx
+import { PreviewList, PreviewProvider } from "@axonpack/preview";
+
+<PreviewProvider config={{ enabled: true, url: "https://pub-<id>.r2.dev" }}>
+  <PreviewList />
+</PreviewProvider>;
+```
+
+[Installation](https://axonpack.dev/docs/preview/installation) · [Quick start](https://axonpack.dev/docs/preview/quick-start) · [CI](https://axonpack.dev/docs/preview/ci) · [Reference](https://axonpack.dev/docs/preview/reference)
 
 ## Repository layout
 

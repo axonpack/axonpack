@@ -1,13 +1,15 @@
 # Contributing to Axonpack
 
 Thanks for taking the time to contribute! This repo hosts `@axonpack/*` — free, open-source
-foundation libraries for React Native / Expo apps. Four are published:
+foundation libraries for React Native / Expo apps. Five are published:
 [`@axonpack/expo-devtools`](./packages/@axonpack/expo-devtools) and
 [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print). A third,
 [`@axonpack/react-native-devtools-tab`](./packages/@axonpack/react-native-devtools-tab), puts your
 own tab in React Native DevTools. The fourth,
 [`@axonpack/in-app-updates`](./packages/@axonpack/in-app-updates), checks the stores for a newer
-version of the app and shows an update modal. The devtools
+version of the app and shows an update modal. The fifth,
+[`@axonpack/preview`](./packages/@axonpack/preview), publishes a JS bundle per branch and lets QA
+switch to it in the installed app, with no native rebuild. The devtools
 [documentation](https://axonpack.dev/docs/expo-devtools) covers what it does, and its
 [notes](./packages/@axonpack/expo-devtools/notes/README.md) record what is built, area by area, and
 what is still open.
@@ -138,7 +140,7 @@ commitlint (see `commitlint.config.js`):
   `chore`, `revert`, `wip`, `release`.
 - **Scope** — optional, but if given it must be one of the names in `scope-enum`
   (`commitlint.config.js`): `@axonpack/expo-devtools`, `@axonpack/react-native-devtools-tab`,
-  `@axonpack/react-pretty-print`, `@axonpack/in-app-updates`, `linter` or `docs`. Commits touching a package's example app conventionally take no scope.
+  `@axonpack/react-pretty-print`, `@axonpack/in-app-updates`, `@axonpack/preview`, `linter` or `docs`. Commits touching a package's example app conventionally take no scope.
 
 ```
 feat(@axonpack/expo-devtools): add cookie jar visibility for webview requests

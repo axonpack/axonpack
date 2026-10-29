@@ -16,6 +16,7 @@ Live at [axonpack.github.io](https://axonpack.github.io). Docs at
 | [`@axonpack/react-native-devtools-tab`](https://axonpack.github.io/docs/react-native-devtools-tab) | ![npm](https://img.shields.io/npm/v/@axonpack/react-native-devtools-tab?label=) | Your own tab in React Native DevTools, drawn from a component that runs in the app |
 | [`@axonpack/react-pretty-print`](https://axonpack.github.io/docs/react-pretty-print)               | ![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print?label=)        | Collapsible JSON and XML trees, plus a syntax highlighter                          |
 | [`@axonpack/in-app-updates`](https://axonpack.github.io/docs/in-app-updates) | ![npm](https://img.shields.io/npm/v/@axonpack/in-app-updates?label=) | Store version checks, force updates and a ready-made update modal |
+| [`@axonpack/preview`](https://axonpack.github.io/docs/preview) | ![npm](https://img.shields.io/npm/v/@axonpack/preview?label=) | Preview JS bundles per branch, switched in the app with no native rebuild |
 
 ```sh
 npx expo install @axonpack/expo-devtools
