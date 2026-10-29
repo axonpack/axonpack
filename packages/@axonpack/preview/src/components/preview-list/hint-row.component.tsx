@@ -1,4 +1,3 @@
-import { createElement as h } from "react";
 import { Text } from "react-native";
 
 import { font } from "../../utils/preview-list/theme.util";
@@ -10,16 +9,16 @@ export function HintRow(props: {
   tone: "muted" | "danger";
 }) {
   const { theme } = props;
-  return h(
-    Text,
-    {
-      style: {
+  return (
+    <Text
+      style={{
         ...font(theme, "regular", 15),
         color: props.tone === "danger" ? theme.danger : theme.muted,
         textAlign: "center",
         padding: 16,
-      },
-    },
-    props.text,
+      }}
+    >
+      {props.text}
+    </Text>
   );
 }

@@ -1,4 +1,4 @@
-import { createElement as h, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 
 import type {
@@ -45,7 +45,16 @@ export function PreviewRow(props: {
     title: string,
     onPress: () => void,
     kind?: "plain" | "danger",
-  ) => actions.push(h(Button, { key: title, theme, title, onPress, kind }));
+  ) =>
+    actions.push(
+      <Button
+        key={title}
+        theme={theme}
+        title={title}
+        onPress={onPress}
+        kind={kind}
+      />,
+    );
   if (item.status === "available")
     action(labels.download, () => props.onDownload(item.id), "plain");
   if (item.status === "update-available")
@@ -55,92 +64,78 @@ export function PreviewRow(props: {
   if (item.local && item.status !== "downloading")
     action(labels.delete, () => props.onDelete(item.id), "danger");
 
-  return h(
-    Card,
-    { theme },
-    h(
-      View,
-      {
-        style: {
+  return (
+    <Card theme={theme}>
+      <View
+        style={{
           flexDirection: "row",
           justifyContent: "space-between",
           gap: 8,
-        },
-      },
-      h(
-        Text,
-        {
-          style: {
+        }}
+      >
+        <Text
+          style={{
             ...font(theme, "bold", 17),
             color: theme.title,
             flexShrink: 1,
-          },
-        },
-        entry.title,
-      ),
-      h(
-        Text,
-        {
-          style: {
+          }}
+        >
+          {entry.title}
+        </Text>
+        <Text
+          style={{
             ...font(theme, "medium", 13),
             color: item.active ? theme.success : statusColor(item.status),
-          },
-        },
-        item.active ? labels.running : labels.status[item.status],
-      ),
-    ),
-    h(
-      Text,
-      { style: { ...font(theme, "regular", 13), color: theme.muted } },
-      meta,
-    ),
-    entry.changelog
-      ? h(
-          Text,
-          {
-            style: {
-              ...font(theme, "regular", 14),
-              color: theme.text,
-              backgroundColor: theme.surface,
-              borderRadius: theme.radius / 2,
-              padding: 10,
-            },
-          },
-          entry.changelog,
-        )
-      : null,
-    item.progress !== null
-      ? h(
-          View,
-          {
-            accessibilityRole: "progressbar",
-            accessibilityValue: {
-              min: 0,
-              max: 100,
-              now: Math.round(item.progress * 100),
-            },
-            style: {
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: theme.surface,
-              overflow: "hidden",
-            },
-          },
-          h(View, {
-            style: {
+          }}
+        >
+          {item.active ? labels.running : labels.status[item.status]}
+        </Text>
+      </View>
+      <Text style={{ ...font(theme, "regular", 13), color: theme.muted }}>
+        {meta}
+      </Text>
+      {entry.changelog ? (
+        <Text
+          style={{
+            ...font(theme, "regular", 14),
+            color: theme.text,
+            backgroundColor: theme.surface,
+            borderRadius: theme.radius / 2,
+            padding: 10,
+          }}
+        >
+          {entry.changelog}
+        </Text>
+      ) : null}
+      {item.progress !== null ? (
+        <View
+          accessibilityRole="progressbar"
+          accessibilityValue={{
+            min: 0,
+            max: 100,
+            now: Math.round(item.progress * 100),
+          }}
+          style={{
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: theme.surface,
+            overflow: "hidden",
+          }}
+        >
+          <View
+            style={{
               width: `${Math.round(item.progress * 100)}%`,
               height: 6,
               backgroundColor: theme.primary,
-            },
-          }),
-        )
-      : null,
-    actions.length > 0
-      ? h(
-          View,
-          { style: { flexDirection: "row", flexWrap: "wrap", gap: 8 } },
-          ...actions,
-        )
-      : null,
+            }}
+          />
+        </View>
+      ) : null}
+      {actions.length > 0 ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {actions}
+        </View>
+      ) : null}
+    </Card>
   );
 }

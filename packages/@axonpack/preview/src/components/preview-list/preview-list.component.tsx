@@ -1,4 +1,4 @@
-import { createElement as h, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   View,
@@ -90,51 +90,65 @@ export function PreviewList(props: PreviewListProps) {
     [showLocal, appSlug, local, preview],
   );
 
+  const deleteAll = (
+    <Button
+      theme={theme}
+      title={labels.deleteAll}
+      onPress={preview.removeIncompatible}
+      kind="danger"
+    />
+  );
+
   const renderItem = ({ item }: ListRenderItemInfo<ListItem>) => {
     switch (item.type) {
       case "dev-servers-header":
-        return h(SectionHeader, {
-          theme,
-          title: labels.devPreviewServersTitle,
-          hint: labels.devPreviewServersHint,
-          error: item.error,
-        });
+        return (
+          <SectionHeader
+            theme={theme}
+            title={labels.devPreviewServersTitle}
+            hint={labels.devPreviewServersHint}
+            error={item.error}
+          />
+        );
       case "dev-server":
-        return h(DevServerRow, {
-          theme,
-          labels,
-          server: item.server,
-          running: item.server.url === local.activeUrl,
-          onSwitch: devPreviewServersStore.switchTo,
-          onStop: () => devPreviewServersStore.switchTo(null),
-        });
+        return (
+          <DevServerRow
+            theme={theme}
+            labels={labels}
+            server={item.server}
+            running={item.server.url === local.activeUrl}
+            onSwitch={devPreviewServersStore.switchTo}
+            onStop={() => devPreviewServersStore.switchTo(null)}
+          />
+        );
       case "hint":
-        return h(HintRow, { theme, text: labels[item.hint], tone: item.tone });
+        return (
+          <HintRow theme={theme} text={labels[item.hint]} tone={item.tone} />
+        );
       case "previews-header":
-        return h(SectionHeader, { theme, title: labels.previewsTitle });
+        return <SectionHeader theme={theme} title={labels.previewsTitle} />;
       case "preview":
-        return h(PreviewRow, {
-          theme,
-          labels,
-          item: item.item,
-          onDownload: preview.download,
-          onSwitch: preview.switchTo,
-          onDelete: preview.remove,
-        });
+        return (
+          <PreviewRow
+            theme={theme}
+            labels={labels}
+            item={item.item}
+            onDownload={preview.download}
+            onSwitch={preview.switchTo}
+            onDelete={preview.remove}
+          />
+        );
       case "incompatible-header":
-        return h(SectionHeader, {
-          theme,
-          title: labels.incompatibleTitle,
-          hint: labels.incompatibleHint,
-          action: h(Button, {
-            theme,
-            title: labels.deleteAll,
-            onPress: preview.removeIncompatible,
-            kind: "danger",
-          }),
-        });
+        return (
+          <SectionHeader
+            theme={theme}
+            title={labels.incompatibleTitle}
+            hint={labels.incompatibleHint}
+            action={deleteAll}
+          />
+        );
       case "incompatible":
-        return h(IncompatibleRow, { theme, preview: item.preview });
+        return <IncompatibleRow theme={theme} preview={item.preview} />;
     }
   };
 
@@ -142,49 +156,51 @@ export function PreviewList(props: PreviewListProps) {
     now.kind === "preview"
       ? (preview.items.find((i) => i.id === now.id)?.entry ?? null)
       : null;
-  const header = h(
-    View,
-    { style: { gap: 12 } },
-    h(HeroCard, {
-      theme,
-      labels,
-      running: now,
-      build: {
-        app: buildApp(),
-        platform: currentPlatform(),
-        compatibility: buildCompatibility(),
-        key: preview.buildKey ?? buildKey(),
-      },
-      entry: runningEntry,
-      error: preview.error,
-      loading: preview.loading,
-      // With only a server picked, Stop does the same, so one button is enough.
-      canGoBack: Boolean(preview.activeId),
-      onBackToBase: () => preview.switchTo(null),
-      onStopServer: () => devPreviewServersStore.switchTo(null),
-      onRefresh: () => {
-        preview.refresh();
-        if (showLocal) devPreviewServersStore.refresh();
-      },
-    }),
+  const header = (
+    <View style={{ gap: 12 }}>
+      <HeroCard
+        theme={theme}
+        labels={labels}
+        running={now}
+        build={{
+          app: buildApp(),
+          platform: currentPlatform(),
+          compatibility: buildCompatibility(),
+          key: preview.buildKey ?? buildKey(),
+        }}
+        entry={runningEntry}
+        error={preview.error}
+        loading={preview.loading}
+        // With only a server picked, Stop does the same, so one button is enough.
+        canGoBack={Boolean(preview.activeId)}
+        onBackToBase={() => preview.switchTo(null)}
+        onStopServer={() => devPreviewServersStore.switchTo(null)}
+        onRefresh={() => {
+          preview.refresh();
+          if (showLocal) devPreviewServersStore.refresh();
+        }}
+      />
+    </View>
   );
 
-  return h(FlatList<ListItem>, {
-    data: items,
-    keyExtractor: keyOf,
-    renderItem,
-    ListHeaderComponent: header,
-    // Only a pull shows the pull spinner. Tied to every load, iOS shifts the list down by the
-    // spinner's height when the first load starts, and the top of the list is cut off.
-    refreshing: pulling,
-    onRefresh: () => {
-      setPulling(true);
-      Promise.all([
-        preview.refresh(),
-        showLocal ? devPreviewServersStore.refresh() : null,
-      ]).finally(() => setPulling(false));
-    },
-    style: [{ backgroundColor: theme.background }, props.style],
-    contentContainerStyle: { padding: 16, gap: 12 },
-  });
+  return (
+    <FlatList<ListItem>
+      data={items}
+      keyExtractor={keyOf}
+      renderItem={renderItem}
+      ListHeaderComponent={header}
+      // Only a pull shows the pull spinner. Tied to every load, iOS shifts the list down by the
+      // spinner's height when the first load starts, and the top of the list is cut off.
+      refreshing={pulling}
+      onRefresh={() => {
+        setPulling(true);
+        Promise.all([
+          preview.refresh(),
+          showLocal ? devPreviewServersStore.refresh() : null,
+        ]).finally(() => setPulling(false));
+      }}
+      style={[{ backgroundColor: theme.background }, props.style]}
+      contentContainerStyle={{ padding: 16, gap: 12 }}
+    />
+  );
 }

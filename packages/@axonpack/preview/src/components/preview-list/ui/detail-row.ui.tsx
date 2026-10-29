@@ -1,4 +1,3 @@
-import { createElement as h } from "react";
 import { Text, View } from "react-native";
 
 import { font } from "../../../utils/preview-list/theme.util";
@@ -11,34 +10,30 @@ export function DetailRow(props: {
   value: string;
 }) {
   const { theme } = props;
-  return h(
-    View,
-    {
-      style: {
+  return (
+    <View
+      style={{
         flexDirection: "row",
         alignItems: "baseline",
         justifyContent: "space-between",
         gap: 16,
         paddingVertical: 6,
-      },
-    },
-    h(
-      Text,
-      { style: { ...font(theme, "regular", 15), color: theme.muted } },
-      props.label,
-    ),
-    h(
-      Text,
-      {
-        selectable: true,
-        style: {
+      }}
+    >
+      <Text style={{ ...font(theme, "regular", 15), color: theme.muted }}>
+        {props.label}
+      </Text>
+      <Text
+        selectable
+        style={{
           ...font(theme, "regular", 15),
           color: theme.text,
           flexShrink: 1,
           textAlign: "right",
-        },
-      },
-      props.value,
-    ),
+        }}
+      >
+        {props.value}
+      </Text>
+    </View>
   );
 }

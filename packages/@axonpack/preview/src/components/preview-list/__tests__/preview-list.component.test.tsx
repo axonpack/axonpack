@@ -1,4 +1,3 @@
-import { createElement as h } from "react";
 import { FlatList, TurboModuleRegistry } from "react-native";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 
@@ -93,14 +92,15 @@ async function render(devPreviewServers?: boolean) {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
-      h(PreviewProvider, {
-        config: {
+      <PreviewProvider
+        config={{
           enabled: true,
           url: "http://localhost:9000/b",
           devPreviewServers,
-        },
-        children: h(PreviewList),
-      }),
+        }}
+      >
+        <PreviewList />
+      </PreviewProvider>,
     );
   });
   return tree;
@@ -342,10 +342,9 @@ test("a build with no bucket URL says which setting is missing", async () => {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
-      h(PreviewProvider, {
-        config: { enabled: true, url: "" },
-        children: h(PreviewList),
-      }),
+      <PreviewProvider config={{ enabled: true, url: "" }}>
+        <PreviewList />
+      </PreviewProvider>,
     );
   });
   expect(texts(tree).join("\n")).toContain(

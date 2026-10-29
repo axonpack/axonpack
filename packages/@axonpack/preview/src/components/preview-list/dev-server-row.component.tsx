@@ -1,4 +1,3 @@
-import { createElement as h } from "react";
 import { Text, View } from "react-native";
 
 import type { DevPreviewServer } from "../../utils/dev-preview-servers/merge-servers.util";
@@ -29,64 +28,54 @@ export function DevServerRow(props: {
       : server.compatible === null
         ? { text: labels.localUnknownBuild, color: theme.muted }
         : null;
-  return h(
-    Card,
-    { theme },
-    h(
-      View,
-      {
-        style: {
+  return (
+    <Card theme={theme}>
+      <View
+        style={{
           flexDirection: "row",
           justifyContent: "space-between",
           gap: 8,
-        },
-      },
-      h(
-        Text,
-        {
-          style: {
+        }}
+      >
+        <Text
+          style={{
             ...font(theme, "bold", 16),
             color: theme.title,
             flexShrink: 1,
-          },
-        },
-        server.title,
-      ),
-      running
-        ? h(
-            Text,
-            { style: { ...font(theme, "medium", 13), color: theme.success } },
-            labels.running,
-          )
-        : null,
-    ),
-    h(
-      Text,
-      { style: { ...font(theme, "regular", 13), color: theme.muted } },
-      meta,
-    ),
-    badge
-      ? h(
-          Text,
-          { style: { ...font(theme, "medium", 13), color: badge.color } },
-          badge.text,
-        )
-      : null,
-    h(
-      View,
-      { style: { flexDirection: "row", flexWrap: "wrap", gap: 8 } },
-      running
-        ? h(Button, {
-            theme,
-            title: labels.stopDevPreviewServer,
-            onPress: props.onStop,
-            kind: "plain",
-          })
-        : h(Button, {
-            theme,
-            title: labels.switchTo,
-            onPress: () => props.onSwitch(server),
-          }),
-    ),
+          }}
+        >
+          {server.title}
+        </Text>
+        {running ? (
+          <Text style={{ ...font(theme, "medium", 13), color: theme.success }}>
+            {labels.running}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={{ ...font(theme, "regular", 13), color: theme.muted }}>
+        {meta}
+      </Text>
+      {badge ? (
+        <Text style={{ ...font(theme, "medium", 13), color: badge.color }}>
+          {badge.text}
+        </Text>
+      ) : null}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {running ? (
+          <Button
+            theme={theme}
+            title={labels.stopDevPreviewServer}
+            onPress={props.onStop}
+            kind="plain"
+          />
+        ) : (
+          <Button
+            theme={theme}
+            title={labels.switchTo}
+            onPress={() => props.onSwitch(server)}
+          />
+        )}
+      </View>
+    </Card>
   );
 }

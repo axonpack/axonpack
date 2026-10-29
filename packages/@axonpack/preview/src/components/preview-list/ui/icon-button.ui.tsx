@@ -1,4 +1,4 @@
-import { createElement as h, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Pressable, type ViewStyle } from "react-native";
 
 import type { PreviewListTheme } from "../preview-list.types";
@@ -12,15 +12,14 @@ export function IconButton(props: {
   children?: ReactNode;
 }) {
   const { theme } = props;
-  return h(
-    Pressable,
-    {
-      onPress: props.onPress,
-      accessibilityRole: "button",
-      accessibilityLabel: props.label,
-      accessibilityState: { busy: Boolean(props.busy) },
-      hitSlop: 4,
-      style: ({ pressed }: { pressed: boolean }): ViewStyle => ({
+  return (
+    <Pressable
+      onPress={props.onPress}
+      accessibilityRole="button"
+      accessibilityLabel={props.label}
+      accessibilityState={{ busy: Boolean(props.busy) }}
+      hitSlop={4}
+      style={({ pressed }: { pressed: boolean }): ViewStyle => ({
         width: 44,
         height: 44,
         borderRadius: 22,
@@ -30,8 +29,9 @@ export function IconButton(props: {
         borderWidth: 1,
         borderColor: theme.border,
         opacity: pressed ? 0.7 : 1,
-      }),
-    },
-    props.children,
+      })}
+    >
+      {props.children}
+    </Pressable>
   );
 }

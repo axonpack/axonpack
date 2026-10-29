@@ -1,4 +1,3 @@
-import { createElement as h } from "react";
 import { Text } from "react-native";
 
 import type { LocalPreview } from "../../services/previews/local-previews.service";
@@ -11,13 +10,11 @@ export function IncompatibleRow(props: {
   preview: LocalPreview;
 }) {
   const { theme, preview } = props;
-  return h(
-    Card,
-    { theme },
-    h(
-      Text,
-      { style: { ...font(theme, "regular", 15), color: theme.text } },
-      `${preview.entry.title} · ${formatSize(preview.entry.size)}`,
-    ),
+  return (
+    <Card theme={theme}>
+      <Text style={{ ...font(theme, "regular", 15), color: theme.text }}>
+        {`${preview.entry.title} · ${formatSize(preview.entry.size)}`}
+      </Text>
+    </Card>
   );
 }

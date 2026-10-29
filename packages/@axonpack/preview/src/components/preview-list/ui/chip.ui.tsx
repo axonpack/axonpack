@@ -1,4 +1,3 @@
-import { createElement as h } from "react";
 import { Text, View } from "react-native";
 
 import { font } from "../../../utils/preview-list/theme.util";
@@ -22,10 +21,9 @@ export function Chip(props: {
           : tone === "danger"
             ? theme.danger
             : theme.text;
-  return h(
-    View,
-    {
-      style: {
+  return (
+    <View
+      style={{
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 999,
@@ -38,8 +36,9 @@ export function Chip(props: {
               : color,
         backgroundColor: tone === "primary" ? theme.primary : theme.card,
         alignSelf: "flex-start",
-      },
-    },
-    h(Text, { style: { ...font(theme, "medium", 13), color } }, props.text),
+      }}
+    >
+      <Text style={{ ...font(theme, "medium", 13), color }}>{props.text}</Text>
+    </View>
   );
 }

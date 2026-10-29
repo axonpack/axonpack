@@ -1,9 +1,4 @@
-import {
-  createContext,
-  createElement as h,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, useEffect, type ReactNode } from "react";
 
 import type { PreviewConfig } from "../../utils/config/config.util";
 import { markLaunched } from "../../services/native/native.service";
@@ -26,5 +21,9 @@ export function PreviewProvider(props: {
     if (props.config.enabled)
       previewsStore.refresh(props.config).catch(() => undefined);
   }, [props.config]);
-  return h(ConfigContext.Provider, { value: props.config }, props.children);
+  return (
+    <ConfigContext.Provider value={props.config}>
+      {props.children}
+    </ConfigContext.Provider>
+  );
 }

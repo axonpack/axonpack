@@ -1,4 +1,4 @@
-import { createElement as h, useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { BuildApp } from "../../services/native/build-info.service";
@@ -105,159 +105,139 @@ export function HeroCard(props: {
   const shown = (list: Row[]) =>
     list
       .filter((row): row is [string, string] => Boolean(row[1]))
-      .map(([label, value]) =>
-        h(DetailRow, { key: label, theme, label, value }),
-      );
+      .map(([label, value]) => (
+        <DetailRow key={label} theme={theme} label={label} value={value} />
+      ));
   const visibleRows = shown(rows);
   const detailRows = shown(details);
   const isDefault = running.kind === "base";
   const chips = [
     // The headline already says the kind when there is no other name.
-    name === kind
-      ? null
-      : h(Chip, {
-          key: "kind",
-          theme,
-          text: kind,
-          // Filled only when something was switched in, so the default reads as calm.
-          tone: isDefault ? "neutral" : "primary",
-        }),
-    isDefault
-      ? h(Chip, { key: "default", theme, text: labels.defaultBundle })
-      : null,
-    entry?.environment
-      ? h(Chip, { key: "env", theme, text: entry.environment, tone: "success" })
-      : null,
+    name === kind ? null : (
+      <Chip
+        key="kind"
+        theme={theme}
+        text={kind}
+        // Filled only when something was switched in, so the default reads as calm.
+        tone={isDefault ? "neutral" : "primary"}
+      />
+    ),
+    isDefault ? (
+      <Chip key="default" theme={theme} text={labels.defaultBundle} />
+    ) : null,
+    entry?.environment ? (
+      <Chip key="env" theme={theme} text={entry.environment} tone="success" />
+    ) : null,
   ].filter(Boolean);
   const hairline = { borderTopWidth: 1, borderColor: theme.border };
 
-  return h(
-    View,
-    {
-      style: {
+  return (
+    <View
+      style={{
         backgroundColor: theme.tint,
         borderRadius: theme.radius,
         borderWidth: 1,
         borderColor: theme.border,
         padding: 16,
         gap: 14,
-      },
-    },
-    h(
-      View,
-      { style: { gap: 10 } },
-      h(
-        View,
-        { style: { flexDirection: "row", alignItems: "flex-start", gap: 12 } },
-        h(
-          View,
-          {
-            accessible: true,
-            accessibilityLabel: `${labels.running}: ${runningLabel(running, labels)}`,
-            style: { flex: 1, paddingTop: 2 },
-          },
-          h(TitleSubtitle, {
-            theme,
-            title: name,
-            subtitle: where,
-            size: "large",
-          }),
-        ),
-        h(
-          IconButton,
-          {
-            theme,
-            label: labels.refresh,
-            onPress: props.onRefresh,
-            busy: props.loading,
-          },
-          props.loading
-            ? h(ActivityIndicator, { color: theme.primary })
-            : h(
-                Text,
-                {
-                  importantForAccessibility: "no",
-                  style: { ...font(theme, "medium", 20), color: theme.text },
-                },
-                "\u21bb",
-              ),
-        ),
-      ),
-      chips.length > 0
-        ? h(
-            View,
-            { style: { flexDirection: "row", flexWrap: "wrap", gap: 6 } },
-            ...chips,
-          )
-        : null,
-    ),
-    h(
-      View,
-      { style: { ...hairline, paddingTop: 8 } },
-      ...visibleRows,
-      expanded ? detailRows : null,
-      detailRows.length > 0
-        ? h(
-            Pressable,
-            {
-              onPress: () => setExpanded(!expanded),
-              accessibilityRole: "button",
-              accessibilityState: { expanded },
-              style: { minHeight: 44, justifyContent: "center" },
-            },
-            h(
-              Text,
-              { style: { ...font(theme, "medium", 15), color: theme.primary } },
-              expanded ? labels.hideDetails : labels.showDetails,
-            ),
-          )
-        : null,
-    ),
-    // A dev preview server wins over a picked preview, so Metro is in use and the note would be wrong.
-    __DEV__ && running.kind === "preview"
-      ? h(
-          Text,
-          { style: { ...font(theme, "regular", 14), color: theme.warning } },
-          labels.metroBypassed,
-        )
-      : null,
-    props.error
-      ? h(
-          Text,
-          { style: { ...font(theme, "regular", 14), color: theme.danger } },
-          props.error,
-        )
-      : null,
-    props.canGoBack || running.kind === "local"
-      ? h(
-          View,
-          {
-            style: {
-              ...hairline,
-              paddingTop: 14,
-              flexDirection: "row",
-              flexWrap: "wrap",
-              gap: 8,
-            },
-          },
-          props.canGoBack
-            ? h(Button, {
-                key: "back",
-                theme,
-                title: labels.backToBase,
-                onPress: props.onBackToBase,
-              })
-            : null,
-          running.kind === "local"
-            ? h(Button, {
-                key: "stop",
-                theme,
-                title: labels.stopServer,
-                onPress: props.onStopServer,
-                kind: "plain",
-              })
-            : null,
-        )
-      : null,
+      }}
+    >
+      <View style={{ gap: 10 }}>
+        <View
+          style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}
+        >
+          <View
+            accessible
+            accessibilityLabel={`${labels.running}: ${runningLabel(running, labels)}`}
+            style={{ flex: 1, paddingTop: 2 }}
+          >
+            <TitleSubtitle
+              theme={theme}
+              title={name}
+              subtitle={where}
+              size="large"
+            />
+          </View>
+          <IconButton
+            theme={theme}
+            label={labels.refresh}
+            onPress={props.onRefresh}
+            busy={props.loading}
+          >
+            {props.loading ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : (
+              <Text
+                importantForAccessibility="no"
+                style={{ ...font(theme, "medium", 20), color: theme.text }}
+              >
+                {"\u21bb"}
+              </Text>
+            )}
+          </IconButton>
+        </View>
+        {chips.length > 0 ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            {chips}
+          </View>
+        ) : null}
+      </View>
+      <View style={{ ...hairline, paddingTop: 8 }}>
+        {visibleRows}
+        {expanded ? detailRows : null}
+        {detailRows.length > 0 ? (
+          <Pressable
+            onPress={() => setExpanded(!expanded)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            style={{ minHeight: 44, justifyContent: "center" }}
+          >
+            <Text
+              style={{ ...font(theme, "medium", 15), color: theme.primary }}
+            >
+              {expanded ? labels.hideDetails : labels.showDetails}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {/* A dev preview server wins over a picked preview, so Metro is in use and the note would be wrong. */}
+      {__DEV__ && running.kind === "preview" ? (
+        <Text style={{ ...font(theme, "regular", 14), color: theme.warning }}>
+          {labels.metroBypassed}
+        </Text>
+      ) : null}
+      {props.error ? (
+        <Text style={{ ...font(theme, "regular", 14), color: theme.danger }}>
+          {props.error}
+        </Text>
+      ) : null}
+      {props.canGoBack || running.kind === "local" ? (
+        <View
+          style={{
+            ...hairline,
+            paddingTop: 14,
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 8,
+          }}
+        >
+          {props.canGoBack ? (
+            <Button
+              theme={theme}
+              title={labels.backToBase}
+              onPress={props.onBackToBase}
+            />
+          ) : null}
+          {running.kind === "local" ? (
+            <Button
+              theme={theme}
+              title={labels.stopServer}
+              onPress={props.onStopServer}
+              kind="plain"
+            />
+          ) : null}
+        </View>
+      ) : null}
+    </View>
   );
 }
