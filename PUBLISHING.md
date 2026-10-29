@@ -80,7 +80,10 @@ Only for a brand-new package's first publish, or when GitHub itself is unavailab
 
 Prerequisites:
 
-- `npm whoami` prints a user with publish access to the `@axonpack` scope. If not, `npm login`.
+- A granular npm token with publish access to the `@axonpack` scope, exported as `NPM_TOKEN`.
+  `bun run release` passes it to npm through [`.npmrc.token`](./.npmrc.token), which holds only the
+  text `${NPM_TOKEN}`. Your `~/.npmrc` is not read in that case, so an old token there does no harm.
+  Without `NPM_TOKEN`, `release` uses your normal npm login, the same as before.
 - The package still allows token publishing. If **Publishing access** on npmjs.com disallows tokens,
   only the workflow can publish it.
 - A clean checkout of `main`, up to date.
@@ -111,14 +114,30 @@ Steps:
 3. **Publish.** Prefer the workflow: run it by hand with `channel: stable`, and you get provenance.
    Only if that is not possible, from an up-to-date `main`:
 
+   Read the token without echoing it, so it stays out of your shell history:
+
+   ```sh
+   read -s NPM_TOKEN; export NPM_TOKEN
+   ```
+
+   Check that npm takes it. This must print your npm user name. Stop here if it prints an error.
+
+   ```sh
+   NPM_CONFIG_USERCONFIG=$PWD/.npmrc.token npm whoami
+   ```
+
+   Then publish:
+
    ```sh
    bun run release
    git push origin --tags
    ```
 
+   A one-off `NPM_TOKEN=... bun run release` works too, but it leaves the token in your history.
+
    `bun run release` builds every package and runs `changeset publish`, which publishes any package
    whose version is not on the registry yet and tags it locally. The tags only reach GitHub with
-   the second command.
+   the second command. Run `unset NPM_TOKEN` when you are done, and revoke the token on npmjs.com.
 
 ## Notes
 
