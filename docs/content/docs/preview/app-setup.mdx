@@ -105,6 +105,23 @@ text:
 Every token and label is on [Reference](/docs/preview/reference#theme). `LIGHT_THEME`, `DARK_THEME`
 and `DEFAULT_LABELS` are exported to build on.
 
+### Layout and your own content
+
+`PreviewList` is a FlatList, so it takes FlatList's props too. By default the end of the list leaves
+room for a floating tab bar; set your own with `contentContainerStyle`. Add your own content above
+the header card with `ListHeaderComponent`, or after the last row with `ListFooterComponent`:
+
+```tsx
+<PreviewList
+  style={{ flex: 1 }}
+  contentContainerStyle={{ paddingBottom: 140 }}
+  ListFooterComponent={<Text style={{ textAlign: 'center' }}>Build 1.4.0 (212)</Text>}
+/>
+```
+
+Every prop, and the few the list keeps for itself, are on
+[Reference](/docs/preview/reference#previewlist-props).
+
 ## Your own screen
 
 `usePreview()` gives the same data and actions. It needs the provider above it.

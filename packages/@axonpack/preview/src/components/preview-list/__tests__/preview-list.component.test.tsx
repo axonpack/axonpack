@@ -1,4 +1,11 @@
-import { FlatList, Platform, TurboModuleRegistry, View } from "react-native";
+import {
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TurboModuleRegistry,
+  View,
+} from "react-native";
 import {
   act,
   create,
@@ -7,7 +14,8 @@ import {
 } from "react-test-renderer";
 
 import { PreviewProvider } from "../../preview-provider/preview-provider.component";
-import { PreviewList } from "../preview-list.component";
+import { PreviewList, type PreviewListProps } from "../preview-list.component";
+import { LIGHT_THEME } from "../../../constants/preview-list/theme.const";
 import { Card } from "../ui/card.ui";
 import { Chip } from "../ui/chip.ui";
 import { RowGap } from "../row-gap.component";
@@ -756,8 +764,86 @@ test("pulling the list down asks the bucket again", async () => {
   const tree = await render();
   const fetch = global.fetch as jest.Mock;
   const before = fetch.mock.calls.length;
-  await act(async () => tree.root.findByType(FlatList).props.onRefresh());
+  const pull = tree.root.findByType(FlatList).props.refreshControl;
+  // The spinner takes the theme's colours.
+  expect(pull.props).toMatchObject({
+    colors: [LIGHT_THEME.primary],
+    tintColor: LIGHT_THEME.muted,
+  });
+  await act(async () => pull.props.onRefresh());
   expect(fetch.mock.calls.length).toBeGreaterThan(before);
+  await act(async () => tree.unmount());
+});
+
+async function renderWith(props: PreviewListProps) {
+  let tree!: ReactTestRenderer;
+  await act(async () => {
+    tree = create(
+      <PreviewProvider
+        config={{ enabled: true, url: "http://localhost:9000/b" }}
+      >
+        <PreviewList {...props} />
+      </PreviewProvider>,
+    );
+  });
+  return tree;
+}
+
+test("the app's style and contentContainerStyle reach the FlatList and win over the list's own", async () => {
+  const tree = await renderWith({
+    style: { backgroundColor: "#ff0000", flex: 1 },
+    contentContainerStyle: { paddingBottom: 200 },
+  });
+  const list = tree.root.findByType(FlatList).props;
+  expect(StyleSheet.flatten(list.style)).toEqual({
+    backgroundColor: "#ff0000",
+    flex: 1,
+  });
+  expect(StyleSheet.flatten(list.contentContainerStyle)).toEqual({
+    padding: 16,
+    paddingBottom: 200,
+  });
+  await act(async () => tree.unmount());
+});
+
+test("by default the end of the list clears a floating tab bar", async () => {
+  const tree = await render();
+  const list = tree.root.findByType(FlatList).props;
+  expect(StyleSheet.flatten(list.contentContainerStyle).paddingBottom).toBe(
+    112,
+  );
+  await act(async () => tree.unmount());
+});
+
+test("the app's header sits above the list's own, and its footer after the last row", async () => {
+  const tree = await renderWith({
+    ListHeaderComponent: <Text>App header</Text>,
+    ListFooterComponent: () => <Text>App footer</Text>,
+  });
+  const all = texts(tree);
+  expect(all.indexOf("App header")).toBeLessThan(
+    all.indexOf("Built into the app"),
+  );
+  expect(all.at(-1)).toBe("App footer");
+  expect(all.indexOf("App footer")).toBeGreaterThan(
+    all.indexOf("Published previews"),
+  );
+  await act(async () => tree.unmount());
+});
+
+test("other FlatList props are passed through", async () => {
+  const onScroll = jest.fn();
+  const tree = await renderWith({
+    testID: "qa-previews",
+    showsVerticalScrollIndicator: false,
+    onScroll,
+  });
+  const list = tree.root.findByType(FlatList).props;
+  expect(list).toMatchObject({
+    testID: "qa-previews",
+    showsVerticalScrollIndicator: false,
+    onScroll,
+  });
   await act(async () => tree.unmount());
 });
 

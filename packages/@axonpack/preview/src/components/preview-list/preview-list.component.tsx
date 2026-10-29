@@ -1,8 +1,17 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  isValidElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   FlatList,
+  RefreshControl,
   View,
   useColorScheme,
+  type FlatListProps,
   type ListRenderItemInfo,
   type StyleProp,
   type ViewStyle,
@@ -46,14 +55,48 @@ import type {
   PreviewListThemeInput,
 } from "./preview-list.types";
 
-export type PreviewListProps = {
+/**
+ * FlatList props the list keeps for itself: its rows and how they are laid out and spaced (`data`,
+ * `getItem`, `getItemCount`, `renderItem`, `keyExtractor`, `ItemSeparatorComponent`,
+ * `CellRendererComponent`, `getItemLayout`, `numColumns`, `columnWrapperStyle`, `horizontal`), pull to refresh (`refreshing`, `onRefresh`,
+ * `refreshControl`, coloured from the theme), and `ListEmptyComponent`, which could never show
+ * since the list always has its section headings and says itself when nothing is published.
+ */
+type OwnedListProps =
+  | "data"
+  | "getItem"
+  | "getItemCount"
+  | "renderItem"
+  | "keyExtractor"
+  | "ItemSeparatorComponent"
+  | "CellRendererComponent"
+  | "getItemLayout"
+  | "numColumns"
+  | "columnWrapperStyle"
+  | "horizontal"
+  | "refreshing"
+  | "onRefresh"
+  | "refreshControl"
+  | "ListEmptyComponent"
+  | "ListHeaderComponent";
+
+/** Every other FlatList prop is passed through, such as `onScroll`, `testID` or `ListFooterComponent`. */
+export type PreviewListProps = Omit<FlatListProps<unknown>, OwnedListProps> & {
   /**
    * Nothing for the built-in light or dark, a partial theme, or the palette the app passes
    * expo-devtools, so both look the same.
    */
   theme?: PreviewListThemeInput;
   labels?: Partial<PreviewListLabels>;
+  /** The FlatList's own style, over the list's background colour. */
   style?: StyleProp<ViewStyle>;
+  /**
+   * Over the list's padding: 16 all round, and room at the end for a floating tab bar. Set
+   * `paddingBottom` to fit the app's own tab bar, or none.
+   */
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  /** The app's own header, above the list's (the error banner and the header card). */
+  ListHeaderComponent?: FlatListProps<unknown>["ListHeaderComponent"];
 };
 
 const keyOf = (item: ListItem) => item.key;
@@ -63,6 +106,14 @@ const keyOf = (item: ListItem) => item.key;
  * another build in a section of their own. Needs a `<PreviewProvider>` above it.
  */
 export function PreviewList(props: PreviewListProps) {
+  const {
+    theme: themeInput,
+    labels: labelsInput,
+    style,
+    contentContainerStyle,
+    ListHeaderComponent: AppHeader,
+    ...listProps
+  } = props;
   const preview = usePreview();
   const local = useDevPreviewServersState();
   const now = useRunning();
@@ -90,17 +141,17 @@ export function PreviewList(props: PreviewListProps) {
   useEffect(() => {
     if (preview.error) console.log(`@axonpack/preview: ${preview.error}`);
   }, [preview.error]);
-  const theme = resolveTheme(props.theme, useColorScheme());
+  const theme = resolveTheme(themeInput, useColorScheme());
   const labels: PreviewListLabels = {
     ...DEFAULT_LABELS,
-    ...props.labels,
+    ...labelsInput,
     // An app written before the rename still sees its own text.
     backToDefault:
-      props.labels?.backToDefault ??
-      props.labels?.backToBase ??
+      labelsInput?.backToDefault ??
+      labelsInput?.backToBase ??
       DEFAULT_LABELS.backToDefault,
-    status: { ...DEFAULT_LABELS.status, ...props.labels?.status },
-    timeAgo: { ...DEFAULT_LABELS.timeAgo, ...props.labels?.timeAgo },
+    status: { ...DEFAULT_LABELS.status, ...labelsInput?.status },
+    timeAgo: { ...DEFAULT_LABELS.timeAgo, ...labelsInput?.timeAgo },
   };
 
   // What runs now when that is the default, else what native says it starts on.
@@ -223,6 +274,11 @@ export function PreviewList(props: PreviewListProps) {
     : null;
   const header = (
     <View style={{ gap: 12, marginBottom: 12 }}>
+      {AppHeader == null ? null : isValidElement(AppHeader) ? (
+        AppHeader
+      ) : (
+        <AppHeader />
+      )}
       {failure ? (
         <ErrorBanner
           theme={theme}
@@ -254,20 +310,32 @@ export function PreviewList(props: PreviewListProps) {
 
   return (
     <FlatList<ListItem>
+      {...listProps}
       data={items}
       keyExtractor={keyOf}
       renderItem={renderItem}
       ItemSeparatorComponent={RowGap}
       ListHeaderComponent={header}
-      // Only a pull shows the pull spinner. Tied to every load, iOS shifts the list down by the
-      // spinner's height when the first load starts, and the top of the list is cut off.
-      refreshing={pulling}
-      onRefresh={() => {
-        setPulling(true);
-        refreshAll().finally(() => setPulling(false));
-      }}
-      style={[{ backgroundColor: theme.background }, props.style]}
-      contentContainerStyle={{ padding: 16 }}
+      refreshControl={
+        <RefreshControl
+          // Only a pull shows the pull spinner. Tied to every load, iOS shifts the list down by
+          // the spinner's height when the first load starts, and the top of the list is cut off.
+          refreshing={pulling}
+          onRefresh={() => {
+            setPulling(true);
+            refreshAll().finally(() => setPulling(false));
+          }}
+          tintColor={theme.muted}
+          colors={[theme.primary]}
+          progressBackgroundColor={theme.card}
+        />
+      }
+      style={[{ backgroundColor: theme.background }, style]}
+      contentContainerStyle={[
+        // The end of the list clears a floating tab bar (iOS 26's sits over the last 90 or so).
+        { padding: 16, paddingBottom: 112 },
+        contentContainerStyle,
+      ]}
     />
   );
 }

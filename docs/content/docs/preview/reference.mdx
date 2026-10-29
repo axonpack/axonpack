@@ -12,11 +12,31 @@ Use this page to look up a name. If you are new, start with the
 | Export                         | What it is                                                                    |
 | ------------------------------ | ----------------------------------------------------------------------------- |
 | `PreviewProvider`              | `{ config: PreviewConfig, children }`. Mount it near the root, on every start |
-| `PreviewList`                  | The ready-made list. Props: `theme`, `labels`, `style`                        |
+| `PreviewList`                  | The ready-made list. Props below                                              |
 | `usePreview()`                 | The list and its actions. Needs the provider above it                         |
 | `useRunning()`                 | What this start runs, as a [`Running`](#running). Needs the provider          |
 | `usePreviewsState()`           | The raw [store state](#usepreview), without the provider                      |
 | `useDevPreviewServersState()`  | `{ servers, activeUrl, error }` for dev preview servers                       |
+
+## PreviewList props
+
+`PreviewList` is a FlatList, and takes FlatList's props as well as its own.
+
+| Prop                    | What it is                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `theme`                 | Colours, radius and fonts. See [Theme](#theme)                               |
+| `labels`                | Any text. See [Labels](#labels)                                              |
+| `style`                 | The FlatList's style, over the list's background colour                      |
+| `contentContainerStyle` | Over the list's padding: 16 all round and 112 at the end, which clears a floating tab bar. Set `paddingBottom` to fit your own |
+| `ListHeaderComponent`   | Your own element above the list's header (the error banner and the header card) |
+| `ListFooterComponent`   | Your own element after the last row                                          |
+| Any other FlatList prop | Passed through, such as `onScroll`, `testID` or `showsVerticalScrollIndicator` |
+
+The list keeps these for itself, so they can't be passed: `data`, `getItem`, `getItemCount`,
+`renderItem`, `keyExtractor`, `ItemSeparatorComponent`, `CellRendererComponent`, `getItemLayout`,
+`numColumns`, `columnWrapperStyle`, `horizontal`, `refreshing`, `onRefresh`, `refreshControl` (pull
+to refresh is built in, coloured from the theme) and `ListEmptyComponent` (the list always has its
+section headings, and says itself when nothing is published).
 
 ## PreviewConfig
 
