@@ -46,9 +46,20 @@ export async function fingerprint(
   return result.hash as string;
 }
 
-export function gitInfo(projectRoot: string) {
+/**
+ * A CI checkout of a pull request is a detached HEAD, where git names no branch ("HEAD"). GitHub
+ * gives the branch in GITHUB_HEAD_REF; without it, the preview id stands in, else nothing.
+ */
+export function gitInfo(
+  projectRoot: string,
+  {
+    id,
+    env = process.env,
+  }: { id?: string; env?: Record<string, string | undefined> } = {},
+) {
+  const ref = git(projectRoot, ["rev-parse", "--abbrev-ref", "HEAD"]) ?? "";
   return {
-    branch: git(projectRoot, ["rev-parse", "--abbrev-ref", "HEAD"]) ?? "",
+    branch: ref === "HEAD" ? env.GITHUB_HEAD_REF || id || "" : ref,
     commit: git(projectRoot, ["rev-parse", "--short", "HEAD"]) ?? "",
     author:
       git(projectRoot, ["log", "-1", "--format=%an"]) ??

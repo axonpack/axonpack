@@ -97,9 +97,9 @@ async function main() {
     // Before anything reads the app config: the config, fingerprint and export must all see the
     // same variables a build in that environment saw, or the key would not match.
     if (values.environment) applyEasEnv(projectRoot, values.environment);
-    const git = gitInfo(projectRoot);
+    const git = gitInfo(projectRoot, { id: values.id });
     const id = values.id ?? git.branch;
-    if (!id || id === "HEAD")
+    if (!id)
       throw new Error("No git branch to name the preview after; pass --id.");
     const platforms =
       values.platform === "all" ? PLATFORMS : [values.platform as Platform];
