@@ -5,6 +5,7 @@ import { parseArgs } from "node:util";
 
 import { PLATFORMS, Platform } from "./utils/previews/layout.util";
 import { prune, publish, unpublish } from "./services/publish/commands.service";
+import { applyEasEnv } from "./services/publish/eas-env.service";
 import {
   DEFAULT_PORT_RANGE,
   DEFAULT_REGISTRY_PORT,
@@ -39,6 +40,8 @@ const HELP = `preview <command> [options]
     --changelog-file <path>
     --entry-file <path>
     --compatibility <c> appVersion or fingerprint; overrides the app config's plugin option
+    --environment <name> build with this EAS environment's variables, like eas update
+                       (needs eas-cli and a project linked to EAS; shell variables win)
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
   start [-- <expo start args>]
@@ -72,6 +75,7 @@ async function main() {
       "changelog-file": { type: "string" },
       "entry-file": { type: "string" },
       compatibility: { type: "string" },
+      environment: { type: "string" },
       project: { type: "string" },
       port: { type: "string" },
       ports: { type: "string" },
@@ -88,6 +92,9 @@ async function main() {
   const s3 = () => readConfig(projectRoot);
 
   if (command === "publish") {
+    // Before anything reads the app config: the config, fingerprint and export must all see the
+    // same variables a build in that environment saw, or the key would not match.
+    if (values.environment) applyEasEnv(projectRoot, values.environment);
     const git = gitInfo(projectRoot);
     const id = values.id ?? git.branch;
     if (!id || id === "HEAD")

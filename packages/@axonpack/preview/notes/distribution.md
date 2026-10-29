@@ -33,6 +33,27 @@ overrides the option, with a warning, since a build of the app would then not li
 are not all there. The changelog is the commit subjects since the branch left the base branch
 (`--base`, default: the repo's default branch); `--changelog=<text>` or `--changelog-file` replace it.
 
+### EAS environment
+
+`--environment <name>` builds with an EAS environment's variables, like `eas update --environment`:
+
+```sh
+npx preview publish --environment preview
+```
+
+It runs `eas env:pull --environment <name> --non-interactive` into a temp folder outside the app,
+reads the file and deletes it. The values go into the environment of everything publish runs that
+reads the app config: the config itself (app version, slug), the fingerprint and `expo
+export:embed`, so the key matches a build made in that environment. A variable already set in the
+shell wins over the EAS one. Without the flag nothing changes and eas-cli is never called.
+
+It needs eas-cli installed, a login (`eas login`, or `EXPO_TOKEN` in CI) and the app linked to an
+EAS project (`eas init`); publish says which one is missing. Variables with **secret** visibility
+are never readable outside EAS servers: `eas env:pull` leaves them out (as a comment), so set them
+in the shell if the bundle needs them. Plain text and sensitive ones come through. A file-type
+variable is written by `eas env:pull` itself into the app's `.eas/.env/` folder, and its value is
+that file's path.
+
 ## Layout
 
 ```
