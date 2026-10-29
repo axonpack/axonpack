@@ -94,6 +94,7 @@ export const NETWORK_PANEL_CSS = `
 }
 .axonpack-net-button:hover { color: var(--fg); }
 .axonpack-net-button[aria-pressed="true"] { color: var(--link); }
+.axonpack-net-button[data-lit] { color: var(--link); }
 .axonpack-net-button[data-red] { color: var(--net-red); }
 .axonpack-net-button[aria-disabled="true"] { opacity: 0.4; }
 [data-icon]::before {
@@ -322,6 +323,33 @@ ${iconRules}
   border-bottom: 1px solid var(--line);
 }
 /* A labelled line of controls, across the whole pane rather than in one of its columns. */
+/* Capped, so a long list of rules leaves the table room. */
+.axonpack-net-overrides {
+  flex: none;
+  max-height: 40%;
+  overflow: auto;
+  border-bottom: 1px solid var(--line);
+}
+.axonpack-net-overrides-head { display: flex; align-items: center; gap: 8px; padding: 4px 12px; color: var(--muted); }
+.axonpack-net-overrides-head span { flex: 1; }
+.axonpack-net-override {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  border-top: 1px solid var(--line);
+}
+.axonpack-net-override-kind { flex: none; width: 96px; color: var(--muted); }
+.axonpack-net-override-kind[data-tone="error"] { color: var(--net-red); }
+.axonpack-net-override-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg);
+}
 .axonpack-net-setting {
   grid-column: 1 / -1;
   display: flex;

@@ -3,6 +3,7 @@ import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
 import { docsContentRoute, docsImageRoute, docsRoute } from './shared';
 import { defineDocs } from 'fumadocs-mdx/macro';
 import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
+import { title } from './services/packages.service';
 
 const docs = defineDocs({
   dir: 'content/docs',
@@ -54,4 +55,28 @@ export async function getLLMText(page: (typeof source)['$inferPage']) {
   return `# ${page.data.title} (${page.url})
 
 ${processed}`;
+}
+
+/**
+ * The package a page documents, read from its section's `meta.json`, so a new package folder gets
+ * its name into titles and structured data with nothing else to edit. Undefined for pages that sit
+ * outside a package section, which today is only the docs home.
+ */
+export function getPagePackage(page: (typeof source)['$inferPage']) {
+  const dir = page.path.split('/').slice(0, -1)[0];
+  if (!dir) return;
+
+  for (const node of source.getPageTree().children) {
+    if (node.type !== 'folder' || !node.root) continue;
+    const meta = source.getNodeMeta(node);
+    if (meta?.path !== `${dir}/meta.json`) continue;
+
+    return {
+      title: meta.data.title ?? title(dir),
+      description: meta.data.description,
+      // Matches the README's rule that `@axonpack/x` lives at /docs/x/.
+      npmName: `@axonpack/${dir}`,
+      url: node.index?.url ?? `${docsRoute}/${dir}`,
+    };
+  }
 }

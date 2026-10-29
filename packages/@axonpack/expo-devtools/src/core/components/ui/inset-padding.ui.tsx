@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Animated, type ViewStyle } from 'react-native';
+import { Animated, Platform, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAnimatedKeyboard } from '../../services/use-animated-keyboard.service';
@@ -28,8 +28,11 @@ export function InsetPadding({
   // built once per thing it depends on instead.
   const padding = useMemo(() => {
     if (!avoidKeyboard) return insets[edge];
-    // Not inset + keyboard: an open keyboard covers the home indicator, so the inset it stands in
-    // for is already accounted for. Fading the inset out as the keyboard arrives is what keeps this
+    // Android reports the keyboard's height less the navigation bar (`ReactRootView` takes the bar
+    // insets off the IME's), so the bar's inset still has to be added under it.
+    if (Platform.OS === 'android') return Animated.add(keyboard.height, insets[edge]);
+    // On iOS, not inset + keyboard: an open keyboard covers the home indicator, so the inset it stands
+    // in for is already accounted for. Fading the inset out as the keyboard arrives is what keeps this
     // from being a `max()` the Animated API has no operator for.
     const uncovered = Animated.multiply(insets[edge], Animated.subtract(1, keyboard.visible));
     return Animated.add(keyboard.height, uncovered);

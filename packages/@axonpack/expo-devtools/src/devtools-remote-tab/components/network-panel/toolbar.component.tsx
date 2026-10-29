@@ -17,6 +17,10 @@ import {
   useNetworkLogStore,
 } from '../../../features/network/stores/network-log.store';
 import {
+  networkOverridesStore,
+  useNetworkOverridesStore,
+} from '../../../features/network/stores/network-overrides.store';
+import {
   activeTimeRange,
   networkViewStore,
   useNetworkViewStore,
@@ -38,11 +42,15 @@ export function NetworkToolbar({
   onToggleFilterBar,
   settingsOpen,
   onToggleSettings,
+  overridesOpen,
+  onToggleOverrides,
 }: {
   filterBarOpen: boolean;
   onToggleFilterBar: () => void;
   settingsOpen: boolean;
   onToggleSettings: () => void;
+  overridesOpen: boolean;
+  onToggleOverrides: () => void;
 }) {
   const recording = !useNetworkLogStore(networkLogStore.isPaused);
   // TODO(network): hidden for now, with its checkbox below. Uncomment both to bring it back.
@@ -50,6 +58,7 @@ export function NetworkToolbar({
   const throttleId = useNetworkConditionsStore((state) => state.throttleId);
   const { filters, sort } = useNetworkViewStore();
   const timeRange = useNetworkViewStore(activeTimeRange);
+  const hasOverrides = useNetworkOverridesStore(networkOverridesStore.getSnapshot).length > 0;
   const [exportFile, setExportFile] = useState<{ href: string; name: string } | null>(null);
 
   // A download has to be a link the page follows itself, since a click cannot wait on the app.
@@ -98,6 +107,15 @@ export function NetworkToolbar({
         title="Filter"
         onClick={onToggleFilterBar}
       />
+      <button
+        className="axonpack-net-button"
+        aria-pressed={overridesOpen}
+        // Lit while any rule is on, as the app's button is.
+        data-lit={hasOverrides || undefined}
+        title="Overrides"
+        onClick={onToggleOverrides}>
+        <span className="axonpack-material" data-material="rule" />
+      </button>
       {/* TODO(network): Preserve log, hidden for now.
       <span className="axonpack-net-divider" />
       <Checkbox
