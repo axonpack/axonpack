@@ -1,4 +1,5 @@
 import type { DevPreviewServer } from "../dev-preview-servers/merge-servers.util";
+import type { NativeLoaded } from "../../services/native/native.service";
 import type { PreviewItem } from "./preview-items.util";
 import type { PreviewListLabels } from "../../components/preview-list/preview-list.types";
 
@@ -89,6 +90,25 @@ export function runsFromServer(running: Running, hostPort: string): boolean {
 const findServer = (servers: DevPreviewServer[], hostPort: string) =>
   servers.find((s) => sameServer(s.hostPort, hostPort)) ?? null;
 
+/**
+ * The preview that runs now, or null: what the header card shows and what makes a row Active.
+ * Native says what it loaded. A native side built before it did leaves the file React Native
+ * loaded, which must be the chosen preview's own, since one that could not load (another Hermes,
+ * the crash fallback) leaves the default running.
+ */
+export function runningPreviewId(input: {
+  activeId: string | null;
+  loaded?: NativeLoaded | null;
+  scriptUrl?: string | null;
+}): string | null {
+  const { activeId, loaded, scriptUrl = null } = input;
+  if (loaded) return loaded.kind === "preview" ? loaded.id : null;
+  return activeId &&
+    (scriptUrl === null || scriptUrl.includes(`/preview/${activeId}/`))
+    ? activeId
+    : null;
+}
+
 export function runningNow(input: {
   items: PreviewItem[];
   activeId: string | null;
@@ -102,8 +122,18 @@ export function runningNow(input: {
   scriptUrl?: string | null;
   /** `host:port` of the Metro the app starts on with nothing picked, from the native state. */
   defaultServer?: string | null;
+  /**
+   * What native says it started from. When given it decides between a server, a preview and the
+   * default, over `localUrl` and `activeId`, which are only what was chosen.
+   */
+  loaded?: NativeLoaded | null;
 }): Running {
-  const { localUrl, scriptUrl = null, defaultServer = null } = input;
+  const { scriptUrl = null, defaultServer = null, loaded = null } = input;
+  const localUrl = loaded
+    ? loaded.kind === "server"
+      ? loaded.url
+      : null
+    : input.localUrl;
   const metro = scriptUrl && isHttp(scriptUrl) ? scriptUrl : null;
   // A dev preview server wins over a picked preview on the native side, so it wins here too.
   if (localUrl) {
@@ -122,17 +152,13 @@ export function runningNow(input: {
         server,
       };
   }
-  // A preview that could not load (another Hermes, the crash fallback) leaves the default running,
-  // so when the loaded file is known it must be the preview's own.
-  const previewLoaded =
-    input.activeId &&
-    (scriptUrl === null || scriptUrl.includes(`/preview/${input.activeId}/`));
-  if (input.activeId && previewLoaded) {
-    const item = input.items.find((i) => i.active);
+  const previewId = runningPreviewId(input);
+  if (previewId) {
+    const item = input.items.find((i) => i.id === previewId);
     return {
       kind: "preview",
-      id: input.activeId,
-      title: item?.entry.title ?? input.activeId,
+      id: previewId,
+      title: item?.entry.title ?? previewId,
     };
   }
   if (metro) {

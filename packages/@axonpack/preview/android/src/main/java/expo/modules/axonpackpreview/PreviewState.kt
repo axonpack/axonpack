@@ -39,7 +39,9 @@ internal object PreviewState {
     Log.w(TAG, "@axonpack/preview needs the New Architecture, so the selected preview is ignored and the base bundle loads")
 
   /** The selected preview if this app can run it, else null for the base bundle. */
-  fun bundleToLoad(context: Context): File? {
+  fun bundleToLoad(context: Context): File? = pickBundle(context).also { recordLoaded(context, it) }
+
+  private fun pickBundle(context: Context): File? {
     val bundle = selectedBundle(context) ?: return null
     if (!madeForThisBuild(context)) return null
     if (!newArchitecture()) {
@@ -88,6 +90,7 @@ internal object PreviewState {
       saveDebugHost(context)
       settings.debugServerHost = local
       devSupport.bundleFilePath = null
+      recordLoaded(context, null)
       return
     }
     if (settings != null) restoreDebugHost(context, settings)
@@ -276,6 +279,28 @@ internal object PreviewState {
     writeJson(context, json)
   }
 
+  /**
+   * What the running start was loaded from, written when native picked it, so the list shows what
+   * really runs and not only what was chosen. A start this package never picked for is the default.
+   */
+  @Volatile private var loaded: Map<String, String> = mapOf("kind" to "default")
+
+  // A local server wins over the preview here because every caller puts it first: Metro is asked
+  // before any bundle loader in a debug build.
+  private fun recordLoaded(context: Context, preview: File?) {
+    val server =
+      if (localServerHostPort(context) == null) null
+      else readJson(context).optJSONObject("localServer")?.optString("url")?.ifEmpty { null }
+    loaded = when {
+      server != null -> mapOf("kind" to "server", "url" to server)
+      preview != null -> mapOf(
+        "kind" to "preview",
+        "id" to preview.relativeTo(root(context)).invariantSeparatorsPath.substringBefore("/"),
+      )
+      else -> mapOf("kind" to "default")
+    }
+  }
+
   /** The raw choice and the broken list, for JS to show. */
   fun read(context: Context): Map<String, Any?> {
     val json = readJson(context)
@@ -284,6 +309,7 @@ internal object PreviewState {
       "broken" to brokenIds(json),
       "localServer" to json.optJSONObject("localServer")?.optString("url")?.ifEmpty { null },
       "defaultServer" to defaultServer(context, json),
+      "loaded" to loaded,
     )
   }
 

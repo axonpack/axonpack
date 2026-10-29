@@ -29,6 +29,7 @@ import {
 } from "../../../services/previews/local-previews.service";
 import type { IndexEntry } from "../../../utils/previews/layout.util";
 import { IncompatibleRow } from "../incompatible-row.component";
+import type { NativeLoaded } from "../../../services/native/native.service";
 
 jest.mock("expo-file-system", () =>
   require("../../../services/previews/__tests__/fake-file-system.test-helper"),
@@ -51,6 +52,7 @@ let mockNativeState: {
   bundle?: string;
   localServer?: string;
   defaultServer?: string;
+  loaded?: NativeLoaded;
 } = {};
 const mockSelectLocalServer = jest.fn();
 jest.mock("expo", () => ({
@@ -496,6 +498,61 @@ test("no server is Active while a preview runs", async () => {
   await settle();
   expectSwitchable(serverRow(tree, 8081));
   await act(async () => tree.unmount());
+});
+
+describe("the header card and the preview rows agree on what runs", () => {
+  const METRO_8081 = "http://127.0.0.1:8081/index.bundle?platform=ios";
+  const METRO_8082 = "http://127.0.0.1:8082/index.bundle?platform=ios";
+  const previewRow = (tree: ReactTestRenderer) =>
+    tree.root.findAll((node) => node.props.testID === "preview-task-1")[0];
+  const header = (tree: ReactTestRenderer) =>
+    textsOf(tree.root.findByType(HeroCard));
+
+  test("a preview native loaded runs in both, whatever the file's path says", async () => {
+    mockNativeState = {
+      bundle: "task-1/ios/main.jsbundle",
+      loaded: { kind: "preview", id: "task-1" },
+    };
+    mockScriptUrl = "file:///private/var/copy/main.jsbundle";
+    global.fetch = bucketWithPreview();
+    const tree = await render(true);
+    expect(header(tree)).toContain("Login fix");
+    expect(textsOf(previewRow(tree))).toContain("Active");
+    await act(async () => tree.unmount());
+  });
+
+  test("a chosen preview under a picked server: the server runs, and the preview is not Active", async () => {
+    mockNativeState = {
+      bundle: "task-1/ios/main.jsbundle",
+      localServer: METRO_8082,
+      defaultServer: "localhost:8081",
+      loaded: { kind: "server", url: METRO_8082 },
+    };
+    mockScriptUrl = METRO_8082;
+    global.fetch = bucketWithPreview();
+    const tree = await render(true);
+    expect(header(tree)).toContain("localhost:8082");
+    expect(header(tree)).not.toContain("Login fix");
+    expect(textsOf(previewRow(tree))).not.toContain("Active");
+    await act(async () => tree.unmount());
+  });
+
+  test("a chosen preview that did not load leaves the default in both", async () => {
+    // The default Metro was picked by hand, so it wins over the preview chosen after it.
+    mockNativeState = {
+      bundle: "task-1/ios/main.jsbundle",
+      localServer: METRO_8081,
+      defaultServer: "localhost:8081",
+      loaded: { kind: "server", url: METRO_8081 },
+    };
+    mockScriptUrl = METRO_8081;
+    global.fetch = bucketWithPreview();
+    const tree = await render(true);
+    expect(header(tree)).toContain("Default");
+    expect(header(tree)).not.toContain("Login fix");
+    expect(textsOf(previewRow(tree))).not.toContain("Active");
+    await act(async () => tree.unmount());
+  });
 });
 
 test("built into the app: the default bundle, no way back to offer, the build behind Show details", async () => {

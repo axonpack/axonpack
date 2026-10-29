@@ -6,6 +6,7 @@ import {
   runningKind,
   runningLabel,
   runningNow,
+  runningPreviewId,
   runsFromServer,
   sameServer,
 } from "../running.util";
@@ -195,6 +196,132 @@ describe("a preview", () => {
         scriptUrl: "http://localhost:8081/index.bundle",
       }),
     ).toMatchObject({ kind: "default", source: "expo-dev-server" });
+  });
+});
+
+describe("what native says it loaded", () => {
+  const scan = metro("localhost:8081");
+  const now = (
+    loaded: Parameters<typeof runningNow>[0]["loaded"],
+    scriptUrl: string,
+    choice: { activeId?: string; localUrl?: string } = {},
+  ) =>
+    runningNow({
+      items: [item("task-1", "Task 1", false)],
+      activeId: choice.activeId ?? null,
+      localUrl: choice.localUrl ?? null,
+      servers: [scan],
+      scriptUrl,
+      defaultServer: "localhost:8081",
+      loaded,
+    });
+
+  test("a preview runs, whatever form the file's path takes", () => {
+    expect(
+      now({ kind: "preview", id: "task-1" }, "/data/files/x/task-1.bundle", {
+        activeId: "task-1",
+      }),
+    ).toEqual({ kind: "preview", id: "task-1", title: "Task 1" });
+  });
+
+  test("a server runs, even one the list has not been told about", () => {
+    expect(
+      now(
+        { kind: "server", url: "http://127.0.0.1:8082/index.bundle" },
+        "http://127.0.0.1:8082/index.bundle",
+      ),
+    ).toMatchObject({ kind: "local", hostPort: "127.0.0.1:8082" });
+  });
+
+  test("a server that is the default Metro is still the default", () => {
+    expect(
+      now(
+        { kind: "server", url: "http://127.0.0.1:8081/index.bundle" },
+        "http://127.0.0.1:8081/index.bundle",
+        { localUrl: "http://127.0.0.1:8081/index.bundle" },
+      ),
+    ).toMatchObject({ kind: "default", source: "expo-dev-server" });
+  });
+
+  test("the default runs, from Metro or built in", () => {
+    expect(
+      now({ kind: "default" }, "http://localhost:8081/index.bundle"),
+    ).toMatchObject({
+      kind: "default",
+      source: "expo-dev-server",
+      server: scan,
+    });
+    expect(
+      now({ kind: "default" }, "file:///app/Main.app/main.jsbundle"),
+    ).toMatchObject({ kind: "default", source: "built-in" });
+  });
+
+  test("a chosen preview that fell back to the default is not running", () => {
+    // The file test alone would be fooled here: the preview's path is what loaded last time.
+    expect(
+      now(
+        { kind: "default" },
+        "file:///Documents/preview/task-1/ios/main.jsbundle",
+        { activeId: "task-1" },
+      ),
+    ).toMatchObject({ kind: "default" });
+  });
+
+  test("a chosen preview under a picked server is not running", () => {
+    expect(
+      now(
+        { kind: "server", url: "http://127.0.0.1:8081/index.bundle" },
+        "http://127.0.0.1:8081/index.bundle",
+        {
+          activeId: "task-1",
+          localUrl: "http://127.0.0.1:8081/index.bundle",
+        },
+      ),
+    ).toMatchObject({ kind: "default", source: "expo-dev-server" });
+  });
+
+  test("a picked server that native did not load is not running", () => {
+    expect(
+      now({ kind: "preview", id: "task-1" }, "/data/x", {
+        activeId: "task-1",
+        localUrl: "http://127.0.0.1:8082/index.bundle",
+      }),
+    ).toMatchObject({ kind: "preview", id: "task-1" });
+  });
+});
+
+describe("runningPreviewId", () => {
+  test("takes what native loaded over the choice and the file", () => {
+    expect(
+      runningPreviewId({ activeId: "a", loaded: { kind: "preview", id: "b" } }),
+    ).toBe("b");
+    expect(
+      runningPreviewId({
+        activeId: "a",
+        loaded: { kind: "default" },
+        scriptUrl: "/files/preview/a/android/index.android.bundle",
+      }),
+    ).toBeNull();
+  });
+
+  test("without it (an older native side), the file must be the chosen preview's own", () => {
+    expect(
+      runningPreviewId({
+        activeId: "a",
+        scriptUrl:
+          "/data/user/0/app/files/preview/a/android/index.android.bundle",
+      }),
+    ).toBe("a");
+    expect(
+      runningPreviewId({
+        activeId: "a",
+        loaded: null,
+        scriptUrl: "http://localhost:8081/index.bundle",
+      }),
+    ).toBeNull();
+    // Nothing to check against (tests, web): the choice stands.
+    expect(runningPreviewId({ activeId: "a" })).toBe("a");
+    expect(runningPreviewId({ activeId: null })).toBeNull();
   });
 });
 

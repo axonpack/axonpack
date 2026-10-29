@@ -1,6 +1,12 @@
 import { requireOptionalNativeModule } from "expo";
 import { TurboModuleRegistry } from "react-native";
 
+/** What native started the running JS from, recorded when it picked it. */
+export type NativeLoaded =
+  | { kind: "preview"; id: string }
+  | { kind: "server"; url: string }
+  | { kind: "default" };
+
 export type NativeState = {
   bundle?: string | null;
   broken?: string[];
@@ -8,6 +14,8 @@ export type NativeState = {
   localServer?: string | null;
   /** `host:port` of the Metro the app starts on with nothing chosen (debug builds only). */
   defaultServer?: string | null;
+  /** Missing on a native side built before it was added. */
+  loaded?: NativeLoaded | null;
 };
 
 type NativeModule = {

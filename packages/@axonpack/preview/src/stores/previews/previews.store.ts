@@ -14,8 +14,10 @@ import {
 } from "../../services/previews/local-previews.service";
 import {
   nativeModule,
+  scriptUrl,
   selectedPreviewId,
 } from "../../services/native/native.service";
+import { runningPreviewId } from "../../utils/previews/running.util";
 import { previewBundlePath } from "../../services/previews/select.service";
 import { fetchPreviews } from "../../services/previews/remote.service";
 
@@ -31,6 +33,11 @@ export type PreviewsState = {
   downloading: Record<string, number>;
   /** The preview the next start loads, or null for the default bundle. */
   activeId: string | null;
+  /**
+   * The preview that runs now, or null. Not `activeId` when the chosen one did not load: a dev
+   * preview server runs instead, or it fell back to the default bundle.
+   */
+  runningId: string | null;
   /** Previews that stopped before they finished starting, so the default bundle loaded instead. */
   broken: string[];
 };
@@ -43,6 +50,7 @@ let state: PreviewsState = {
   local: [],
   downloading: {},
   activeId: null,
+  runningId: null,
   broken: [],
 };
 const listeners = new Set<() => void>();
@@ -55,9 +63,15 @@ const set = (patch: Partial<PreviewsState>) => {
 const readLocal = async () => {
   const platform = currentPlatform();
   const nativeState = nativeModule()?.state() ?? {};
+  const activeId = selectedPreviewId(nativeState);
   set({
     local: platform ? await listLocalPreviews(platform) : [],
-    activeId: selectedPreviewId(nativeState),
+    activeId,
+    runningId: runningPreviewId({
+      activeId,
+      loaded: nativeState.loaded,
+      scriptUrl: scriptUrl(),
+    }),
     broken: nativeState.broken ?? [],
   });
 };

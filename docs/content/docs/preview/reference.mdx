@@ -68,6 +68,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `local`                | Every download on the device                                               |
 | `downloading`          | Download progress by id, from 0 to 1                                       |
 | `activeId`             | The preview the next start loads, or null for the default bundle          |
+| `runningId`            | The preview that runs now, or null. Not `activeId` when the chosen one did not load |
 | `broken`               | Ids of previews that stopped before they finished starting                 |
 
 | Action                   | What it does                                                             |
@@ -87,7 +88,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `entry`    | The bucket's entry: `title`, `branch`, `commit`, `author`, `publishedAt`, `appVersion`, `buildNumber`, `compatibility`, `fingerprint`, `size`, `changelog`, `revision`, `manifest` |
 | `status`   | `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken` |
 | `progress` | 0 to 1 while downloading, else null                                              |
-| `active`   | It is the one the next start loads                                               |
+| `active`   | It runs now: what native started from, not only what was chosen                  |
 | `local`    | The download on the device, or null                                              |
 
 ### Running

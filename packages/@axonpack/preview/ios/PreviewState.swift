@@ -219,6 +219,33 @@ enum PreviewState {
     writeJson(json)
   }
 
+  /// What the running start was loaded from, written when native picked it, so the list shows what
+  /// really runs and not only what was chosen. A start this package never picked for is the default.
+  private static var loaded: [String: String] = ["kind": "default"]
+
+  static func recordLoaded(local: URL?, preview: URL?) {
+    if let local {
+      loaded = ["kind": "server", "url": local.absoluteString]
+    } else if let preview, let id = previewId(of: preview) {
+      loaded = ["kind": "preview", "id": id]
+    } else {
+      loaded = ["kind": "default"]
+    }
+  }
+
+  /// The first folder under the preview folder, the way JS reads the id from the bundle path.
+  private static func previewId(of bundle: URL) -> String? {
+    guard let root else {
+      return nil
+    }
+    let base = root.standardizedFileURL.path + "/"
+    let path = bundle.standardizedFileURL.path
+    guard path.hasPrefix(base) else {
+      return nil
+    }
+    return path.dropFirst(base.count).components(separatedBy: "/").first
+  }
+
   /// The raw choice and the broken list, for JS to show.
   static func read() -> [String: Any?] {
     let json = readJson()
@@ -227,6 +254,7 @@ enum PreviewState {
       "broken": json["broken"] as? [String] ?? [],
       "localServer": (json["localServer"] as? [String: Any])?["url"] as? String,
       "defaultServer": defaultServer,
+      "loaded": loaded,
     ]
   }
 

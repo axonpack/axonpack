@@ -62,6 +62,7 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
       Self.defaultURL = preview == nil ? base() : nil
       let url = local ?? preview ?? Self.defaultURL
       Self.lastServed = url
+      PreviewState.recordLoaded(local: local, preview: preview)
       return url
     }
     configuration.setValue(block, forKey: "bundleURLBlock")
@@ -100,21 +101,25 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
    */
   static func reload() {
     PreviewState.nextStart()
+    defer { RCTTriggerReloadCommandListeners("preview: switch bundle") }
     guard
       let host = reactHost(),
       let ivar = class_getInstanceVariable(type(of: host), "_bundleManager"),
       let manager = object_getIvar(host, ivar) as? NSObject,
-      manager.responds(to: NSSelectorFromString("setBundleConfig:")),
-      let configuration = bundleConfiguration(
-        for: PreviewState.localServerURL == nil ? PreviewState.bundleToLoad() : nil
-      )
+      manager.responds(to: NSSelectorFromString("setBundleConfig:"))
     else {
       previewLog.warning("Could not reach React's bundle manager, so the reload keeps the current bundle")
-      RCTTriggerReloadCommandListeners("preview: switch bundle")
+      return
+    }
+    let preview = PreviewState.localServerURL == nil ? PreviewState.bundleToLoad() : nil
+    guard let configuration = bundleConfiguration(for: preview) else {
+      previewLog.warning("Could not reach React's bundle manager, so the reload keeps the current bundle")
       return
     }
     manager.setValue(configuration, forKey: "bundleConfig")
-    RCTTriggerReloadCommandListeners("preview: switch bundle")
+    // With expo-updates first the block above is not installed, so this is the only record of the
+    // start. With the block, the reload asks it next and it records the same choice, or the server.
+    PreviewState.recordLoaded(local: nil, preview: preview)
   }
 
   private static func reactHost() -> NSObject? {

@@ -52,7 +52,7 @@ export function previewItems(state: PreviewsState): {
       entry,
       status,
       progress,
-      active: state.activeId === entry.id,
+      active: state.runningId === entry.id,
       local,
     };
   };

@@ -13,9 +13,10 @@ export function useRunning(): Running {
   const preview = usePreview();
   const local = useDevPreviewServersState();
   const showLocal = __DEV__ && preview.devPreviewServers;
+  const native = nativeModule()?.state();
   // The first poll fills activeUrl a moment after the list mounts, but native knows it from the start.
   const localUrl = showLocal
-    ? (local.activeUrl ?? nativeModule()?.state().localServer ?? null)
+    ? (local.activeUrl ?? native?.localServer ?? null)
     : null;
   const loadedFrom = scriptUrl();
   // Whether the default's Metro is a `preview start` server shows in the servers list, which is
@@ -35,8 +36,7 @@ export function useRunning(): Running {
     localUrl,
     servers: local.servers,
     scriptUrl: loadedFrom,
-    defaultServer: localUrl
-      ? (nativeModule()?.state().defaultServer ?? null)
-      : null,
+    defaultServer: native?.defaultServer ?? null,
+    loaded: native?.loaded ?? null,
   });
 }
