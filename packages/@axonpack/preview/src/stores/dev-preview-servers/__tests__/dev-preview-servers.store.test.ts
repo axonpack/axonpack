@@ -146,6 +146,7 @@ test("the first mount sweeps the range and asks the registry", async () => {
 
 test("a 2 s tick asks the registry and only the ports known", async () => {
   up = new Set([8081, 8085]);
+  registry = [];
   await watch();
   probed();
   await wait(2000);
@@ -251,6 +252,7 @@ test("a server a sweep finds is asked on quick ticks until it stops answering", 
 });
 
 test("a preview start server shows and goes within one quick tick, through the registry", async () => {
+  registry = [];
   await watch();
   registry = [8095];
   up.add(8095);
@@ -300,6 +302,71 @@ test("nothing is asked once nothing watches", async () => {
   asked = [];
   await wait(60000);
   expect(asked).toEqual([]);
+});
+
+describe("a registry that does not answer", () => {
+  const registryAsks = (host = "localhost") => {
+    const count = asked.filter(
+      (url) => url === `http://${host}:19150/servers`,
+    ).length;
+    asked = [];
+    return count;
+  };
+
+  test("is asked on full sweeps only, and every 2 s again once it answers", async () => {
+    await watch();
+    expect(registryAsks()).toBe(1);
+    await wait(2000);
+    await wait(2000);
+    expect(registryAsks()).toBe(0);
+    // preview start runs now, but the quick look does not ask until a sweep.
+    registry = [8095];
+    up.add(8095);
+    await wait(2000);
+    expect(registryAsks()).toBe(0);
+    expect(listed()).toEqual([8081]);
+    await devPreviewServersStore.refresh();
+    expect(registryAsks()).toBe(1);
+    expect(listed()).toEqual([8081, 8095]);
+    await wait(2000);
+    expect(registryAsks()).toBe(1);
+    // It stops: skipped again after one refusal.
+    registry = null;
+    await wait(2000);
+    expect(registryAsks()).toBe(1);
+    await wait(2000);
+    expect(registryAsks()).toBe(0);
+  });
+
+  test("on another computer, waits for the 30 s sweep the same way", async () => {
+    const LAN = "192.168.1.30";
+    devPreviewServersStore.configure(devServersSetup({ hosts: [LAN] }));
+    machines[LAN] = { registry: null, up: [8082] };
+    await watch();
+    expect(registryAsks(LAN)).toBe(1);
+    machines[LAN].registry = [8082];
+    await wait(26000);
+    expect(registryAsks(LAN)).toBe(0);
+    expect(listed()).toEqual([8081]);
+    await wait(4000);
+    expect(registryAsks(LAN)).toBe(1);
+    expect(listed()).toEqual([8081, 8082]);
+    await wait(2000);
+    expect(registryAsks(LAN)).toBe(1);
+  });
+
+  test("a host added again is asked at once", async () => {
+    const LAN = "192.168.1.30";
+    machines[LAN] = { registry: null, up: [8082] };
+    await watch();
+    await devPreviewServersStore.addHost({ host: LAN, port: 19150 });
+    await devPreviewServersStore.removeHost({ host: LAN, port: 19150 });
+    machines[LAN].registry = [8082];
+    asked = [];
+    await devPreviewServersStore.addHost({ host: LAN, port: 19150 });
+    expect(registryAsks(LAN)).toBe(1);
+    expect(listed()).toEqual([8081, 8082]);
+  });
 });
 
 describe("other computers", () => {

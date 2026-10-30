@@ -297,6 +297,7 @@ export const devPreviewServersStore = {
     userHosts = [...userHosts, address];
     updateHosts();
     await saveHosts(userHosts);
+    // A full look, which also asks a registry that did not answer before it was removed.
     await look(true);
   },
 

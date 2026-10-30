@@ -118,9 +118,25 @@ const manifests = new Map<
   Promise<Awaited<ReturnType<typeof readManifest>> | null>
 >();
 
-async function localRegistry(hosts: string[]) {
+/**
+ * Registries that did not answer, as `host:port`. iOS logs every refused connection to the Xcode
+ * console, and a registry is down for as long as no `preview start` runs, so a quick look skips
+ * these and only a full sweep asks again. Once one answers, it is asked every 2 s again.
+ */
+const silent = new Set<string>();
+
+async function askRegistry(host: string, port: number, sweep: boolean) {
+  const id = `${host}:${port}`;
+  if (!sweep && silent.has(id)) return null;
+  const servers = await readRegistry(host, port);
+  if (servers) silent.delete(id);
+  else silent.add(id);
+  return servers;
+}
+
+async function localRegistry(hosts: string[], sweep: boolean) {
   for (const host of hosts) {
-    const registry = await readRegistry(host, DEFAULT_REGISTRY_PORT);
+    const registry = await askRegistry(host, DEFAULT_REGISTRY_PORT, sweep);
     if (registry) return { registry, registryHost: host };
   }
   return { registry: [], registryHost: null };
@@ -145,16 +161,17 @@ export async function discover(
   alive: string[];
 }> {
   const [from, to] = DEFAULT_PORT_RANGE;
+  const sweep = ports === null;
   const hosts = candidateHosts();
   // Another computer is never scanned, so a plain `expo start` there never shows. One the app's
   // Metro is on is scanned already.
   const others = remote.filter((r) => !hosts.includes(r.host));
   const [{ registry, registryHost }, registries] = await Promise.all([
-    localRegistry(hosts),
+    localRegistry(hosts, sweep),
     Promise.all(
       others.map(async ({ host, port }) => ({
         host,
-        servers: (await readRegistry(host, port)) ?? [],
+        servers: (await askRegistry(host, port, sweep)) ?? [],
       })),
     ),
   ]);
