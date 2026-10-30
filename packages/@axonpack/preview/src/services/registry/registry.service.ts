@@ -4,6 +4,7 @@ import {
   type Machine,
   type RegisteredServer,
   type RegistryAnswer,
+  REGISTRY_VERSION,
   SERVER_TTL_MS,
 } from "../../constants/dev-preview-servers/dev-preview-servers.const";
 
@@ -43,8 +44,9 @@ const readBody = (req: IncomingMessage) =>
   });
 
 /**
- * `GET /servers` lists the live servers, with this computer's id and LAN addresses; `POST /servers`
- * registers one or renews its heartbeat; `DELETE /servers/<id>` removes one. Plain HTTP, so the app
+ * `GET /servers` lists the live servers, with this registry's version, this computer's id and LAN
+ * addresses, and why Bonjour announcing fails, if it does; `POST /servers` registers one or renews
+ * its heartbeat, and answers the same; `DELETE /servers/<id>` removes one. Plain HTTP, so the app
  * reads it with `fetch` and `curl` shows it too. Once it has been empty for `idleExitMs`, `onIdle`
  * is called. `onChange` gets the live list after every change and once a second, which is when a
  * server whose heartbeat stopped is dropped.
@@ -56,6 +58,7 @@ export function createRegistry(
     onIdle?: () => void;
     onChange?: (servers: RegisteredServer[]) => void;
     machine?: Machine;
+    announceError?: () => string | undefined;
     now?: () => number;
   } = {},
 ): { server: Server; list: ServerList } {
@@ -71,13 +74,16 @@ export function createRegistry(
       });
       res.end(body === undefined ? "" : JSON.stringify(body));
     };
+    const answer = (): RegistryAnswer => ({
+      servers: list.alive(now()),
+      version: REGISTRY_VERSION,
+      machineId: options.machine?.id,
+      addresses: options.machine?.addresses,
+      announceError: options.announceError?.(),
+    });
     try {
       if (req.method === "GET" && req.url === "/servers") {
-        send(200, {
-          servers: list.alive(now()),
-          machineId: options.machine?.id,
-          addresses: options.machine?.addresses,
-        } satisfies RegistryAnswer);
+        send(200, answer());
       } else if (req.method === "POST" && req.url === "/servers") {
         const entry = JSON.parse(await readBody(req)) as RegisteredServer;
         if (typeof entry.id !== "string" || typeof entry.port !== "number") {
@@ -85,7 +91,9 @@ export function createRegistry(
           return;
         }
         list.upsert(entry, now());
-        send(204);
+        // The heartbeat's answer is how `preview start` hears that announcing fails. One from an
+        // older version ignores the body.
+        send(200, answer());
         options.onChange?.(list.alive(now()));
       } else if (req.method === "DELETE" && req.url?.startsWith("/servers/")) {
         list.remove(decodeURIComponent(req.url.slice("/servers/".length)));

@@ -23,17 +23,33 @@ const server = (port: number, title = "Login fix"): RegisteredServer => ({
   startedAt: "t",
 });
 
-/** A socket that records what goes out and on which interface. Nothing touches the network. */
+/**
+ * A socket that records what goes out and on which interface. Nothing touches the network. A send
+ * on an interface in `failing` fails the way macOS fails one without local network access.
+ */
 function fakeSocket() {
   const socket = new EventEmitter() as EventEmitter & Record<string, unknown>;
   const sent: { via: string; ttl: number; port: number; a?: string }[] = [];
+  const failing = new Set<string>();
+  let closed = false;
   let via = "";
   Object.assign(socket, {
     bind: (_port: number, ready: () => void) => setImmediate(ready),
     setMulticastTTL: () => undefined,
     addMembership: () => undefined,
     setMulticastInterface: (address: string) => (via = address),
-    send: (packet: Buffer, _port: number, _group: string, done: () => void) => {
+    send: (
+      packet: Buffer,
+      _port: number,
+      _group: string,
+      done: (error?: Error) => void,
+    ) => {
+      if (failing.has(via)) {
+        setImmediate(() =>
+          done(new Error("send EHOSTUNREACH 224.0.0.251:5353")),
+        );
+        return;
+      }
       const answers = readAnswers(packet);
       sent.push({
         via,
@@ -43,9 +59,14 @@ function fakeSocket() {
       });
       setImmediate(done);
     },
-    close: () => undefined,
+    close: () => (closed = true),
   });
-  return { socket: socket as unknown as Socket, sent };
+  return {
+    socket: socket as unknown as Socket,
+    sent,
+    failing,
+    closed: () => closed,
+  };
 }
 
 /** A query for the service type. */
@@ -131,13 +152,14 @@ test("answers a query for preview's servers, and ignores the rest", async () => 
   ]);
 });
 
-test("a failed bind turns it off quietly, and a failed send does not", async () => {
+test("a failed bind turns it off and says why, and a failed send does not turn it off", async () => {
   const off = fakeSocket();
   const failed = advertise(machine, 19150, off.socket);
-  off.socket.emit("error", new Error("EADDRINUSE"));
+  off.socket.emit("error", new Error("bind EADDRINUSE 0.0.0.0:5353"));
   failed.sync([server(8081)]);
   await settle(1000);
   expect(off.sent).toEqual([]);
+  expect(failed.error()).toBe("bind EADDRINUSE 0.0.0.0:5353");
 
   const on = fakeSocket();
   const working = advertise(machine, 19150, on.socket);
@@ -146,6 +168,35 @@ test("a failed bind turns it off quietly, and a failed send does not", async () 
   working.sync([server(8081)]);
   await settle();
   expect(on.sent).toHaveLength(2);
+});
+
+test("says why when no send gets through, and stops once one does", async () => {
+  const { socket, failing } = fakeSocket();
+  const bonjour = advertise(machine, 19150, socket);
+  failing.add("192.168.1.24").add("10.0.0.5");
+  bonjour.sync([server(8081)]);
+  await settle();
+  expect(bonjour.error()).toBe("send EHOSTUNREACH 224.0.0.251:5353");
+  // One interface failing, such as a VPN, is normal.
+  failing.delete("192.168.1.24");
+  await settle(1000);
+  expect(bonjour.error()).toBeUndefined();
+});
+
+test("a stop says goodbye for each announced server, then closes the socket", async () => {
+  const fake = fakeSocket();
+  const bonjour = advertise(machine, 19150, fake.socket);
+  bonjour.sync([server(8081), server(8082)]);
+  await settle(1000);
+  fake.sent.length = 0;
+  await bonjour.stop();
+  expect(fake.sent.map((s) => [s.via, s.port, s.ttl])).toEqual([
+    ["192.168.1.24", 8081, 0],
+    ["192.168.1.24", 8082, 0],
+    ["10.0.0.5", 8081, 0],
+    ["10.0.0.5", 8082, 0],
+  ]);
+  expect(fake.closed()).toBe(true);
 });
 
 test("this computer's id is the same on every call", () => {

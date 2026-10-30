@@ -11,7 +11,9 @@ import {
 } from "../../utils/previews/layout.util";
 import {
   HEARTBEAT_MS,
+  REGISTRY_VERSION,
   type RegisteredServer,
+  type RegistryAnswer,
 } from "../../constants/dev-preview-servers/dev-preview-servers.const";
 import { previewTitle } from "../../utils/previews/preview-title.util";
 import {
@@ -129,29 +131,193 @@ export function registration(input: {
   };
 }
 
-const registryUp = async (registry: string) => {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** What the registry answers on `/servers`, or null when none does. */
+async function registryAnswer(registry: string) {
   try {
-    return (
-      await fetch(`${registry}/servers`, { signal: AbortSignal.timeout(500) })
-    ).ok;
+    const res = await fetch(`${registry}/servers`, {
+      signal: AbortSignal.timeout(500),
+    });
+    return res.ok ? ((await res.json()) as RegistryAnswer) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A registry that sends no version is older than any that does. */
+export const olderRegistry = (answer: RegistryAnswer) =>
+  (answer.version ?? 0) < REGISTRY_VERSION;
+
+/** Whether `command` runs this package's CLI as a registry, the way `ensureRegistry` starts one. */
+function isPreviewRegistry(command: string) {
+  const script = / (\S+) registry --port \d+$/.exec(command)?.[1];
+  try {
+    return !!script && /@axonpack[/\\]preview[/\\]/.test(realpathSync(script));
   } catch {
     return false;
   }
+}
+
+/** The pid and command line of what listens on `port`, or null where lsof or ps is missing. */
+function listener(port: number) {
+  const run = (cmd: string, args: string[]) =>
+    execFileSync(cmd, args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  try {
+    const pid = Number(
+      run("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"]).split(
+        "\n",
+      )[0],
+    );
+    return pid
+      ? {
+          pid,
+          command: run("ps", ["-ww", "-o", "command=", "-p", String(pid)]),
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const waitForFreePort = async (port: number, ms: number) => {
+  for (let waited = 0; waited < ms; waited += 100) {
+    if (await portIsFree(port)) return true;
+    await sleep(100);
+  }
+  return false;
 };
 
-/** Starts the registry in the background when none answers, and waits for it. */
-async function ensureRegistry(registryPort: number, bin: string) {
+/**
+ * Stops the registry on `port` with SIGTERM, and SIGKILL when that is not enough, once its command
+ * line shows it is one, and returns its pid once the port is free. Anything else on the port is left
+ * alone, with a line saying what it is.
+ */
+async function stopRegistry(port: number, what: string) {
+  const found = listener(port);
+  const again = "and run preview start again.";
+  if (!found) {
+    log(
+      `${what} is on port ${port}, and lsof can't say which process it is. Stop it ${again}` +
+        (process.platform === "win32"
+          ? ` netstat -ano | findstr :${port} shows its pid.`
+          : ""),
+    );
+    return null;
+  }
+  if (!isPreviewRegistry(found.command)) {
+    log(
+      `Port ${port} is held by pid ${found.pid} (${found.command}), which isn't a preview registry, so it was left running. Stop it with kill ${found.pid} ${again}`,
+    );
+    return null;
+  }
+  try {
+    process.kill(found.pid, "SIGTERM");
+    if (await waitForFreePort(port, 3000)) return found.pid;
+    // Hung, so its own SIGTERM handler never ran.
+    process.kill(found.pid, "SIGKILL");
+    if (await waitForFreePort(port, 1000)) return found.pid;
+  } catch {
+    // Gone in the meantime, or another user's.
+    if (await portIsFree(port)) return found.pid;
+  }
+  log(
+    `${what} (pid ${found.pid}) didn't stop. Stop it with kill -9 ${found.pid} ${again}`,
+  );
+  return null;
+}
+
+const metroAnswers = (port: number) =>
+  fetch(`http://127.0.0.1:${port}/status`, {
+    signal: AbortSignal.timeout(500),
+  }).then(
+    (res) => res.ok,
+    () => false,
+  );
+
+/**
+ * Starts the registry in the background when none answers, and waits for it. One that is older
+ * than this version, or holds the port but doesn't answer, is replaced first. The older one's
+ * servers whose Metro still answers are handed over, so none drops out of the list or the Bonjour
+ * announcements. A newer or equal one is used as it is.
+ */
+export async function ensureRegistry(
+  registryPort: number,
+  bin: string,
+  retry = true,
+): Promise<string> {
   const registry = `http://127.0.0.1:${registryPort}`;
-  if (await registryUp(registry)) return registry;
+  const running = await registryAnswer(registry);
+  if (running && !olderRegistry(running)) return registry;
+  // Nothing answers but the port is taken: a registry that hung, or something else.
+  const hung = !running && !(await portIsFree(registryPort));
+  let replaced: number | null = null;
+  if (running) {
+    replaced = await stopRegistry(registryPort, "An older preview registry");
+    // Then the older one stays, which still works on this computer and over USB.
+    if (!replaced) return registry;
+  } else if (hung) {
+    replaced = await stopRegistry(
+      registryPort,
+      "Something that doesn't answer like a preview registry",
+    );
+    if (!replaced)
+      throw new Error(
+        `The registry can't start while port ${registryPort} is taken.`,
+      );
+  }
   spawn(process.execPath, [bin, "registry", "--port", String(registryPort)], {
     detached: true,
     stdio: "ignore",
   }).unref();
   for (let i = 0; i < 30; i++) {
-    if (await registryUp(registry)) return registry;
-    await new Promise((r) => setTimeout(r, 100));
+    const answer = await registryAnswer(registry);
+    if (!answer) {
+      await sleep(100);
+      continue;
+    }
+    if (!replaced) return registry;
+    // An older `preview start` whose heartbeat failed in the gap starts its own older registry,
+    // and may get the port first.
+    if (olderRegistry(answer))
+      return retry ? ensureRegistry(registryPort, bin, false) : registry;
+    // A server whose Metro is gone would be announced until its heartbeat TTL ran out.
+    await Promise.all(
+      (running?.servers ?? []).map(async (server) => {
+        if (!(await metroAnswers(server.port))) return;
+        await fetch(`${registry}/servers`, {
+          method: "POST",
+          body: JSON.stringify(server),
+        }).catch(() => undefined);
+      }),
+    );
+    log(
+      running
+        ? `Replaced an older preview registry (pid ${replaced}), so this computer can be found on the network.`
+        : `Replaced a preview registry that had stopped answering (pid ${replaced}).`,
+    );
+    return registry;
   }
   throw new Error(`The registry did not start on port ${registryPort}.`);
+}
+
+/** Says once why phones on the network can't find this computer, with the fix on macOS. */
+export function announceErrorNotice() {
+  let shown: string | undefined;
+  return (error: string | undefined) => {
+    if (error && error !== shown)
+      log(
+        `Phones on the network can't find this computer (${error}).` +
+          // What macOS answers a send with when the terminal app has no local network access.
+          (process.platform === "darwin" && /EHOSTUNREACH|EPERM/.test(error)
+            ? " Allow your terminal app under System Settings > Privacy & Security > Local Network."
+            : ""),
+      );
+    shown = error;
+  };
 }
 
 /** Forwards the ports to every attached Android device, when adb is there; quiet otherwise. */
@@ -209,6 +375,13 @@ export async function start(options: StartOptions) {
     .then(({ servers }) => new Set(servers.map((s) => s.port)))
     .catch(() => new Set<number>());
   const port = await freePort(options.ports, claimed);
+  // Maybe left by a `preview start` that crashed, maybe the user's own `expo start`, so it is never
+  // stopped. A free port does the job.
+  const wanted = options.ports[0];
+  if (port !== wanted && !claimed.has(wanted) && (await metroAnswers(wanted)))
+    log(
+      `Port ${wanted} has a Metro that no preview start announced (your own expo start, or one left from an earlier run), so this one uses port ${port}.`,
+    );
   const fingerprints: Partial<Record<Platform, string>> = {};
   if (compatibilityOf(options.config) === "fingerprint") {
     for (const platform of PLATFORMS) {
@@ -223,13 +396,17 @@ export async function start(options: StartOptions) {
       method: "POST",
       body: JSON.stringify(server),
     });
+  const notice = announceErrorNotice();
   // The registry exits once it has been empty for a while, which a slow start (adb, fingerprint)
   // can outlast, and it may be killed: start it again and register in that case.
   const register = () =>
     post()
       .catch(() => ensureRegistry(options.registryPort, options.bin).then(post))
+      .then((res) => res.json() as Promise<RegistryAnswer>)
+      .then((answer) => notice(answer.announceError))
       .catch(() => {
-        // Still down; the next heartbeat tries again.
+        // Still down, and the next heartbeat tries again. Or an older registry, which answers
+        // with no body.
       });
   const unregister = () =>
     fetch(`${registry}/servers/${encodeURIComponent(server.id)}`, {

@@ -46,9 +46,21 @@ export type Machine = {
   addresses: string[];
 };
 
-/** What `GET /servers` on the registry returns. An older registry sends `servers` only. */
+/**
+ * Goes up when the registry can do something an older one can't, so `preview start` knows to
+ * replace an older one. A registry that sends no version is older than any that does.
+ */
+export const REGISTRY_VERSION = 1;
+
+/**
+ * What `GET /servers` on the registry returns, and `POST /servers` too. An older registry sends
+ * `servers` only, and answers a POST with nothing.
+ */
 export type RegistryAnswer = {
   servers: RegisteredServer[];
+  version?: number;
   machineId?: string;
   addresses?: string[];
+  /** Why the last Bonjour announcement got nowhere, until one gets through. */
+  announceError?: string;
 };

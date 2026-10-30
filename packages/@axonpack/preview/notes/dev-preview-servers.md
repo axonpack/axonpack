@@ -21,6 +21,7 @@ between them live.
 - [x] Only this app's servers, by the slug the config plugin bakes in; a build without it says so
 - [x] Finds `preview start` servers on other computers on the network with no address typed in
 - [x] Says which computer a server found on the network runs on, and lists a server found two ways once
+- [x] Replaces an older registry, or one that hung, on its own, and says when phones can't find the computer
 - [ ] Lists and switches to dev servers in a release build too, when the app turns previews on
 
 ## Turning it on
@@ -87,6 +88,26 @@ record carries the title, branch, slug, app name, compatibility, native keys, re
 id and computer name. Expo's `_expo._tcp` is not browsed, so a plain `expo start` elsewhere never
 shows. To check the packets with no network, write `announcement()`'s output into a pcap file
 (raw IP) and read it with `tcpdump -nn -vvv -r`.
+
+**Stopping and errors.** On SIGTERM, SIGINT, SIGHUP and the idle exit the registry sends a goodbye
+for each server, waits at most 1 s for it, and closes. The registry runs detached with no terminal,
+so a failed bind, or a round of sends where none got through, is kept as `announceError` in the
+`/servers` answer (and the heartbeat's, which is why a POST answers 200 with the same body). One
+interface failing alone, such as a VPN, is not reported. `preview start` prints it once, with the
+Local Network fix on macOS for EHOSTUNREACH or EPERM, which is what a send without that access gets.
+
+**An older registry.** `/servers` sends `version` (`REGISTRY_VERSION`); none counts as older. A
+`start` that meets an older one, or one that holds 19150 but doesn't answer, finds its pid with
+`lsof -nP -iTCP:19150 -sTCP:LISTEN -t`, and stops it only when `ps -ww -o command=` shows
+`<script> registry --port <n>` and the script's real path is inside `@axonpack/preview`. SIGTERM,
+then SIGKILL after 3 s. It then starts its own, and posts the old list to it, minus the servers whose
+Metro `/status` no longer answers. A handed-over entry gets the usual 15 s TTL, so one whose `start`
+is gone, with its Metro still up, drops out then. Anything else on the port, or no `lsof` (Windows), is left
+running with a line saying what holds it. An older `start` keeps using a newer registry, and its
+POST and DELETE are unchanged, so its heartbeat works with the new one. When an older `start`'s
+failed heartbeat brings its own registry back in the gap and wins the port, the takeover runs once
+more. A Metro on the first port of the range that no registry lists is never stopped, since it may
+be the user's own `expo start`; `start` takes the next free port and says so.
 
 **Browsing.** Native browses only while the list watches and the app is in the foreground, and sends
 JS the full list on every change. iOS uses `NWBrowser` and resolves a result by opening a

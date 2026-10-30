@@ -1,7 +1,10 @@
 import { request } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import type { RegisteredServer } from "../../../constants/dev-preview-servers/dev-preview-servers.const";
+import {
+  REGISTRY_VERSION,
+  type RegisteredServer,
+} from "../../../constants/dev-preview-servers/dev-preview-servers.const";
 import { ServerList, createRegistry } from "../registry.service";
 
 const server = (id: string, port: number): RegisteredServer => ({
@@ -56,7 +59,7 @@ test("registers, lists and removes over HTTP", async () => {
           JSON.stringify(server("run-1", 8083)),
         )
       ).status,
-    ).toBe(204);
+    ).toBe(200);
     expect(
       (await call(base, "GET", "/servers"))
         .json()
@@ -86,6 +89,54 @@ test("says which computer it is, and passes every change on", async () => {
     });
     await call(base, "DELETE", "/servers/run-1");
     expect(changes.slice(0, 2)).toEqual([["run-1"], []]);
+  } finally {
+    await new Promise((resolve) => http.close(resolve));
+  }
+});
+
+test("answers a heartbeat with its version and why announcing fails", async () => {
+  const { server: http } = createRegistry({
+    announceError: () => "send EHOSTUNREACH 224.0.0.251:5353",
+  });
+  await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
+  try {
+    const heartbeat = await call(
+      base,
+      "POST",
+      "/servers",
+      JSON.stringify(server("run-1", 8083)),
+    );
+    expect(heartbeat.json()).toMatchObject({
+      version: REGISTRY_VERSION,
+      announceError: "send EHOSTUNREACH 224.0.0.251:5353",
+    });
+    expect((await call(base, "GET", "/servers")).json().version).toBe(
+      REGISTRY_VERSION,
+    );
+  } finally {
+    await new Promise((resolve) => http.close(resolve));
+  }
+});
+
+test("an older preview start's register, heartbeat and goodbye still work", async () => {
+  const { server: http } = createRegistry();
+  await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
+  // The body `main`'s `preview start` posts every 5 s, which ignores the answer.
+  const old = JSON.stringify(server("8082-1a2b3c4d", 8082));
+  try {
+    expect((await call(base, "POST", "/servers", old)).status).toBe(200);
+    expect((await call(base, "POST", "/servers", old)).status).toBe(200);
+    expect(
+      (await call(base, "GET", "/servers"))
+        .json()
+        .servers.map((s: RegisteredServer) => s.id),
+    ).toEqual(["8082-1a2b3c4d"]);
+    expect((await call(base, "DELETE", "/servers/8082-1a2b3c4d")).status).toBe(
+      204,
+    );
+    expect((await call(base, "GET", "/servers")).json().servers).toEqual([]);
   } finally {
     await new Promise((resolve) => http.close(resolve));
   }

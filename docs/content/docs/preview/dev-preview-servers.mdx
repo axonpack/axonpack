@@ -48,6 +48,9 @@ In a terminal, `start` asks for the name the app shows, prefilled with the branc
 Enter keeps it. `--title` skips the question, and so does a run with no terminal, such as an AI
 agent's shell, which takes the branch title.
 
+A Metro already on 8081 that no `preview start` announced, such as your own `expo start` or one left
+by a run that crashed, is never stopped. `start` takes the next free port and says so in one line.
+
 A plain `npx expo start --port 8085` is found too, with less detail: no branch. It shows when the
 list opens, when you refresh it, or within 30 seconds.
 
@@ -151,8 +154,31 @@ The registry announces on every network the computer is on, and answers the ques
 devices send, on UDP port 5353 next to the system's own Bonjour. No setting is needed. On macOS 15
 and later, the terminal app you run `preview start` from needs Local Network access (**System
 Settings > Privacy & Security > Local Network**). Without it, macOS drops the announcements, and
-phones find nothing. To check from the Mac, run `dns-sd -B _axon-preview._tcp` while
-`preview start` runs.
+phones find nothing. `preview start` then says so, with the error the registry got:
+
+```
+preview: Phones on the network can't find this computer (send EHOSTUNREACH 224.0.0.251:5353). Allow your terminal app under System Settings > Privacy & Security > Local Network.
+```
+
+To check from the Mac, run `dns-sd -B _axon-preview._tcp` while `preview start` runs. When the
+registry stops, on Ctrl+C, a `kill`, or once no server is left, it sends a goodbye for each server,
+so phones drop them straight away instead of two minutes later.
+
+### An older registry
+
+`preview start` uses the registry already on port 19150 when it is from the same version of the
+package or a newer one. One from an older version, which may not announce over Bonjour, is replaced,
+and so is one that holds the port but doesn't answer. `start` checks that the process on the port
+runs this package's `preview registry`, stops it, starts its own, and hands it the old one's servers
+whose Metro still answers. It prints one line:
+
+```
+preview: Replaced an older preview registry (pid 59356), so this computer can be found on the network.
+```
+
+A `preview start` from an older version keeps working with the new registry. The process is found
+with `lsof`, so on Windows nothing is stopped. Neither is a process that isn't a preview registry:
+`start` says what holds the port and how to stop it.
 
 ## Which servers are listed
 
@@ -172,6 +198,7 @@ Four sources, merged by computer and port:
   registry on your computer, on port 19150, with the branch, the worktree and the native key
   `publish` would use. It announces once Metro answers, on the port Metro really took: Expo moves
   to another port when it finds the first one taken. The first `start` starts the registry, and it exits once no server is left.
+  A `start` replaces an [older registry](#an-older-registry).
   A heartbeat every 5 seconds keeps a server listed; it drops out 15 seconds after the last, so a
   killed process goes too. Its `/servers` also gives the computer's id and LAN addresses.
 - **A port scan.** The app asks each port from 8081 to 8099 for Metro's `/status`, then reads the

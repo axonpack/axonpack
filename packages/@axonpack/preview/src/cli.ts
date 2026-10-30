@@ -169,15 +169,28 @@ async function main() {
       bin: process.argv[1],
     });
   } else if (command === "registry") {
-    // Started by `preview start` when none is running; exits once no server is left. It also
-    // announces the servers over Bonjour, so phones on the network find them with no address typed.
+    // Started by `preview start` when none is running, or an older one is; exits once no server is
+    // left. It also announces the servers over Bonjour, so phones on the network find them with no
+    // address typed.
     const port = Number(values.port ?? DEFAULT_REGISTRY_PORT);
     const machine = thisMachine();
     const bonjour = advertise(machine, port);
+    // Without the goodbyes, phones keep showing the servers for the records' 120 s TTL.
+    const stop = async () => {
+      await Promise.race([
+        bonjour.stop(),
+        new Promise((r) => setTimeout(r, 1000)),
+      ]);
+      server.close();
+      process.exit(0);
+    };
+    for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"] as const)
+      process.on(signal, stop);
     const { server } = createRegistry({
       machine,
       onChange: bonjour.sync,
-      onIdle: () => process.exit(0),
+      announceError: bonjour.error,
+      onIdle: stop,
     });
     server.listen(port);
   } else {

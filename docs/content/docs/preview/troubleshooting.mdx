@@ -135,9 +135,12 @@ never shows.
   stays empty on the computer that runs `preview start`, allow the terminal app you started it from
   in **System Settings > Privacy & Security > Local Network** (macOS 15 and later), then start it
   again.
-- **No old registry.** `preview start` reuses the registry already on port 19150, and one from an
-  older version of the package announces nothing. `lsof -nP -iTCP:19150` shows the process holding
-  the port. Stop it and run `preview start` again.
+- **Read what `preview start` printed.** When announcing fails, it prints `Phones on the network
+  can't find this computer`, with the error and, on macOS, the Local Network fix.
+- **No old registry.** `preview start` replaces an older registry on port 19150, or one that doesn't
+  answer, and prints `Replaced an older preview registry`. It leaves the process running when it
+  can't tell it is a preview registry, or on Windows, and prints what holds the port.
+  `lsof -nP -iTCP:19150` shows it too. Stop it and run `preview start` again.
 - **On iOS**, the app needs local network access: **Settings > the app > Local Network**. Without
   `NSBonjourServices` listing `_axon-preview._tcp`, iOS finds nothing and never asks. See
   [iOS asks first](/docs/preview/dev-preview-servers#ios-asks-first).

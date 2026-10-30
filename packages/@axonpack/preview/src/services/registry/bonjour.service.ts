@@ -38,7 +38,9 @@ export function thisMachine(): Machine {
 /**
  * Announces the registry's servers over Bonjour, on every LAN interface, and answers the queries
  * for them. `sync` takes the live list each time it may have changed: a new server is announced,
- * and one that went or changed gets a goodbye.
+ * and one that went or changed gets a goodbye. `error` says why announcing gets nowhere, if it
+ * doesn't: the registry runs with no terminal, so `preview start` shows it from the registry's
+ * answer.
  *
  * The interfaces are read once, when the registry starts. After a network change the
  * announcements go out on the old ones until the registry restarts, which it does once no server is
@@ -53,14 +55,15 @@ export function advertise(
   let closed = false;
   let answering: ReturnType<typeof setTimeout> | null = null;
   let lastAnswer = 0;
+  let error: string | undefined;
 
   // Port 5353 is shared with the system's own responder; `reuseAddr` is what lets both bind it.
   let bound = false;
   let queue = new Promise<void>((resolve) => {
-    socket.on("error", () => {
-      // After the bind, a send failed: a network went away, or macOS refused local network
-      // access. The next one may work. Before it, the bind failed, and Bonjour stays off: the
-      // registry still works without it.
+    socket.on("error", (failed) => {
+      // Before the bind, the bind failed, and Bonjour stays off: the registry still works without
+      // it. After it, the next send may work.
+      error = failed.message;
       if (bound) return;
       closed = true;
       resolve();
@@ -83,6 +86,8 @@ export function advertise(
   // interface is a socket setting, so each send waits for the last before switching it.
   const send = (servers: RegisteredServer[], ttl: number) => {
     queue = queue.then(async () => {
+      let sent = false;
+      let failed: Error | null = null;
       for (const address of machine.addresses) {
         for (const server of servers) {
           if (closed) return;
@@ -98,11 +103,17 @@ export function advertise(
             registryPort,
             ttl,
           });
-          await new Promise<void>((done) =>
-            socket.send(packet, MDNS_PORT, MDNS_GROUP, () => done()),
+          const result = await new Promise<Error | null>((done) =>
+            socket.send(packet, MDNS_PORT, MDNS_GROUP, done),
           );
+          if (result) failed = result;
+          else sent = true;
         }
       }
+      // One interface failing, such as a VPN, is normal. Every send failing is what macOS does
+      // without local network access (EHOSTUNREACH or EPERM), or a computer with no network.
+      if (sent) error = undefined;
+      else if (failed) error = failed.message;
     });
   };
 
@@ -126,6 +137,19 @@ export function advertise(
     JSON.stringify(a) === JSON.stringify(b);
 
   return {
+    error: () => error,
+    /** Says goodbye for every server still announced, so phones drop them now, then closes. */
+    async stop() {
+      send([...shown.values()], 0);
+      shown = new Map();
+      await queue;
+      closed = true;
+      try {
+        socket.close();
+      } catch {
+        // Never bound.
+      }
+    },
     sync(servers: RegisteredServer[]) {
       const next = new Map(
         servers.map((s) => [instanceName(machine, s.port), s]),
