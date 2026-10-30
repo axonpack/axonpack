@@ -2,9 +2,9 @@
 
 The ready-made list QA uses in the app, and the hook that says what runs.
 
-- [x] A header card for what runs now: its name, its address, what kind it is, and whether it is the default bundle
+- [x] A header card for what runs now: its name, its address, what kind it is, and whether it is the default
 - [x] The rest of the facts for a bug report behind Show details: branch, id, environment, app version and build, commit, platform and build key
-- [x] One action back to the default bundle, from a preview or a picked server
+- [x] One action back to the default, from a preview or a picked server: the default Metro in a debug build, the built-in bundle in a release build
 - [x] Errors in plain words in a snackbar, with Retry and Dismiss, and the fix for the Android emulator
 - [x] Each published preview with its state, environment, changelog, who published it and when, its size and one main action
 - [x] Rows of chips that scroll sideways instead of wrapping

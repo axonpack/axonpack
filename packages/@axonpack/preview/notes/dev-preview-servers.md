@@ -57,7 +57,9 @@ name, version and bundle URL. A server found both ways (same host and port) uses
 is on screen and the app is in the foreground, it asks the registry, the servers already found, the
 default Metro and the server it runs from every 2 s, and sweeps the whole range on open, on refresh
 and every 30 s. Each closed port is a refused connection that iOS logs to the Xcode console, so the
-sweep can't run every 2 s. It never starts a look while the last one runs. A probe gives
+sweep can't run every 2 s. It never starts a look while the last one runs. Off the list's screen,
+the hook that says what runs sweeps once when it mounts, if the app runs from Metro and no server is
+known yet, because only the registry says whether a server is a `preview start` one. A probe gives
 up after 2 s: Android sends 5 requests per host at a time and the emulator takes about 400 ms to
 refuse a closed port, so a tighter limit dropped live servers there. A closed port on the computer
 itself fails at once, so the scan stays cheap.
