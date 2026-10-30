@@ -75,8 +75,9 @@ app needs `devPreviewServers` on (the example has it).
    In a terminal it asks for the name the app shows, prefilled from the branch; Enter keeps it.
    `--title <name>` skips the question, and so does a run with no terminal.
    A plain `npx expo start --port 8085` is found as well, with less detail (no branch).
-2. Open the Previews tab in the app. "Dev preview servers" shows each server for this app within about two
-   seconds, with its address and branch. Tap a row to run that server; "Back to default" on the
+2. Open the Previews tab in the app. "Dev preview servers" shows each `preview start` server for
+   this app within about two seconds, and a plain one on refresh or within 30 seconds, with its
+   address and branch. Tap a row to run that server; "Back to default" on the
    header card goes back.
 3. Stop a server with Ctrl+C; it leaves the list on its own.
 

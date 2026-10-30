@@ -2,12 +2,12 @@
 
 Starting the app from a downloaded bundle, and getting back again.
 
-- [ ] Starts the app from the chosen preview, with no change to the app's native code
-- [ ] Switches to another preview or back to the default bundle with one restart
-- [ ] Works in debug builds too: a chosen preview loads instead of Metro, and going back to the default bundle returns to Metro
+- [x] Starts the app from the chosen preview, with no change to the app's native code
+- [x] Switches to another preview or back to the default bundle with one restart
+- [x] Works in debug builds too: a chosen preview loads instead of Metro, and going back to the default bundle returns to Metro
 - [x] Falls back to the default bundle when a preview crashes before it has started
-- [ ] Works next to expo-updates, which keeps managing the default bundle
-- [ ] Needs the New Architecture; under the old one it logs a warning and always loads the default bundle
+- [x] Works next to expo-updates, which keeps managing the default bundle
+- [x] Needs the New Architecture; under the old one it logs a warning and always loads the default bundle
 
 Previews need React Native's New Architecture, the default from Expo SDK 53. Under the old one the
 package never loads a preview: it logs one warning and the default bundle loads, so the app still

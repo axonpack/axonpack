@@ -8,6 +8,7 @@ The ready-made list QA uses in the app, and the hook that says what runs.
 - [x] Errors in plain words in a snackbar, with Retry and Dismiss, and the fix for the Android emulator
 - [x] Each published preview with its state, environment, changelog, who published it and when, its size and one main action
 - [x] Rows of chips that scroll sideways instead of wrapping
+- [x] Says previews aren't set up, with no error, when the app has no bucket URL
 - [x] Light and dark, a theme written by hand, or the palette the app gives expo-devtools
 - [x] Every piece of text can be changed
 - [x] Styled and extended like any list: its style, its padding, and the app's own header and footer

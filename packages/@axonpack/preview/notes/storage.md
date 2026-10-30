@@ -2,10 +2,10 @@
 
 Where previews are kept: in the bucket they are published to, and on the device once downloaded.
 
-- [ ] Reads previews from any S3-compatible bucket (S3, R2, MinIO and others), public or private (with a read-only key)
-- [ ] Downloads a preview into the app's documents folder and checks every file
-- [ ] Keeps a download until QA deletes it; nothing expires on a timer
-- [ ] Shows downloads made for another native build apart, with one button to delete them all
+- [x] Reads previews from any S3-compatible bucket (S3, R2, MinIO and others), public or private (with a read-only key)
+- [x] Downloads a preview into the app's documents folder and checks every file
+- [x] Keeps a download until QA deletes it; nothing expires on a timer
+- [x] Shows downloads made for another native build apart, with one button to delete them all
 
 A half-finished download is never offered, because it only becomes a preview once every file has
 been checked.

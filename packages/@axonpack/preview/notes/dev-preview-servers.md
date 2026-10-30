@@ -13,8 +13,14 @@ between them live.
 - [x] Says whether each server is a plain Expo server or one started with `preview start`
 - [x] Starts Metro on a free port and announces it with one command, `preview start`
 - [x] Asks for the name the app shows, prefilled from the branch (`--title` or no terminal skips it)
-- [x] Off unless the app turns it on, and never in a release build
+- [x] Keeps the server the app runs from in the list when it stops, marked Offline, with the name it last had
+- [x] Shows the hosts it checks, and lets QA add another computer's address on the device
+- [x] Lists another computer's `preview start` servers through its registry, never its plain Expo servers
+- [x] Takes the team's own computers from the app's config, and can hide adding one on the device
+- [x] Off unless the app turns it on, and debug builds only
 - [x] Only this app's servers, by the slug the config plugin bakes in; a build without it says so
+- [ ] Finds `preview start` servers on other computers on the network with no address typed in
+- [ ] Lists and switches to dev servers in a release build too, when the app turns previews on
 
 ## Turning it on
 
@@ -22,8 +28,9 @@ between them live.
 <PreviewProvider config={{ ...config, devPreviewServers: true }}>
 ```
 
-It is one switch, off by default, and only shows in a debug build. Nothing else is set: the app probes
-ports 8081 to 8099, asks the registry on port 19150 (the same constant `preview start` uses, in
+It is one switch, off by default, and only shows in a debug build. An object instead of `true`,
+`{ enabled, allowCustomHosts, hosts }`, adds the team's own computers and can hide Add a host.
+Otherwise the app probes ports 8081 to 8099, asks the registry on port 19150 (the same constant `preview start` uses, in
 `src/constants/dev-preview-servers/dev-preview-servers.const.ts`), looks on the host its own Metro is on (plus `10.0.2.2` on the
 Android emulator), and lists only servers for the slug the config plugin baked into the build. A
 build made without the plugin has no slug, and the section says so instead of listing anything.
@@ -55,6 +62,19 @@ up after 2 s: Android sends 5 requests per host at a time and the emulator takes
 refuse a closed port, so a tighter limit dropped live servers there. A closed port on the computer
 itself fails at once, so the scan stays cheap.
 
+**Other computers.** A host from the config or added on the device is never port scanned. The app
+asks its registry (`http://<host>:19150/servers`, or the port given with it) and lists only the
+servers it names, so a plain `expo start` on another computer never shows. Hosts added on the
+device are saved in `Documents/preview/hosts.json`. A registry that does not answer, here or there,
+is left out of the 2 s looks until the next full sweep, since every refused connection is one more
+line in the Xcode console.
+
+**Offline.** The server the app runs from stays in the list when a look misses it, marked Offline,
+with the title, branch and kind it had when it last answered. That is saved in
+`Documents/preview/server.json`, so a reload still knows it. A server the app never saw answering
+goes by its address, with a plain Server chip. Registry details are joined to what the scan found by
+host and port only, so a `preview start` server's name never lands on another server.
+
 **Which servers.** Only the app's own slug, which the config plugin bakes into the build. A server
 for the same app but another native key (another app version, or another fingerprint) is listed and
 marked, since a developer may still want it. A plain server in fingerprint mode shows "native build
@@ -73,8 +93,3 @@ native would load the server first; "Back to default" clears both. A picked serv
 Metro the app starts on anyway counts as the default. The server the app runs from is read from what the
 app actually loaded, so the default's Metro shows Active too, not only one picked by hand.
 Loopback names (`localhost`, `127.0.0.1`, the emulator's `10.0.2.2`) count as one machine.
-
-## Won't do
-
-- Run in a release build. There is no Metro there, and a release build ignores the setting even if it
-  is in the saved state.
