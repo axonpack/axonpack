@@ -1141,11 +1141,12 @@ async function renderConfig(config: PreviewConfig) {
   return tree;
 }
 
-test("with no bucket URL, Published previews says Not configured, with no error, and dev servers still show", async () => {
+test("with no bucket URL, Published previews says previews aren't set up, with no error, and dev servers still show", async () => {
   for (const bucket of [
     {},
     { s3Config: { url: undefined as unknown as string } },
     { s3Config: { url: "" } },
+    { s3Config: { url: "  " } },
     { url: "  " },
   ]) {
     const tree = await renderConfig({
@@ -1154,7 +1155,7 @@ test("with no bucket URL, Published previews says Not configured, with no error,
       ...bucket,
     });
     const all = texts(tree);
-    expect(all).toContain("Not configured");
+    expect(all).toContain("Previews aren't set up");
     expect(all).toContain(
       "Add s3Config.url to the preview config to list published previews.",
     );
@@ -1162,7 +1163,7 @@ test("with no bucket URL, Published previews says Not configured, with no error,
     const [row] = byId(tree, "previews-not-configured");
     expect(row.type).toBe(Card);
     expect(all.indexOf("Published previews")).toBeLessThan(
-      all.indexOf("Not configured"),
+      all.indexOf("Previews aren't set up"),
     );
     expect(all).not.toContain("No previews published for this build yet.");
     expect(byId(tree, "list-error")).toEqual([]);
@@ -1180,17 +1181,44 @@ test("with no bucket URL, Published previews says Not configured, with no error,
 });
 
 test("a relative bucket URL is set but wrong, so it still says which setting to fix", async () => {
-  const tree = await renderConfig({
-    enabled: true,
-    s3Config: { url: "/previews" },
-  });
-  expect(texts(tree)).not.toContain("Not configured");
-  const [hint] = byId(tree, "list-error-hint");
-  expect(flat(hint)).toContain(
-    'The bucket URL "/previews" is not a full address',
+  for (const url of ["/previews", "localhost:9000/b"]) {
+    const tree = await renderConfig({ enabled: true, s3Config: { url } });
+    expect(texts(tree)).not.toContain("Previews aren't set up");
+    expect(byId(tree, "previews-not-configured")).toEqual([]);
+    const [hint] = byId(tree, "list-error-hint");
+    expect(flat(hint)).toContain(
+      `The bucket URL "${url}" is not a full address`,
+    );
+    // Asking again can't help: the URL is in the build.
+    expect(bannerButtons(tree)).toEqual(["Dismiss"]);
+    await act(async () => tree.unmount());
+  }
+});
+
+test("a bucket URL that arrives in a new config starts the reads, and the not set up row goes", async () => {
+  global.fetch = bucketWithPreview();
+  const tree = await renderConfig({ enabled: true, s3Config: { url: "" } });
+  expect(byId(tree, "previews-not-configured")).toHaveLength(1);
+  const asked = () =>
+    (global.fetch as jest.Mock).mock.calls
+      .map(([u]) => String(u))
+      .filter((u) => u.includes("/index/"));
+  expect(asked()).toEqual([]);
+  await act(async () =>
+    tree.update(
+      <PreviewProvider
+        config={{ enabled: true, s3Config: { url: "http://localhost:9000/b" } }}
+      >
+        <PreviewList />
+      </PreviewProvider>,
+    ),
   );
-  // Asking again can't help: the URL is in the build.
-  expect(bannerButtons(tree)).toEqual(["Dismiss"]);
+  expect(asked()).toEqual([
+    "http://localhost:9000/b/index/ios/version-1.0.0.json",
+  ]);
+  expect(byId(tree, "previews-not-configured")).toEqual([]);
+  expect(texts(tree)).toContain("Login fix");
+  expect(byId(tree, "list-error")).toEqual([]);
   await act(async () => tree.unmount());
 });
 
