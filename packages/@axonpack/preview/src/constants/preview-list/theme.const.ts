@@ -149,6 +149,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   previewsTitle: "Published previews",
   devPreviewServersTitle: "Dev preview servers",
   devPreviewServersHint: "Metro servers for this app on your computer.",
+  scanning: "Scanning…",
   noDevPreviewServers:
     "No Metro server found. Start one with npx preview start.",
   noBuildSlug:

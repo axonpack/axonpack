@@ -141,6 +141,24 @@ test("a 2 s tick asks the registry and only the ports known", async () => {
   expect(listed()).toEqual([8081, 8085]);
 });
 
+test("scanning is true during a sweep only, never during a quick tick", async () => {
+  stop = devPreviewServersStore.watch();
+  expect(devPreviewServersStore.getState().scanning).toBe(true);
+  await settle();
+  expect(devPreviewServersStore.getState().scanning).toBe(false);
+  const seen: boolean[] = [];
+  const off = devPreviewServersStore.subscribe(() =>
+    seen.push(devPreviewServersStore.getState().scanning),
+  );
+  await wait(2000);
+  expect(seen).not.toContain(true);
+  const refreshed = devPreviewServersStore.refresh();
+  expect(devPreviewServersStore.getState().scanning).toBe(true);
+  await refreshed;
+  expect(devPreviewServersStore.getState().scanning).toBe(false);
+  off();
+});
+
 test("the range is swept again after 30 s, and not before", async () => {
   await watch();
   probed();

@@ -29,6 +29,8 @@ export type DevPreviewServersState = {
    */
   alive: string[] | null;
   error: string | null;
+  /** A full sweep of the port range runs now. The quick look every 2 s does not count. */
+  scanning: boolean;
 };
 
 let state: DevPreviewServersState = {
@@ -36,6 +38,7 @@ let state: DevPreviewServersState = {
   activeUrl: null,
   alive: null,
   error: null,
+  scanning: false,
 };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<DevPreviewServersState>) => {
@@ -95,7 +98,10 @@ async function poll(sweep: boolean) {
   const platform = currentPlatform();
   const appSlug = buildSlug();
   if (!platform || !appSlug) return;
-  if (sweep) lastSweep = Date.now();
+  if (sweep) {
+    lastSweep = Date.now();
+    set({ scanning: true });
+  }
   try {
     // The Metro the app's JS came from; null for a preview or a bundle built into the app.
     const url = scriptUrl();
@@ -131,9 +137,10 @@ async function poll(sweep: boolean) {
       activeUrl: nativeModule()?.state().localServer ?? null,
       alive: found.alive,
       error: null,
+      scanning: false,
     });
   } catch (error) {
-    set({ error: message(error) });
+    set({ error: message(error), scanning: false });
   }
 }
 

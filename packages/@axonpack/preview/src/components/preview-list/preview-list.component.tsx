@@ -38,6 +38,7 @@ import {
 } from "../../utils/preview-list/list-items.util";
 import { Button } from "./ui/button.ui";
 import { SectionHeader } from "./ui/section-header.ui";
+import { Scanning } from "./ui/scanning.ui";
 import { DevServerRow } from "./dev-server-row.component";
 import { ErrorBanner } from "./error-banner.component";
 import { HeroCard } from "./hero-card.component";
@@ -176,6 +177,7 @@ export function PreviewList(props: PreviewListProps) {
         hasSlug: Boolean(appSlug),
         servers: local.servers,
         devServersError: local.error,
+        devServersScanning: local.scanning,
         loading: preview.loading,
         buildKey: preview.buildKey,
         items: preview.items,
@@ -204,6 +206,11 @@ export function PreviewList(props: PreviewListProps) {
             title={labels.devPreviewServersTitle}
             hint={labels.devPreviewServersHint}
             error={item.error}
+            action=<Scanning
+              theme={theme}
+              label={labels.scanning}
+              visible={item.scanning}
+            />
           />
         );
       case "dev-server": {

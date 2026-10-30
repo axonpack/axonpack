@@ -52,6 +52,8 @@ export type PreviewStatusInfo = {
    * before the first look since the list opened, and with dev preview servers off.
    */
   online: boolean | null;
+  /** The app looks through every port for dev preview servers now: on open, on refresh, every 30 s. */
+  scanning: boolean;
   /** The running preview's EAS environment, author, full commit and ISO publish date. */
   environment: string | null;
   author: string | null;
@@ -86,7 +88,7 @@ export function usePreviewStatus(
 ): PreviewStatusInfo {
   const preview = usePreview();
   const running = useRunning();
-  const { alive } = useDevPreviewServersState();
+  const { alive, scanning } = useDevPreviewServersState();
   const words = { ...DEFAULT_LABELS, ...labels };
   const kind = bundleKind(running);
   const entry =
@@ -122,6 +124,7 @@ export function usePreviewStatus(
     label: runningLabel(running, words),
     isDefault: running.kind === "default",
     online: serverOnline(running, alive),
+    scanning,
     environment: entry?.environment || null,
     author: entry?.author || null,
     commit: entry?.commit || null,

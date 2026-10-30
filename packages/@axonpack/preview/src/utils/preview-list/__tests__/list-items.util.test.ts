@@ -16,6 +16,7 @@ const base: State = {
   hasSlug: true,
   servers: [],
   devServersError: null,
+  devServersScanning: false,
   loading: false,
   buildKey: "version-1.0.0",
   items: [],

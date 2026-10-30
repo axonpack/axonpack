@@ -20,7 +20,12 @@ const positionOf = (index: number, count: number): GroupPosition =>
 
 /** One row of the list's FlatList. `key` is stable across refreshes. */
 export type ListItem =
-  | { type: "dev-servers-header"; key: string; error: string | null }
+  | {
+      type: "dev-servers-header";
+      key: string;
+      error: string | null;
+      scanning: boolean;
+    }
   | {
       type: "dev-server";
       key: string;
@@ -44,6 +49,8 @@ export function buildListItems(state: {
   hasSlug: boolean;
   servers: DevPreviewServer[];
   devServersError: string | null;
+  /** A full sweep of the port range runs now. */
+  devServersScanning: boolean;
   loading: boolean;
   buildKey: string | null;
   items: PreviewItem[];
@@ -55,6 +62,7 @@ export function buildListItems(state: {
       type: "dev-servers-header",
       key: "dev-servers",
       error: state.devServersError,
+      scanning: state.devServersScanning,
     });
     if (!state.hasSlug)
       list.push({

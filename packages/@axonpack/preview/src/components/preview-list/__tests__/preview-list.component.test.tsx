@@ -25,6 +25,7 @@ import { RowGap } from "../row-gap.component";
 import { Chevron } from "../ui/chevron.ui";
 import { HeroCard } from "../hero-card.component";
 import { RefreshIcon } from "../ui/refresh-icon.ui";
+import { Scanning } from "../ui/scanning.ui";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
 import { File } from "expo-file-system";
 
@@ -189,6 +190,26 @@ test("with it on, a debug build shows the section", async () => {
   expect(texts(tree)).toContain(
     "No Metro server found. Start one with npx preview start.",
   );
+  await act(async () => tree.unmount());
+});
+
+test("the section's heading says Scanning only while every port is asked, at the same height", async () => {
+  const tree = await render(true);
+  await settle();
+  const scanning = () => tree.root.findByType(Scanning);
+  expect(scanning().props.visible).toBe(false);
+  let sweep!: Promise<void>;
+  act(() => {
+    sweep = devPreviewServersStore.refresh();
+  });
+  expect(scanning().props.visible).toBe(true);
+  expect(textsOf(scanning())).toEqual(["Scanning…"]);
+  await act(() => sweep);
+  // Still laid out, only faded, so the heading does not jump.
+  expect(scanning().props.visible).toBe(false);
+  expect(
+    StyleSheet.flatten(scanning().findByType(View).props.style),
+  ).toMatchObject({ opacity: 0 });
   await act(async () => tree.unmount());
 });
 

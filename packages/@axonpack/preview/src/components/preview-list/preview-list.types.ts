@@ -214,6 +214,8 @@ export type PreviewListLabels = {
   previewsTitle: string;
   devPreviewServersTitle: string;
   devPreviewServersHint: string;
+  /** Beside the heading while the app looks through every port for servers. */
+  scanning: string;
   noDevPreviewServers: string;
   /** In place of the servers, when the build has no slug baked in by the config plugin. */
   noBuildSlug: string;

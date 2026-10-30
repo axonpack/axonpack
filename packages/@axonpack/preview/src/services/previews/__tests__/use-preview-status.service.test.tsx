@@ -148,8 +148,16 @@ test("the default Metro, with nothing picked", async () => {
     label: "Expo server, localhost:8081",
     isDefault: true,
     online: true,
+    scanning: false,
     canGoBack: false,
   });
+  let sweep!: Promise<void>;
+  act(() => {
+    sweep = devPreviewServersStore.refresh();
+  });
+  expect(status.scanning).toBe(true);
+  await act(() => sweep);
+  expect(status.scanning).toBe(false);
   await act(async () => tree.unmount());
 });
 
