@@ -301,7 +301,6 @@ test("a preview: its title and branch, the environment, who published it, and th
     "Back to default",
   ])
     expect(all).toContain(text);
-  expect(all).not.toContain("Stop server");
   expect(all).not.toContain("abc1234");
   // The header keeps its top for the name; the branch waits in the details.
   const hero = () => tree.root.findByType(HeroCard);
@@ -348,7 +347,6 @@ test("a dev preview server picked by hand: its address, one way back, and no Met
   // One machine, one name.
   expect(all).toContain("localhost:8082");
   expect(all).not.toContain("127.0.0.1:8082");
-  expect(all).not.toContain("Stop server");
   expect(all.filter((t) => t === "Back to default")).toHaveLength(1);
   expect(all).not.toContain(METRO_NOTE);
   await act(async () => tree.unmount());
@@ -360,7 +358,6 @@ test("a server picked by hand, with no preview chosen, offers Back to default, w
   };
   mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
   const tree = await render(true);
-  expect(texts(tree)).not.toContain("Stop server");
   mockSelectLocalServer.mockClear();
   await act(async () => pressable(tree, "Back to default").props.onPress());
   expect(mockSelectLocalServer).toHaveBeenCalledWith(null, null);
@@ -849,7 +846,6 @@ test("built into the app: the default bundle, no way back to offer, the build be
   expect(all).not.toContain("Back to default");
   // A bundle, not a server.
   expect(all).not.toContain("Default server");
-  expect(all).not.toContain("Stop server");
   await showDetails(tree);
   for (const text of [
     "Shop",

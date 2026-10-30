@@ -71,7 +71,6 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   offlineDefaultHint: "Start Metro again, then reload.",
   switchToServer: "Switch to {title}, {address}",
   switchToServerHint: "Restarts the app on this server.",
-  stopServer: "Stop server",
   showDetails: "Show details",
   hideDetails: "Hide details",
   app: "App",

@@ -43,7 +43,7 @@ export type PreviewStatusInfo = {
   branch: string | null;
   /** A server's `host:port`, with loopback shown as localhost; null for a preview or built in. */
   address: string | null;
-  /** One sentence for what runs, such as "Expo dev server, localhost:8081". */
+  /** One sentence for what runs, such as "Expo server, localhost:8081". */
   label: string;
   /** The default bundle runs: nothing picked, or what was picked is what the app starts on anyway. */
   isDefault: boolean;

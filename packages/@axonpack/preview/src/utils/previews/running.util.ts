@@ -257,7 +257,7 @@ export function runningWhere(running: Running): string | null {
 }
 
 /**
- * A sentence for what runs now, such as "Expo dev server, localhost:8081" or "Preview, Login
+ * A sentence for what runs now, such as "Expo server, localhost:8081" or "Preview, Login
  * fix": what a screen reader says for the hero card, and the example's banner.
  */
 export function runningLabel(running: Running, labels: KindLabels): string {

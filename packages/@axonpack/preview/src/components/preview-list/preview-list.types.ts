@@ -122,8 +122,6 @@ export type PreviewListLabels = {
   /** What a screen reader says for a server row. `{title}` and `{address}` are filled in. */
   switchToServer: string;
   switchToServerHint: string;
-  /** @deprecated No longer shown: the header's Back to default stops a picked server too. */
-  stopServer: string;
   showDetails: string;
   hideDetails: string;
   /** Labels of the facts on the hero card. */
