@@ -17,7 +17,7 @@ Use this page to look up a name. If you are new, start with the
 | `usePreviewStatus(labels?)`    | What runs now and the build it runs in. See [below](#usepreviewstatus). Needs the provider |
 | `useRunning()`                 | What this start runs, as a [`Running`](#running). Needs the provider          |
 | `usePreviewsState()`           | The raw [store state](#usepreview), without the provider                      |
-| `useDevPreviewServersState()`  | `{ servers, activeUrl, alive, error }` for dev preview servers. `alive` is every `host:port` that answered the last look, or null before one |
+| `useDevPreviewServersState()`  | `{ servers, activeUrl, alive, error, scanning, hosts }` for dev preview servers. `alive` is every `host:port` that answered the last look, or null before one |
 
 ## PreviewList props
 
@@ -46,7 +46,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | Field               | Needed | What it is                                                                          |
 | ------------------- | ------ | ----------------------------------------------------------------------------------- |
 | `enabled`           | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
-| `s3Config`          | No     | The bucket and how to read it (`PreviewS3Config`, below). Without it, previews are not set up |
+| `s3Config`          | No     | The bucket and how to read it (`PreviewS3Config`, below). Without it, the list shows previews as not set up |
 | `devPreviewServers` | No     | Lists this app's Metro servers in a debug build. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
 | `buildKey`          | No     | This build's key, only when the config plugin is not used to bake it in             |
 
@@ -54,7 +54,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 
 | Field                 | Needed | What it is                                                                          |
 | --------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `url`                 | No     | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN. Undefined, empty or blank means not configured |
+| `url`                 | Yes    | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN. Left out or empty at runtime, the list shows previews as not set up |
 | `readAccessKeyId`     | No     | A read-only key, for a private bucket. Never the write key                          |
 | `readSecretAccessKey` | No     | Its secret                                                                          |
 | `region`              | No     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
@@ -69,9 +69,9 @@ s3Config: {
 },
 ```
 
-Pass the env values straight in. An undefined, empty or blank `url` simply means previews are not
-configured: the app reads nothing from a bucket, shows no error, and **Published previews** says
-previews aren't set up. Dev preview servers and the header card work as usual. A `url` that is set
+`url` is typed as a string, and an env value can be undefined, so pass it with `as string`. Left
+out or empty at runtime, the list shows previews as not set up: the app reads nothing from a bucket
+and shows no error, and dev preview servers and the header card work as usual. A `url` that is set
 but is not a full address, such as `/previews`, is still an error.
 
 0.1.0 took these five fields at the top level of the config. They still work but are deprecated, and
@@ -116,7 +116,7 @@ devPreviewServers: {
 
 | Action                   | What it does                                                             |
 | ------------------------ | ------------------------------------------------------------------------ |
-| `refresh()`              | Reads the downloads, then asks the bucket for this build's list          |
+| `refresh()`              | Reads the downloads, then asks the bucket for this build's list. With no bucket URL it asks nothing |
 | `download(id)`           | Downloads a preview, or its update                                       |
 | `switchTo(id)`           | Restarts into a preview, downloading it first if needed                  |
 | `switchTo(null)`         | Back to the default bundle. Also stops a dev preview server              |
@@ -242,7 +242,7 @@ that is not a hex colour gets an outline instead of a wash.
 | `muted`         | `#56637a` | `#94a3b8` | Quiet text: hints, who published and when, size, and plain chips |
 | `primary`       | `#2563eb` | `#5b8def` | Main buttons, Show details, the Preview chip and Downloading |
 | `primaryText`   | `#ffffff` | `#0b1220` | Text on main buttons                                       |
-| `danger`        | `#dc2626` | `#f87171` | Delete, the error snackbar's edge, Unpublished and Broken  |
+| `danger`        | `#dc2626` | `#f87171` | Delete, the error snackbar's edge, Offline, Unpublished and Broken |
 | `dangerSurface` | `#fff6f6` | `#3b1d1d` | Behind the error snackbar                                  |
 | `warning`       | `#d97706` | `#fbbf24` | Update available, Made for another native build, and the Metro note |
 | `success`       | `#16a34a` | `#4ade80` | Active and Downloaded                                      |
