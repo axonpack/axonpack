@@ -72,7 +72,8 @@ Put it on a screen QA can reach: a tab in internal builds, a settings row, or a 
 - **An error snackbar**, only when something went wrong. See [Errors](#errors).
 - **The header card:** what runs now, and **Back to default**.
 - **Dev preview servers**, in a debug build with that option on.
-- **Published previews** for this build.
+- **Published previews** for this build, or one row saying previews aren't set up. See
+  [Not configured](#not-configured).
 - **Incompatible:** downloads made for another native build, with **Delete all**.
 
 Pull the list down, or tap the Refresh icon on the header card, to ask the bucket again. A row of
@@ -124,9 +125,17 @@ words, and what to try:
 | Something went wrong.                   | The error itself                                                                |
 
 **Retry** does again what was tapped last; the first load counts as a refresh. It is left out when
-the bucket URL in the config is empty or not a full URL, since asking again can't help. **Dismiss**
+the bucket URL in the config is not a full URL, since asking again can't help. **Dismiss**
 hides the snackbar. The raw error also goes to the console. More fixes are on
 [Troubleshooting](/docs/preview/troubleshooting).
+
+### Not configured
+
+With no `s3Config`, or a `url` that is undefined, empty or blank, previews are not set up. That is
+not an error: the app reads nothing from a bucket and shows no snackbar. **Published previews** shows
+one row, **Previews aren't set up**, with a line saying to add `s3Config.url`. Downloads already on
+the device are still listed, and dev preview servers and the header card work as usual.
+`usePreviewStatus().previewsConfigured` is false.
 
 ### Dev preview servers
 

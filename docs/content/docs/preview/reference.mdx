@@ -46,7 +46,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | Field               | Needed | What it is                                                                          |
 | ------------------- | ------ | ----------------------------------------------------------------------------------- |
 | `enabled`           | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
-| `s3Config`          | Yes    | The bucket and how to read it (`PreviewS3Config`, below)                            |
+| `s3Config`          | No     | The bucket and how to read it (`PreviewS3Config`, below). Without it, previews are not set up |
 | `devPreviewServers` | No     | Lists this app's Metro servers in a debug build. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
 | `buildKey`          | No     | This build's key, only when the config plugin is not used to bake it in             |
 
@@ -54,7 +54,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 
 | Field                 | Needed | What it is                                                                          |
 | --------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `url`                 | Yes    | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN |
+| `url`                 | No     | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN. Undefined, empty or blank means not configured |
 | `readAccessKeyId`     | No     | A read-only key, for a private bucket. Never the write key                          |
 | `readSecretAccessKey` | No     | Its secret                                                                          |
 | `region`              | No     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
@@ -62,14 +62,20 @@ What the app passes to the provider. Nothing here is read from the environment.
 
 ```ts
 s3Config: {
-  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? '',
+  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL,
   readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
   readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
   region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
 },
 ```
 
-0.1.0 took these five fields at the top level of the config. They still work but are deprecated.
+Pass the env values straight in. An undefined, empty or blank `url` simply means previews are not
+configured: the app reads nothing from a bucket, shows no error, and **Published previews** says
+previews aren't set up. Dev preview servers and the header card work as usual. A `url` that is set
+but is not a full address, such as `/previews`, is still an error.
+
+0.1.0 took these five fields at the top level of the config. They still work but are deprecated, and
+the old top-level `url` follows the same rule.
 When `s3Config` is set too, it wins, and the app logs one warning.
 
 `devPreviewServers` as an object (`DevPreviewServersOptions`). `true` is the same as `{}`.
@@ -94,6 +100,7 @@ devPreviewServers: {
 | Field                  | What it is                                                                 |
 | ---------------------- | -------------------------------------------------------------------------- |
 | `enabled`              | `config.enabled`                                                           |
+| `previewsConfigured`   | A bucket URL is set. False when `s3Config.url` is undefined, empty or blank |
 | `devPreviewServers`    | Whether dev preview servers are on                                         |
 | `items`                | [`PreviewItem[]`](#previewitem): this build's previews, and downloads it no longer lists |
 | `incompatible`         | Downloads made for another native build                                    |
@@ -163,6 +170,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `publishedAt`   | The running preview's ISO publish date, or null                                |
 | `app`           | `{ name, version, buildNumber, platform }` of this build. Nulls on a native side older than the JS |
 | `compatibility` | `{ mode, key }`: `appVersion` or `fingerprint`, and the build key               |
+| `previewsConfigured` | A bucket URL is set. False when `s3Config.url` is undefined, empty or blank, and then nothing is read from a bucket |
 | `loading`       | The previews list is loading                                                   |
 | `error`         | The last error, as text, or null                                               |
 | `canGoBack`     | A preview is chosen (even one that could not load) or a server is picked       |
@@ -335,6 +343,8 @@ Text between backticks shows in a code font.
 | Label               | Default                                   | Where it shows                                     |
 | ------------------- | ----------------------------------------- | -------------------------------------------------- |
 | `previewsTitle`     | Published previews                        | The section's heading                              |
+| `previewsNotConfigured` | Previews aren't set up                | Under the heading when the config has no `s3Config.url` |
+| `previewsNotConfiguredHint` | Add s3Config.url to the preview config to list published previews. | Under `previewsNotConfigured` |
 | `empty`             | No previews published for this build yet. | When none is published                             |
 | `noBuildKey`        | This build has no compatibility key, so it cannot list previews. Add the config plugin and rebuild. | In a build without the plugin |
 | `branchPrefix`      | Branch:                                   | Before the branch name on a row                    |

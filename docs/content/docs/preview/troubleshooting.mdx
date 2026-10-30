@@ -9,6 +9,15 @@ shows the last error in a snackbar above its header card, in plain words with wh
 that first. The raw error goes to the console. The messages are listed under
 [Errors](/docs/preview/app-setup#errors).
 
+## "Previews aren't set up"
+
+**Cause.** The config has no bucket URL: `s3Config` is left out, or its `url` is undefined, empty or
+blank. Usually the env value is missing, such as a build made without its `.env`. This is a setup
+state, not an error, so there is no snackbar.
+**Fix.** Set `EXPO_PUBLIC_PREVIEW_S3_URL`, or whatever the app passes as `s3Config.url`, then restart
+Metro with `npx expo start --clear`, or rebuild. See
+[Settings and env files](/docs/preview/environment#the-apps-settings).
+
 ## The list is empty
 
 **Cause.** Nothing is published for this build's key. The app only asks for its own key.
