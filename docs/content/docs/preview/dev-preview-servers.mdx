@@ -37,12 +37,15 @@ In a terminal, `start` asks for the name the app shows, prefilled with the branc
 Enter keeps it. `--title` skips the question, and so does a run with no terminal, such as an AI
 agent's shell, which takes the branch title.
 
-A plain `npx expo start --port 8085` is found too, with less detail: no branch.
+A plain `npx expo start --port 8085` is found too, with less detail: no branch. It shows when the
+list opens, when you refresh it, or within 30 seconds.
 
 ## Switch servers in the app
 
-Open the list. **Dev preview servers** shows each server for this app within about two seconds, in
-one grouped card. Each row has the server's title, its address and its branch, with chips:
+Open the list. **Dev preview servers** shows each server for this app in one grouped card. A
+`preview start` server shows within about two seconds of announcing itself, and a plain
+`expo start` server once the next full scan finds it. Each row has the server's title, its address
+and its branch, with chips:
 
 - **Active** on the server the app runs from now. Its row takes the header card's tint.
 - **`server: Expo`** on a plain `expo start` or `expo run` Metro, and **`server: Preview`** on one
@@ -87,8 +90,30 @@ Two sources, merged by host and port:
 - **A port scan.** The app asks each port from 8081 to 8099 for Metro's `/status`, then reads the
   Expo manifest of each one it finds for the slug, name, version and bundle URL.
 
-A server found both ways uses the registry's details. The app looks only while the list is on
-screen, every 2 seconds, and never starts a look while the last one runs.
+A server found both ways uses the registry's details.
+
+## How often it looks
+
+Only while the list is on screen, and never while the app is in the background. When the app comes
+back to the foreground, it looks once straight away.
+
+- **Every 2 seconds** it asks the registry, the servers it has already found, the default Metro and
+  the server the app runs from. That is enough for `preview start` servers: one that starts or stops
+  shows or goes within one of these looks, because the registry names its port. A found server is
+  asked again each time until it stops answering, then it leaves the list. The one the app runs
+  from stays, marked Offline.
+- **A full scan** of 8081 to 8099 runs when the list opens, when you pull to refresh or tap Refresh,
+  and 30 seconds after the last one. A refresh restarts that count. The heading says
+  **Scanning…** while it runs. A new plain `expo start` server shows after the next full scan, so on
+  open, on refresh, or within 30 seconds.
+
+A look never starts while the last one runs, and a refresh during a scan waits for that scan.
+
+Each closed port is a refused connection, and iOS writes every one to the Xcode console as
+`Could not connect to the server`. JS can't turn that off, so the full scan runs only this often:
+expect a burst of those lines every 30 seconds. A server that is down but still asked every 2
+seconds (the registry when no `preview start` runs, the default Metro, or the server the app runs
+from) adds one line each time.
 
 ## Reaching the servers
 

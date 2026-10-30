@@ -18,4 +18,5 @@
 - **A missing or relative bucket URL** now says which setting to fix
 - **An offline server stays in view**: when the server the app runs from stops, the header card and its row say Offline and what to do, with the title, branch and kind it had when it last answered, after a reload too. `usePreviewStatus()` has `online`
 - **Servers go by their own names**: a server `preview start` did not name shows its address, never the app's name. One the app never saw answering shows a plain `Server` chip
+- **A quieter server scan**: every 2 seconds the list asks only the registry and the servers it knows, so a `preview start` server still shows within two seconds. The full scan of ports 8081 to 8099 runs on open, on refresh and every 30 seconds, never in the background, with Scanning beside the heading. iOS no longer fills the Xcode console with a refused connection per port. `usePreviewStatus()` has `scanning`
 - **`preview start` announces the port Metro really took**, once it answers, so its title and kind no longer show on another server

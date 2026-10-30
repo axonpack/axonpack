@@ -120,6 +120,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `label`         | One sentence for what runs, such as "Expo server, localhost:8081"              |
 | `isDefault`     | The default bundle runs: nothing picked, or what was picked is what the app starts on anyway |
 | `online`        | Whether the server the app runs from answers: false once a look for dev preview servers did not find it. Null for a preview or a bundle built into the app, before the first look, and with dev preview servers off |
+| `scanning`      | A full scan of every port for dev preview servers runs now: on open, on refresh, and every 30 seconds. The quick look every 2 seconds does not count |
 | `environment`   | The running preview's EAS environment, or null                                 |
 | `author`        | The running preview's author, or null                                          |
 | `commit`        | The running preview's full commit, or null                                     |
@@ -133,7 +134,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | Action            | What it does                                                               |
 | ----------------- | -------------------------------------------------------------------------- |
 | `backToDefault()` | Restarts on the default bundle, clearing the chosen preview and the picked server |
-| `refresh()`       | Asks the bucket again, and looks for dev preview servers when they are on  |
+| `refresh()`       | Asks the bucket again, and scans every port for dev preview servers when they are on |
 
 ## Functions
 
@@ -270,6 +271,7 @@ Text between backticks shows in a code font.
 | ------------------------ | --------------------------------------------- | ----------------------------------------------- |
 | `devPreviewServersTitle` | Dev preview servers                           | The section's heading                           |
 | `devPreviewServersHint`  | Metro servers for this app on your computer.  | Under the heading                               |
+| `scanning`               | Scanning…                                     | Beside the heading, with a spinner, during a full scan of the ports |
 | `active`                 | Active                                        | The chip on the server or preview the app runs from |
 | `defaultServerTitle`     | Default                                       | The title of the Metro the app starts on, when `preview start` gave it none |
 | `switchToServer`         | Switch to \{title\}, \{address\}              | What a screen reader says for a server row      |

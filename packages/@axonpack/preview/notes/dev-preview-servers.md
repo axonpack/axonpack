@@ -5,7 +5,8 @@ between them live.
 
 - [x] Lists every Metro server for this app on the developer's computer, in a debug build
 - [x] Finds plain `expo start` servers, and servers started with `preview start` with their branch
-- [x] Shows a new server within about two seconds, and drops one that stopped
+- [x] Shows a new `preview start` server within 2 s, a plain one within 30 s, and drops one that stopped
+- [x] Says Scanning beside the heading during a full scan of the ports
 - [x] Leaves out other apps' servers; keeps the same app built for other native code, marked
 - [x] Switches the running app to a server with a tap on its row, and back, with no rebuild
 - [x] Marks the server the app runs from as Active, and the one it starts on as the default
@@ -46,7 +47,10 @@ never sees it answering unannounced. Heartbeats every 5 s keep it listed; it
 drops out 15 s after the last, so a killed process goes too. Plain `expo start` servers are found
 by probing the port range for Metro's `/status`; each one's Expo manifest then gives its slug,
 name, version and bundle URL. A server found both ways (same host and port) uses the registry's details. While the list
-is on screen the app looks every 2 s, and never starts a look while the last one runs. A probe gives
+is on screen and the app is in the foreground, it asks the registry, the servers already found, the
+default Metro and the server it runs from every 2 s, and sweeps the whole range on open, on refresh
+and every 30 s. Each closed port is a refused connection that iOS logs to the Xcode console, so the
+sweep can't run every 2 s. It never starts a look while the last one runs. A probe gives
 up after 2 s: Android sends 5 requests per host at a time and the emulator takes about 400 ms to
 refuse a closed port, so a tighter limit dropped live servers there. A closed port on the computer
 itself fails at once, so the scan stays cheap.
