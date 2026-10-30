@@ -26,8 +26,11 @@ import { Chevron } from "../ui/chevron.ui";
 import { HeroCard } from "../hero-card.component";
 import { RefreshIcon } from "../ui/refresh-icon.ui";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
+import { File } from "expo-file-system";
+
 import {
   previewDirectory,
+  rootDirectory,
   writeLocalPreview,
 } from "../../../services/previews/local-previews.service";
 import type { IndexEntry } from "../../../utils/previews/layout.util";
@@ -127,6 +130,8 @@ beforeEach(async () => {
   global.fetch = notFound();
   // The servers store lives for the whole file; one look clears a server an earlier test picked.
   await devPreviewServersStore.refresh();
+  // What an earlier test saved about the server it ran from.
+  new File(rootDirectory(), "server.json").delete();
 });
 
 const textsOf = (node: ReactTestInstance) =>
@@ -303,8 +308,10 @@ test("a dev preview server picked by hand: its address, one way back, and no Met
   mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
   const tree = await render(true);
   const all = texts(tree);
-  // Not found by the scan yet, so its kind is its title.
-  expect(all).toContain("Preview server");
+  // No look has found it, so its kind is not known: a plain chip, and its address for a title.
+  expect(all).toContain("Server");
+  expect(all).not.toContain("Preview server");
+  expect(textsOf(tree.root.findByType(HeroCard))[0]).toBe("localhost:8082");
   // One machine, one name.
   expect(all).toContain("localhost:8082");
   expect(all).not.toContain("127.0.0.1:8082");
@@ -407,13 +414,11 @@ test("the default Metro, with nothing picked, is Active and titled Default", asy
   expect(row.props.accessibilityLabel).toBe(
     "Default, localhost:8081, Active, Expo server, Default bundle",
   );
-  // Another server Metro found with no title of its own keeps the app's name.
+  // Metro knows only the app's name, which every server of the app shares, so another server
+  // with no title of its own goes by its address, once.
   const other = serverRow(tree, 8083);
   expectSwitchable(other);
-  expect(textsOf(other)).toEqual(
-    expect.arrayContaining(["Shop", "localhost:8083"]),
-  );
-  expect(textsOf(other)).not.toContain("Default");
+  expect(textsOf(other)).toEqual(["localhost:8083", "server: Expo"]);
   expect(textsOf(tree.root.findByType(HeroCard))).toContain("Default");
   // One grouped card: square where the rows meet, a hairline only between them, no gap.
   expect(row.findByType(Card).props.position).toBe("first");
@@ -559,6 +564,187 @@ test("no server is Active while a preview runs", async () => {
   await act(async () => tree.unmount());
 });
 
+const offlineChips = (node: ReactTestInstance) =>
+  node.findAllByType(Chip).filter((chip) => chip.props.text === "Offline");
+
+test("the default Metro that stops answering keeps its row and says so, until it answers again", async () => {
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  global.fetch = metros([8081, 8082], [8082]);
+  const tree = await render(true);
+  await settle();
+  const hero = () => tree.root.findByType(HeroCard);
+  expect(offlineChips(tree.root).length).toBe(0);
+
+  // Metro stops, so the next look does not find 8081.
+  global.fetch = metros([8082], [8082]);
+  await act(() => devPreviewServersStore.refresh());
+  const row = serverRow(tree, 8081);
+  expectActive(row);
+  expect(
+    row.findAllByType(Chip).map((chip) => [chip.props.text, chip.props.tone]),
+  ).toEqual([
+    ["Active", "success"],
+    ["Offline", "danger"],
+    ["server: Expo", "info"],
+    ["Default bundle", undefined],
+  ]);
+  expect(row.props.accessibilityLabel).toBe(
+    "Default, localhost:8081, Active, Offline, Expo server, Default bundle",
+  );
+  expectSwitchable(serverRow(tree, 8082));
+  expect(
+    hero()
+      .findAllByType(Chip)
+      .map((chip) => chip.props.text),
+  ).toEqual(["server: Expo", "Offline", "Default bundle"]);
+  expect(offlineChips(hero())[0].props.tone).toBe("danger");
+  expect(textsOf(hero())).toContain("Start Metro again, then reload.");
+
+  global.fetch = metros([8081, 8082], [8082]);
+  await act(() => devPreviewServersStore.refresh());
+  expect(offlineChips(tree.root).length).toBe(0);
+  expect(byId(tree, "hero-offline-hint").length).toBe(0);
+  expectActive(serverRow(tree, 8081));
+  await act(async () => tree.unmount());
+});
+
+test("a chosen preview that did not load, on a stopped default Metro, offers no way back that reloads it", async () => {
+  mockNativeState = {
+    bundle: "task-1/ios/main.jsbundle",
+    loaded: { kind: "default" },
+  };
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  const tree = await render(true);
+  await settle();
+  expect(offlineChips(tree.root.findByType(HeroCard))).toHaveLength(1);
+  expect(byId(tree, "hero-actions").length).toBe(0);
+  await act(async () => tree.unmount());
+});
+
+test("a picked server that stops answering keeps its name, and Use the default bundle still shows", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  mockScriptUrl = "http://127.0.0.1:8082/index.bundle?platform=ios";
+  global.fetch = metros([8081, 8082], [8082]);
+  const tree = await render(true);
+  await settle();
+  // `preview start` stopped: the registry no longer has it, and Metro does not answer.
+  global.fetch = metros([8081]);
+  await act(() => devPreviewServersStore.refresh());
+  const picked = serverRow(tree, 8082);
+  expectActive(picked);
+  expect(textsOf(picked)).toEqual(
+    expect.arrayContaining(["Main-Branch", "Offline", "server: Preview"]),
+  );
+  const hero = textsOf(tree.root.findByType(HeroCard));
+  expect(hero).toEqual(
+    expect.arrayContaining([
+      "Main-Branch",
+      "Offline",
+      "Start this server again, or use the default bundle.",
+      "Use the default bundle",
+    ]),
+  );
+  await act(async () => tree.unmount());
+});
+
+test("a stopped preview start server keeps its title, branch and kind, after a reload too", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8083/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  mockScriptUrl = "http://127.0.0.1:8083/index.bundle?platform=ios";
+  global.fetch = metros([8081, 8083], [8083]);
+  const first = await render(true);
+  await settle();
+  await act(async () => first.unmount());
+  // A reload: the store starts with no servers, then `preview start` on 8083 stops (it leaves the
+  // registry too).
+  global.fetch = metros([8081]);
+  const scriptUrl = mockScriptUrl;
+  mockScriptUrl = null;
+  await devPreviewServersStore.refresh();
+  expect(devPreviewServersStore.getState().servers).toHaveLength(1);
+  mockScriptUrl = scriptUrl;
+  const tree = await render(true);
+  await settle();
+  const row = serverRow(tree, 8083);
+  expectActive(row);
+  expect(textsOf(row)).toEqual(
+    expect.arrayContaining(["Main-Branch", "localhost:8083", "main"]),
+  );
+  expect(row.findAllByType(Chip).map((chip) => chip.props.text)).toEqual([
+    "Active",
+    "Offline",
+    "server: Preview",
+  ]);
+  const hero = textsOf(tree.root.findByType(HeroCard));
+  expect(hero).toEqual(
+    expect.arrayContaining(["Main-Branch", "server: Preview", "Offline"]),
+  );
+  expect(texts(tree)).not.toContain("Shop");
+  await act(async () => tree.unmount());
+});
+
+test("a stopped server nothing is known about goes by its address, with no kind", async () => {
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8083/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  mockScriptUrl = "http://127.0.0.1:8083/index.bundle?platform=ios";
+  global.fetch = metros([8081]);
+  const tree = await render(true);
+  await settle();
+  const row = serverRow(tree, 8083);
+  expectActive(row);
+  expect(textsOf(row)[0]).toBe("localhost:8083");
+  expect(
+    row.findAllByType(Chip).map((chip) => [chip.props.text, chip.props.tone]),
+  ).toEqual([
+    ["Active", "success"],
+    ["Offline", "danger"],
+    ["Server", "neutral"],
+  ]);
+  const hero = tree.root.findByType(HeroCard);
+  expect(textsOf(hero)[0]).toBe("localhost:8083");
+  expect(hero.findAllByType(Chip).map((chip) => chip.props.text)).toEqual([
+    "Server",
+    "Offline",
+  ]);
+  // No guess at a kind or a name.
+  for (const guess of ["Shop", "Default", "server: Expo", "server: Preview"]) {
+    expect(textsOf(row)).not.toContain(guess);
+    expect(textsOf(hero)).not.toContain(guess);
+  }
+  await act(async () => tree.unmount());
+});
+
+test("before the first look finishes, nothing says Offline", async () => {
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  let answer!: () => void;
+  const held = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  const live = metros([8081]);
+  global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+    await held;
+    return live(input);
+  }) as typeof fetch;
+  const tree = await render(true);
+  // An earlier look found nothing, which read alone would say the server is offline.
+  expect(offlineChips(tree.root).length).toBe(0);
+  expect(byId(tree, "hero-offline-hint").length).toBe(0);
+  await act(async () => {
+    answer();
+    await new Promise((r) => setTimeout(r, 50));
+  });
+  expect(offlineChips(tree.root).length).toBe(0);
+  expectActive(serverRow(tree, 8081));
+  await act(async () => tree.unmount());
+});
+
 describe("the header card and the preview rows agree on what runs", () => {
   const METRO_8081 = "http://127.0.0.1:8081/index.bundle?platform=ios";
   const METRO_8082 = "http://127.0.0.1:8082/index.bundle?platform=ios";
@@ -640,7 +826,9 @@ test("built into the app: the default bundle, no way back to offer, the build be
 
 test("the app's own bundle from Expo's Metro names the server and its address", async () => {
   mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  global.fetch = metros([8081]);
   const tree = await render(true);
+  await settle();
   const all = texts(tree);
   expect(all).toContain("server: Expo");
   expect(all).toContain("localhost:8081");

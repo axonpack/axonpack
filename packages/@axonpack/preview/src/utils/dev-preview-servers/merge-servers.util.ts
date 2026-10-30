@@ -27,6 +27,11 @@ export type DevPreviewServer = {
   compatible: boolean | null;
   /** Announced by `preview start` (with branch and worktree), or only found by the scan. */
   announced: boolean;
+  /**
+   * Only on the server the app runs from, when no look ever found it answering and nothing was
+   * saved about it: whether it is an Expo or a preview server, and its name, are not known.
+   */
+  unknown?: true;
 };
 
 export type ScannedServer = {

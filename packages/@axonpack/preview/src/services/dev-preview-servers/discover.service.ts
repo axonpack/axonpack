@@ -31,10 +31,10 @@ async function within<T>(
   }
 }
 
-async function isMetro(host: string, port: number): Promise<boolean> {
+async function isMetro(hostPort: string): Promise<boolean> {
   try {
     const text = await within(PROBE_MS, async (signal) =>
-      (await fetch(`http://${host}:${port}/status`, { signal })).text(),
+      (await fetch(`http://${hostPort}/status`, { signal })).text(),
     );
     return text.includes("packager-status:running");
   } catch {
@@ -98,11 +98,19 @@ const manifests = new Map<
   Promise<Awaited<ReturnType<typeof readManifest>> | null>
 >();
 
-/** One look: every Metro in the range on the candidate hosts, plus the registry and its host. */
-export async function discover(platform: Platform): Promise<{
+/**
+ * One look: every Metro in the range on the candidate hosts, plus the registry and the host it
+ * answered on. `own` is the `host:port` the app runs from, asked directly. `alive` is every
+ * `host:port` that answered.
+ */
+export async function discover(
+  platform: Platform,
+  own: string | null = null,
+): Promise<{
   registry: RegisteredServer[];
   registryHost: string | null;
   scanned: ScannedServer[];
+  alive: string[];
 }> {
   const [from, to] = DEFAULT_PORT_RANGE;
   const hosts = candidateHosts();
@@ -120,11 +128,13 @@ export async function discover(platform: Platform): Promise<{
   for (let port = from; port <= to; port++) ports.add(port);
 
   const scanned: ScannedServer[] = [];
-  await Promise.all(
-    [...ports].map(async (port) => {
+  const alive: string[] = [];
+  await Promise.all([
+    ...[...ports].map(async (port) => {
       for (const host of hosts) {
-        if (!(await isMetro(host, port))) continue;
         const id = `${host}:${port}`;
+        if (!(await isMetro(id))) continue;
+        alive.push(id);
         // Read once per server; a closed port drops its entry so a new server there is read fresh.
         if (!manifests.has(id))
           manifests.set(
@@ -137,6 +147,11 @@ export async function discover(platform: Platform): Promise<{
       }
       for (const host of hosts) manifests.delete(`${host}:${port}`);
     }),
-  );
-  return { registry, registryHost, scanned };
+    // The server the app runs from can be on a host or port the scan does not cover.
+    own &&
+      isMetro(own).then((up) => {
+        if (up) alive.push(own);
+      }),
+  ]);
+  return { registry, registryHost, scanned, alive };
 }

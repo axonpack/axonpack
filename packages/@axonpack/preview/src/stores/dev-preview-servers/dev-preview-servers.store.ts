@@ -7,18 +7,33 @@ import {
   type DevPreviewServer,
   mergeServers,
 } from "../../utils/dev-preview-servers/merge-servers.util";
-import { nativeModule } from "../../services/native/native.service";
+import { nativeModule, scriptUrl } from "../../services/native/native.service";
+import {
+  readRunningServer,
+  saveRunningServer,
+} from "../../services/dev-preview-servers/running-server.service";
+import { hostPortOf, sameServer } from "../../utils/previews/running.util";
 
 export type DevPreviewServersState = {
+  /**
+   * This app's servers. The one the app runs from stays when a look misses it, as it was last
+   * seen answering (saved, so a reload still knows it), or marked `unknown` if it never was.
+   */
   servers: DevPreviewServer[];
   /** The bundle URL of the dev preview server the next start uses, or null. */
   activeUrl: string | null;
+  /**
+   * `host:port` of every Metro that answered in the last round, the one the app runs from
+   * included wherever it is. Null until a round has finished since the list opened.
+   */
+  alive: string[] | null;
   error: string | null;
 };
 
 let state: DevPreviewServersState = {
   servers: [],
   activeUrl: null,
+  alive: null,
   error: null,
 };
 const listeners = new Set<() => void>();
@@ -33,6 +48,34 @@ let timer: ReturnType<typeof setInterval> | null = null;
 
 let polling = false;
 
+/** The server at `own` as saved before a reload, or marked unknown when nothing was. */
+async function savedOrUnknown(
+  own: string,
+  url: string,
+  appSlug: string,
+): Promise<DevPreviewServer> {
+  const saved = await readRunningServer();
+  if (saved && sameServer(saved.hostPort, own)) return saved;
+  const at = own.lastIndexOf(":");
+  return {
+    hostPort: own,
+    host: own.slice(0, at),
+    port: Number(own.slice(at + 1)),
+    url,
+    title: "",
+    name: "",
+    slug: appSlug,
+    version: null,
+    branch: null,
+    worktree: null,
+    key: null,
+    // It runs here, so it was made for this build.
+    compatible: true,
+    announced: false,
+    unknown: true,
+  };
+}
+
 async function poll() {
   const platform = currentPlatform();
   const appSlug = buildSlug();
@@ -40,15 +83,31 @@ async function poll() {
   if (!platform || !appSlug || polling) return;
   polling = true;
   try {
-    const found = await discover(platform);
+    // The Metro the app's JS came from; null for a preview or a bundle built into the app.
+    const url = scriptUrl();
+    const own = url ? hostPortOf(url) : null;
+    const found = await discover(platform, own);
+    let servers = mergeServers({
+      ...found,
+      appSlug,
+      buildKey: buildKey(),
+      platform,
+    });
+    if (url && own) {
+      const seen = servers.find((s) => sameServer(s.hostPort, own));
+      const last = state.servers.find((s) => sameServer(s.hostPort, own));
+      if (seen && JSON.stringify(seen) !== JSON.stringify(last))
+        saveRunningServer(seen);
+      if (!seen)
+        servers = [
+          ...servers,
+          last ?? (await savedOrUnknown(own, url, appSlug)),
+        ].sort((a, b) => a.port - b.port);
+    }
     set({
-      servers: mergeServers({
-        ...found,
-        appSlug,
-        buildKey: buildKey(),
-        platform,
-      }),
+      servers,
       activeUrl: nativeModule()?.state().localServer ?? null,
+      alive: found.alive,
       error: null,
     });
   } catch (error) {
@@ -76,6 +135,8 @@ export const devPreviewServersStore = {
     if (!__DEV__) return () => undefined;
     watchers++;
     if (!timer) {
+      // A round from an earlier visit may be old. Until this visit's first one, it is not known.
+      set({ alive: null });
       poll();
       timer = setInterval(poll, POLL_MS);
     }

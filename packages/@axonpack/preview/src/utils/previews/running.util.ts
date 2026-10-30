@@ -87,6 +87,20 @@ export function runsFromServer(running: Running, hostPort: string): boolean {
   );
 }
 
+/**
+ * Whether the server the app runs from answers, from the last round of the servers scan (`alive`,
+ * every `host:port` that answered, or null before the first round). Null while it is not known yet
+ * and when no server runs: a preview, or a bundle built into the app.
+ */
+export function serverOnline(
+  running: Running,
+  alive: string[] | null,
+): boolean | null {
+  const hostPort = running.kind === "preview" ? null : running.hostPort;
+  if (hostPort === null || alive === null) return null;
+  return alive.some((answered) => sameServer(answered, hostPort));
+}
+
 const findServer = (servers: DevPreviewServer[], hostPort: string) =>
   servers.find((s) => sameServer(s.hostPort, hostPort)) ?? null;
 
@@ -183,20 +197,26 @@ export function runningNow(input: {
 
 type KindLabels = Pick<
   PreviewListLabels,
-  "kindBuiltIn" | "kindExpoDevServer" | "kindDevPreviewServer" | "kindPreview"
+  | "kindBuiltIn"
+  | "kindExpoDevServer"
+  | "kindDevPreviewServer"
+  | "kindPreview"
+  | "kindServer"
 >;
 
-/** Where a bundle comes from, the same for what runs now and for a server row. */
-export type BundleKind = DefaultSource | "preview";
+/**
+ * Where a bundle comes from, the same for what runs now and for a server row. `server` is a
+ * server no look has found yet, so whether `preview start` runs it is not known.
+ */
+export type BundleKind = DefaultSource | "preview" | "server";
 
 export function bundleKind(running: Running): BundleKind {
   if (running.kind === "preview") return "preview";
-  // A server picked from the scan that `preview start` never announced is a plain Expo one.
-  if (running.kind === "local")
-    return running.server && !running.server.announced
-      ? "expo-dev-server"
-      : "dev-preview-server";
-  return running.source;
+  if (running.kind === "default" && running.source === "built-in")
+    return "built-in";
+  // Only the registry says a server is a preview one, so the kind is known only once a look found it.
+  if (!running.server || running.server.unknown) return "server";
+  return running.server.announced ? "dev-preview-server" : "expo-dev-server";
 }
 
 const KIND_LABEL: Record<BundleKind, keyof KindLabels> = {
@@ -204,6 +224,7 @@ const KIND_LABEL: Record<BundleKind, keyof KindLabels> = {
   "expo-dev-server": "kindExpoDevServer",
   "dev-preview-server": "kindDevPreviewServer",
   preview: "kindPreview",
+  server: "kindServer",
 };
 
 /** A kind's name: what its chip and the banner say. */

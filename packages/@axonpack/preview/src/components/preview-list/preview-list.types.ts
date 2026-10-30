@@ -85,6 +85,11 @@ export type PreviewListLabels = {
   kindExpoDevServer: string;
   kindDevPreviewServer: string;
   kindPreview: string;
+  /**
+   * A server no look has found answering and nothing was saved about, so its kind is not known:
+   * its chip, with no hue, and what a screen reader says for it.
+   */
+  kindServer: string;
   /** Before a server's kind on its chip, as in "server: Expo". */
   serverPrefix: string;
   /** A server's kind on its chip, after `serverPrefix`. */
@@ -97,6 +102,15 @@ export type PreviewListLabels = {
    * the app's name, which every server of the app shares.
    */
   defaultServerTitle: string;
+  /** On the header card and on the row of the server the app runs from, once it stops answering. */
+  offline: string;
+  /** Under the header card's chips when a server picked in the list stops answering. */
+  offlineHint: string;
+  /**
+   * Under the header card's chips when the Metro the app starts on stops answering. The default
+   * bundle comes from that same server, so starting it again is the only way back.
+   */
+  offlineDefaultHint: string;
   /** What a screen reader says for a server row. `{title}` and `{address}` are filled in. */
   switchToServer: string;
   switchToServerHint: string;

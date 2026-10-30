@@ -2,8 +2,16 @@ import { Pressable, View } from "react-native";
 
 import type { DevPreviewServer } from "../../utils/dev-preview-servers/merge-servers.util";
 import type { GroupPosition } from "../../utils/preview-list/list-items.util";
-import { displayHostPort, kindLabel } from "../../utils/previews/running.util";
-import { ACTIVE_TONE } from "../../constants/preview-list/chip-tones.const";
+import {
+  type BundleKind,
+  displayHostPort,
+  kindLabel,
+} from "../../utils/previews/running.util";
+import {
+  ACTIVE_TONE,
+  KIND_TONE,
+  OFFLINE_TONE,
+} from "../../constants/preview-list/chip-tones.const";
 import { BranchLine } from "./ui/branch-line.ui";
 import { Card } from "./ui/card.ui";
 import { Chevron } from "./ui/chevron.ui";
@@ -23,6 +31,8 @@ export function DevServerRow(props: {
   server: DevPreviewServer;
   /** The app runs from this server now. */
   active: boolean;
+  /** The app runs from it and it stopped answering. Its row stays, so QA sees why. */
+  offline: boolean;
   /** The Metro the app starts on with nothing picked. */
   isDefault: boolean;
   /** The servers are one grouped card; this row's place in it. */
@@ -30,18 +40,28 @@ export function DevServerRow(props: {
   onSwitch: (server: DevPreviewServer) => void;
 }) {
   const { theme, labels, server, active } = props;
-  // Metro only knows the app's name, the same on every server of this app, so the one the app
-  // starts on is called by its role. A title from `preview start` is a real name and stays.
-  const title =
-    !server.announced && props.isDefault
-      ? labels.defaultServerTitle
-      : server.title;
   const address = displayHostPort(server.hostPort);
-  const kind = server.announced ? "dev-preview-server" : "expo-dev-server";
-  // The kind chip is drawn as a ServerChip; `text` is what a screen reader says for it.
+  // A title from `preview start` is a real name and stays. Metro only knows the app's name, the
+  // same on every server of this app, so the rest go by their role or their address.
+  const title = server.announced
+    ? server.title
+    : props.isDefault
+      ? labels.defaultServerTitle
+      : address;
+  const subtitle = title === address ? null : address;
+  const kind: BundleKind = server.unknown
+    ? "server"
+    : server.announced
+      ? "dev-preview-server"
+      : "expo-dev-server";
+  // The kind chip is drawn as a ServerChip; `text` is what a screen reader says for it. A server
+  // of no known kind gets a plain chip with no hue.
   const chips: ({ text: string; tone?: ChipTone; kind?: boolean } | null)[] = [
     active ? { text: labels.active, tone: ACTIVE_TONE } : null,
-    { text: kindLabel(kind, labels), kind: true },
+    props.offline ? { text: labels.offline, tone: OFFLINE_TONE } : null,
+    kind === "server"
+      ? { text: kindLabel(kind, labels), tone: KIND_TONE[kind] }
+      : { text: kindLabel(kind, labels), kind: true },
     // Whether it runs or not, so the default is always easy to find.
     props.isDefault ? { text: labels.defaultBundle } : null,
     // Still switchable: the warning says why it may not start.
@@ -64,14 +84,14 @@ export function DevServerRow(props: {
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
       <View style={{ flex: 1, gap: 10 }}>
         <View style={{ gap: 6 }}>
-          <TitleSubtitle theme={theme} title={title} subtitle={address} />
+          <TitleSubtitle theme={theme} title={title} subtitle={subtitle} />
           {server.branch ? (
             <BranchLine theme={theme} labels={labels} name={server.branch} />
           ) : null}
         </View>
         <ChipRow endBleed={0}>
           {shown.map((chip) =>
-            chip.kind ? (
+            chip.kind && kind !== "server" ? (
               <ServerChip
                 key={chip.text}
                 theme={theme}
@@ -99,7 +119,7 @@ export function DevServerRow(props: {
       <View
         testID={testID}
         accessible
-        accessibilityLabel={`${title}, ${address}, ${said}`}
+        accessibilityLabel={[title, subtitle, said].filter(Boolean).join(", ")}
         accessibilityState={{ selected: true }}
       >
         <Card theme={theme} tinted position={props.position}>

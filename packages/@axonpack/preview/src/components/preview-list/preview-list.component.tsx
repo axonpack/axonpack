@@ -206,13 +206,15 @@ export function PreviewList(props: PreviewListProps) {
             error={item.error}
           />
         );
-      case "dev-server":
+      case "dev-server": {
+        const active = runsFromServer(now, item.server.hostPort);
         return (
           <DevServerRow
             theme={theme}
             labels={labels}
             server={item.server}
-            active={runsFromServer(now, item.server.hostPort)}
+            active={active}
+            offline={active && status.online === false}
             isDefault={
               defaultMetro !== null &&
               sameServer(item.server.hostPort, defaultMetro)
@@ -221,6 +223,7 @@ export function PreviewList(props: PreviewListProps) {
             onSwitch={devPreviewServersStore.switchTo}
           />
         );
+      }
       case "hint":
         return (
           <HintRow theme={theme} text={labels[item.hint]} tone={item.tone} />

@@ -1,6 +1,9 @@
 import { DEFAULT_LABELS } from "../../constants/preview-list/theme.const";
 import type { PreviewListLabels } from "../../components/preview-list/preview-list.types";
-import { devPreviewServersStore } from "../../stores/dev-preview-servers/dev-preview-servers.store";
+import {
+  devPreviewServersStore,
+  useDevPreviewServersState,
+} from "../../stores/dev-preview-servers/dev-preview-servers.store";
 import { currentPlatform } from "../../utils/config/config.util";
 import type { Compatibility, Platform } from "../../utils/previews/layout.util";
 import {
@@ -10,6 +13,7 @@ import {
   displayHostPort,
   kindLabel,
   runningLabel,
+  serverOnline,
 } from "../../utils/previews/running.util";
 import {
   buildApp,
@@ -27,7 +31,10 @@ export type PreviewStatusInfo = {
   kind: Running["kind"];
   /** Where it comes from, which picks the header's kind chip. */
   bundleKind: BundleKind;
-  /** The header's headline: the preview's or the server's title, "Default", or the kind's name. */
+  /**
+   * The header's headline: the preview's title, a `preview start` server's title, "Default" for the
+   * Metro the app starts on, any other server's address, or the kind's name.
+   */
   title: string;
   /** The running preview's id; null for a server or the default bundle. */
   id: string | null;
@@ -39,6 +46,12 @@ export type PreviewStatusInfo = {
   label: string;
   /** The default bundle runs: nothing picked, or what was picked is what the app starts on anyway. */
   isDefault: boolean;
+  /**
+   * Whether the server the app runs from answers: false once a look for dev preview servers did
+   * not find it, true when it did. Null when no server runs (a preview, or built into the app),
+   * before the first look since the list opened, and with dev preview servers off.
+   */
+  online: boolean | null;
   /** The running preview's EAS environment, author, full commit and ISO publish date. */
   environment: string | null;
   author: string | null;
@@ -73,6 +86,7 @@ export function usePreviewStatus(
 ): PreviewStatusInfo {
   const preview = usePreview();
   const running = useRunning();
+  const { alive } = useDevPreviewServersState();
   const words = { ...DEFAULT_LABELS, ...labels };
   const kind = bundleKind(running);
   const entry =
@@ -80,14 +94,20 @@ export function usePreviewStatus(
       ? (preview.items.find((i) => i.id === running.id)?.entry ?? null)
       : null;
   const server = running.kind === "preview" ? null : running.server;
-  // Metro only knows the app's name, so the Metro the app starts on, when `preview start` gave it
-  // no title, is called by its role.
+  const address =
+    running.kind !== "preview" && running.hostPort
+      ? displayHostPort(running.hostPort)
+      : null;
+  // Only `preview start` names a server. Metro knows just the app's name, which every server of
+  // the app shares, so any other goes by its role (the Metro the app starts on) or its address.
   const title =
     running.kind === "preview"
       ? running.title
-      : running.kind === "default" && running.source === "expo-dev-server"
-        ? words.defaultServerTitle
-        : (server?.title ?? kindLabel(kind, words));
+      : server?.announced
+        ? server.title
+        : running.kind === "default" && address
+          ? words.defaultServerTitle
+          : (address ?? kindLabel(kind, words));
   const showLocal = __DEV__ && preview.devPreviewServers;
 
   return {
@@ -98,12 +118,10 @@ export function usePreviewStatus(
     id: running.kind === "preview" ? running.id : null,
     branch:
       (running.kind === "preview" ? entry?.branch : server?.branch) || null,
-    address:
-      running.kind !== "preview" && running.hostPort
-        ? displayHostPort(running.hostPort)
-        : null,
+    address,
     label: runningLabel(running, words),
     isDefault: running.kind === "default",
+    online: serverOnline(running, alive),
     environment: entry?.environment || null,
     author: entry?.author || null,
     commit: entry?.commit || null,

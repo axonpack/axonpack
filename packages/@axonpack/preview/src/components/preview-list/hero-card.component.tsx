@@ -3,7 +3,10 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import type { PreviewStatusInfo } from "../../services/previews/use-preview-status.service";
 import { shortKey } from "../../utils/previews/layout.util";
-import { KIND_TONE } from "../../constants/preview-list/chip-tones.const";
+import {
+  KIND_TONE,
+  OFFLINE_TONE,
+} from "../../constants/preview-list/chip-tones.const";
 import { kindLabel } from "../../utils/previews/running.util";
 import { font } from "../../utils/preview-list/theme.util";
 import { Button } from "./ui/button.ui";
@@ -37,8 +40,17 @@ export function HeroCard(props: {
   const kindKey = status.bundleKind;
   const kind = kindLabel(kindKey, labels);
   const name = status.title;
-  // A preview has no address; its branch and id wait behind Show details.
-  const where = status.address;
+  // A preview has no address; its branch and id wait behind Show details. A server named by its
+  // address says it once.
+  const where = status.address === name ? null : status.address;
+  const offline = status.online === false;
+  // The default bundle comes from that same server, so going back to it can't help: it has to start
+  // again. A picked server still has the default to go back to.
+  const offlineHint = !offline
+    ? null
+    : status.kind === "local"
+      ? labels.offlineHint
+      : labels.offlineDefaultHint;
   const version = app.version
     ? `${app.version}${app.buildNumber ? ` (${app.buildNumber})` : ""}`
     : null;
@@ -85,11 +97,21 @@ export function HeroCard(props: {
   const detailRows = shown(details);
   const chips = [
     // The headline already says the kind when there is no other name.
-    name === kind ? null : kindKey === "preview" || kindKey === "built-in" ? (
+    name === kind ? null : kindKey === "preview" ||
+      kindKey === "built-in" ||
+      kindKey === "server" ? (
       <Chip key="kind" theme={theme} text={kind} tone={KIND_TONE[kindKey]} />
     ) : (
       <ServerChip key="kind" theme={theme} labels={labels} kind={kindKey} />
     ),
+    offline ? (
+      <Chip
+        key="offline"
+        theme={theme}
+        text={labels.offline}
+        tone={OFFLINE_TONE}
+      />
+    ) : null,
     status.isDefault ? (
       <Chip key="default" theme={theme} text={labels.defaultBundle} />
     ) : null,
@@ -103,7 +125,10 @@ export function HeroCard(props: {
     ) : null,
   ].filter(Boolean);
   const hairline = { borderTopWidth: 1, borderColor: theme.border };
-  const hasActions = status.canGoBack;
+  // A chosen preview that did not load leaves the default running; its way back reloads the same
+  // stopped server.
+  const hasActions =
+    status.canGoBack && !(offline && status.kind === "default");
   const showNote = __DEV__ && status.kind === "preview";
   const factRows = expanded ? [...visibleRows, ...detailRows] : visibleRows;
   const hasToggle = detailRows.length > 0;
@@ -154,6 +179,14 @@ export function HeroCard(props: {
           </IconButton>
         </View>
         {chips.length > 0 ? <ChipRow>{chips}</ChipRow> : null}
+        {offlineHint ? (
+          <Text
+            testID="hero-offline-hint"
+            style={{ ...font(theme, "regular", 14), color: theme.muted }}
+          >
+            {offlineHint}
+          </Text>
+        ) : null}
       </View>
       {factRows.length > 0 || hasToggle ? (
         <View

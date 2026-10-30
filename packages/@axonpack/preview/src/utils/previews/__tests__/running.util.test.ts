@@ -9,6 +9,7 @@ import {
   runningPreviewId,
   runsFromServer,
   sameServer,
+  serverOnline,
 } from "../running.util";
 
 const item = (id: string, title: string, active: boolean) =>
@@ -385,8 +386,16 @@ describe("runningLabel", () => {
 
   test("says what serves the app's own bundle, with no word for 'base'", () => {
     expect(label(onDefault(null))).toBe("Built into the app");
+    expect(
+      label(
+        onDefault("http://127.0.0.1:8081/index.bundle", [
+          metro("localhost:8081"),
+        ]),
+      ),
+    ).toBe("Expo server, localhost:8081");
+    // Not found by any look yet, so it is not known to be either kind.
     expect(label(onDefault("http://127.0.0.1:8081/index.bundle"))).toBe(
-      "Expo server, localhost:8081",
+      "Server, localhost:8081",
     );
     expect(
       label(
@@ -478,5 +487,58 @@ describe("runsFromServer", () => {
     });
     expect(runsFromServer(preview, "localhost:8081")).toBe(false);
     expect(runsFromServer(onDefault(null), "localhost:8081")).toBe(false);
+  });
+});
+
+describe("serverOnline", () => {
+  const onMetro = onDefault("http://localhost:8081/index.bundle?platform=ios");
+
+  test("found in the last round, under any name for this computer", () => {
+    expect(serverOnline(onMetro, ["127.0.0.1:8081", "localhost:8082"])).toBe(
+      true,
+    );
+  });
+
+  test("not found after a round is offline", () => {
+    expect(serverOnline(onMetro, ["localhost:8082"])).toBe(false);
+    expect(serverOnline(onMetro, [])).toBe(false);
+  });
+
+  test("unknown before the first round", () => {
+    expect(serverOnline(onMetro, null)).toBeNull();
+  });
+
+  test("online again once a round finds it", () => {
+    const rounds = [["localhost:8081"], [], ["localhost:8081"]];
+    expect(rounds.map((alive) => serverOnline(onMetro, alive))).toEqual([
+      true,
+      false,
+      true,
+    ]);
+  });
+
+  test("a server picked by hand", () => {
+    const picked = runningNow({
+      items: [],
+      activeId: null,
+      localUrl: "http://127.0.0.1:8082/index.bundle",
+      servers: [],
+      scriptUrl: "http://127.0.0.1:8082/index.bundle",
+      defaultServer: "localhost:8081",
+    });
+    expect(serverOnline(picked, ["localhost:8081"])).toBe(false);
+    expect(serverOnline(picked, ["localhost:8082"])).toBe(true);
+  });
+
+  test("null when no server runs: a preview, or built into the app", () => {
+    const preview = runningNow({
+      items: [],
+      activeId: "task-1",
+      localUrl: null,
+      servers: [],
+      scriptUrl: "file:///data/preview/task-1/ios/main.jsbundle",
+    });
+    expect(serverOnline(preview, ["localhost:8081"])).toBeNull();
+    expect(serverOnline(onDefault(null), ["localhost:8081"])).toBeNull();
   });
 });

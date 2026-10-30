@@ -62,6 +62,22 @@ const bucket = () =>
       : new Response("", { status: 404 }),
   ) as typeof fetch;
 
+/** The bucket, and this app's Metro answering on 8081. */
+const bucketAndMetro = () => {
+  const fromBucket = bucket();
+  return jest.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith(":8081/status"))
+      return new Response("packager-status:running");
+    if (url.endsWith(":8081/"))
+      return Response.json({
+        launchAsset: { url: "http://localhost:8081/index.bundle?platform=ios" },
+        extra: { expoClient: { slug: "shop", name: "Shop", version: "1.0.0" } },
+      });
+    return fromBucket(input);
+  }) as typeof fetch;
+};
+
 let status!: PreviewStatusInfo;
 function Probe() {
   const latest = usePreviewStatus();
@@ -118,7 +134,9 @@ test("the default Metro, with nothing picked", async () => {
     defaultServer: "localhost:8081",
     loaded: { kind: "default" },
   };
+  global.fetch = bucketAndMetro();
   const tree = await render();
+  await act(() => devPreviewServersStore.refresh());
   expect(status).toMatchObject({
     ...THIS_BUILD,
     ...NO_PREVIEW,
@@ -129,12 +147,13 @@ test("the default Metro, with nothing picked", async () => {
     address: "localhost:8081",
     label: "Expo server, localhost:8081",
     isDefault: true,
+    online: true,
     canGoBack: false,
   });
   await act(async () => tree.unmount());
 });
 
-test("a server picked in the list, and the way back clears it", async () => {
+test("a server picked in the list that no look has found, and the way back clears it", async () => {
   const url = "http://127.0.0.1:8082/index.bundle?platform=ios";
   mockScriptUrl = url;
   mockNativeState = {
@@ -143,15 +162,18 @@ test("a server picked in the list, and the way back clears it", async () => {
     loaded: { kind: "server", url },
   };
   const tree = await render();
+  await act(() => devPreviewServersStore.refresh());
+  // Nothing answers there and nothing was saved, so its kind and name are not known.
   expect(status).toMatchObject({
     ...THIS_BUILD,
     ...NO_PREVIEW,
     kind: "local",
-    bundleKind: "dev-preview-server",
-    title: "Preview server",
+    bundleKind: "server",
+    title: "localhost:8082",
     address: "localhost:8082",
-    label: "Preview server, localhost:8082",
+    label: "Server, localhost:8082",
     isDefault: false,
+    online: false,
     canGoBack: true,
   });
   await act(() => status.backToDefault());
@@ -178,6 +200,7 @@ test("a preview, with what it was published with", async () => {
     address: null,
     label: "Preview, Login fix",
     isDefault: false,
+    online: null,
     environment: "staging",
     author: "Ana",
     commit: "abc1234def",
@@ -199,6 +222,7 @@ test("the bundle built into the app", async () => {
     address: null,
     label: "Built into the app",
     isDefault: true,
+    online: null,
     canGoBack: false,
   });
   const fetches = (global.fetch as jest.Mock).mock.calls.length;
