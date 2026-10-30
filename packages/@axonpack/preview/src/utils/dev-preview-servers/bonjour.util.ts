@@ -59,14 +59,20 @@ export type KnownMachine = {
   host: string;
   machineId?: string;
   addresses?: string[];
+  /**
+   * The ports a server answered on there. Unset, it covers every port, which is the guess made
+   * before anything is asked.
+   */
+  ports?: number[];
 };
 
 /**
  * The servers Bonjour found that nothing else covers, grouped by computer like a host's registry.
- * Another app's are left out. So is a computer already reached another way: this one (its
- * registry's machine id or one of its addresses, which is how the emulator's 10.0.2.2 and the
+ * Another app's are left out. So is a server on a computer already reached another way: this one
+ * (its registry's machine id or one of its addresses, which is how the emulator's 10.0.2.2 and the
  * Mac's LAN address are told to be one machine), and a host typed in whose registry answered. Those
- * come from their registry, which knows more, so one server never shows twice.
+ * come from their registry, which knows more, so one server never shows twice. A known computer's
+ * `ports` narrow that to the servers that answered there.
  */
 export function bonjourRegistries(input: {
   services: BonjourService[];
@@ -78,9 +84,10 @@ export function bonjourRegistries(input: {
     if (txt.slug !== input.appSlug) continue;
     const reached = input.known.some(
       (k) =>
-        (k.machineId !== undefined && k.machineId === txt.machineId) ||
-        k.host === host ||
-        k.addresses?.includes(host),
+        ((k.machineId !== undefined && k.machineId === txt.machineId) ||
+          k.host === host ||
+          k.addresses?.includes(host)) &&
+        (k.ports === undefined || k.ports.includes(port)),
     );
     if (reached) continue;
     const group = groups.get(host) ?? {

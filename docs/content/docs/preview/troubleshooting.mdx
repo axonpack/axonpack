@@ -121,6 +121,32 @@ device can't reach the computer.
 `adb reverse` for each port, or start the servers with `preview start` with `adb` on the PATH. See
 [Dev preview servers](/docs/preview/dev-preview-servers#reaching-the-servers).
 
+## Bonjour finds nothing
+
+A `preview start` on the same Wi-Fi, a teammate's or your own, doesn't show in the dev servers list.
+
+**Cause.** The announcement doesn't reach the device, or the device can't use it. A row also needs
+Metro to answer at the announced address and port, so an announcement for a port where nothing runs
+never shows.
+**Fix.** Check from the computer outward:
+
+- **The computer announces it.** On a Mac on the same network, run `dns-sd -B _axon-preview._tcp`
+  while `preview start` runs. Each server should be listed as `preview-<id>-<port>`. If the list
+  stays empty on the computer that runs `preview start`, allow the terminal app you started it from
+  in **System Settings > Privacy & Security > Local Network** (macOS 15 and later), then start it
+  again.
+- **No old registry.** `preview start` reuses the registry already on port 19150, and one from an
+  older version of the package announces nothing. `lsof -nP -iTCP:19150` shows the process holding
+  the port. Stop it and run `preview start` again.
+- **On iOS**, the app needs local network access: **Settings > the app > Local Network**. Without
+  `NSBonjourServices` listing `_axon-preview._tcp`, iOS finds nothing and never asks. See
+  [iOS asks first](/docs/preview/dev-preview-servers#ios-asks-first).
+- **Read the logs.** On Android, `adb logcat -s AxonpackPreview` shows each server found, with its
+  address, and why one was skipped: browsing that did not start, a failed resolve, or no IPv4
+  address. On iOS the same `Bonjour:` lines are in the Xcode console, or in Console.app under the
+  `dev.axonpack.preview` subsystem. In a debug build, the app's JS console says why a server found
+  this way has no row, such as another app's slug or a port where Metro does not answer.
+
 ## npx preview fails with a 404 in a bun project
 
 **Cause.** `npx` can't read bun's install, so it looks for a `preview` package on npm.

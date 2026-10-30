@@ -114,11 +114,14 @@ Wi-Fi shows with no address typed in. It shows within 2 seconds of the app heari
 
 - **Preview servers only.** Only `preview start` announces, so a plain `npx expo start` on another
   computer still never shows.
-- **Each row says which computer.** A server found this way shows its computer's name and port, such
-  as `qa-mac:8081`. Two computers running Metro on 8081 are two rows.
+- **Each row says which computer.** A server found this way shows its IP address and port, such as
+  `192.168.1.30:8081`, like every other row, and its computer's name in a chip, such as `qa-mac`.
+  Two computers running Metro on 8081 are two rows.
 - **One row per server.** Your own computer's servers are also announced. The registry tells the app
   its computer's id and LAN addresses, so a server found both on `localhost` and over Bonjour is one
-  row. A computer you also added as a host shows once, through its registry.
+  row. A computer you also added as a host shows once, through its registry. When your computer's
+  server doesn't answer on `localhost`, such as after the USB cable is pulled, it shows at the LAN
+  address Bonjour gave instead.
 - **Only this app's servers**, by the slug in the announcement.
 
 The app stops looking while it is in the background, and when the list closes.

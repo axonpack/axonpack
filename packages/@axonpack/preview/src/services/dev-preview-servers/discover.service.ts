@@ -154,14 +154,28 @@ async function localRegistry(hosts: string[], sweep: boolean) {
 let thisMachine: KnownMachine | null = null;
 /** Bonjour names seen in the last look. */
 let bonjourSeen = new Set<string>();
+/** Why each Bonjour server has no row, as last logged, so each reason is logged once. */
+const unlisted = new Map<string, string>();
+
+/** Debug builds log why a server Bonjour found has no row. Null: it has one. */
+function explain(service: BonjourService, reason: string | null) {
+  if (!__DEV__ || unlisted.get(service.name) === (reason ?? undefined)) return;
+  if (reason === null) {
+    unlisted.delete(service.name);
+    return;
+  }
+  unlisted.set(service.name, reason);
+  console.log(
+    `@axonpack/preview: Bonjour found "${service.name}" at ${service.host}:${service.port}, but it is not listed: ${reason}.`,
+  );
+}
 
 /**
  * One look: every Metro in the range on the candidate hosts, plus the registry and the host it
  * answered on. `ports` narrows the range to those ports (the registry's are always asked). `own`
  * is the `host:port` the app runs from, asked directly. `remote` are other computers, asked only
  * for the servers their registry lists. `bonjour` are the servers Bonjour found, kept when they are
- * for `appSlug` and no registry already covers their computer. `alive` is every `host:port` that
- * answered.
+ * for `appSlug` and no other way reached them. `alive` is every `host:port` that answered.
  */
 export async function discover(
   platform: Platform,
@@ -204,22 +218,24 @@ export async function discover(
       machineId: local.answer.machineId,
       addresses: local.answer.addresses,
     };
+  const machines: KnownMachine[] = [
+    ...(thisMachine ? [thisMachine] : []),
+    ...elsewhere.flatMap(({ host, answer }) =>
+      answer ? [{ host, ...answer }] : [],
+    ),
+  ];
+  // The scan covers these already.
+  const scannedHosts = hosts.map((host) => ({ host }));
+  const typed = elsewhere.map(({ host, answer }) => ({
+    host,
+    servers: answer?.servers ?? [],
+  }));
   const registries = [
-    ...elsewhere.map(({ host, answer }) => ({
-      host,
-      servers: answer?.servers ?? [],
-    })),
+    ...typed,
     ...bonjourRegistries({
       services: bonjour,
       appSlug,
-      known: [
-        ...(thisMachine ? [thisMachine] : []),
-        ...elsewhere.flatMap(({ host, answer }) =>
-          answer ? [{ host, ...answer }] : [],
-        ),
-        // The scan covers these already.
-        ...hosts.map((host) => ({ host })),
-      ],
+      known: [...machines, ...scannedHosts],
     }),
   ];
   const asked = new Set<number>(registry.map((r) => r.port));
@@ -268,9 +284,39 @@ export async function discover(
         if (up) alive.push(own);
       }),
   ]);
+  // A Bonjour server on a computer reached another way was left to that way. When it did not
+  // answer there, it is asked at its Bonjour address: a port `adb reverse` does not cover, or this
+  // computer after the cable was pulled, whose registry is only remembered.
+  const hitPorts = (hits: ({ host: string; port: number } | null)[]) =>
+    hits.flatMap((hit) => (hit ? [hit.port] : []));
+  const bonjourGroups = bonjourRegistries({
+    services: bonjour,
+    appSlug,
+    known: [
+      ...machines.map((machine) => ({
+        ...machine,
+        // Every host the scan asks is this computer.
+        ports: hosts.includes(machine.host)
+          ? hitPorts(found)
+          : hitPorts(
+              foundElsewhere.filter((hit) => hit?.host === machine.host),
+            ),
+      })),
+      ...scannedHosts,
+    ],
+  });
+  const probed = new Set(listed.map(({ host, port }) => `${host}:${port}`));
+  const late = bonjourGroups
+    .flatMap(({ host, servers }) => servers.map(({ port }) => ({ host, port })))
+    .filter(({ host, port }) => !probed.has(`${host}:${port}`));
+  const foundLate = await Promise.all(
+    late.map(async ({ host, port }) =>
+      (await answers(host, port)) ? { host, port } : null,
+    ),
+  );
   // In the order asked, not the order answered, so two servers on one port keep their places.
   const scanned = await Promise.all(
-    [...found, ...foundElsewhere].map(async (hit) => {
+    [...found, ...foundElsewhere, ...foundLate].map(async (hit) => {
       if (!hit) return null;
       const id = `${hit.host}:${hit.port}`;
       // Read once per server.
@@ -283,11 +329,38 @@ export async function discover(
       return manifest?.url ? { ...hit, ...manifest } : null;
     }),
   );
+  const listedScanned = scanned.filter((s): s is ScannedServer => s !== null);
+  for (const service of bonjour)
+    explain(
+      service,
+      whyUnlisted(service, appSlug, bonjourGroups, alive, listedScanned),
+    );
   return {
     registry,
     registryHost,
-    remote: registries,
-    scanned: scanned.filter((s): s is ScannedServer => s !== null),
+    remote: [...typed, ...bonjourGroups],
+    scanned: listedScanned,
     alive,
   };
+}
+
+function whyUnlisted(
+  { host, port, txt }: BonjourService,
+  appSlug: string,
+  groups: RemoteRegistry[],
+  alive: string[],
+  scanned: ScannedServer[],
+): string | null {
+  if (txt.slug !== appSlug)
+    return `it is for the app "${txt.slug ?? ""}", and this app is "${appSlug}"`;
+  const asked = groups.some(
+    (g) => g.host === host && g.servers.some((s) => s.port === port),
+  );
+  // Listed through its computer's registry or the scan instead.
+  if (!asked) return null;
+  if (!alive.includes(`${host}:${port}`))
+    return "Metro did not answer there (is it running, and can this device reach that address?)";
+  if (!scanned.some((s) => s.host === host && s.port === port))
+    return "its Metro gave no bundle URL for this platform";
+  return null;
 }

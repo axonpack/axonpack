@@ -55,6 +55,8 @@ let registry: number[] | null = null;
  * the ports Metro answers on as this app.
  */
 let machines: Record<string, { registry: number[] | null; up: number[] }> = {};
+/** The ports `adb reverse` forwards, so localhost reaches only these. Null: all of them. */
+let reverse: number[] | null = null;
 let asked: string[] = [];
 const answer = (body: unknown) =>
   ({
@@ -87,6 +89,8 @@ global.fetch = jest.fn(async (input: RequestInfo | URL) => {
   const url = String(input);
   asked.push(url);
   const [, host, port] = /^http:\/\/([^/:]+):(\d+)\//.exec(url)!;
+  if (host === "localhost" && reverse && !reverse.includes(Number(port)))
+    refused();
   const machine = machines[host] ?? { registry, up: [...up] };
   if (url.endsWith(":19150/servers"))
     return machine.registry ? announce(machine.registry, host) : refused();
@@ -145,6 +149,7 @@ beforeEach(() => {
   up = new Set([8081]);
   registry = null;
   machines = {};
+  reverse = null;
   devPreviewServersStore.configure(devServersSetup(true));
   hostsFile().delete();
   appState.currentState = realState;
@@ -546,10 +551,13 @@ describe("Bonjour", () => {
     await wait(2000);
   };
 
+  let log: jest.SpyInstance;
   beforeEach(() => {
     mockBrowse.start.mockClear();
     mockBrowse.stop.mockClear();
+    log = jest.spyOn(console, "log").mockImplementation(() => {});
   });
+  afterEach(() => log.mockRestore());
 
   test("another computer's preview start server shows with no host typed in, named by its computer", async () => {
     machines = { "192.168.1.30": { registry: null, up: [8081] } };
@@ -589,6 +597,58 @@ describe("Bonjour", () => {
     await found([service("192.168.1.10", "this-mac")]);
     expect(listedAt()).toEqual(["localhost:8081"]);
     expect(devPreviewServersStore.getState().servers[0].announced).toBe(true);
+  });
+
+  test("this computer's server that adb reverse does not forward shows at its LAN address", async () => {
+    // A phone on USB reaches Metro's 8081 and the registry through localhost, but not 8083.
+    reverse = [8081, 19150];
+    registry = [8081, 8083];
+    up = new Set([8081, 8083]);
+    await watch();
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    await found([
+      service("192.168.1.10", "this-mac", 8081),
+      service("192.168.1.10", "this-mac", 8083),
+    ]);
+    // 8081 is one row, from localhost. 8083 is reached over Wi-Fi.
+    expect(listedAt()).toEqual(["localhost:8081", "192.168.1.10:8083"]);
+    expect(devPreviewServersStore.getState().servers[1]).toMatchObject({
+      title: "Signup",
+      announced: true,
+      url: "http://192.168.1.10:8083/index.bundle?platform=ios",
+    });
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081", "192.168.1.10:8083"]);
+  });
+
+  test("this computer's server stays listed, at its LAN address, once the USB cable is pulled", async () => {
+    reverse = [8081, 19150];
+    registry = [8081];
+    await watch();
+    await found([service("192.168.1.10", "this-mac")]);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    // Its registry is still remembered, but localhost reaches nothing now.
+    reverse = [];
+    await wait(2000);
+    expect(listedAt()).toEqual(["192.168.1.10:8081"]);
+    expect(devPreviewServersStore.getState().servers[0]).toMatchObject({
+      title: "Signup",
+      announced: true,
+    });
+  });
+
+  test("debug builds log once why a Bonjour server is not listed", async () => {
+    machines = { "192.168.1.31": { registry: null, up: [] } };
+    await watch();
+    await found([
+      service("192.168.1.31", "ci", 8081, "other"),
+      service("192.168.1.31", "ci", 8082),
+    ]);
+    await wait(2000);
+    expect(log.mock.calls.map(([text]) => text)).toEqual([
+      '@axonpack/preview: Bonjour found "preview-ci-8081" at 192.168.1.31:8081, but it is not listed: it is for the app "other", and this app is "shop".',
+      '@axonpack/preview: Bonjour found "preview-ci-8082" at 192.168.1.31:8082, but it is not listed: Metro did not answer there (is it running, and can this device reach that address?).',
+    ]);
   });
 
   test("browses only while watched and in the foreground", async () => {

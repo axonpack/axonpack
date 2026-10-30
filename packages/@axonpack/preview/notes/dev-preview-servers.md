@@ -92,11 +92,19 @@ shows. To check the packets with no network, write `announcement()`'s output int
 JS the full list on every change. iOS uses `NWBrowser` and resolves a result by opening a
 `NWConnection` to it, whose remote end is the address; Android uses `NsdManager`, one resolve at a
 time, since before Android 14 a second one fails. Both report IPv4 only, as only an A record is
-announced. JS keeps a Bonjour server only when the build's slug matches and no registry already
-covers its computer: this computer (the local registry's machine id, or one of the LAN addresses it
-reports, which is how the emulator's `10.0.2.2` and the Mac's LAN address are one machine), a host
-typed in whose registry answered, or a host the scan covers. The rest are merged like another
-computer's registry, and the row shows the computer's name and port. The last answer of this
+announced. A service macOS announces itself (`dns-sd -R`) also has an AAAA record: the iOS
+connection is held to IPv4, or it would prefer IPv6, and Android 14 and up list the IPv4 addresses
+first (`NsdService.getInetAddresses`). Each side logs what it skips under the `AxonpackPreview` tag
+(logcat) or the `dev.axonpack.preview` subsystem, prefixed `Bonjour:`. JS keeps a Bonjour server
+only when the build's slug matches and no registry already covers its computer: this computer (the
+local registry's machine id, or one of the LAN addresses it reports, which is how the emulator's
+`10.0.2.2` and the Mac's LAN address are one machine), a host typed in whose registry answered, or a
+host the scan covers. A covered server that did not answer there in this look is asked at its
+Bonjour address after the rest: a port `adb reverse` does not forward, or this computer after the
+USB cable is pulled, when its registry is only remembered. The rest are merged like another
+computer's registry, and the row shows the IP address and port like any other, with the computer's
+name in a plain chip. A debug build logs once, with the `@axonpack/preview:` prefix, why a Bonjour
+server has no row. The last answer of this
 computer's registry is kept, since a quick look may skip it. A Bonjour name not seen before makes
 the next look ask that registry even when it was quiet, so the first `preview start` shows as this
 computer within 2 s. iOS needs `NSLocalNetworkUsageDescription` and `NSBonjourServices` listing

@@ -113,6 +113,14 @@ describe("a computer already reached another way is left to its registry", () =>
     expect(groups([found("192.168.1.30", "qa")], [typed])).toEqual([]);
   });
 
+  test("with its ports known, only the servers that answered there", () => {
+    const known = [{ host: "localhost", machineId: "this-mac", ports: [8081] }];
+    const both = [mine, found("192.168.1.10", "this-mac", 8083)];
+    expect(
+      groups(both, known).map((g) => g.servers.map((s) => s.port)),
+    ).toEqual([[8083]]);
+  });
+
   test("another computer is kept", () => {
     const known = [
       { host: "localhost", machineId: "this-mac", addresses: ["192.168.1.10"] },
