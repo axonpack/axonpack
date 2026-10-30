@@ -51,8 +51,25 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `readSecretAccessKey` | No     | Its secret                                                                          |
 | `region`              | No     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
 | `headers`             | No     | Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket      |
-| `devPreviewServers`   | No     | Lists this app's Metro servers in a debug build. Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
+| `devPreviewServers`   | No     | Lists this app's Metro servers in a debug build. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
 | `buildKey`            | No     | This build's key, only when the config plugin is not used to bake it in             |
+
+`devPreviewServers` as an object (`DevPreviewServersOptions`). `true` is the same as `{}`.
+
+| Field              | Default | What it is                                                                 |
+| ------------------ | ------- | -------------------------------------------------------------------------- |
+| `enabled`          | `true`  | Turns the section on                                                       |
+| `allowCustomHosts` | `true`  | Shows **Add a host**, so QA can add another computer on the device          |
+| `hosts`            | none    | Other computers the app asks, such as `"192.168.1.24"` or `"qa-mac.local:19150"`. The port is the registry's, 19150 when left out. An entry that is not a host, is listed twice, or is this computer is skipped with a `console.warn` |
+
+`localhost`, `127.0.0.1`, and `10.0.2.2` on Android are always checked and need no entry.
+
+```ts
+devPreviewServers: {
+  allowCustomHosts: true,
+  hosts: ["192.168.1.24", "qa-mac.local:19150"],
+},
+```
 
 ## usePreview
 
@@ -121,6 +138,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `isDefault`     | The default bundle runs: nothing picked, or what was picked is what the app starts on anyway |
 | `online`        | Whether the server the app runs from answers: false once a look for dev preview servers did not find it. Null for a preview or a bundle built into the app, before the first look, and with dev preview servers off |
 | `scanning`      | A full scan of every port for dev preview servers runs now: on open, on refresh, and every 30 seconds. The quick look every 2 seconds does not count |
+| `hosts`         | Where the app looks for dev preview servers: `{ host, port, source }`, where `source` is `built-in`, `app` (from the config) or `user` (added on the device). Empty until the first look |
 | `environment`   | The running preview's EAS environment, or null                                 |
 | `author`        | The running preview's author, or null                                          |
 | `commit`        | The running preview's full commit, or null                                     |
@@ -158,11 +176,12 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 
 Types: `PreviewConfig`, `PreviewsState`, `PreviewItem`, `PreviewStatus`, `Running`, `DefaultSource`,
 `BundleKind`, `PreviewStatusInfo`, `PreviewListProps`, `PreviewListTheme`, `PreviewListThemeInput`,
-`PreviewListFonts`, `DevtoolsPaletteLike`, `PreviewListLabels`, `DevPreviewServersState` and
-`DevPreviewServer`.
+`PreviewListFonts`, `DevtoolsPaletteLike`, `PreviewListLabels`, `DevPreviewServersState`,
+`DevPreviewServer`, `DevPreviewServersOptions`, `DevServerHost` and `HostAddress`.
 
 `previewsStore` and `devPreviewServersStore` are the stores behind the hooks, with `getState()` and
-`subscribe()`, for use outside React.
+`subscribe()`, for use outside React. `devPreviewServersStore.addHost({ host, port })` and
+`removeHost({ host, port })` add and remove a host on the device, as the list does.
 
 ## Theme
 
@@ -270,8 +289,17 @@ Text between backticks shows in a code font.
 | Label                    | Default                                       | Where it shows                                  |
 | ------------------------ | --------------------------------------------- | ----------------------------------------------- |
 | `devPreviewServersTitle` | Dev preview servers                           | The section's heading                           |
-| `devPreviewServersHint`  | Metro servers for this app on your computer.  | Under the heading                               |
+| `devPreviewServersHint`  | Metro servers for this app on these hosts.    | Under the heading, above the hosts              |
 | `scanning`               | Scanning…                                     | Beside the heading, with a spinner, during a full scan of the ports |
+| `addHost`                | Add a host                                    | After the hosts. Opens the field                |
+| `addHostPlaceholder`     | 192.168.1.24 or qa-mac.local                  | In the empty field                              |
+| `addHostHint`            | A computer running npx preview start. Add :port if its registry is not on 19150. | Under the field |
+| `addHostConfirm`         | Add                                           | Adds what is in the field                       |
+| `cancel`                 | Cancel                                        | Closes the field                                |
+| `removeHost`             | Remove \{host\}                               | What a screen reader says for a host's ✕        |
+| `hostInvalid`            | That is not an IP address or a host name.     | Under the field, in place of the hint           |
+| `hostDuplicate`          | \{host\} is already in the list.              | Under the field                                 |
+| `hostBuiltIn`            | \{host\} is always checked.                   | Under the field, for localhost and this computer's other names |
 | `active`                 | Active                                        | The chip on the server or preview the app runs from |
 | `defaultServerTitle`     | Default                                       | The title of the Metro the app starts on, when `preview start` gave it none |
 | `switchToServer`         | Switch to \{title\}, \{address\}              | What a screen reader says for a server row      |

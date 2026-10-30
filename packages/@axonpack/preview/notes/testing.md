@@ -65,7 +65,7 @@ The example also takes links, which run the same code as its buttons:
 ## Several tasks at once (people and AI agents)
 
 One debug build of the example can run any of several Metro servers, one per task or worktree. The
-app needs `devPreviewServers: true` (the example has it).
+app needs `devPreviewServers` on (the example has it).
 
 1. In each worktree, start Metro with:
    ```sh
