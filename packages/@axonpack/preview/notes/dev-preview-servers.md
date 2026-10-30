@@ -19,7 +19,8 @@ between them live.
 - [x] Takes the team's own computers from the app's config, and can hide adding one on the device
 - [x] Off unless the app turns it on, and debug builds only
 - [x] Only this app's servers, by the slug the config plugin bakes in; a build without it says so
-- [ ] Finds `preview start` servers on other computers on the network with no address typed in
+- [x] Finds `preview start` servers on other computers on the network with no address typed in
+- [x] Says which computer a server found on the network runs on, and lists a server found two ways once
 - [ ] Lists and switches to dev servers in a release build too, when the app turns previews on
 
 ## Turning it on
@@ -70,6 +71,37 @@ servers it names, so a plain `expo start` on another computer never shows. Hosts
 device are saved in `Documents/preview/hosts.json`. A registry that does not answer, here or there,
 is left out of the 2 s looks until the next full sweep, since every refused connection is one more
 line in the Xcode console.
+
+**On the network.** The registry announces its servers over Bonjour as `_axon-preview._tcp` (a
+service name takes 15 characters at most, so not `_axonpack-preview`). It lives in the registry, not
+in each `preview start`, so one computer has one responder, and a server whose heartbeat stops gets
+a goodbye too. No dependency: Node's `dgram` binds UDP 5353 with `reuseAddr` beside the system's own
+responder, and a small writer in `src/utils/registry/mdns.util.ts` makes the PTR, SRV, TXT and A
+records. It sends one packet per server on each LAN interface, with that interface's address in the
+A record, announces twice a second apart, and answers any query for the type, an instance or its
+host name after 20 to 120 ms, at most once a second. The instance name is `preview-<machine id>-<port>`
+and the host name `axonpack-<machine id>.local`, both unique to the computer, so it skips the
+probing step. TTLs are 120 s, so a killed registry ages out in two minutes. The machine id is a hash
+of the host name and the LAN cards' MAC addresses: the same on every run, with no file. The TXT
+record carries the title, branch, slug, app name, compatibility, native keys, registry port, machine
+id and computer name. Expo's `_expo._tcp` is not browsed, so a plain `expo start` elsewhere never
+shows. To check the packets with no network, write `announcement()`'s output into a pcap file
+(raw IP) and read it with `tcpdump -nn -vvv -r`.
+
+**Browsing.** Native browses only while the list watches and the app is in the foreground, and sends
+JS the full list on every change. iOS uses `NWBrowser` and resolves a result by opening a
+`NWConnection` to it, whose remote end is the address; Android uses `NsdManager`, one resolve at a
+time, since before Android 14 a second one fails. Both report IPv4 only, as only an A record is
+announced. JS keeps a Bonjour server only when the build's slug matches and no registry already
+covers its computer: this computer (the local registry's machine id, or one of the LAN addresses it
+reports, which is how the emulator's `10.0.2.2` and the Mac's LAN address are one machine), a host
+typed in whose registry answered, or a host the scan covers. The rest are merged like another
+computer's registry, and the row shows the computer's name and port. The last answer of this
+computer's registry is kept, since a quick look may skip it. A Bonjour name not seen before makes
+the next look ask that registry even when it was quiet, so the first `preview start` shows as this
+computer within 2 s. iOS needs `NSLocalNetworkUsageDescription` and `NSBonjourServices` listing
+the type, added by hand to the app config for now (the example has them); the config plugin does
+not add them yet.
 
 **Offline.** The server the app runs from stays in the list when a look misses it, marked Offline,
 with the title, branch and kind it had when it last answered. That is saved in

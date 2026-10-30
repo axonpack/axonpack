@@ -7,8 +7,12 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class AxonpackPreviewModule : Module() {
+  private var bonjour: BonjourBrowser? = null
+
   override fun definition() = ModuleDefinition {
     Name("AxonpackPreview")
+
+    Events("onBonjourServices")
 
     Constants(
       "compatibility" to metaData("COMPATIBILITY"),
@@ -42,6 +46,20 @@ class AxonpackPreviewModule : Module() {
     }
 
     Function("reload") { reload() }
+
+    // While the dev preview servers list is on screen, and never in the background.
+    Function("startBonjourBrowse") {
+      appContext.reactContext?.let { context ->
+        val browser = bonjour ?: BonjourBrowser(context.applicationContext) { services ->
+          sendEvent("onBonjourServices", mapOf("services" to services))
+        }.also { bonjour = it }
+        browser.start()
+      }
+    }
+
+    Function("stopBonjourBrowse") { bonjour?.stop() }
+
+    OnDestroy { bonjour?.stop() }
   }
 
   private fun reload() {

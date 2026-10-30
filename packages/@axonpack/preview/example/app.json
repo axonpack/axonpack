@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "io.github.axonpack.previewexample"
+      "bundleIdentifier": "io.github.axonpack.previewexample",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Finds preview servers on your network.",
+        "NSBonjourServices": ["_axon-preview._tcp"]
+      }
     },
     "android": {
       "adaptiveIcon": {

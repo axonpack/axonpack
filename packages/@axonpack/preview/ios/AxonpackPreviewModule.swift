@@ -2,8 +2,14 @@ import ExpoModulesCore
 import React
 
 public final class AxonpackPreviewModule: Module {
+  private lazy var bonjour = BonjourBrowser { [weak self] services in
+    self?.sendEvent("onBonjourServices", ["services": services])
+  }
+
   public func definition() -> ModuleDefinition {
     Name("AxonpackPreview")
+
+    Events("onBonjourServices")
 
     // What the config plugin wrote at prebuild; nil when the plugin is not in the app config.
     Constants([
@@ -37,6 +43,19 @@ public final class AxonpackPreviewModule: Module {
 
     Function("markLaunched") {
       PreviewState.confirmStart()
+    }
+
+    // While the dev preview servers list is on screen, and never in the background.
+    Function("startBonjourBrowse") {
+      self.bonjour.start()
+    }
+
+    Function("stopBonjourBrowse") {
+      self.bonjour.stop()
+    }
+
+    OnDestroy {
+      self.bonjour.stop()
     }
 
     Function("reload") {

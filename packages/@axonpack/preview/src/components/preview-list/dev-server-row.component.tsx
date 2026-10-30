@@ -40,7 +40,10 @@ export function DevServerRow(props: {
   onSwitch: (server: DevPreviewServer) => void;
 }) {
   const { theme, labels, server, active } = props;
-  const address = displayHostPort(server.hostPort);
+  // A server Bonjour found goes by its computer's name, which says more than a LAN address.
+  const address = server.machine
+    ? `${server.machine}:${server.port}`
+    : displayHostPort(server.hostPort);
   // A title from `preview start` is a real name and stays. Metro only knows the app's name, the
   // same on every server of this app, so the rest go by their role or their address.
   const title = server.announced

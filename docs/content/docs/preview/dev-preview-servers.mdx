@@ -102,8 +102,54 @@ lists only the servers that registry names, for this app's slug. So a teammate's
 shows, and a plain `npx expo start` on their computer never does. Each row's address says which
 computer it is on, so two computers running Metro on 8081 are two rows.
 
-To try it, run `npx preview start` in the app's project on another computer on the same Wi-Fi, and
-add that computer's address in the list. It shows within 2 seconds of its registry answering.
+On the same network you don't need to add the computer at all: see
+[Found on the network](#found-on-the-network). Add a host for a computer Bonjour can't reach, such as
+one on another subnet or behind a VPN. It shows within 2 seconds of its registry answering.
+
+## Found on the network
+
+`preview start` also announces its server over Bonjour, as `_axon-preview._tcp`. While the list is
+on screen, the app listens for these announcements, so a teammate's `npx preview start` on the same
+Wi-Fi shows with no address typed in. It shows within 2 seconds of the app hearing it.
+
+- **Preview servers only.** Only `preview start` announces, so a plain `npx expo start` on another
+  computer still never shows.
+- **Each row says which computer.** A server found this way shows its computer's name and port, such
+  as `qa-mac:8081`. Two computers running Metro on 8081 are two rows.
+- **One row per server.** Your own computer's servers are also announced. The registry tells the app
+  its computer's id and LAN addresses, so a server found both on `localhost` and over Bonjour is one
+  row. A computer you also added as a host shows once, through its registry.
+- **Only this app's servers**, by the slug in the announcement.
+
+The app stops looking while it is in the background, and when the list closes.
+
+### iOS asks first
+
+iOS needs two keys in the app's `Info.plist` before it lets the app look. Add them to the app config:
+
+```json
+"ios": {
+  "infoPlist": {
+    "NSLocalNetworkUsageDescription": "Finds preview servers on your network.",
+    "NSBonjourServices": ["_axon-preview._tcp"]
+  }
+}
+```
+
+Then rebuild the app. The first time the list opens, iOS asks the user to allow the app to find
+devices on the local network, using that text. If they say no, the app finds nothing over Bonjour
+until they allow it in **Settings > Privacy & Security > Local Network**. Without
+`_axon-preview._tcp` in `NSBonjourServices`, iOS finds nothing and shows no prompt. The simulator
+never asks. Android needs nothing in the app config.
+
+### On the computer
+
+The registry announces on every network the computer is on, and answers the questions other
+devices send, on UDP port 5353 next to the system's own Bonjour. No setting is needed. On macOS 15
+and later, the terminal app you run `preview start` from needs Local Network access (**System
+Settings > Privacy & Security > Local Network**). Without it, macOS drops the announcements, and
+phones find nothing. To check from the Mac, run `dns-sd -B _axon-preview._tcp` while
+`preview start` runs.
 
 ## Which servers are listed
 
@@ -117,20 +163,23 @@ fingerprint.
 
 ## How the app finds them
 
-Three sources, merged by host and port:
+Four sources, merged by computer and port:
 
 - **The registry.** `preview start` runs `expo start` on a free port and announces it to a small
   registry on your computer, on port 19150, with the branch, the worktree and the native key
   `publish` would use. It announces once Metro answers, on the port Metro really took: Expo moves
   to another port when it finds the first one taken. The first `start` starts the registry, and it exits once no server is left.
   A heartbeat every 5 seconds keeps a server listed; it drops out 15 seconds after the last, so a
-  killed process goes too.
+  killed process goes too. Its `/servers` also gives the computer's id and LAN addresses.
 - **A port scan.** The app asks each port from 8081 to 8099 for Metro's `/status`, then reads the
   Expo manifest of each one it finds for the slug, name, version and bundle URL.
 - **Other computers' registries.** Each host from the config or added on the device is asked for its
   registry on 19150, or the port given with it. Only the ports it lists are asked on that computer.
+- **Bonjour.** Each registry announces its servers on the network, with the title, branch, slug and
+  native key. The app asks Metro at the announced address and port, like a registry's servers.
 
-A server found both ways uses the registry's details.
+A server found both ways uses the registry's details. A server Bonjour found on a computer the app
+already reaches through a registry is left to that registry.
 
 ## How often it looks
 
@@ -153,7 +202,9 @@ A look never starts while the last one runs, and a refresh during a scan waits f
 
 A registry that does not answer, here or on another computer, is left out of the 2 second looks.
 It is asked again on the next full scan, and once it answers it is back on every 2 seconds. So the
-first `preview start` after the list opened shows on refresh, or within 30 seconds.
+first `preview start` after the list opened shows on refresh, or within 30 seconds. When Bonjour
+hears a new server first, the next 2 second look asks this computer's registry too, and the server
+shows straight away.
 
 Each closed port is a refused connection, and iOS writes every one to the Xcode console as
 `Could not connect to the server`. JS can't turn that off, so the full scan runs only this often:
@@ -179,6 +230,8 @@ Metro. Allow it in the app's settings, or on the emulator run
 ## Limits
 
 - **Debug builds only.** A release build has no Metro to switch to.
+- **Bonjour stays on one network.** It does not cross routers, and most VPNs block it. Add a
+  computer on another network as a host.
 - **This app only.** Servers for another slug are never listed.
 - **Plain HTTP on the local network.** An Expo app's iOS build allows plain HTTP to local addresses
   only, so another host must be on the same network as the device, not a server on the internet.

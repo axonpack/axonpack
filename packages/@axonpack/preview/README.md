@@ -93,24 +93,24 @@ address, or a read-only key for a private bucket.
 
 Everything else is on the docs site.
 
-| Page                                                                         | What is on it                                                           |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| [Quick start](https://axonpack.dev/docs/preview/quick-start)                 | From an empty bucket to switching previews in the app                   |
-| [Storage](https://axonpack.dev/docs/preview/storage)                         | Public or private bucket, and the write and read keys                   |
-| [AWS S3](https://axonpack.dev/docs/preview/aws-s3)                           | A bucket, a policy and both keys on AWS                                 |
-| [Cloudflare R2](https://axonpack.dev/docs/preview/cloudflare-r2)             | A bucket, a public address and both keys on R2                          |
-| [MinIO](https://axonpack.dev/docs/preview/minio)                             | Your own server on a VPS, or the local one for trying it out            |
-| [Settings and env files](https://axonpack.dev/docs/preview/environment)      | Where the publish settings and the app's settings come from, and EAS    |
-| [Publishing](https://axonpack.dev/docs/preview/publishing)                   | Publish, replace, unpublish and prune                                   |
-| [CI](https://axonpack.dev/docs/preview/ci)                                   | Publish every pull request with GitHub Actions                          |
-| [Compatibility](https://axonpack.dev/docs/preview/compatibility)             | The config plugin, and app version or fingerprint                       |
-| [App setup](https://axonpack.dev/docs/preview/app-setup)                     | The provider, the list and its theme, your own screen, and the status   |
-| [Dev preview servers](https://axonpack.dev/docs/preview/dev-preview-servers) | Several Metro servers, one per worktree, switched live in a debug build |
-| [expo-updates](https://axonpack.dev/docs/preview/expo-updates)               | How previews sit on top of a build that expo-updates manages            |
-| [Troubleshooting](https://axonpack.dev/docs/preview/troubleshooting)         | An empty list, a failed download, and what to check                     |
-| [CLI](https://axonpack.dev/docs/preview/cli)                                 | Every command and option                                                |
-| [Reference](https://axonpack.dev/docs/preview/reference)                     | Every export, config field, label and theme token                       |
-| [Changelog](https://axonpack.dev/docs/preview/changelog)                     | Every published release, also in [`CHANGELOG.md`](./CHANGELOG.md)       |
+| Page                                                                         | What is on it                                                                                                |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| [Quick start](https://axonpack.dev/docs/preview/quick-start)                 | From an empty bucket to switching previews in the app                                                        |
+| [Storage](https://axonpack.dev/docs/preview/storage)                         | Public or private bucket, and the write and read keys                                                        |
+| [AWS S3](https://axonpack.dev/docs/preview/aws-s3)                           | A bucket, a policy and both keys on AWS                                                                      |
+| [Cloudflare R2](https://axonpack.dev/docs/preview/cloudflare-r2)             | A bucket, a public address and both keys on R2                                                               |
+| [MinIO](https://axonpack.dev/docs/preview/minio)                             | Your own server on a VPS, or the local one for trying it out                                                 |
+| [Settings and env files](https://axonpack.dev/docs/preview/environment)      | Where the publish settings and the app's settings come from, and EAS                                         |
+| [Publishing](https://axonpack.dev/docs/preview/publishing)                   | Publish, replace, unpublish and prune                                                                        |
+| [CI](https://axonpack.dev/docs/preview/ci)                                   | Publish every pull request with GitHub Actions                                                               |
+| [Compatibility](https://axonpack.dev/docs/preview/compatibility)             | The config plugin, and app version or fingerprint                                                            |
+| [App setup](https://axonpack.dev/docs/preview/app-setup)                     | The provider, the list and its theme, your own screen, and the status                                        |
+| [Dev preview servers](https://axonpack.dev/docs/preview/dev-preview-servers) | Several Metro servers, one per worktree or computer, found on the network and switched live in a debug build |
+| [expo-updates](https://axonpack.dev/docs/preview/expo-updates)               | How previews sit on top of a build that expo-updates manages                                                 |
+| [Troubleshooting](https://axonpack.dev/docs/preview/troubleshooting)         | An empty list, a failed download, and what to check                                                          |
+| [CLI](https://axonpack.dev/docs/preview/cli)                                 | Every command and option                                                                                     |
+| [Reference](https://axonpack.dev/docs/preview/reference)                     | Every export, config field, label and theme token                                                            |
+| [Changelog](https://axonpack.dev/docs/preview/changelog)                     | Every published release, also in [`CHANGELOG.md`](./CHANGELOG.md)                                            |
 
 ## Example app
 

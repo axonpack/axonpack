@@ -30,6 +30,7 @@ import {
   saveRunningServer,
 } from "../../services/dev-preview-servers/running-server.service";
 import { hostPortOf, sameServer } from "../../utils/previews/running.util";
+import type { BonjourService } from "../../utils/dev-preview-servers/bonjour.util";
 
 export type DevPreviewServersState = {
   /**
@@ -89,6 +90,27 @@ let setup: Pick<DevServersSetup, "hosts" | "allowCustomHosts"> = {
 /** The hosts added on the device, read from its file on each mount. */
 let userHosts: HostAddress[] = [];
 let userHostsRead: Promise<void> | null = null;
+
+/** What Bonjour found on the network, while it browses. The next look picks it up. */
+let bonjour: BonjourService[] = [];
+let browsing: { remove(): void } | null = null;
+
+/** Bonjour runs while the list watches and the app is in the foreground. */
+function browse(on: boolean) {
+  const native = nativeModule();
+  if (!native?.startBonjourBrowse) return;
+  if (on && !browsing) {
+    browsing = native.addListener("onBonjourServices", (event) => {
+      bonjour = event.services;
+    });
+    native.startBonjourBrowse();
+  } else if (!on && browsing) {
+    browsing.remove();
+    browsing = null;
+    bonjour = [];
+    native.stopBonjourBrowse?.();
+  }
+}
 
 const sameAddress = (a: HostAddress, b: HostAddress) =>
   a.host === b.host && a.port === b.port;
@@ -181,6 +203,8 @@ async function poll(sweep: boolean) {
         ? null
         : [...known, ...(defaultMetro ? [portOf(defaultMetro)] : [])],
       remote,
+      bonjour,
+      appSlug,
     );
     // Another computer's ports are asked through its registry, never scanned here.
     known = found.alive
@@ -260,8 +284,9 @@ export const devPreviewServersStore = {
 
   /**
    * While something watches (the list is on screen): sweeps the port range at once and every 30 s,
-   * and asks the servers already known every 2 s. Nothing while the app is in the background.
-   * Debug builds only; returns a function that stops watching.
+   * asks the servers already known every 2 s, and browses Bonjour for `preview start` servers on
+   * the network. Nothing while the app is in the background. Debug builds only; returns a function
+   * that stops watching.
    */
   watch(): () => void {
     if (!__DEV__) return () => undefined;
@@ -271,9 +296,13 @@ export const devPreviewServersStore = {
       set({ alive: null });
       userHostsRead = null;
       look(true);
+      browse(true);
       timer = setInterval(tick, POLL_MS);
       appState = AppState.addEventListener("change", (next) => {
-        if (next === "active") look(false);
+        if (next === "active") {
+          browse(true);
+          look(false);
+        } else if (next === "background") browse(false);
       });
     }
     return () => {
@@ -283,6 +312,7 @@ export const devPreviewServersStore = {
         timer = null;
         appState?.remove();
         appState = null;
+        browse(false);
       }
     };
   },

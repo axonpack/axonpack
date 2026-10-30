@@ -1,6 +1,8 @@
 import { requireOptionalNativeModule } from "expo";
 import { TurboModuleRegistry } from "react-native";
 
+import type { BonjourService } from "../../utils/dev-preview-servers/bonjour.util";
+
 /** What native started the running JS from, recorded when it picked it. */
 export type NativeLoaded =
   | { kind: "preview"; id: string }
@@ -24,6 +26,16 @@ type NativeModule = {
   markLaunched(): void;
   selectLocalServer(url: string | null, hostPort: string | null): void;
   state(): NativeState;
+  /**
+   * Browses for `preview start` servers on the network until stopped, and sends the full list in
+   * `onBonjourServices` each time it changes. Missing on a native side built before it.
+   */
+  startBonjourBrowse?(): void;
+  stopBonjourBrowse?(): void;
+  addListener(
+    event: "onBonjourServices",
+    listener: (event: { services: BonjourService[] }) => void,
+  ): { remove(): void };
 };
 
 /** Undefined where the module isn't linked (Expo Go, web), and the package then does nothing. */

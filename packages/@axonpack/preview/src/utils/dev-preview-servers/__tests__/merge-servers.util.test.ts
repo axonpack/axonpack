@@ -158,3 +158,26 @@ describe("an announcement belongs to its own port", () => {
     ]);
   });
 });
+
+test("a server Bonjour found says which computer it is on, and two on 8081 are two rows", () => {
+  const at = (host: string) => ({ ...scanned(8081, "shop"), host });
+  const servers = merge({
+    scanned: [at("192.168.1.30"), at("192.168.1.31")],
+    remote: [
+      {
+        host: "192.168.1.30",
+        machine: "qa-mac",
+        servers: [registered(8081, {})],
+      },
+      {
+        host: "192.168.1.31",
+        machine: "ci-mac",
+        servers: [registered(8081, {})],
+      },
+    ],
+  });
+  expect(servers.map((s) => [s.hostPort, s.machine, s.announced])).toEqual([
+    ["192.168.1.30:8081", "qa-mac", true],
+    ["192.168.1.31:8081", "ci-mac", true],
+  ]);
+});

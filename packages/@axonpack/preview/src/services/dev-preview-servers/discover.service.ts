@@ -5,8 +5,14 @@ import {
   DEFAULT_PORT_RANGE,
   DEFAULT_REGISTRY_PORT,
   type RegisteredServer,
+  type RegistryAnswer,
 } from "../../constants/dev-preview-servers/dev-preview-servers.const";
 import type { HostAddress } from "../../utils/dev-preview-servers/hosts.util";
+import {
+  type BonjourService,
+  type KnownMachine,
+  bonjourRegistries,
+} from "../../utils/dev-preview-servers/bonjour.util";
 import type {
   RemoteRegistry,
   ScannedServer,
@@ -66,14 +72,13 @@ async function readManifest(host: string, port: number, platform: Platform) {
 async function readRegistry(
   host: string,
   port: number,
-): Promise<RegisteredServer[] | null> {
+): Promise<RegistryAnswer | null> {
   try {
     const body = await within(PROBE_MS, async (signal) =>
       (await fetch(`http://${host}:${port}/servers`, { signal })).json(),
     );
     // A host typed by hand may run something else on the port.
-    const { servers } = body as { servers?: unknown };
-    return Array.isArray(servers) ? (servers as RegisteredServer[]) : null;
+    return Array.isArray(body?.servers) ? (body as RegistryAnswer) : null;
   } catch {
     return null;
   }
@@ -136,23 +141,35 @@ async function askRegistry(host: string, port: number, sweep: boolean) {
 
 async function localRegistry(hosts: string[], sweep: boolean) {
   for (const host of hosts) {
-    const registry = await askRegistry(host, DEFAULT_REGISTRY_PORT, sweep);
-    if (registry) return { registry, registryHost: host };
+    const answer = await askRegistry(host, DEFAULT_REGISTRY_PORT, sweep);
+    if (answer) return { answer, registryHost: host };
   }
-  return { registry: [], registryHost: null };
+  return { answer: null, registryHost: null };
 }
+
+/**
+ * This computer as its registry last described itself. Bonjour reports this computer's own servers
+ * under its LAN address, and a quick look may skip the registry, so the last answer is kept.
+ */
+let thisMachine: KnownMachine | null = null;
+/** Bonjour names seen in the last look. */
+let bonjourSeen = new Set<string>();
 
 /**
  * One look: every Metro in the range on the candidate hosts, plus the registry and the host it
  * answered on. `ports` narrows the range to those ports (the registry's are always asked). `own`
  * is the `host:port` the app runs from, asked directly. `remote` are other computers, asked only
- * for the servers their registry lists. `alive` is every `host:port` that answered.
+ * for the servers their registry lists. `bonjour` are the servers Bonjour found, kept when they are
+ * for `appSlug` and no registry already covers their computer. `alive` is every `host:port` that
+ * answered.
  */
 export async function discover(
   platform: Platform,
   own: string | null = null,
   ports: number[] | null = null,
   remote: HostAddress[] = [],
+  bonjour: BonjourService[] = [],
+  appSlug = "",
 ): Promise<{
   registry: RegisteredServer[];
   registryHost: string | null;
@@ -166,15 +183,45 @@ export async function discover(
   // Another computer is never scanned, so a plain `expo start` there never shows. One the app's
   // Metro is on is scanned already.
   const others = remote.filter((r) => !hosts.includes(r.host));
-  const [{ registry, registryHost }, registries] = await Promise.all([
-    localRegistry(hosts, sweep),
+  // A server Bonjour just found may be this computer's, from a registry that was down at the last
+  // full sweep. Ask it now, so the server shows as this computer's straight away.
+  const fresh = bonjour.some((s) => !bonjourSeen.has(s.name));
+  bonjourSeen = new Set(bonjour.map((s) => s.name));
+  const [local, elsewhere] = await Promise.all([
+    localRegistry(hosts, sweep || fresh),
     Promise.all(
       others.map(async ({ host, port }) => ({
         host,
-        servers: (await askRegistry(host, port, sweep)) ?? [],
+        answer: await askRegistry(host, port, sweep),
       })),
     ),
   ]);
+  const registry = local.answer?.servers ?? [];
+  const registryHost = local.registryHost;
+  if (local.answer)
+    thisMachine = {
+      host: registryHost ?? "",
+      machineId: local.answer.machineId,
+      addresses: local.answer.addresses,
+    };
+  const registries = [
+    ...elsewhere.map(({ host, answer }) => ({
+      host,
+      servers: answer?.servers ?? [],
+    })),
+    ...bonjourRegistries({
+      services: bonjour,
+      appSlug,
+      known: [
+        ...(thisMachine ? [thisMachine] : []),
+        ...elsewhere.flatMap(({ host, answer }) =>
+          answer ? [{ host, ...answer }] : [],
+        ),
+        // The scan covers these already.
+        ...hosts.map((host) => ({ host })),
+      ],
+    }),
+  ];
   const asked = new Set<number>(registry.map((r) => r.port));
   if (ports) ports.forEach((port) => asked.add(port));
   else for (let port = from; port <= to; port++) asked.add(port);

@@ -5,6 +5,10 @@ import { devPreviewServersStore } from "../dev-preview-servers.store";
 import type { NativeState } from "../../../services/native/native.service";
 import { rootDirectory } from "../../../services/previews/local-previews.service";
 import { devServersSetup } from "../../../utils/config/config.util";
+import {
+  type BonjourService,
+  txtOf,
+} from "../../../utils/dev-preview-servers/bonjour.util";
 
 jest.mock("expo-file-system", () =>
   require("../../../services/previews/__tests__/fake-file-system.test-helper"),
@@ -18,12 +22,25 @@ jest
       ? { getConstants: () => ({ scriptURL: mockScriptUrl }) }
       : realGet(name)) as typeof TurboModuleRegistry.get);
 let mockNativeState: NativeState = {};
+/** Native's Bonjour listener while it browses, or null. */
+let mockBonjour: ((event: { services: BonjourService[] }) => void) | null =
+  null;
+const mockBrowse = { start: jest.fn(), stop: jest.fn() };
 jest.mock("expo", () => ({
   requireOptionalNativeModule: () => ({
     key: "version-1.0.0",
     compatibility: "appVersion",
     slug: "shop",
     state: () => mockNativeState,
+    startBonjourBrowse: mockBrowse.start,
+    stopBonjourBrowse: mockBrowse.stop,
+    addListener: (
+      _event: string,
+      listener: (event: { services: BonjourService[] }) => void,
+    ) => {
+      mockBonjour = listener;
+      return { remove: () => (mockBonjour = null) };
+    },
   }),
 }));
 
@@ -47,8 +64,12 @@ const answer = (body: unknown) =>
 const refused = () => {
   throw new TypeError("Network request failed");
 };
-const announce = (ports: number[]) =>
+/** This computer is "this-mac" at 192.168.1.10 on the LAN; another one is named by its host. */
+const announce = (ports: number[], host: string) =>
   answer({
+    ...(host in machines
+      ? { machineId: host }
+      : { machineId: "this-mac", addresses: ["192.168.1.10"] }),
     servers: ports.map((port) => ({
       id: String(port),
       port,
@@ -68,7 +89,7 @@ global.fetch = jest.fn(async (input: RequestInfo | URL) => {
   const [, host, port] = /^http:\/\/([^/:]+):(\d+)\//.exec(url)!;
   const machine = machines[host] ?? { registry, up: [...up] };
   if (url.endsWith(":19150/servers"))
-    return machine.registry ? announce(machine.registry) : refused();
+    return machine.registry ? announce(machine.registry, host) : refused();
   if (!machine.up.includes(Number(port))) refused();
   if (url.endsWith("/status")) return answer("packager-status:running");
   return answer({
@@ -489,5 +510,96 @@ describe("hosts added on the device", () => {
     await watch();
     expect(sources()).not.toContain(`user ${LAN}:19150`);
     expect(asked.some((url) => url.includes(LAN))).toBe(false);
+  });
+});
+
+describe("Bonjour", () => {
+  /** A `preview start` server on `machineId`, at `host`, as native reports it. */
+  const service = (
+    host: string,
+    machineId: string,
+    port = 8081,
+    slug = "shop",
+  ): BonjourService => ({
+    name: `preview-${machineId}-${port}`,
+    host,
+    port,
+    txt: txtOf(
+      {
+        id: "x",
+        port,
+        title: "Signup",
+        branch: "task-2",
+        worktree: "/w",
+        slug,
+        name: "Shop",
+        compatibility: "appVersion",
+        keys: { ios: "version-1.0.0" },
+        startedAt: "",
+      },
+      { id: machineId, name: `${machineId}-mac` },
+      19150,
+    ),
+  });
+  const found = async (services: BonjourService[]) => {
+    mockBonjour?.({ services });
+    await wait(2000);
+  };
+
+  beforeEach(() => {
+    mockBrowse.start.mockClear();
+    mockBrowse.stop.mockClear();
+  });
+
+  test("another computer's preview start server shows with no host typed in, named by its computer", async () => {
+    machines = { "192.168.1.30": { registry: null, up: [8081] } };
+    await watch();
+    await found([service("192.168.1.30", "qa")]);
+    expect(listedAt()).toEqual(["localhost:8081", "192.168.1.30:8081"]);
+    expect(devPreviewServersStore.getState().servers[1]).toMatchObject({
+      title: "Signup",
+      branch: "task-2",
+      machine: "qa-mac",
+      announced: true,
+    });
+    // Bonjour said everything; its registry is never asked.
+    expect(asked).not.toContain("http://192.168.1.30:19150/servers");
+  });
+
+  test("another app's server is neither listed nor asked", async () => {
+    machines = { "192.168.1.30": { registry: null, up: [8081] } };
+    await watch();
+    asked = [];
+    await found([service("192.168.1.30", "qa", 8081, "other")]);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    expect(asked.some((url) => url.includes("192.168.1.30"))).toBe(false);
+  });
+
+  test("this computer's server, found by Bonjour too, is one row", async () => {
+    registry = [8081];
+    await watch();
+    await found([service("192.168.1.10", "this-mac")]);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+  });
+
+  test("a new Bonjour server makes a registry that was down answer at once", async () => {
+    await watch();
+    // `preview start` runs now: its registry is up, and announces 8081.
+    registry = [8081];
+    await found([service("192.168.1.10", "this-mac")]);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    expect(devPreviewServersStore.getState().servers[0].announced).toBe(true);
+  });
+
+  test("browses only while watched and in the foreground", async () => {
+    await watch();
+    expect(mockBrowse.start).toHaveBeenCalledTimes(1);
+    onAppState()("background");
+    expect(mockBrowse.stop).toHaveBeenCalledTimes(1);
+    expect(mockBonjour).toBeNull();
+    onAppState()("active");
+    expect(mockBrowse.start).toHaveBeenCalledTimes(2);
+    stop();
+    expect(mockBrowse.stop).toHaveBeenCalledTimes(2);
   });
 });

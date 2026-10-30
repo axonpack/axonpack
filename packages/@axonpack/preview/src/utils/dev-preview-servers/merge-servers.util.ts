@@ -27,6 +27,8 @@ export type DevPreviewServer = {
   compatible: boolean | null;
   /** Announced by `preview start` (with branch and worktree), or only found by the scan. */
   announced: boolean;
+  /** The name of the computer it runs on, when Bonjour found it on the network. */
+  machine?: string;
   /**
    * Only on the server the app runs from, when no look ever found it answering and nothing was
    * saved about it: whether it is an Expo or a preview server, and its name, are not known.
@@ -41,8 +43,13 @@ export type ScannedServer = {
   expo: AppConfig & { slug?: string; name?: string };
 };
 
-/** What another computer's registry lists, by the host it was asked on. */
-export type RemoteRegistry = { host: string; servers: RegisteredServer[] };
+/** What another computer's registry lists, by the host it was asked on, or what Bonjour found there. */
+export type RemoteRegistry = {
+  host: string;
+  servers: RegisteredServer[];
+  /** The computer's name, from Bonjour. */
+  machine?: string;
+};
 
 /**
  * Turns what the registry announced and what the scan found into this app's list: other apps'
@@ -63,15 +70,16 @@ export function mergeServers(input: {
   platform: Platform;
 }): DevPreviewServer[] {
   const servers: DevPreviewServer[] = [];
-  const registries = [
+  const registries: RemoteRegistry[] = [
     { host: input.registryHost ?? "localhost", servers: input.registry },
     ...(input.remote ?? []),
   ];
   for (const found of input.scanned) {
     const at = `${found.host}:${found.port}`;
-    const announced = registries
-      .flatMap(({ host, servers: list }) => list.map((r) => ({ host, r })))
-      .find(({ host, r }) => sameServer(`${host}:${r.port}`, at))?.r;
+    const match = registries
+      .flatMap((g) => g.servers.map((r) => ({ g, r })))
+      .find(({ g, r }) => sameServer(`${g.host}:${r.port}`, at));
+    const announced = match?.r;
     const slug = announced?.slug ?? found.expo.slug ?? "";
     if (slug !== input.appSlug) continue;
     const key =
@@ -96,6 +104,7 @@ export function mergeServers(input: {
       key,
       compatible: key && input.buildKey ? key === input.buildKey : null,
       announced: Boolean(announced),
+      ...(match?.g.machine ? { machine: match.g.machine } : {}),
     });
   }
   return servers.sort((a, b) => a.port - b.port);
