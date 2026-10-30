@@ -9,6 +9,7 @@ import {
   type BonjourService,
   txtOf,
 } from "../../../utils/dev-preview-servers/bonjour.util";
+import type { LocalNetwork } from "../../../utils/dev-preview-servers/subnet.util";
 
 jest.mock("expo-file-system", () =>
   require("../../../services/previews/__tests__/fake-file-system.test-helper"),
@@ -26,6 +27,8 @@ let mockNativeState: NativeState = {};
 let mockBonjour: ((event: { services: BonjourService[] }) => void) | null =
   null;
 const mockBrowse = { start: jest.fn(), stop: jest.fn() };
+/** What native reports as this device's networks, for the sweep. */
+let mockNetworks: LocalNetwork[] = [];
 jest.mock("expo", () => ({
   requireOptionalNativeModule: () => ({
     key: "version-1.0.0",
@@ -34,6 +37,7 @@ jest.mock("expo", () => ({
     state: () => mockNativeState,
     startBonjourBrowse: mockBrowse.start,
     stopBonjourBrowse: mockBrowse.stop,
+    localNetworks: () => mockNetworks,
     addListener: (
       _event: string,
       listener: (event: { services: BonjourService[] }) => void,
@@ -54,7 +58,10 @@ let registry: number[] | null = null;
  * Other computers by host: the ports their registry announces (null when it is not running), and
  * the ports Metro answers on as this app.
  */
-let machines: Record<string, { registry: number[] | null; up: number[] }> = {};
+let machines: Record<
+  string,
+  { registry: number[] | null; up: number[]; machineId?: string }
+> = {};
 /** The ports `adb reverse` forwards, so localhost reaches only these. Null: all of them. */
 let reverse: number[] | null = null;
 let asked: string[] = [];
@@ -70,7 +77,7 @@ const refused = () => {
 const announce = (ports: number[], host: string) =>
   answer({
     ...(host in machines
-      ? { machineId: host }
+      ? { machineId: machines[host].machineId ?? host }
       : { machineId: "this-mac", addresses: ["192.168.1.10"] }),
     servers: ports.map((port) => ({
       id: String(port),
@@ -91,6 +98,8 @@ global.fetch = jest.fn(async (input: RequestInfo | URL) => {
   const [, host, port] = /^http:\/\/([^/:]+):(\d+)\//.exec(url)!;
   if (host === "localhost" && reverse && !reverse.includes(Number(port)))
     refused();
+  // The network the sweep tests use: only the machines listed there answer.
+  if (host.startsWith("10.9.8.") && !(host in machines)) refused();
   const machine = machines[host] ?? { registry, up: [...up] };
   if (url.endsWith(":19150/servers"))
     return machine.registry ? announce(machine.registry, host) : refused();
@@ -146,6 +155,7 @@ beforeEach(() => {
   jest.useFakeTimers({ doNotFake: ["setImmediate"] });
   mockScriptUrl = null;
   mockNativeState = {};
+  mockNetworks = [];
   up = new Set([8081]);
   registry = null;
   machines = {};
@@ -516,6 +526,21 @@ describe("hosts added on the device", () => {
     expect(sources()).not.toContain(`user ${LAN}:19150`);
     expect(asked.some((url) => url.includes(LAN))).toBe(false);
   });
+
+  test("this computer's LAN address is one row over USB, and still lists its servers once the cable is pulled", async () => {
+    reverse = [8081, 19150];
+    registry = [8081];
+    devPreviewServersStore.configure(
+      devServersSetup({ hosts: ["192.168.1.10"] }),
+    );
+    await watch();
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    // Its registry is still remembered, but localhost reaches nothing now.
+    reverse = [];
+    await wait(2000);
+    expect(listedAt()).toEqual(["192.168.1.10:8081"]);
+  });
 });
 
 describe("Bonjour", () => {
@@ -660,6 +685,112 @@ describe("Bonjour", () => {
     onAppState()("active");
     expect(mockBrowse.start).toHaveBeenCalledTimes(2);
     stop();
+    // Or afterEach stops it again, and the next watch finds it still watched.
+    stop = () => undefined;
     expect(mockBrowse.stop).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("the network sweep", () => {
+  const PHONE = { address: "10.9.8.5", prefixLength: 24 };
+  // Distinct, since the first look of a watch also asks what the last sweep found.
+  const swept = () => [
+    ...new Set(
+      asked.filter((url) =>
+        /^http:\/\/10\.9\.8\.\d+:19150\/servers$/.test(url),
+      ),
+    ),
+  ];
+
+  test("a computer on this device's network shows with no host typed in and no Bonjour", async () => {
+    mockNetworks = [PHONE];
+    machines["10.9.8.30"] = { registry: [8082], up: [8082] };
+    await watch();
+    expect(swept()).toHaveLength(253);
+    expect(swept()).not.toContain("http://10.9.8.5:19150/servers");
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081", "10.9.8.30:8082"]);
+    expect(devPreviewServersStore.getState().servers[1]).toMatchObject({
+      announced: true,
+      title: "Login fix",
+    });
+    // Not a host added on the device, so the Hosts list does not show it.
+    expect(
+      devPreviewServersStore.getState().hosts.map((h) => h.host),
+    ).not.toContain("10.9.8.30");
+  });
+
+  test("this computer, found at its LAN address, is one row", async () => {
+    mockNetworks = [PHONE];
+    registry = [8081];
+    machines["10.9.8.10"] = {
+      registry: [8081],
+      up: [8081],
+      machineId: "this-mac",
+    };
+    await watch();
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+  });
+
+  test("this computer, found at its LAN address, still lists its servers once the USB cable is pulled", async () => {
+    mockNetworks = [PHONE];
+    reverse = [8081, 19150];
+    registry = [8081];
+    machines["10.9.8.10"] = {
+      registry: [8081],
+      up: [8081],
+      machineId: "this-mac",
+    };
+    await watch();
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    reverse = [];
+    await wait(2000);
+    expect(listedAt()).toEqual(["10.9.8.10:8081"]);
+  });
+
+  test("a host typed in that the sweep finds too is one row, the typed one", async () => {
+    mockNetworks = [PHONE];
+    devPreviewServersStore.configure(
+      devServersSetup({ hosts: ["qa-mac.local"] }),
+    );
+    machines["qa-mac.local"] = {
+      registry: [8082],
+      up: [8082],
+      machineId: "qa",
+    };
+    machines["10.9.8.30"] = { registry: [8082], up: [8082], machineId: "qa" };
+    await watch();
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081", "qa-mac.local:8082"]);
+  });
+
+  test("runs on open, on return to the foreground and on refresh, never on a tick or off the list", async () => {
+    mockNetworks = [PHONE];
+    await watch();
+    expect(swept()).toHaveLength(253);
+    asked = [];
+    await wait(30000);
+    expect(swept()).toEqual([]);
+    asked = [];
+    appState.currentState = "background";
+    onAppState()("background");
+    await wait(10000);
+    expect(asked).toEqual([]);
+    appState.currentState = "active";
+    onAppState()("active");
+    await settle();
+    expect(swept()).toHaveLength(253);
+    asked = [];
+    await devPreviewServersStore.refresh();
+    await settle();
+    expect(swept()).toHaveLength(253);
+    stop();
+    stop = () => undefined;
+    asked = [];
+    await devPreviewServersStore.refresh();
+    await settle();
+    expect(swept()).toEqual([]);
   });
 });

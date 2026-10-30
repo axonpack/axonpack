@@ -106,8 +106,9 @@ shows, and a plain `npx expo start` on their computer never does. Each row's add
 computer it is on, so two computers running Metro on 8081 are two rows.
 
 On the same network you don't need to add the computer at all: see
-[Found on the network](#found-on-the-network). Add a host for a computer Bonjour can't reach, such as
-one on another subnet or behind a VPN. It shows within 2 seconds of its registry answering.
+[Found on the network](#found-on-the-network) and [The network sweep](#the-network-sweep). Add a
+host for a computer neither of them reaches, such as one on another subnet or behind a VPN. It shows
+within 2 seconds of its registry answering.
 
 ## Found on the network
 
@@ -154,7 +155,9 @@ The registry announces on every network the computer is on, and answers the ques
 devices send, on UDP port 5353 next to the system's own Bonjour. No setting is needed. On macOS 15
 and later, the terminal app you run `preview start` from needs Local Network access (**System
 Settings > Privacy & Security > Local Network**). Without it, macOS drops the announcements, and
-phones find nothing. `preview start` then says so, with the error the registry got:
+Bonjour finds nothing. Phones on the same /24 still find the computer through
+[the network sweep](#the-network-sweep), a few seconds after the list opens. `preview start` says
+when the announcements fail, with the error the registry got:
 
 ```
 preview: Phones on the network can't find this computer (send EHOSTUNREACH 224.0.0.251:5353). Allow your terminal app under System Settings > Privacy & Security > Local Network.
@@ -180,6 +183,36 @@ A `preview start` from an older version keeps working with the new registry. The
 with `lsof`, so on Windows nothing is stopped. Neither is a process that isn't a preview registry:
 `start` says what holds the port and how to stop it.
 
+## The network sweep
+
+macOS blocks the registry's Bonjour announcements when the app you ran `preview start` from has no
+Local Network access, but it never blocks a connection coming in. So the app also asks the
+addresses on its own network for a registry, the same way it asks a host you added.
+
+- **What it asks.** `GET http://<address>:19150/servers` on every other address in the device's own
+  /24, or in its smaller network when the device is on one. It asks 32 addresses at a time and gives
+  up on each after half a second, so a /24 takes a few seconds. Only Wi-Fi and Ethernet are swept,
+  never cellular.
+- **When.** When the list opens, when the app comes back to the foreground, and when you pull to
+  refresh or tap Refresh. Never on the 2 second or 30 second looks, and it stops while the app is in
+  the background.
+- **What shows.** A computer whose registry answers is listed like a host you added: only its
+  `preview start` servers, at its IP address, and asked every 2 seconds from then on. It is not added
+  to the **Hosts** list.
+- **One row per server.** A computer the app also reaches another way, such as a host you added,
+  Bonjour, or your own computer at its LAN address, still has one row per server. The registry's
+  computer id decides, and a host you added wins over the sweep.
+- **Same access as Bonjour.** iOS asks for local network access before the first sweep reaches
+  anything, with the same prompt. On Android 17 it needs the same local network permission as
+  reaching Metro. See [Reaching the servers](#reaching-the-servers).
+
+Where it can't work:
+
+- **Wi-Fi with client isolation**, common on guest and hotel networks, stops devices reaching each
+  other. Nothing finds the computer there, a host you add included. Use USB, or another network.
+- **A network bigger than a /24**, such as a /16 office network. Only the device's own /24 is swept,
+  so add a computer outside it as a host.
+
 ## Which servers are listed
 
 Only servers for this app's slug, the one the config plugin baked in. A build made without the plugin
@@ -192,12 +225,14 @@ fingerprint.
 
 ## How the app finds them
 
-Four sources, merged by computer and port:
+Five sources, merged by computer and port:
 
 - **The registry.** `preview start` runs `expo start` on a free port and announces it to a small
   registry on your computer, on port 19150, with the branch, the worktree and the native key
   `publish` would use. It announces once Metro answers, on the port Metro really took: Expo moves
-  to another port when it finds the first one taken. The first `start` starts the registry, and it exits once no server is left.
+  to another port when it finds the first one taken. A Metro of the same project that was running
+  before, such as one left from an earlier run, is never taken for it. The first `start` starts the
+  registry, and it exits once no server is left.
   A `start` replaces an [older registry](#an-older-registry).
   A heartbeat every 5 seconds keeps a server listed; it drops out 15 seconds after the last, so a
   killed process goes too. Its `/servers` also gives the computer's id and LAN addresses.
@@ -207,9 +242,12 @@ Four sources, merged by computer and port:
   registry on 19150, or the port given with it. Only the ports it lists are asked on that computer.
 - **Bonjour.** Each registry announces its servers on the network, with the title, branch, slug and
   native key. The app asks Metro at the announced address and port, like a registry's servers.
+- **The network sweep.** The app asks every other address in its own /24 for a registry, and asks
+  each one that answers like a host you added. See [The network sweep](#the-network-sweep).
 
 A server found both ways uses the registry's details. A server Bonjour found on a computer the app
-already reaches through a registry is left to that registry.
+already reaches through a registry is left to that registry, and so is a computer the sweep finds
+that the app already reaches.
 
 ## How often it looks
 
@@ -227,6 +265,8 @@ yet, so a banner can name a `preview start` server.
   and 30 seconds after the last one. A refresh restarts that count. A spinner shows right after the
   heading's title while it runs. A new plain `expo start` server shows after the next full scan, so
   on open, on refresh, or within 30 seconds.
+- **The network sweep** runs when the list opens, when the app comes back to the foreground, and on
+  refresh. The servers of a computer it finds show within 2 seconds of it ending.
 
 A look never starts while the last one runs, and a refresh during a scan waits for that scan.
 
@@ -238,7 +278,7 @@ shows straight away.
 
 Each closed port is a refused connection, and iOS writes every one to the Xcode console as
 `Could not connect to the server`. JS can't turn that off, so the full scan runs only this often:
-expect a burst of those lines every 30 seconds. A server that is down but still asked every 2
+expect a burst of those lines every 30 seconds, and more during each network sweep. A server that is down but still asked every 2
 seconds (the default Metro, or the server the app runs from) adds one line each time.
 
 ## Reaching the servers
@@ -260,8 +300,8 @@ Metro. Allow it in the app's settings, or on the emulator run
 ## Limits
 
 - **Debug builds only.** A release build has no Metro to switch to.
-- **Bonjour stays on one network.** It does not cross routers, and most VPNs block it. Add a
-  computer on another network as a host.
+- **Bonjour and the sweep stay on one network.** Bonjour does not cross routers, most VPNs block it,
+  and the sweep covers only the device's own /24. Add a computer on another network as a host.
 - **This app only.** Servers for another slug are never listed.
 - **Plain HTTP on the local network.** An Expo app's iOS build allows plain HTTP to local addresses
   only, so another host must be on the same network as the device, not a server on the internet.

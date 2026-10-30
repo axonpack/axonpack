@@ -22,6 +22,7 @@ between them live.
 - [x] Finds `preview start` servers on other computers on the network with no address typed in
 - [x] Says which computer a server found on the network runs on, and lists a server found two ways once
 - [x] Replaces an older registry, or one that hung, on its own, and says when phones can't find the computer
+- [x] Finds `preview start` servers on the device's own /24 when Bonjour doesn't get through, by asking each address for a registry
 - [ ] Lists and switches to dev servers in a release build too, when the app turns previews on
 
 ## Turning it on
@@ -51,7 +52,9 @@ registry on the computer (started by the first `start`, gone once no server is l
 branch, worktree and the native key `publish` would use. It announces only once Metro answers, on
 the port whose `/status` names its project root (`X-React-Native-Project-Root`), because Expo moves
 to another port when it finds the given one taken, and the app gives an announcement's title and
-kind to whatever answers on its port. It unannounces after Metro has exited, so the app's last look
+kind to whatever answers on its port. Before it spawns Expo, `start` notes the ports where this
+project's Metro answers already (`projectMetros`), and never takes one of those: a leftover Metro of
+the same project on 8081 was once registered for a start whose own Metro ran on 8083. It unannounces after Metro has exited, so the app's last look
 never sees it answering unannounced. Heartbeats every 5 s keep it listed; it
 drops out 15 s after the last, so a killed process goes too. Plain `expo start` servers are found
 by probing the port range for Metro's `/status`; each one's Expo manifest then gives its slug,
@@ -131,6 +134,28 @@ the next look ask that registry even when it was quiet, so the first `preview st
 computer within 2 s. iOS needs `NSLocalNetworkUsageDescription` and `NSBonjourServices` listing
 the type, added by hand to the app config for now (the example has them); the config plugin does
 not add them yet.
+
+**The network sweep.** macOS drops the registry's Bonjour sends from an app without Local Network
+access (`send EHOSTUNREACH 224.0.0.251:5353`, VS Code's terminal here), but never an incoming TCP
+connection, which is why a typed host always worked. So while the list watches, the app also asks
+its own network: native `localNetworks()` gives the device's private IPv4 addresses on `en*` (iOS,
+`getifaddrs`) or `wlan*`/`eth*` (Android, `NetworkInterface`), each with its prefix length, so
+cellular is never swept and no permission is needed to read them. `sweepRange`
+(`src/utils/dev-preview-servers/subnet.util.ts`) turns each into the other addresses of its /24, or
+of its smaller network when the prefix is longer, and `findRegistries` in `discover.service.ts` asks
+each for `GET /servers` on 19150, 32 at a time with a 500 ms limit, through the same `readRegistry`
+a typed host uses. What answers is kept in the store and passed to `discover` after the typed hosts,
+so it is asked exactly like one from then on, every 2 s, and dropped from the 2 s looks once it stops
+answering. It is not added to the Hosts list. The sweep runs on watch, on return to the foreground
+and on refresh (not on the 2 s or 30 s ticks, and never off the list's screen), asks no new address
+once the app goes to the background or the list closes, and only one runs at a time. A cut-short
+sweep keeps the last full one's result. `discover` lists a computer reached twice once: a typed or
+swept host whose registry gives this computer's machine id, or is one of the LAN addresses this
+computer's registry reports (the Mac's LAN address typed in on the simulator), or gives a machine id
+an earlier host already gave (a Mac on Wi-Fi and Ethernet, or a typed host the sweep found too).
+This computer counts only while its registry answers in that look, not as last remembered, so after
+the USB cable is pulled its LAN address lists its servers. Typed hosts come first, so they win. Each refused address is one more `Could not connect to the server` line in
+the Xcode console, so a sweep adds a burst there.
 
 **Offline.** The server the app runs from stays in the list when a look misses it, marked Offline,
 with the title, branch and kind it had when it last answered. That is saved in

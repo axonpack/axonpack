@@ -72,9 +72,10 @@ async function readManifest(host: string, port: number, platform: Platform) {
 async function readRegistry(
   host: string,
   port: number,
+  ms = PROBE_MS,
 ): Promise<RegistryAnswer | null> {
   try {
-    const body = await within(PROBE_MS, async (signal) =>
+    const body = await within(ms, async (signal) =>
       (await fetch(`http://${host}:${port}/servers`, { signal })).json(),
     );
     // A host typed by hand may run something else on the port.
@@ -82,6 +83,39 @@ async function readRegistry(
   } catch {
     return null;
   }
+}
+
+/**
+ * The addresses whose registry answered on `port`, in the order given. Each is asked once, with a
+ * short timeout, `concurrency` at a time, so a /24 takes a few seconds. Once `signal` aborts, no
+ * new address is asked. The found ones are then asked like hosts added on the device.
+ */
+export async function findRegistries(
+  addresses: string[],
+  {
+    port = DEFAULT_REGISTRY_PORT,
+    ms = 500,
+    concurrency = 32,
+    signal,
+  }: {
+    port?: number;
+    ms?: number;
+    concurrency?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<HostAddress[]> {
+  const answered = new Set<string>();
+  let next = 0;
+  const worker = async () => {
+    while (next < addresses.length && !signal?.aborted) {
+      const host = addresses[next++];
+      if (await readRegistry(host, port, ms)) answered.add(host);
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return addresses
+    .filter((host) => answered.has(host))
+    .map((host) => ({ host, port }));
 }
 
 /** The host the app's own Metro is on, which is where its other servers are too. */
@@ -218,15 +252,30 @@ export async function discover(
       machineId: local.answer.machineId,
       addresses: local.answer.addresses,
     };
+  // A computer reached twice is listed once, the first way: this one at its LAN address typed in
+  // on the simulator, a Mac on Wi-Fi and Ethernet, or a host typed in that the sweep found too.
+  // Only a registry that answered now counts: a remembered one may be this computer after the
+  // USB cable was pulled, which its LAN address is then the only way to.
+  const machineIds = new Set(
+    local.answer?.machineId ? [local.answer.machineId] : [],
+  );
+  const reached = elsewhere.filter(({ host, answer }) => {
+    if (local.answer?.addresses?.includes(host)) return false;
+    const id = answer?.machineId;
+    if (!id) return true;
+    if (machineIds.has(id)) return false;
+    machineIds.add(id);
+    return true;
+  });
   const machines: KnownMachine[] = [
     ...(thisMachine ? [thisMachine] : []),
-    ...elsewhere.flatMap(({ host, answer }) =>
+    ...reached.flatMap(({ host, answer }) =>
       answer ? [{ host, ...answer }] : [],
     ),
   ];
   // The scan covers these already.
   const scannedHosts = hosts.map((host) => ({ host }));
-  const typed = elsewhere.map(({ host, answer }) => ({
+  const typed = reached.map(({ host, answer }) => ({
     host,
     servers: answer?.servers ?? [],
   }));

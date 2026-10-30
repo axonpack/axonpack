@@ -2,6 +2,7 @@ import { requireOptionalNativeModule } from "expo";
 import { TurboModuleRegistry } from "react-native";
 
 import type { BonjourService } from "../../utils/dev-preview-servers/bonjour.util";
+import type { LocalNetwork } from "../../utils/dev-preview-servers/subnet.util";
 
 /** What native started the running JS from, recorded when it picked it. */
 export type NativeLoaded =
@@ -32,6 +33,11 @@ type NativeModule = {
    */
   startBonjourBrowse?(): void;
   stopBonjourBrowse?(): void;
+  /**
+   * This device's private IPv4 addresses on Wi-Fi or Ethernet, for the network sweep. Missing on a
+   * native side built before it.
+   */
+  localNetworks?(): LocalNetwork[];
   addListener(
     event: "onBonjourServices",
     listener: (event: { services: BonjourService[] }) => void,

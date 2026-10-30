@@ -5,6 +5,8 @@ import android.util.Log
 import com.facebook.react.ReactApplication
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import java.net.Inet4Address
+import java.net.NetworkInterface
 
 class AxonpackPreviewModule : Module() {
   private var bonjour: BonjourBrowser? = null
@@ -59,6 +61,9 @@ class AxonpackPreviewModule : Module() {
 
     Function("stopBonjourBrowse") { bonjour?.stop() }
 
+    // For the network sweep, which finds a registry whose Bonjour announcements never arrive.
+    Function("localNetworks") { localNetworks() }
+
     OnDestroy { bonjour?.stop() }
   }
 
@@ -89,6 +94,22 @@ class AxonpackPreviewModule : Module() {
       null
     }
   }
+
+  /**
+   * This device's private IPv4 addresses on Wi-Fi or Ethernet (`wlan*`, `eth*`, so not cellular's
+   * `rmnet*`), each with its prefix length. NetworkInterface needs no permission.
+   */
+  private fun localNetworks(): List<Map<String, Any?>> =
+    try {
+      NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()
+        .filter { it.isUp && !it.isLoopback && (it.name.startsWith("wlan") || it.name.startsWith("eth")) }
+        .flatMap { it.interfaceAddresses }
+        // 10/8, 172.16/12 and 192.168/16.
+        .filter { (it.address as? Inet4Address)?.isSiteLocalAddress == true }
+        .map { mapOf("address" to it.address.hostAddress, "prefixLength" to it.networkPrefixLength.toInt()) }
+    } catch (e: Exception) {
+      emptyList()
+    }
 
   /** What the config plugin wrote at prebuild; null when the plugin is not in the app config. */
   private fun metaData(name: String): String? {

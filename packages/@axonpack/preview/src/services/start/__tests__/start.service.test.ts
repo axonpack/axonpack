@@ -14,6 +14,7 @@ import {
   freePort,
   metroPort,
   olderRegistry,
+  projectMetros,
   registration,
 } from "../start.service";
 
@@ -119,6 +120,22 @@ describe("metroPort: where this project's Metro really answers", () => {
     } finally {
       other.server.close();
       moved.server.close();
+    }
+  });
+
+  test("never a Metro of the same project that answered before this start ran its own", async () => {
+    // A leftover `expo start` of this project holds 8081, so this start asked Expo for 8083,
+    // which does not answer yet.
+    const leftover = await metro(ours);
+    const given = await freePort([40000, 40100]);
+    const ports: [number, number] = [leftover.port, leftover.port];
+    try {
+      const before = await projectMetros(ours, ports);
+      expect([...before]).toEqual([leftover.port]);
+      expect(await metroPort(ours, given, ports)).toBe(leftover.port);
+      expect(await metroPort(ours, given, ports, before)).toBe(null);
+    } finally {
+      leftover.server.close();
     }
   });
 

@@ -72,18 +72,37 @@ const servesProject = (port: number, projectRoot: string) =>
     req.on("error", () => resolve(false));
   });
 
+/** The ports in the range where this project's Metro answers already, such as a leftover's. */
+export async function projectMetros(
+  projectRoot: string,
+  [from, to]: [number, number],
+): Promise<Set<number>> {
+  const ports = new Set<number>();
+  for (let port = from; port <= to; port++)
+    if (await servesProject(port, projectRoot)) ports.add(port);
+  return ports;
+}
+
 /**
  * The port this project's Metro answers on, or null until it does. Usually the one it was given,
  * but Expo moves to another when it finds that one taken (it asks, and yes is the default).
+ * `before` are the ports this project's Metro answered on before this start ran its own: they
+ * serve the same project, so only skipping them keeps a leftover from being taken for this one.
  */
 export async function metroPort(
   projectRoot: string,
   given: number,
   [from, to]: [number, number],
+  before: Set<number> = new Set(),
 ): Promise<number | null> {
   if (await servesProject(given, projectRoot)) return given;
   for (let port = from; port <= to; port++) {
-    if (port !== given && (await servesProject(port, projectRoot))) return port;
+    if (
+      port !== given &&
+      !before.has(port) &&
+      (await servesProject(port, projectRoot))
+    )
+      return port;
   }
   return null;
 }
@@ -382,6 +401,7 @@ export async function start(options: StartOptions) {
     log(
       `Port ${wanted} has a Metro that no preview start announced (your own expo start, or one left from an earlier run), so this one uses port ${port}.`,
     );
+  const before = await projectMetros(options.projectRoot, options.ports);
   const fingerprints: Partial<Record<Platform, string>> = {};
   if (compatibilityOf(options.config) === "fingerprint") {
     for (const platform of PLATFORMS) {
@@ -419,6 +439,7 @@ export async function start(options: StartOptions) {
       options.projectRoot,
       server.port,
       options.ports,
+      before,
     );
     if (real === null) return;
     if (real !== server.port) {

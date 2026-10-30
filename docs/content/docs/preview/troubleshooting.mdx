@@ -128,7 +128,19 @@ A `preview start` on the same Wi-Fi, a teammate's or your own, doesn't show in t
 **Cause.** The announcement doesn't reach the device, or the device can't use it. A row also needs
 Metro to answer at the announced address and port, so an announcement for a port where nothing runs
 never shows.
-**Fix.** Check from the computer outward:
+**Fix.** On most home and office Wi-Fi, [the network sweep](/docs/preview/dev-preview-servers#the-network-sweep)
+finds the computer anyway, a few seconds after the list opens or after a refresh. When it doesn't
+either, open `http://<computer's IP>:19150/servers` in the phone's browser:
+
+- **The page doesn't load.** The phone can't reach the computer at all, often because the Wi-Fi
+  keeps devices apart (client isolation, common on guest Wi-Fi). Nothing finds it there, a host you
+  add included. Use USB, or another network.
+- **The page loads, and the computer's address is outside the phone's own /24.** The sweep doesn't
+  go that far. Add the computer as a host.
+- **The page loads otherwise.** Check the app's local network access (iOS, and Android 17), then
+  the steps below.
+
+To get Bonjour working, check from the computer outward:
 
 - **The computer announces it.** On a Mac on the same network, run `dns-sd -B _axon-preview._tcp`
   while `preview start` runs. Each server should be listed as `preview-<id>-<port>`. If the list

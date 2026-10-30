@@ -9,7 +9,9 @@ import {
 import {
   builtInHosts,
   discover,
+  findRegistries,
 } from "../../services/dev-preview-servers/discover.service";
+import { sweepRange } from "../../utils/dev-preview-servers/subnet.util";
 import {
   readHosts,
   saveHosts,
@@ -112,6 +114,40 @@ function browse(on: boolean) {
   }
 }
 
+/**
+ * Registries the last sweep of this device's own network found. They are asked like hosts added on
+ * the device, which is what finds a computer whose Bonjour announcements macOS blocks.
+ */
+let swept: HostAddress[] = [];
+let sweeping: AbortController | null = null;
+
+/** Sweeps this device's network for registries while the list watches, one sweep at a time. */
+function sweepNetwork() {
+  if (sweeping || !timer) return;
+  const networks = nativeModule()?.localNetworks?.() ?? [];
+  if (networks.length === 0) return;
+  const run = new AbortController();
+  sweeping = run;
+  // Two cards on one network, such as the emulator's wlan0 and eth0, give one range.
+  const own = new Set(networks.map((n) => n.address));
+  const addresses = [...new Set(networks.flatMap(sweepRange))].filter(
+    (a) => !own.has(a),
+  );
+  findRegistries(addresses, { signal: run.signal })
+    .then((found) => {
+      // Cut short, so it may have missed some. The last full one stands.
+      if (!run.signal.aborted) swept = found;
+    })
+    .finally(() => {
+      if (sweeping === run) sweeping = null;
+    });
+}
+
+function stopSweep() {
+  sweeping?.abort();
+  sweeping = null;
+}
+
 const sameAddress = (a: HostAddress, b: HostAddress) =>
   a.host === b.host && a.port === b.port;
 
@@ -191,7 +227,11 @@ async function poll(sweep: boolean) {
   }
   try {
     await readUserHosts();
-    const remote = state.hosts.filter((h) => h.source !== "built-in");
+    const typed = state.hosts.filter((h) => h.source !== "built-in");
+    const remote = [
+      ...typed,
+      ...swept.filter((s) => !typed.some((h) => sameAddress(h, s))),
+    ];
     // The Metro the app's JS came from; null for a preview or a bundle built into the app.
     const url = scriptUrl();
     const own = url ? hostPortOf(url) : null;
@@ -298,11 +338,16 @@ export const devPreviewServersStore = {
       look(true);
       browse(true);
       timer = setInterval(tick, POLL_MS);
+      sweepNetwork();
       appState = AppState.addEventListener("change", (next) => {
         if (next === "active") {
           browse(true);
           look(false);
-        } else if (next === "background") browse(false);
+          sweepNetwork();
+        } else if (next === "background") {
+          browse(false);
+          stopSweep();
+        }
       });
     }
     return () => {
@@ -313,12 +358,19 @@ export const devPreviewServersStore = {
         appState?.remove();
         appState = null;
         browse(false);
+        stopSweep();
       }
     };
   },
 
-  /** Sweeps the whole port range, as pull to refresh and the Refresh button ask. */
-  refresh: () => look(true),
+  /**
+   * Sweeps the whole port range, as pull to refresh and the Refresh button ask, and this device's
+   * network too while the list watches.
+   */
+  refresh: () => {
+    sweepNetwork();
+    return look(true);
+  },
 
   /** Adds a host on this device, saves it, and looks for its servers. */
   async addHost(address: HostAddress) {
