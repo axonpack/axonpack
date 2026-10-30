@@ -20,7 +20,9 @@ import { PreviewList, type PreviewListProps } from "../preview-list.component";
 import type { PreviewListLabels } from "../preview-list.types";
 import { LIGHT_THEME } from "../../../constants/preview-list/theme.const";
 import { Card } from "../ui/card.ui";
-import { Chip, RemovableChip } from "../ui/chip.ui";
+import { Chip } from "../ui/chip.ui";
+import { HostIcon } from "../ui/host-icon.ui";
+import { HintRow } from "../hint-row.component";
 import type { PreviewConfig } from "../../../utils/config/config.util";
 import { ChipRow } from "../ui/chip-row.ui";
 import { RowGap } from "../row-gap.component";
@@ -196,7 +198,7 @@ test("with it on, a debug build shows the section", async () => {
   await act(async () => tree.unmount());
 });
 
-test("the section's heading says Scanning only while every port is asked, at the same height", async () => {
+test("a spinner follows the section's title only while every port is asked, at the same height", async () => {
   const tree = await render(true);
   await settle();
   const scanning = () => tree.root.findByType(Scanning);
@@ -206,9 +208,16 @@ test("the section's heading says Scanning only while every port is asked, at the
     sweep = devPreviewServersStore.refresh();
   });
   expect(scanning().props.visible).toBe(true);
-  expect(textsOf(scanning())).toEqual(["Scanning…"]);
+  // A spinner right after the title, which a screen reader calls Scanning.
+  expect(textsOf(scanning())).toEqual([]);
+  const spinner = scanning().findByType(View);
+  expect(spinner.props.accessibilityLabel).toBe("Scanning…");
+  expect(spinner.props.accessible).toBe(true);
+  const titleLine = scanning().parent!;
+  expect(textsOf(titleLine)).toEqual(["Dev preview servers"]);
+  expect(titleLine.children.at(-1)).toBe(scanning());
   await act(() => sweep);
-  // Still laid out, only faded, so the heading does not jump.
+  // Still laid out, only faded, so the heading does not shift.
   expect(scanning().props.visible).toBe(false);
   expect(
     StyleSheet.flatten(scanning().findByType(View).props.style),
@@ -442,9 +451,11 @@ test("the default Metro, with nothing picked, is Active and titled Default", asy
   expectSwitchable(other);
   expect(textsOf(other)).toEqual(["localhost:8083", "server: Expo"]);
   expect(textsOf(tree.root.findByType(HeroCard))).toContain("Default");
-  // One grouped card: square where the rows meet, a hairline only between them, no gap.
+  // One grouped card with the hosts at its end: square where the rows meet, a hairline only
+  // between them, no gap.
   expect(row.findByType(Card).props.position).toBe("first");
-  expect(other.findByType(Card).props.position).toBe("last");
+  expect(other.findByType(Card).props.position).toBe("middle");
+  expect(byId(tree, "dev-server-hosts")[0].props.position).toBe("last");
   expect(separators(row)).toBe(0);
   expect(separators(other)).toBe(1);
   const gaps = tree.root.findAllByType(RowGap);
@@ -455,7 +466,11 @@ test("the default Metro, with nothing picked, is Active and titled Default", asy
         g.props.leadingItem.server.port === port,
     );
   expect(after(8081)?.children).toEqual([]);
-  expect(after(8083)?.children).toHaveLength(1);
+  expect(after(8083)?.children).toEqual([]);
+  const afterHosts = gaps.find(
+    (g) => g.props.leadingItem?.type === "dev-server-hosts",
+  );
+  expect(afterHosts?.children).toHaveLength(1);
   await act(async () => tree.unmount());
 });
 
@@ -1308,10 +1323,29 @@ test("an app's own status labels still show on the chip, and statusShort wins ov
   }
 });
 
-describe("the hosts under the dev servers heading", () => {
+describe("the hosts at the end of the dev servers card", () => {
   const hostsBlock = (tree: ReactTestRenderer) =>
     byId(tree, "dev-server-hosts")[0];
+  const toggle = (tree: ReactTestRenderer) => byId(tree, "hosts-toggle")[0];
+  const hostNames = (tree: ReactTestRenderer) =>
+    byId(tree, "host-row").map((row) => textsOf(row)[0]);
+  const removeButtons = (tree: ReactTestRenderer) =>
+    hostsBlock(tree).findAll(
+      (n) =>
+        typeof n.props.onPress === "function" &&
+        String(n.props.accessibilityLabel).startsWith("Remove "),
+      { deep: false },
+    );
   const field = (tree: ReactTestRenderer) => tree.root.findAllByType(TextInput);
+  const fieldStyle = (tree: ReactTestRenderer) =>
+    StyleSheet.flatten(byId(tree, "add-host-field")[0].props.style);
+  const clear = (tree: ReactTestRenderer) =>
+    tree.root.findAll(
+      (n) =>
+        typeof n.props.onPress === "function" &&
+        n.props.accessibilityLabel === "Clear",
+      { deep: false },
+    );
   const type = async (tree: ReactTestRenderer, text: string) => {
     await act(async () => field(tree)[0].props.onChangeText(text));
     await act(async () => pressable(tree, "Add").props.onPress());
@@ -1319,46 +1353,101 @@ describe("the hosts under the dev servers heading", () => {
   const error = (tree: ReactTestRenderer) =>
     byId(tree, "add-host-error").map(flat)[0];
 
-  test("this computer's names and the app's hosts are quiet chips, with Add a host after them", async () => {
+  test("the hosts wait behind a Hosts row with their count; open, each is a row, and Add a host ends the card", async () => {
     const tree = await render({
       hosts: ["qa-mac.local", "192.168.1.24:19151"],
     });
     await settle();
-    const block = hostsBlock(tree);
-    expect(block.findAllByType(Chip).map((chip) => chip.props.text)).toEqual([
+    expect(hostsBlock(tree).props.position).toBe("last");
+    expect(textsOf(toggle(tree))).toEqual(["Hosts", "4"]);
+    expect(toggle(tree).props.accessibilityLabel).toBe("Hosts, 4");
+    expect(toggle(tree).props.accessibilityState).toEqual({ expanded: false });
+    expect(hostNames(tree)).toEqual([]);
+    expect(textsOf(hostsBlock(tree)).at(-1)).toBe("Add a host");
+
+    await act(async () => toggle(tree).props.onPress());
+    expect(toggle(tree).props.accessibilityState).toEqual({ expanded: true });
+    expect(toggle(tree).findByType(Chevron).props.open).toBe(true);
+    expect(hostNames(tree)).toEqual([
       "localhost",
       "127.0.0.1",
       "qa-mac.local",
       "192.168.1.24:19151",
     ]);
-    expect(block.findAllByType(RemovableChip)).toEqual([]);
-    expect(textsOf(block)).toContain("Add a host");
+    // A drawn computer on each, no font glyph.
+    for (const row of byId(tree, "host-row"))
+      expect(row.findAllByType(HostIcon)).toHaveLength(1);
+    // This computer's names and the app's hosts can't be removed.
+    expect(removeButtons(tree)).toEqual([]);
+    expect(textsOf(hostsBlock(tree)).at(-1)).toBe("Add a host");
     expect(field(tree)).toEqual([]);
+    await act(async () => toggle(tree).props.onPress());
+    expect(hostNames(tree)).toEqual([]);
     await act(async () => tree.unmount());
   });
 
   test("no Add a host when the app turns custom hosts off", async () => {
     const tree = await render({ allowCustomHosts: false });
     await settle();
-    expect(hostsBlock(tree).findAllByType(Chip)).toHaveLength(2);
+    expect(textsOf(toggle(tree))).toEqual(["Hosts", "2"]);
     expect(texts(tree)).not.toContain("Add a host");
     await act(async () => tree.unmount());
   });
 
-  test("Add a host opens a field that says in plain words why a host can't be added", async () => {
+  test("with no server found, the card says so in its first row, above the hosts", async () => {
+    const tree = await render(true);
+    await settle();
+    const [hint] = tree.root.findAllByType(HintRow);
+    expect(hint.props.position).toBe("first");
+    expect(hint.findByType(Card).props.position).toBe("first");
+    expect(textsOf(hint)).toEqual([
+      "No Metro server found. Start one with npx preview start.",
+    ]);
+    expect(hostsBlock(tree).props.position).toBe("last");
+    await act(async () => tree.unmount());
+  });
+
+  test("Add a host opens a field for the keyboard, with a clear button, that says in plain words why a host can't be added", async () => {
     const tree = await render({ hosts: ["qa-mac.local"] });
     await settle();
     await act(async () => pressable(tree, "Add a host").props.onPress());
     expect(field(tree)).toHaveLength(1);
-    expect(field(tree)[0].props.placeholder).toBe(
-      "192.168.1.24 or qa-mac.local",
-    );
+    expect(field(tree)[0].props).toMatchObject({
+      placeholder: "192.168.1.24 or qa-mac.local",
+      autoFocus: true,
+      autoCapitalize: "none",
+      autoCorrect: false,
+      keyboardType: "url",
+      returnKeyType: "done",
+    });
+    // The field shows the same drawn computer as the host rows.
+    expect(
+      byId(tree, "add-host-field")[0].findAllByType(HostIcon),
+    ).toHaveLength(1);
+    // iOS scrolls it up above the keyboard.
+    expect(
+      tree.root.findByType(FlatList).props.automaticallyAdjustKeyboardInsets,
+    ).toBe(true);
     expect(texts(tree)).not.toContain("Add a host");
     expect(texts(tree)).toContain(
       "A computer running npx preview start. Add :port if its registry is not on 19150.",
     );
+    expect(fieldStyle(tree).borderColor).toBe(LIGHT_THEME.border);
+    await act(async () => field(tree)[0].props.onFocus());
+    expect(fieldStyle(tree).borderColor).toBe(LIGHT_THEME.primary);
+
+    // Nothing to clear yet.
+    expect(clear(tree)).toEqual([]);
     await type(tree, "qa mac");
     expect(error(tree)).toBe("That is not an IP address or a host name.");
+    expect(fieldStyle(tree).borderColor).toBe(LIGHT_THEME.danger);
+    // The clear button empties the field and takes the error with it.
+    expect(clear(tree)[0].findAllByType(Text)).toEqual([]);
+    await act(async () => clear(tree)[0].props.onPress());
+    expect(field(tree)[0].props.value).toBe("");
+    expect(error(tree)).toBeUndefined();
+    expect(clear(tree)).toEqual([]);
+
     await type(tree, "127.0.0.1");
     expect(error(tree)).toBe("127.0.0.1 is always checked.");
     await type(tree, "QA-Mac.local:19150");
@@ -1372,7 +1461,7 @@ describe("the hosts under the dev servers heading", () => {
     await act(async () => tree.unmount());
   });
 
-  test("a host added there is saved, and its chip has a drawn remove button that removes it", async () => {
+  test("a host added there is saved and shown open in the list, with a drawn remove button that removes it", async () => {
     const tree = await render(true);
     await settle();
     await act(async () => pressable(tree, "Add a host").props.onPress());
@@ -1383,16 +1472,18 @@ describe("the hosts under the dev servers heading", () => {
     const saved = async () =>
       JSON.parse(await new File(rootDirectory(), "hosts.json").text());
     expect(await saved()).toEqual(["192.168.1.30"]);
-    const chip = hostsBlock(tree).findByType(RemovableChip);
-    expect(chip.props.text).toBe("192.168.1.30");
-    const remove = pressable(tree, "Remove 192.168.1.30");
+    expect(toggle(tree).props.accessibilityState).toEqual({ expanded: true });
+    expect(hostNames(tree)).toContain("192.168.1.30");
+    const [remove] = removeButtons(tree);
+    expect(remove.props.accessibilityLabel).toBe("Remove 192.168.1.30");
     expect(remove.findAllByType(Text)).toEqual([]);
     expect(
       StyleSheet.flatten(remove.props.style({ pressed: false })),
     ).toMatchObject({ width: 44, height: 44 });
     await act(async () => remove.props.onPress());
     await settle();
-    expect(hostsBlock(tree).findAllByType(RemovableChip)).toEqual([]);
+    expect(removeButtons(tree)).toEqual([]);
+    expect(hostNames(tree)).not.toContain("192.168.1.30");
     expect(await saved()).toEqual([]);
     await act(async () => tree.unmount());
   });

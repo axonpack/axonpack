@@ -49,21 +49,21 @@ test("a running preview is one more preview row", () => {
   expect(list[1]).toMatchObject({ type: "preview", item: { active: true } });
 });
 
-test("dev servers come first when on, each keyed by host and port", () => {
+test("dev servers come first when on, each keyed by host and port, with the hosts after them", () => {
   expect(
     shape({ showDevServers: true, servers: [server(8081), server(8082)] }),
   ).toEqual([
     "dev-servers",
-    "dev-server-hosts",
     "server:localhost:8081",
     "server:localhost:8082",
+    "dev-server-hosts",
     "previews",
     "hint:empty",
   ]);
   expect(shape({ showDevServers: true })).toEqual([
     "dev-servers",
-    "dev-server-hosts",
     "hint:noDevPreviewServers",
+    "dev-server-hosts",
     "previews",
     "hint:empty",
   ]);
@@ -92,16 +92,33 @@ test("incompatible downloads get their header and a row each, last", () => {
   ]);
 });
 
+const grouped = (list: ReturnType<typeof buildListItems>) =>
+  list.flatMap((i) =>
+    i.type === "dev-server" ||
+    i.type === "dev-server-hosts" ||
+    i.type === "hint"
+      ? [i.position ?? null]
+      : [],
+  );
+
 test.each([
-  [1, ["only"]],
-  [2, ["first", "last"]],
-  [3, ["first", "middle", "last"]],
-])("%d dev servers are one group: %j", (count, positions) => {
+  [1, ["first", "last"]],
+  [2, ["first", "middle", "last"]],
+  [3, ["first", "middle", "middle", "last"]],
+])("%d dev servers and the hosts are one group: %j", (count, positions) => {
   const servers = Array.from({ length: count }, (_, i) => server(8081 + i));
   const list = buildListItems({ ...base, showDevServers: true, servers });
+  // The previews' own hint, after the group, is not in it.
+  expect(grouped(list)).toEqual([...positions, null]);
+});
+
+test("with no servers, the line saying so is the card's first row, and the hosts its last", () => {
+  const list = buildListItems({ ...base, showDevServers: true });
+  expect(grouped(list)).toEqual(["first", "last", null]);
+  // No slug: the warning stands on its own, as before.
   expect(
-    list.flatMap((i) => (i.type === "dev-server" ? [i.position] : [])),
-  ).toEqual(positions);
+    grouped(buildListItems({ ...base, showDevServers: true, hasSlug: false })),
+  ).toEqual([null, null]);
 });
 
 test("downloads for another build are one group too", () => {
@@ -114,7 +131,7 @@ test("downloads for another build are one group too", () => {
   ).toEqual(["first", "middle", "last"]);
 });
 
-test("the hosts sit under the dev servers heading, with whether one can be added", () => {
+test("the hosts end the servers' card, with whether one can be added", () => {
   const hosts = [
     { host: "localhost", port: 19150, source: "built-in" as const },
   ];
@@ -124,11 +141,12 @@ test("the hosts sit under the dev servers heading, with whether one can be added
       showDevServers: true,
       hosts,
       allowCustomHosts: false,
-    })[1],
+    })[2],
   ).toEqual({
     type: "dev-server-hosts",
     key: "dev-server-hosts",
     hosts,
     allowCustomHosts: false,
+    position: "last",
   });
 });

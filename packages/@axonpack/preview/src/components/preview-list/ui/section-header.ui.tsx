@@ -9,6 +9,9 @@ export function SectionHeader(props: {
   title: string;
   hint?: string;
   error?: string | null;
+  /** Right after the title, such as a spinner while the section looks for something. */
+  afterTitle?: ReactNode;
+  /** At the end of the title's line. */
   action?: ReactNode;
 }) {
   const { theme } = props;
@@ -23,16 +26,26 @@ export function SectionHeader(props: {
           gap: 8,
         }}
       >
-        <Text
-          accessibilityRole="header"
+        <View
           style={{
-            ...font(theme, "bold", 17),
-            color: theme.title,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
             flexShrink: 1,
           }}
         >
-          {props.title}
-        </Text>
+          <Text
+            accessibilityRole="header"
+            style={{
+              ...font(theme, "bold", 17),
+              color: theme.title,
+              flexShrink: 1,
+            }}
+          >
+            {props.title}
+          </Text>
+          {props.afterTitle ?? null}
+        </View>
         {props.action ?? null}
       </View>
       {props.hint ? (

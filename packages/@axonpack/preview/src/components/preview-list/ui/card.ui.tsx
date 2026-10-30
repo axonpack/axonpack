@@ -17,6 +17,8 @@ export function Card(props: {
   pressed?: boolean;
   /** Default "only": a card on its own. */
   position?: GroupPosition;
+  /** For rows 44 high, which bring their own room: 4 above and below instead of 16, and no gap. */
+  flush?: boolean;
   testID?: string;
   children?: ReactNode;
 }) {
@@ -44,8 +46,9 @@ export function Card(props: {
         // In a group the outline runs unbroken past a tinted row.
         borderColor:
           tinted && position === "only" ? theme.tintBorder : theme.border,
-        padding: 16,
-        gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: props.flush ? 4 : 16,
+        gap: props.flush ? 0 : 10,
       }}
     >
       {top ? null : (

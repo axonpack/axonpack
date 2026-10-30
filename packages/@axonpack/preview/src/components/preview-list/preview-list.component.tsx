@@ -221,7 +221,7 @@ export function PreviewList(props: PreviewListProps) {
             title={labels.devPreviewServersTitle}
             hint={labels.devPreviewServersHint}
             error={item.error}
-            action=<Scanning
+            afterTitle=<Scanning
               theme={theme}
               label={labels.scanning}
               visible={item.scanning}
@@ -235,6 +235,7 @@ export function PreviewList(props: PreviewListProps) {
             labels={labels}
             hosts={item.hosts}
             allowCustomHosts={item.allowCustomHosts}
+            position={item.position}
             onAdd={devPreviewServersStore.addHost}
             onRemove={devPreviewServersStore.removeHost}
           />
@@ -259,7 +260,12 @@ export function PreviewList(props: PreviewListProps) {
       }
       case "hint":
         return (
-          <HintRow theme={theme} text={labels[item.hint]} tone={item.tone} />
+          <HintRow
+            theme={theme}
+            text={labels[item.hint]}
+            tone={item.tone}
+            position={item.position}
+          />
         );
       case "previews-header":
         return <SectionHeader theme={theme} title={labels.previewsTitle} />;
@@ -341,6 +347,9 @@ export function PreviewList(props: PreviewListProps) {
     <FlatList<ListItem>
       // A tap on Add while the keyboard is up adds, instead of only closing the keyboard.
       keyboardShouldPersistTaps="handled"
+      // iOS: room for the keyboard, and Add a host's field scrolled up above it. Android's window
+      // resizes for the keyboard instead.
+      automaticallyAdjustKeyboardInsets
       {...listProps}
       data={items}
       keyExtractor={keyOf}

@@ -1,9 +1,8 @@
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 
-import { font } from "../../../utils/preview-list/theme.util";
 import type { PreviewListTheme } from "../preview-list.types";
 
-/** A quiet spinner and label beside a heading while something runs. */
+/** A quiet spinner right after a heading while something runs. `label` is what a screen reader says. */
 export function Scanning(props: {
   theme: PreviewListTheme;
   label: string;
@@ -11,16 +10,13 @@ export function Scanning(props: {
 }) {
   const { theme, visible } = props;
   return (
-    // Always laid out and only faded, so the heading keeps its height as it comes and goes.
+    // Always laid out and only faded, so the heading does not shift as it comes and goes.
     <View
+      accessible={visible}
+      accessibilityLabel={props.label}
       accessibilityElementsHidden={!visible}
-      importantForAccessibility={visible ? "auto" : "no-hide-descendants"}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        opacity: visible ? 1 : 0,
-      }}
+      importantForAccessibility={visible ? "yes" : "no-hide-descendants"}
+      style={{ opacity: visible ? 1 : 0 }}
     >
       <ActivityIndicator
         size="small"
@@ -28,9 +24,6 @@ export function Scanning(props: {
         animating={visible}
         hidesWhenStopped={false}
       />
-      <Text style={{ ...font(theme, "regular", 13), color: theme.muted }}>
-        {props.label}
-      </Text>
     </View>
   );
 }

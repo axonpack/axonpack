@@ -32,6 +32,7 @@ export type ListItem =
       key: string;
       hosts: DevServerHost[];
       allowCustomHosts: boolean;
+      position: GroupPosition;
     }
   | {
       type: "dev-server";
@@ -39,7 +40,14 @@ export type ListItem =
       server: DevPreviewServer;
       position: GroupPosition;
     }
-  | { type: "hint"; key: string; hint: ListHint; tone: "muted" | "danger" }
+  | {
+      type: "hint";
+      key: string;
+      hint: ListHint;
+      tone: "muted" | "danger";
+      /** Set when the hint is a row of a grouped card. */
+      position?: GroupPosition;
+    }
   | { type: "previews-header"; key: string }
   | { type: "preview"; key: string; item: PreviewItem }
   | { type: "incompatible-header"; key: string }
@@ -60,7 +68,7 @@ export function buildListItems(state: {
   devServersScanning: boolean;
   /** Where the dev servers list looks. */
   hosts: DevServerHost[];
-  /** "Add a host" shows after the hosts. */
+  /** "Add a host" ends the servers' card. */
   allowCustomHosts: boolean;
   loading: boolean;
   buildKey: string | null;
@@ -76,13 +84,6 @@ export function buildListItems(state: {
       scanning: state.devServersScanning,
     });
     // Without a slug nothing is asked, so no host is checked.
-    if (state.hasSlug)
-      list.push({
-        type: "dev-server-hosts",
-        key: "dev-server-hosts",
-        hosts: state.hosts,
-        allowCustomHosts: state.allowCustomHosts,
-      });
     if (!state.hasSlug)
       list.push({
         type: "hint",
@@ -90,22 +91,33 @@ export function buildListItems(state: {
         hint: "noBuildSlug",
         tone: "danger",
       });
-    else if (state.servers.length === 0)
-      list.push({
-        type: "hint",
-        key: "hint:noDevPreviewServers",
-        hint: "noDevPreviewServers",
-        tone: "muted",
-      });
-    else
-      state.servers.forEach((server, index) =>
+    else {
+      // One card: the servers, or a row saying there are none, then the hosts.
+      if (state.servers.length === 0)
         list.push({
-          type: "dev-server",
-          key: `server:${server.hostPort}`,
-          server,
-          position: positionOf(index, state.servers.length),
-        }),
-      );
+          type: "hint",
+          key: "hint:noDevPreviewServers",
+          hint: "noDevPreviewServers",
+          tone: "muted",
+          position: "first",
+        });
+      else
+        state.servers.forEach((server, index) =>
+          list.push({
+            type: "dev-server",
+            key: `server:${server.hostPort}`,
+            server,
+            position: positionOf(index, state.servers.length + 1),
+          }),
+        );
+      list.push({
+        type: "dev-server-hosts",
+        key: "dev-server-hosts",
+        hosts: state.hosts,
+        allowCustomHosts: state.allowCustomHosts,
+        position: "last",
+      });
+    }
   }
   list.push({ type: "previews-header", key: "previews" });
   for (const item of state.items)

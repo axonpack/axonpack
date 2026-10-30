@@ -1,168 +1,156 @@
 import { useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Pressable, Text, View, type ViewStyle } from "react-native";
 
 import {
   type DevServerHost,
   type HostAddress,
-  checkNewHost,
   formatHost,
-  parseHost,
 } from "../../utils/dev-preview-servers/hosts.util";
+import type { GroupPosition } from "../../utils/preview-list/list-items.util";
 import { font } from "../../utils/preview-list/theme.util";
-import { Button } from "./ui/button.ui";
-import { Chip, RemovableChip } from "./ui/chip.ui";
+import { AddHostField } from "./add-host-field.component";
+import { Card } from "./ui/card.ui";
+import { Chevron } from "./ui/chevron.ui";
+import { CrossIcon } from "./ui/cross-icon.ui";
+import { HostIcon } from "./ui/host-icon.ui";
 import type { PreviewListLabels, PreviewListTheme } from "./preview-list.types";
 
+const row: ViewStyle = {
+  minHeight: 44,
+  flexDirection: "row",
+  alignItems: "center",
+};
+
 /**
- * The hosts the dev servers list checks, under its heading: the built-in and the app's as quiet
- * chips, the ones added on the device with a remove button, then Add a host when the app allows
- * it, which opens a field in place.
+ * The end of the dev servers card: the hosts it checks behind a Hosts row, so they don't crowd the
+ * servers, then Add a host when the app allows it, which opens a field in its place. Host names
+ * and Add a host start at the same edge, after the icon, under the Hosts row's text.
  */
 export function DevServerHosts(props: {
   theme: PreviewListTheme;
   labels: PreviewListLabels;
   hosts: DevServerHost[];
   allowCustomHosts: boolean;
+  /** Where the hosts sit in the servers' grouped card: last. */
+  position: GroupPosition;
   onAdd: (host: HostAddress) => void;
   onRemove: (host: HostAddress) => void;
 }) {
-  const { theme, labels } = props;
+  const { theme, labels, hosts } = props;
+  const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const close = () => {
-    setAdding(false);
-    setText("");
-    setError(null);
-  };
-  const add = () => {
-    const host = checkNewHost(text, props.hosts);
-    if (typeof host !== "string") {
-      props.onAdd(host);
-      close();
-      return;
-    }
-    const typed = parseHost(text);
-    setError(
-      host === "invalid" || !typed
-        ? labels.hostInvalid
-        : (host === "duplicate"
-            ? labels.hostDuplicate
-            : labels.hostBuiltIn
-          ).replace("{host}", formatHost(typed)),
-    );
-  };
+  const pressableRow =
+    (gap: number) =>
+    ({ pressed }: { pressed: boolean }): ViewStyle => ({
+      ...row,
+      gap,
+      opacity: pressed ? 0.6 : 1,
+    });
 
   return (
-    // Starts where the heading's text does.
-    <View testID="dev-server-hosts" style={{ paddingHorizontal: 16, gap: 8 }}>
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 6,
-        }}
+    <Card
+      theme={theme}
+      position={props.position}
+      flush
+      testID="dev-server-hosts"
+    >
+      <Pressable
+        testID="hosts-toggle"
+        onPress={() => setExpanded(!expanded)}
+        accessibilityRole="button"
+        accessibilityLabel={`${labels.hosts}, ${hosts.length}`}
+        accessibilityState={{ expanded }}
+        style={pressableRow(8)}
       >
-        {props.hosts.map((host) => {
-          const name = formatHost(host);
-          return host.source === "user" ? (
-            <RemovableChip
-              key={`${host.source}:${name}`}
-              theme={theme}
-              text={name}
-              removeLabel={labels.removeHost.replace("{host}", name)}
-              onRemove={() => props.onRemove(host)}
-            />
-          ) : (
-            <Chip key={`${host.source}:${name}`} theme={theme} text={name} />
-          );
-        })}
-        {props.allowCustomHosts && !adding ? (
-          <Button
-            theme={theme}
-            title={labels.addHost}
-            onPress={() => setAdding(true)}
-            kind="primary"
-            quiet
-          />
-        ) : null}
-      </View>
-      {adding ? (
-        <View style={{ gap: 4 }}>
-          <View
-            style={{
-              minHeight: 44,
-              justifyContent: "center",
-              paddingHorizontal: 12,
-              borderWidth: 1,
-              borderColor: error ? theme.danger : theme.border,
-              borderRadius: theme.radius / 1.5,
-              backgroundColor: theme.card,
-            }}
-          >
-            <TextInput
-              testID="add-host-input"
-              value={text}
-              onChangeText={(next: string) => {
-                setText(next);
-                setError(null);
-              }}
-              onSubmitEditing={add}
-              placeholder={labels.addHostPlaceholder}
-              placeholderTextColor={theme.muted}
-              accessibilityLabel={labels.addHost}
-              accessibilityHint={labels.addHostHint}
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              returnKeyType="done"
-              style={{
-                ...font(theme, "regular", 15),
-                color: theme.title,
-                // React Native pads a TextInput by default; the row sets the height.
-                padding: 0,
-              }}
-            />
+        <Text
+          style={{ flex: 1, ...font(theme, "medium", 15), color: theme.title }}
+        >
+          {labels.hosts}
+        </Text>
+        <Text style={{ ...font(theme, "regular", 15), color: theme.muted }}>
+          {String(hosts.length)}
+        </Text>
+        <Chevron color={theme.muted} open={expanded} />
+      </Pressable>
+      {expanded
+        ? hosts.map((host) => {
+            const name = formatHost(host);
+            return (
+              <View
+                key={`${host.source}:${name}`}
+                testID="host-row"
+                style={{
+                  ...row,
+                  gap: 12,
+                  // Out to the card's edge, so the remove button's 44 stays inside its row:
+                  // Android drops a touch outside the parent's bounds.
+                  marginRight: -16,
+                  paddingRight: host.source === "user" ? 0 : 16,
+                }}
+              >
+                <HostIcon color={theme.muted} />
+                <Text
+                  selectable
+                  numberOfLines={1}
+                  style={{
+                    flex: 1,
+                    ...font(theme, "regular", 15),
+                    color: theme.text,
+                  }}
+                >
+                  {name}
+                </Text>
+                {host.source === "user" ? (
+                  <Pressable
+                    onPress={() => props.onRemove(host)}
+                    accessibilityRole="button"
+                    accessibilityLabel={labels.removeHost.replace(
+                      "{host}",
+                      name,
+                    )}
+                    style={({ pressed }: { pressed: boolean }): ViewStyle => ({
+                      width: 44,
+                      height: 44,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.5 : 1,
+                    })}
+                  >
+                    <CrossIcon color={theme.muted} diagonal />
+                  </Pressable>
+                ) : null}
+              </View>
+            );
+          })
+        : null}
+      {!props.allowCustomHosts ? null : adding ? (
+        <AddHostField
+          theme={theme}
+          labels={labels}
+          hosts={hosts}
+          onAdd={(host) => {
+            props.onAdd(host);
+            setAdding(false);
+            // So the host just added shows, with its remove button.
+            setExpanded(true);
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : (
+        <Pressable
+          onPress={() => setAdding(true)}
+          accessibilityRole="button"
+          style={pressableRow(12)}
+        >
+          {/* As wide as the host icon, so the text lines up with the host names. */}
+          <View style={{ width: 16, alignItems: "center" }}>
+            <CrossIcon color={theme.primary} />
           </View>
-          <Text
-            testID={error ? "add-host-error" : undefined}
-            accessibilityLiveRegion={error ? "polite" : "none"}
-            style={{
-              ...font(theme, "regular", 13),
-              lineHeight: 18,
-              color: error ? theme.danger : theme.muted,
-            }}
-          >
-            {error ?? labels.addHostHint}
+          <Text style={{ ...font(theme, "medium", 15), color: theme.primary }}>
+            {labels.addHost}
           </Text>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              // As in the error banner: the last button's text ends where the field does.
-              marginRight: -12,
-            }}
-          >
-            <Button
-              theme={theme}
-              title={labels.cancel}
-              onPress={close}
-              kind="plain"
-              quiet
-            />
-            <Button
-              theme={theme}
-              title={labels.addHostConfirm}
-              onPress={add}
-              kind="primary"
-              quiet
-            />
-          </View>
-        </View>
-      ) : null}
-    </View>
+        </Pressable>
+      )}
+    </Card>
   );
 }

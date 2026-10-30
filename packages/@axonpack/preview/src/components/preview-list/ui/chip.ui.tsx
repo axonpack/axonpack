@@ -1,4 +1,4 @@
-import { Pressable, Text, View, type ViewStyle } from "react-native";
+import { Text, View } from "react-native";
 
 import {
   ENVIRONMENT_TONE,
@@ -34,8 +34,6 @@ export function Chip(props: {
   tone?: ChipTone;
   /** What a screen reader says instead of the text. */
   accessibilityLabel?: string;
-  /** Room after the text, for something laid over the chip's end. */
-  endSpace?: number;
 }) {
   const { theme, tone = "neutral" } = props;
   const colors = toneColors(theme, tone);
@@ -44,8 +42,7 @@ export function Chip(props: {
       accessible={props.accessibilityLabel ? true : undefined}
       accessibilityLabel={props.accessibilityLabel}
       style={{
-        paddingLeft: 10,
-        paddingRight: props.endSpace ?? 10,
+        paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 999,
         borderWidth: colors.fill ? 0 : 1,
@@ -119,52 +116,5 @@ export function ServerChip(props: {
       accessibilityLabel={kindLabel(kind, labels)}
       tone={KIND_TONE[kind]}
     />
-  );
-}
-
-/**
- * A chip with a remove button over its end. The ✕ is drawn, so no font moves it off centre, and
- * its 44 x 44 target reaches past the chip, inside a row tall enough to hold it: Android drops a
- * touch outside the parent's bounds.
- */
-export function RemovableChip(props: {
-  theme: PreviewListTheme;
-  text: string;
-  /** What a screen reader says for the button. */
-  removeLabel: string;
-  onRemove: () => void;
-}) {
-  const { theme } = props;
-  const color = toneColors(theme, "neutral").text;
-  const bar: ViewStyle = {
-    position: "absolute",
-    top: 5,
-    width: 12,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: color,
-  };
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", height: 44 }}>
-      <Chip theme={theme} text={props.text} endSpace={30} />
-      <Pressable
-        onPress={props.onRemove}
-        accessibilityRole="button"
-        accessibilityLabel={props.removeLabel}
-        style={({ pressed }: { pressed: boolean }): ViewStyle => ({
-          width: 44,
-          height: 44,
-          marginLeft: -36,
-          alignItems: "center",
-          justifyContent: "center",
-          opacity: pressed ? 0.5 : 1,
-        })}
-      >
-        <View style={{ width: 12, height: 12 }}>
-          <View style={[bar, { transform: [{ rotate: "45deg" }] }]} />
-          <View style={[bar, { transform: [{ rotate: "-45deg" }] }]} />
-        </View>
-      </Pressable>
-    </View>
   );
 }

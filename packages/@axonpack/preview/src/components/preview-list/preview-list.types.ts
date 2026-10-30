@@ -214,14 +214,21 @@ export type PreviewListLabels = {
   previewsTitle: string;
   devPreviewServersTitle: string;
   devPreviewServersHint: string;
-  /** Beside the heading while the app looks through every port for servers. */
+  /**
+   * What a screen reader says for the spinner right after the heading while the app looks
+   * through every port for servers.
+   */
   scanning: string;
-  /** Opens the field for another computer's address, after the hosts under the heading. */
+  /** The row near the end of the servers' card that shows or hides the hosts it checks. */
+  hosts: string;
+  /** The last row of the servers' card. Opens the field for another computer's address. */
   addHost: string;
   /** In the empty field. */
   addHostPlaceholder: string;
   /** Under the field. */
   addHostHint: string;
+  /** What a screen reader says for the field's clear button. */
+  clearHost: string;
   /** Adds what is in the field. */
   addHostConfirm: string;
   /** Closes the field without adding. */
