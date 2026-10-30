@@ -87,14 +87,14 @@ function Probe() {
   return null;
 }
 
-async function render() {
+async function render(url = "http://localhost:9000/b") {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
       <PreviewProvider
         config={{
           enabled: true,
-          url: "http://localhost:9000/b",
+          s3Config: url ? { url } : undefined,
           devPreviewServers: true,
         }}
       >
@@ -108,6 +108,7 @@ async function render() {
 const THIS_BUILD = {
   app: { name: "Shop", version: "1.0.0", buildNumber: "7", platform: "ios" },
   compatibility: { mode: "appVersion", key: "version-1.0.0" },
+  previewsConfigured: true,
   loading: false,
   error: null,
 };
@@ -238,5 +239,16 @@ test("the bundle built into the app", async () => {
   expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(
     fetches,
   );
+  await act(async () => tree.unmount());
+});
+
+test("with no bucket URL, previews are not configured and that is no error", async () => {
+  const tree = await render("");
+  expect(status).toMatchObject({
+    ...THIS_BUILD,
+    previewsConfigured: false,
+    error: null,
+    kind: "default",
+  });
   await act(async () => tree.unmount());
 });

@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import {
   PreviewConfig,
   currentPlatform,
+  previewsConfigured,
   resolveBuildKey,
 } from "../../utils/config/config.util";
 import type { IndexEntry } from "../../utils/previews/layout.util";
@@ -86,7 +87,10 @@ export const previewsStore = {
     return () => listeners.delete(listener);
   },
 
-  /** Reads the downloads on the device, then asks the bucket for this build's list. */
+  /**
+   * Reads the downloads on the device, then asks the bucket for this build's list. With no bucket
+   * URL set it asks nothing, and the list says previews are not set up.
+   */
   async refresh(config: PreviewConfig) {
     set({
       loading: true,
@@ -95,8 +99,10 @@ export const previewsStore = {
     });
     try {
       await readLocal();
-      const index = await fetchPreviews(config);
-      set({ remote: index.previews, loading: false });
+      const index = previewsConfigured(config)
+        ? await fetchPreviews(config)
+        : null;
+      set({ remote: index?.previews ?? null, loading: false });
     } catch (error) {
       set({ loading: false, error: message(error) });
     }

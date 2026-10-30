@@ -2,10 +2,11 @@ import type { PreviewConfig } from "@axonpack/preview";
 
 // From .env (see .env.example). Expo builds EXPO_PUBLIC_* values into the app, so only a read-only
 // key may go there, never the write key.
+// Without a URL the list says previews are not set up.
 export const previewConfig: PreviewConfig = {
   enabled: true,
   s3Config: {
-    url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? "",
+    url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL,
     readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
     readSecretAccessKey:
       process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,

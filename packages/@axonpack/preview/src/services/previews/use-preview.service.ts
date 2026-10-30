@@ -2,7 +2,10 @@ import { useContext, useMemo } from "react";
 
 import { ConfigContext } from "../../components/preview-provider/preview-provider.component";
 import { previewItems } from "../../utils/previews/preview-items.util";
-import { devServersSetup } from "../../utils/config/config.util";
+import {
+  devServersSetup,
+  previewsConfigured,
+} from "../../utils/config/config.util";
 import {
   previewsStore,
   usePreviewsState,
@@ -20,6 +23,7 @@ export function usePreview() {
       ...state,
       ...lists,
       enabled: config.enabled,
+      previewsConfigured: previewsConfigured(config),
       devPreviewServers: devServersSetup(config.devPreviewServers).enabled,
       refresh: () => previewsStore.refresh(config),
       download: (id: string) => previewsStore.download(config, id),

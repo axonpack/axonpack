@@ -178,3 +178,35 @@ test("switching to a preview stops using a picked server first", async () => {
   );
   expect(mockNative.select).toHaveBeenCalledWith("a/ios/main.jsbundle", "fp");
 });
+
+test("with no bucket URL nothing is asked of a bucket, and it is no error", async () => {
+  saveDownload("a", "fp");
+  for (const bucket of [
+    {},
+    { s3Config: { url: undefined } },
+    { s3Config: { url: "" } },
+    { s3Config: { url: " " } },
+    { url: "" },
+  ]) {
+    await previewsStore.refresh({ enabled: true, buildKey: "fp", ...bucket });
+    expect(previewsStore.getState()).toMatchObject({
+      loading: false,
+      error: null,
+      remote: null,
+    });
+  }
+  // The download on the device is still listed, and one not on it can't be fetched.
+  expect(previewsStore.getState().local.map((p) => p.id)).toEqual(["a"]);
+  await previewsStore.switchTo({ enabled: true, buildKey: "fp" }, "b");
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(mockNative.reload).not.toHaveBeenCalled();
+});
+
+test("a relative bucket URL is set but wrong, so a refresh still errors", async () => {
+  await previewsStore.refresh({
+    enabled: true,
+    buildKey: "fp",
+    s3Config: { url: "/previews" },
+  });
+  expect(previewsStore.getState().error).toMatch(/is not a full address/);
+});

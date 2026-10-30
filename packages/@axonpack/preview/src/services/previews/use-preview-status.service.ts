@@ -74,6 +74,11 @@ export type PreviewStatusInfo = {
   };
   /** How this build is matched with previews, and the key it lists them under. */
   compatibility: { mode: Compatibility | null; key: string | null };
+  /**
+   * A bucket URL is set. False when `s3Config.url` is left out, empty or blank: the app reads
+   * nothing from a bucket, and the list says previews are not set up.
+   */
+  previewsConfigured: boolean;
   /** The previews list is loading, and the last thing that went wrong with it. */
   loading: boolean;
   error: string | null;
@@ -141,6 +146,7 @@ export function usePreviewStatus(
       mode: buildCompatibility(),
       key: preview.buildKey ?? buildKey(),
     },
+    previewsConfigured: preview.previewsConfigured,
     loading: preview.loading,
     error: preview.error,
     canGoBack: Boolean(preview.activeId) || running.kind === "local",

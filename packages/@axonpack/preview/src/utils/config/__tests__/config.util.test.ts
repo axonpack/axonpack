@@ -1,4 +1,9 @@
-import { bucketSettings, devServersSetup, toS3Config } from "../config.util";
+import {
+  bucketSettings,
+  devServersSetup,
+  previewsConfigured,
+  toS3Config,
+} from "../config.util";
 import { objectUrl } from "../../../services/s3/s3.service";
 
 const read = (url: string, key = "index/ios/fp.json") =>
@@ -126,6 +131,31 @@ describe("s3Config", () => {
     expect(() => toS3Config({ enabled: true })).toThrow(
       /No bucket URL\. Set `s3Config\.url` in the preview config/,
     );
+  });
+});
+
+describe("previewsConfigured", () => {
+  test("no s3Config, or an undefined, empty or blank URL, is not configured", () => {
+    expect(previewsConfigured({ enabled: true })).toBe(false);
+    // What an unset env value gives, passed straight in.
+    for (const url of [undefined, "", "  "])
+      expect(previewsConfigured({ enabled: true, s3Config: { url } })).toBe(
+        false,
+      );
+  });
+
+  test("a URL in s3Config is configured, even a bad one, which still errors on a read", () => {
+    expect(
+      previewsConfigured({ enabled: true, s3Config: { url: "http://h/b" } }),
+    ).toBe(true);
+    expect(
+      previewsConfigured({ enabled: true, s3Config: { url: "/previews" } }),
+    ).toBe(true);
+  });
+
+  test("the old flat url follows the same rule", () => {
+    expect(previewsConfigured({ enabled: true, url: "" })).toBe(false);
+    expect(previewsConfigured({ enabled: true, url: "http://h/b" })).toBe(true);
   });
 });
 

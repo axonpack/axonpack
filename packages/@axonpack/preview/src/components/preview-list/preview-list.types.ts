@@ -212,6 +212,9 @@ export type PreviewListLabels = {
   deleteAll: string;
   /** Above the published previews. */
   previewsTitle: string;
+  /** Under that heading when the config has no `s3Config.url`, with the hint under it. */
+  previewsNotConfigured: string;
+  previewsNotConfiguredHint: string;
   devPreviewServersTitle: string;
   devPreviewServersHint: string;
   /**

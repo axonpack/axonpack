@@ -49,6 +49,8 @@ export type ListItem =
       position?: GroupPosition;
     }
   | { type: "previews-header"; key: string }
+  /** No bucket URL in the config: one row saying previews are not set up. */
+  | { type: "not-configured"; key: string }
   | { type: "preview"; key: string; item: PreviewItem }
   | { type: "incompatible-header"; key: string }
   | {
@@ -70,6 +72,8 @@ export function buildListItems(state: {
   hosts: DevServerHost[];
   /** "Add a host" ends the servers' card. */
   allowCustomHosts: boolean;
+  /** A bucket URL is set. Without one nothing is asked, so "nothing published" would be wrong. */
+  configured: boolean;
   loading: boolean;
   buildKey: string | null;
   items: PreviewItem[];
@@ -120,10 +124,13 @@ export function buildListItems(state: {
     }
   }
   list.push({ type: "previews-header", key: "previews" });
+  if (!state.configured)
+    list.push({ type: "not-configured", key: "not-configured" });
+  // Downloads on the device still run without a bucket, so they stay listed.
   for (const item of state.items)
     list.push({ type: "preview", key: `preview:${item.id}`, item });
   // While the first answer is on its way, "nothing published" would be a guess.
-  if (state.items.length === 0 && !state.loading) {
+  if (state.configured && state.items.length === 0 && !state.loading) {
     const hint = state.buildKey ? "empty" : "noBuildKey";
     list.push({ type: "hint", key: `hint:${hint}`, hint, tone: "muted" });
   }

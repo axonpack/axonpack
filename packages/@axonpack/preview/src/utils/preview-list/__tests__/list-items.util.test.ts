@@ -19,6 +19,7 @@ const base: State = {
   devServersScanning: false,
   hosts: [],
   allowCustomHosts: true,
+  configured: true,
   loading: false,
   buildKey: "version-1.0.0",
   items: [],
@@ -30,6 +31,19 @@ const shape = (state: Partial<State>) =>
 test("nothing at all still says nothing is published", () => {
   expect(shape({})).toEqual(["previews", "hint:empty"]);
   expect(shape({ buildKey: null })).toEqual(["previews", "hint:noBuildKey"]);
+});
+
+test("with no bucket URL one row says so, in place of the hint, and downloads stay listed", () => {
+  expect(shape({ configured: false })).toEqual(["previews", "not-configured"]);
+  expect(shape({ configured: false, buildKey: null })).toEqual([
+    "previews",
+    "not-configured",
+  ]);
+  expect(shape({ configured: false, items: [item("a")] })).toEqual([
+    "previews",
+    "not-configured",
+    "preview:a",
+  ]);
 });
 
 test("no hint while the first answer is loading", () => {

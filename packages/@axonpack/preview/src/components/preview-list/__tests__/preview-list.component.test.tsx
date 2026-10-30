@@ -1129,18 +1129,65 @@ test("a build with no slug says so instead of listing other apps' servers", asyn
   await act(async () => tree.unmount());
 });
 
-test("a build with no bucket URL says which setting is missing", async () => {
+async function renderConfig(config: PreviewConfig) {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
-      <PreviewProvider config={{ enabled: true, s3Config: { url: "" } }}>
+      <PreviewProvider config={config}>
         <PreviewList />
       </PreviewProvider>,
     );
   });
+  return tree;
+}
+
+test("with no bucket URL, Published previews says previews aren't set up, with no error, and dev servers still show", async () => {
+  for (const bucket of [
+    {},
+    { s3Config: { url: undefined } },
+    { s3Config: { url: "" } },
+    { url: "  " },
+  ]) {
+    const tree = await renderConfig({
+      enabled: true,
+      devPreviewServers: true,
+      ...bucket,
+    });
+    const all = texts(tree);
+    expect(all).toContain("Previews aren't set up");
+    expect(all).toContain(
+      "Add s3Config.url to the preview config to list published previews.",
+    );
+    // One calm row in a card, under the section's heading.
+    const [row] = byId(tree, "previews-not-configured");
+    expect(row.type).toBe(Card);
+    expect(all.indexOf("Published previews")).toBeLessThan(
+      all.indexOf("Previews aren't set up"),
+    );
+    expect(all).not.toContain("No previews published for this build yet.");
+    expect(byId(tree, "list-error")).toEqual([]);
+    expect(all).toContain("Dev preview servers");
+    expect(all).toContain(
+      "No Metro server found. Start one with npx preview start.",
+    );
+    tree.root.findByType(HeroCard);
+    const asked = (global.fetch as jest.Mock).mock.calls.map(([u]) =>
+      String(u),
+    );
+    expect(asked.filter((u) => u.includes("/index/"))).toEqual([]);
+    await act(async () => tree.unmount());
+  }
+});
+
+test("a relative bucket URL is set but wrong, so it still says which setting to fix", async () => {
+  const tree = await renderConfig({
+    enabled: true,
+    s3Config: { url: "/previews" },
+  });
+  expect(texts(tree)).not.toContain("Previews aren't set up");
   const [hint] = byId(tree, "list-error-hint");
   expect(flat(hint)).toContain(
-    "No bucket URL. Set s3Config.url in the preview config",
+    'The bucket URL "/previews" is not a full address',
   );
   // Asking again can't help: the URL is in the build.
   expect(bannerButtons(tree)).toEqual(["Dismiss"]);

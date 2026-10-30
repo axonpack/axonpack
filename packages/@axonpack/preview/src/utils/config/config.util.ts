@@ -53,9 +53,10 @@ export type PreviewS3Config = {
   /**
    * Where the previews are. With a read key: `<endpoint>/<bucket>[/<folder>]`, the same value as
    * `PREVIEW_S3_URL` when publishing. Without one, any address the objects are public under:
-   * that same URL for a public bucket, or R2's `https://pub-<id>.r2.dev` or a CDN.
+   * that same URL for a public bucket, or R2's `https://pub-<id>.r2.dev` or a CDN. Undefined,
+   * empty or blank means previews are not set up: nothing is read, and the list says so.
    */
-  url: string;
+  url?: string;
   /** Read-only key, for a private bucket. Leave out for a public one. Never the write key. */
   readAccessKeyId?: string;
   readSecretAccessKey?: string;
@@ -161,15 +162,23 @@ export function bucketSettings(config: PreviewConfig): PreviewS3Config {
   return s3Config;
 }
 
+/**
+ * A bucket URL is set, in `s3Config` or the old flat field. Left out, empty or blank means the app
+ * has not set previews up yet, which is a state to show, not an error.
+ */
+export const previewsConfigured = (config: PreviewConfig): boolean =>
+  Boolean(bucketSettings(config).url?.trim());
+
 export function toS3Config(config: PreviewConfig): S3Config {
   const s3 = bucketSettings(config);
-  checkBucketUrl(s3.url);
+  const url = s3.url ?? "";
+  checkBucketUrl(url);
   const region = s3.region ?? DEFAULT_REGION;
   const { headers } = s3;
   // Signing needs the bucket apart from the endpoint; a plain read only needs the base address.
   if (s3.readAccessKeyId && s3.readSecretAccessKey) {
     return {
-      ...parseBucketUrl(s3.url),
+      ...parseBucketUrl(url),
       region,
       credentials: {
         accessKeyId: s3.readAccessKeyId,
@@ -178,7 +187,7 @@ export function toS3Config(config: PreviewConfig): S3Config {
       headers,
     };
   }
-  return { endpoint: s3.url.trim(), region, headers };
+  return { endpoint: url.trim(), region, headers };
 }
 
 export const currentPlatform = (): Platform | null =>

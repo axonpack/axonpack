@@ -41,6 +41,8 @@ import {
   buildListItems,
 } from "../../utils/preview-list/list-items.util";
 import { Button } from "./ui/button.ui";
+import { Card } from "./ui/card.ui";
+import { TitleSubtitle } from "./ui/title-subtitle.ui";
 import { SectionHeader } from "./ui/section-header.ui";
 import { Scanning } from "./ui/scanning.ui";
 import { DevServerHosts } from "./dev-server-hosts.component";
@@ -137,7 +139,7 @@ export function PreviewList(props: PreviewListProps) {
   const [pulling, setPulling] = useState(false);
   // What "2 minutes ago" counts from: when the list opened, then each refresh QA asks for.
   const [shownAt, setShownAt] = useState(Date.now);
-  const bucketUrl = config ? bucketSettings(config).url : "";
+  const bucketUrl = (config && bucketSettings(config).url) ?? "";
   // What QA asked for last, so Retry asks again. The first load is a refresh.
   const lastAction = useRef<() => unknown>(preview.refresh);
   const run =
@@ -194,6 +196,7 @@ export function PreviewList(props: PreviewListProps) {
         devServersScanning: local.scanning,
         hosts: local.hosts,
         allowCustomHosts: setup.allowCustomHosts,
+        configured: preview.previewsConfigured,
         loading: preview.loading,
         buildKey: preview.buildKey,
         items: preview.items,
@@ -270,6 +273,16 @@ export function PreviewList(props: PreviewListProps) {
         );
       case "previews-header":
         return <SectionHeader theme={theme} title={labels.previewsTitle} />;
+      case "not-configured":
+        return (
+          <Card theme={theme} testID="previews-not-configured">
+            <TitleSubtitle
+              theme={theme}
+              title={labels.previewsNotConfigured}
+              subtitle={labels.previewsNotConfiguredHint}
+            />
+          </Card>
+        );
       case "preview":
         return (
           <PreviewRow
