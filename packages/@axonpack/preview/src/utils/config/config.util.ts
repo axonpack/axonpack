@@ -53,10 +53,11 @@ export type PreviewS3Config = {
   /**
    * Where the previews are. With a read key: `<endpoint>/<bucket>[/<folder>]`, the same value as
    * `PREVIEW_S3_URL` when publishing. Without one, any address the objects are public under:
-   * that same URL for a public bucket, or R2's `https://pub-<id>.r2.dev` or a CDN. Undefined,
-   * empty or blank means previews are not set up: nothing is read, and the list says so.
+   * that same URL for a public bucket, or R2's `https://pub-<id>.r2.dev` or a CDN. An env value can
+   * still be undefined at runtime despite the type, so undefined, empty or blank means previews are
+   * not set up: nothing is read, and the list says so.
    */
-  url?: string;
+  url: string;
   /** Read-only key, for a private bucket. Leave out for a public one. Never the write key. */
   readAccessKeyId?: string;
   readSecretAccessKey?: string;

@@ -138,7 +138,7 @@ describe("previewsConfigured", () => {
   test("no s3Config, or an undefined, empty or blank URL, is not configured", () => {
     expect(previewsConfigured({ enabled: true })).toBe(false);
     // What an unset env value gives, passed straight in.
-    for (const url of [undefined, "", "  "])
+    for (const url of [undefined as unknown as string, "", "  "])
       expect(previewsConfigured({ enabled: true, s3Config: { url } })).toBe(
         false,
       );

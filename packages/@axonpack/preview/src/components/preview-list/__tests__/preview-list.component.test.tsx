@@ -1144,7 +1144,7 @@ async function renderConfig(config: PreviewConfig) {
 test("with no bucket URL, Published previews says previews aren't set up, with no error, and dev servers still show", async () => {
   for (const bucket of [
     {},
-    { s3Config: { url: undefined } },
+    { s3Config: { url: undefined as unknown as string } },
     { s3Config: { url: "" } },
     { url: "  " },
   ]) {

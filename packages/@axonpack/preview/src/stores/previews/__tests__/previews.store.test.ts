@@ -183,7 +183,7 @@ test("with no bucket URL nothing is asked of a bucket, and it is no error", asyn
   saveDownload("a", "fp");
   for (const bucket of [
     {},
-    { s3Config: { url: undefined } },
+    { s3Config: { url: undefined as unknown as string } },
     { s3Config: { url: "" } },
     { s3Config: { url: " " } },
     { url: "" },
