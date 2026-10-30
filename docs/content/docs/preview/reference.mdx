@@ -33,6 +33,9 @@ Use this page to look up a name. If you are new, start with the
 | `ListFooterComponent`   | Your own element after the last row                                          |
 | Any other FlatList prop | Passed through, such as `onScroll`, `testID` or `showsVerticalScrollIndicator` |
 
+For **Add a host**'s field, the list sets `keyboardShouldPersistTaps="handled"` and, for iOS,
+`automaticallyAdjustKeyboardInsets`. Pass your own to change them.
+
 The list keeps these for itself, so they can't be passed: `data`, `getItem`, `getItemCount`,
 `renderItem`, `keyExtractor`, `ItemSeparatorComponent`, `CellRendererComponent`, `getItemLayout`,
 `numColumns`, `columnWrapperStyle`, `horizontal`, `refreshing`, `onRefresh`, `refreshControl` (pull
@@ -118,7 +121,7 @@ devPreviewServers: {
 | ------------------------ | ------------------------------------------------------------------------ |
 | `refresh()`              | Reads the downloads, then asks the bucket for this build's list. With no bucket URL it asks nothing |
 | `download(id)`           | Downloads a preview, or its update                                       |
-| `switchTo(id)`           | Restarts into a preview, downloading it first if needed                  |
+| `switchTo(id)`           | Restarts into a preview, downloading it first if needed. Also stops a dev preview server |
 | `switchTo(null)`         | Back to the default bundle. Also stops a dev preview server              |
 | `remove(id)`             | Deletes a download. If it runs, goes back to the default bundle first    |
 | `removeIncompatible()`   | Deletes every download made for another native build                     |
@@ -209,6 +212,7 @@ Types: `PreviewConfig`, `PreviewS3Config`, `PreviewsState`, `PreviewItem`, `Prev
 `previewsStore` and `devPreviewServersStore` are the stores behind the hooks, with `getState()` and
 `subscribe()`, for use outside React. `devPreviewServersStore.addHost({ host, port })` and
 `removeHost({ host, port })` add and remove a host on the device, as the list does.
+`previewsStore.clearError()` hides the error, as the snackbar's **Dismiss** does.
 
 ## Theme
 
@@ -379,7 +383,6 @@ Still accepted, so an app written for 0.1.0 type-checks.
 | `title`                | Previews                         | Not shown. The list opens with the header card        |
 | `base`                 | Base                             | Not shown. The card names the default by what serves it |
 | `backToBase`           | Back to default                  | Use `backToDefault`. Still shown when `backToDefault` is not set |
-| `stopServer`           | Stop server                      | Not shown. Back to default stops a picked server      |
 | `stopDevPreviewServer` | Stop using dev preview server    | Not shown. Back to default stops a picked server      |
 | `localSuffix`          | local                            | Not shown. The chip names the server's kind           |
 | `status`               | One per status, as `statusShort`, with Broken: it stopped while starting | Use `statusShort`. Still shown for any status `statusShort` does not set |

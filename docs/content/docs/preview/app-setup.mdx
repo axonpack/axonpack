@@ -107,10 +107,10 @@ When the server the app runs from stops, the card says **Offline** and what to d
 or, for a picked server, go back to default. Its title and kind stay as they were when it last
 answered, after a reload too.
 
-When a preview or a picked server runs, **Back to default** restarts on what the app starts on (the
-default Metro in a debug build, the bundle built into the app in a release build), and stops using
-the server. In a debug build a running preview also says that Metro is
-not used.
+When a preview is chosen (even one that could not start) or a server is picked, **Back to default**
+restarts on what the app starts on (the default Metro in a debug build, the bundle built into the
+app in a release build), and stops using the server. In a debug build a running preview also says
+that Metro is not used.
 
 ### Errors
 
@@ -126,7 +126,7 @@ words, and what to try:
 
 **Retry** does again what was tapped last; the first load counts as a refresh. It is left out when
 the bucket URL in the config is not a full URL, since asking again can't help. **Dismiss**
-hides the snackbar. The raw error also goes to the console. More fixes are on
+hides the snackbar, and so does the next refresh or action. The raw error also goes to the console. More fixes are on
 [Troubleshooting](/docs/preview/troubleshooting).
 
 ### Not configured
@@ -160,7 +160,8 @@ hosts the app checks, and **Add a host**, for another computer's address. See
 ![Published previews with status and environment chips, changelogs, and Delete, Switch and Update](/preview/screenshots/list-published-previews.png)
 
 Each preview is a card: its title, its branch, chips, the changelog (cut to three lines with **Show
-more**), who published it and how long ago, its size, **Delete** and one main action. The one that
+more**), who published it and how long ago, its size, one main action, and **Delete** once it is on
+the device. The one that
 runs takes the header card's tint and has an **Active** chip. `env: <name>` shows when it was
 published with `--environment`.
 
@@ -213,7 +214,7 @@ Change any text with `labels`:
 ```
 
 `status`, `statusShort` and `timeAgo` are merged per key, so `labels={{ statusShort: { broken:
-'Crashed' } }}` changes only that one. Some labels are deprecated: `title`, `base`, `stopServer`,
+'Crashed' } }}` changes only that one. Some labels are deprecated: `title`, `base`,
 `stopDevPreviewServer` and `localSuffix` are no longer shown, `backToBase` is used only when
 `backToDefault` is not set, and `status` still shows for any status `statusShort` does not set. Every
 label and its default is on [Reference](/docs/preview/reference#labels). `DEFAULT_LABELS` is exported.
@@ -256,8 +257,9 @@ What it needs:
 It can be mounted in more than one place at once, and mounted and unmounted as often as you like.
 Its state lives in module stores, so every copy shows the same list. Opening it does not ask the
 bucket again: the provider did that at start, and a pull down or **Refresh** asks again. Dev preview
-servers are looked for only while a list is mounted, and the search stops when the last one
-unmounts.
+servers are looked for while a list is mounted, and the search stops when the last one unmounts.
+`usePreviewStatus()` and `useRunning()` also look once when they mount, if the app runs from Metro
+and no server is known yet, so a banner can tell a `preview start` server from a plain one.
 
 The list does not hide itself when `enabled` is false, so hiding the tab, button or gesture that
 opens it in store builds is the app's job. `usePreview().enabled` tells you when.

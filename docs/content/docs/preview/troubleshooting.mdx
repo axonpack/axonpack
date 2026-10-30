@@ -18,6 +18,15 @@ state, not an error, so there is no snackbar.
 Metro with `npx expo start --clear`, or rebuild. See
 [Settings and env files](/docs/preview/environment#the-apps-settings).
 
+## "The bucket URL ... is not a full address"
+
+The snackbar says "Something went wrong." with this message under it, and has no Retry.
+
+**Cause.** `s3Config.url` is set but does not start with `https://` or `http://`, such as
+`/previews` or `localhost:9000/previews`.
+**Fix.** Pass the whole address, such as `https://pub-<id>.r2.dev`, then restart Metro with
+`npx expo start --clear`, or rebuild.
+
 ## The list is empty
 
 **Cause.** Nothing is published for this build's key. The app only asks for its own key.

@@ -135,7 +135,9 @@ A server found both ways uses the registry's details.
 ## How often it looks
 
 Only while the list is on screen, and never while the app is in the background. When the app comes
-back to the foreground, it looks once straight away.
+back to the foreground, it looks once straight away. Off the list's screen, `usePreviewStatus()` and
+`useRunning()` run one full scan when they mount, if the app runs from Metro and no server is known
+yet, so a banner can name a `preview start` server.
 
 - **Every 2 seconds** it asks the registry, the other computers' registries, the servers it has
   already found, the default Metro and the server the app runs from. That is enough for `preview start` servers: one that starts or stops
@@ -160,8 +162,8 @@ seconds (the default Metro, or the server the app runs from) adds one line each 
 
 ## Reaching the servers
 
-The app scans the host its own Metro is on, and asks the registries of the other hosts under the
-heading.
+The app scans the host its own Metro is on, and asks the registries of the other hosts in the
+**Hosts** row.
 
 | Device                 | What to do                                                                 |
 | ---------------------- | -------------------------------------------------------------------------- |
