@@ -32,7 +32,7 @@ Signed requests use AWS Signature Version 4 with the service `s3`, the region yo
 `x-amz-content-sha256` header holding the body's hash. The host name is part of the signature, so a
 proxy in front must pass the `Host` header through unchanged.
 
-The region is `PREVIEW_S3_REGION` for the CLI and `region` in the app. Both default to `us-east-1`.
+The region is `PREVIEW_S3_REGION` for the CLI and `s3Config.region` in the app. Both default to `us-east-1`.
 Use whatever region your host expects; many accept `us-east-1` or `auto`.
 
 ### Conditional PUT
@@ -50,9 +50,9 @@ preview again.
 ### Reads from the app
 
 A public bucket needs anonymous `GET` on its objects. The app reads `<url>/<key>` with no
-signature, so `url` can be any address the files are public under, such as a CDN.
+signature, so `s3Config.url` can be any address the files are public under, such as a CDN.
 
-A private bucket needs a read-only key. The app signs each `GET` with it, so `url` must be the real
+A private bucket needs a read-only key. The app signs each `GET` with it, so `s3Config.url` must be the real
 `<endpoint>/<bucket>` address. Give the key `ListBucket` as well as `GetObject` if the host has
 that distinction: without it, many hosts answer a missing file with 403 instead of 404, and a build
 with nothing published yet shows an error instead of an empty list.

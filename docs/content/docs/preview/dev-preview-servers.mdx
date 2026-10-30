@@ -80,7 +80,7 @@ nothing, so it counts as the default.
 
 ## Hosts
 
-Under the heading, the list shows the hosts it checks, as chips:
+At the end of the servers card, a **Hosts** row with a count opens the list of hosts it checks:
 
 - **This computer**: `localhost`, `127.0.0.1`, and `10.0.2.2` on Android. Always there, never in the
   config. The computer the app's own Metro runs on shows too when it is another address, such as a
@@ -88,11 +88,12 @@ Under the heading, the list shows the hosts it checks, as chips:
 - **The app's hosts** from `hosts` in the config. Like the ones above, they can't be removed.
 - **Hosts added on the device**, each with a ✕ to remove it.
 
-**Add a host** opens a field for an IP address or a host name, such as `192.168.1.24` or
-`qa-mac.local`. Add `:port` only when that computer's registry is not on 19150. A host that is not an
-address, is already listed, or is this computer gets a plain message under the field instead. Added
-hosts are saved on the device in `Documents/preview/hosts.json` and come back after a restart. An
-app that sets `allowCustomHosts: false` shows no **Add a host**, and ignores hosts added before.
+**Add a host** is the last row of the card. It opens a field in its place for an IP address or a
+host name, such as `192.168.1.24` or `qa-mac.local`. Add `:port` only when that computer's registry
+is not on 19150. A host that is not an address, is already listed, or is this computer gets a plain
+message under the field instead. Added hosts are saved on the device in
+`Documents/preview/hosts.json` and come back after a restart. An app that sets
+`allowCustomHosts: false` shows no **Add a host**, and ignores hosts added before.
 
 ### Other computers show preview servers only
 
@@ -142,9 +143,9 @@ back to the foreground, it looks once straight away.
   asked again each time until it stops answering, then it leaves the list. The one the app runs
   from stays, marked Offline.
 - **A full scan** of 8081 to 8099 runs when the list opens, when you pull to refresh or tap Refresh,
-  and 30 seconds after the last one. A refresh restarts that count. The heading says
-  **Scanning…** while it runs. A new plain `expo start` server shows after the next full scan, so on
-  open, on refresh, or within 30 seconds.
+  and 30 seconds after the last one. A refresh restarts that count. A spinner shows right after the
+  heading's title while it runs. A new plain `expo start` server shows after the next full scan, so
+  on open, on refresh, or within 30 seconds.
 
 A look never starts while the last one runs, and a refresh during a scan waits for that scan.
 

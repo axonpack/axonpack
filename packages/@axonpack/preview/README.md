@@ -64,7 +64,7 @@ export default function App() {
     <PreviewProvider
       config={{
         enabled: true,
-        url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? "",
+        s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? "" },
       }}
     >
       <PreviewList style={{ flex: 1 }} />

@@ -43,16 +43,34 @@ section headings, and says itself when nothing is published).
 
 What the app passes to the provider. Nothing here is read from the environment.
 
+| Field               | Needed | What it is                                                                          |
+| ------------------- | ------ | ----------------------------------------------------------------------------------- |
+| `enabled`           | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
+| `s3Config`          | Yes    | The bucket and how to read it (`PreviewS3Config`, below)                            |
+| `devPreviewServers` | No     | Lists this app's Metro servers in a debug build. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
+| `buildKey`          | No     | This build's key, only when the config plugin is not used to bake it in             |
+
+`s3Config` (`PreviewS3Config`):
+
 | Field                 | Needed | What it is                                                                          |
 | --------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `enabled`             | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
 | `url`                 | Yes    | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN |
 | `readAccessKeyId`     | No     | A read-only key, for a private bucket. Never the write key                          |
 | `readSecretAccessKey` | No     | Its secret                                                                          |
 | `region`              | No     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
 | `headers`             | No     | Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket      |
-| `devPreviewServers`   | No     | Lists this app's Metro servers in a debug build. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
-| `buildKey`            | No     | This build's key, only when the config plugin is not used to bake it in             |
+
+```ts
+s3Config: {
+  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? '',
+  readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
+  readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
+  region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
+},
+```
+
+0.1.0 took these five fields at the top level of the config. They still work but are deprecated.
+When `s3Config` is set too, it wins, and the app logs one warning.
 
 `devPreviewServers` as an object (`DevPreviewServersOptions`). `true` is the same as `{}`.
 
@@ -174,10 +192,11 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `resolveTheme(theme, scheme)` | A full list theme from the `theme` prop and the device's colour scheme      |
 | `fromDevtoolsPalette(palette)` | The list theme keys an expo-devtools palette maps to                       |
 
-Types: `PreviewConfig`, `PreviewsState`, `PreviewItem`, `PreviewStatus`, `Running`, `DefaultSource`,
-`BundleKind`, `PreviewStatusInfo`, `PreviewListProps`, `PreviewListTheme`, `PreviewListThemeInput`,
-`PreviewListFonts`, `DevtoolsPaletteLike`, `PreviewListLabels`, `DevPreviewServersState`,
-`DevPreviewServer`, `DevPreviewServersOptions`, `DevServerHost` and `HostAddress`.
+Types: `PreviewConfig`, `PreviewS3Config`, `PreviewsState`, `PreviewItem`, `PreviewStatus`,
+`Running`, `DefaultSource`, `BundleKind`, `PreviewStatusInfo`, `PreviewListProps`,
+`PreviewListTheme`, `PreviewListThemeInput`, `PreviewListFonts`, `DevtoolsPaletteLike`,
+`PreviewListLabels`, `DevPreviewServersState`, `DevPreviewServer`, `DevPreviewServersOptions`,
+`DevServerHost` and `HostAddress`.
 
 `previewsStore` and `devPreviewServersStore` are the stores behind the hooks, with `getState()` and
 `subscribe()`, for use outside React. `devPreviewServersStore.addHost({ host, port })` and
@@ -289,11 +308,13 @@ Text between backticks shows in a code font.
 | Label                    | Default                                       | Where it shows                                  |
 | ------------------------ | --------------------------------------------- | ----------------------------------------------- |
 | `devPreviewServersTitle` | Dev preview servers                           | The section's heading                           |
-| `devPreviewServersHint`  | Metro servers for this app on these hosts.    | Under the heading, above the hosts              |
-| `scanning`               | Scanning…                                     | Beside the heading, with a spinner, during a full scan of the ports |
-| `addHost`                | Add a host                                    | After the hosts. Opens the field                |
+| `devPreviewServersHint`  | Metro servers for this app on these hosts.    | Under the heading                               |
+| `scanning`               | Scanning…                                     | What a screen reader says for the spinner after the heading's title, during a full scan of the ports |
+| `hosts`                  | Hosts                                         | The row at the end of the servers card, with a count. Opens the list of hosts |
+| `addHost`                | Add a host                                    | The last row of the servers card. Opens the field in its place |
 | `addHostPlaceholder`     | 192.168.1.24 or qa-mac.local                  | In the empty field                              |
 | `addHostHint`            | A computer running npx preview start. Add :port if its registry is not on 19150. | Under the field |
+| `clearHost`              | Clear                                         | What a screen reader says for the field's clear button |
 | `addHostConfirm`         | Add                                           | Adds what is in the field                       |
 | `cancel`                 | Cancel                                        | Closes the field                                |
 | `removeHost`             | Remove \{host\}                               | What a screen reader says for a host's ✕        |

@@ -147,7 +147,9 @@ npx expo install @axonpack/preview expo-file-system
 ```tsx
 import { PreviewList, PreviewProvider } from "@axonpack/preview";
 
-<PreviewProvider config={{ enabled: true, url: "https://pub-<id>.r2.dev" }}>
+<PreviewProvider
+  config={{ enabled: true, s3Config: { url: "https://pub-<id>.r2.dev" } }}
+>
   <PreviewList />
 </PreviewProvider>;
 ```

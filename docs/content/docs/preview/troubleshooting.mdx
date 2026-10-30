@@ -28,7 +28,7 @@ of the list it wrote; compare its key with the build's.
 **Cause.** Something other than the bucket answered. The URL is not public, a tunnel or proxy is
 showing its login page, or the URL points at the wrong place.
 **Fix.** Open the URL from the message in a browser. Make the bucket or the tunnel public, give the
-app the read key, or pass the headers the proxy wants with the `headers` option.
+app the read key, or pass the headers the proxy wants with `s3Config.headers`.
 
 ## The bucket answers 403
 
@@ -38,7 +38,7 @@ The list says "The bucket refused access."
 signing region that does not match the bucket. In the CLI: the write key lacks one of the actions it
 needs.
 **Fix.** Check the key's policy against [Storage](/docs/preview/storage#the-two-keys), and set the
-region (`PREVIEW_S3_REGION` for the CLI, `region` in the app) for an AWS bucket outside `us-east-1`.
+region (`PREVIEW_S3_REGION` for the CLI, `s3Config.region` in the app) for an AWS bucket outside `us-east-1`.
 
 ## Publish says to set PREVIEW_S3_URL
 

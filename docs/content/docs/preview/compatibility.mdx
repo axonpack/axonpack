@@ -72,7 +72,7 @@ If you can't use the plugin, pass the key yourself in the provider's config:
 ```ts
 const config: PreviewConfig = {
   enabled: true,
-  url: '...',
+  s3Config: { url: '...' },
   buildKey: 'version-1.4.0',
 };
 ```

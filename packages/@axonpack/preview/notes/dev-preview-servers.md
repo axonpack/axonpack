@@ -6,7 +6,7 @@ between them live.
 - [x] Lists every Metro server for this app on the developer's computer, in a debug build
 - [x] Finds plain `expo start` servers, and servers started with `preview start` with their branch
 - [x] Shows a new `preview start` server within 2 s, a plain one within 30 s, and drops one that stopped
-- [x] Says Scanning beside the heading during a full scan of the ports
+- [x] Shows a spinner right after the heading during a full scan of the ports
 - [x] Leaves out other apps' servers; keeps the same app built for other native code, marked
 - [x] Switches the running app to a server with a tap on its row, and back, with no rebuild
 - [x] Marks the server the app runs from as Active, and the one it starts on as the default

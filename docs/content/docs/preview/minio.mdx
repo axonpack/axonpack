@@ -106,7 +106,7 @@ Reaching it from a device:
   the publish URL and the app's URL.
 - **A phone on another network:** a public tunnel to port 9000 in the app's URL, while publishing
   stays on `localhost:9000`. A private tunnel answers with a login page instead of the file. Pass
-  any header the tunnel wants with the `headers` option, for example
+  any header the tunnel wants with `s3Config.headers`, for example
   `{ 'X-Tunnel-Skip-AntiPhishing-Page': 'True' }` for a VS Code dev tunnel.
 
 Android 17 asks the user before an app may reach the local network, which includes the emulator's

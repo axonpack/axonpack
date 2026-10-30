@@ -114,7 +114,7 @@ The example reads its bucket from `example/.env` (copy `example/.env.example`):
 With a read key the app splits the URL into endpoint, bucket and folder and signs its reads. Without
 one it reads `<url>/<key>` unsigned, so the URL needs no bucket in it.
 
-Headers for a tunnel or proxy are not env values: pass `headers` in the app's config.
+Headers for a tunnel or proxy are not env values: pass `s3Config.headers` in the app's config.
 
 Expo builds `EXPO_PUBLIC_*` values into the app, so only a read-only key may go there, never the
 write key. They are read when the app is bundled, so rebuild after changing them.
@@ -128,7 +128,7 @@ A tunnel works too, for a phone on another network: forward port 9000 (a VS Code
 example) and put its HTTPS address in the app's URL, while publishing stays on `localhost:9000`. The
 tunnel must be public, or it answers every request with a redirect to a login page. Dev tunnels may
 also put a warning page in front of the first request; pass
-`headers: { "X-Tunnel-Skip-AntiPhishing-Page": "True" }` in the app's config to skip it.
+`{ "X-Tunnel-Skip-AntiPhishing-Page": "True" }` as `s3Config.headers` in the app's config to skip it.
 
 ### Plain HTTP on a device
 
