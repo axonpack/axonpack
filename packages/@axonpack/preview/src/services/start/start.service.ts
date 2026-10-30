@@ -323,16 +323,19 @@ export async function ensureRegistry(
   throw new Error(`The registry did not start on port ${registryPort}.`);
 }
 
-/** Says once why phones on the network can't find this computer, with the fix on macOS. */
+/**
+ * Says once that Bonjour can't announce this computer. Phones on the same Wi-Fi still find it
+ * through the network sweep, so the line says that too, plus the Local Network fix on macOS.
+ */
 export function announceErrorNotice() {
   let shown: string | undefined;
   return (error: string | undefined) => {
     if (error && error !== shown)
       log(
-        `Phones on the network can't find this computer (${error}).` +
+        `Bonjour can't announce this computer (${error}). Phones on the same Wi-Fi still find it by scanning the network.` +
           // What macOS answers a send with when the terminal app has no local network access.
           (process.platform === "darwin" && /EHOSTUNREACH|EPERM/.test(error)
-            ? " Allow your terminal app under System Settings > Privacy & Security > Local Network."
+            ? " To turn Bonjour on, allow your terminal app under System Settings > Privacy & Security > Local Network."
             : ""),
       );
     shown = error;

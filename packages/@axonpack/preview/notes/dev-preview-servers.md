@@ -21,7 +21,7 @@ between them live.
 - [x] Only this app's servers, by the slug the config plugin bakes in; a build without it says so
 - [x] Finds `preview start` servers on other computers on the network with no address typed in
 - [x] Says which computer a server found on the network runs on, and lists a server found two ways once
-- [x] Replaces an older registry, or one that hung, on its own, and says when phones can't find the computer
+- [x] Replaces an older registry, or one that hung, on its own, and says when Bonjour can't announce the computer
 - [x] Finds `preview start` servers on the device's own /24 when Bonjour doesn't get through, by asking each address for a registry
 - [ ] Lists and switches to dev servers in a release build too, when the app turns previews on
 
@@ -96,8 +96,9 @@ shows. To check the packets with no network, write `announcement()`'s output int
 for each server, waits at most 1 s for it, and closes. The registry runs detached with no terminal,
 so a failed bind, or a round of sends where none got through, is kept as `announceError` in the
 `/servers` answer (and the heartbeat's, which is why a POST answers 200 with the same body). One
-interface failing alone, such as a VPN, is not reported. `preview start` prints it once, with the
-Local Network fix on macOS for EHOSTUNREACH or EPERM, which is what a send without that access gets.
+interface failing alone, such as a VPN, is not reported. `preview start` prints it once, says the
+sweep still finds the computer, and adds the Local Network fix on macOS for EHOSTUNREACH or EPERM,
+which is what a send without that access gets.
 
 **An older registry.** `/servers` sends `version` (`REGISTRY_VERSION`); none counts as older. A
 `start` that meets an older one, or one that holds 19150 but doesn't answer, finds its pid with

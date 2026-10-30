@@ -147,8 +147,8 @@ To get Bonjour working, check from the computer outward:
   stays empty on the computer that runs `preview start`, allow the terminal app you started it from
   in **System Settings > Privacy & Security > Local Network** (macOS 15 and later), then start it
   again.
-- **Read what `preview start` printed.** When announcing fails, it prints `Phones on the network
-  can't find this computer`, with the error and, on macOS, the Local Network fix.
+- **Read what `preview start` printed.** When announcing fails, it prints
+  `Bonjour can't announce this computer`, with the error and, on macOS, the Local Network fix.
 - **No old registry.** `preview start` replaces an older registry on port 19150, or one that doesn't
   answer, and prints `Replaced an older preview registry`. It leaves the process running when it
   can't tell it is a preview registry, or on Windows, and prints what holds the port.

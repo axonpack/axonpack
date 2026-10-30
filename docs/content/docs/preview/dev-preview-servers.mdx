@@ -160,7 +160,7 @@ Bonjour finds nothing. Phones on the same /24 still find the computer through
 when the announcements fail, with the error the registry got:
 
 ```
-preview: Phones on the network can't find this computer (send EHOSTUNREACH 224.0.0.251:5353). Allow your terminal app under System Settings > Privacy & Security > Local Network.
+preview: Bonjour can't announce this computer (send EHOSTUNREACH 224.0.0.251:5353). Phones on the same Wi-Fi still find it by scanning the network. To turn Bonjour on, allow your terminal app under System Settings > Privacy & Security > Local Network.
 ```
 
 To check from the Mac, run `dns-sd -B _axon-preview._tcp` while `preview start` runs. When the

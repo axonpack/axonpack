@@ -299,7 +299,7 @@ test("says once why announcing fails, with the macOS fix for a refused send", ()
     notice("send EHOSTUNREACH 224.0.0.251:5353");
     notice(undefined);
     expect(lines).toEqual([
-      "preview: Phones on the network can't find this computer (send EHOSTUNREACH 224.0.0.251:5353). Allow your terminal app under System Settings > Privacy & Security > Local Network.\n",
+      "preview: Bonjour can't announce this computer (send EHOSTUNREACH 224.0.0.251:5353). Phones on the same Wi-Fi still find it by scanning the network. To turn Bonjour on, allow your terminal app under System Settings > Privacy & Security > Local Network.\n",
     ]);
   } finally {
     Object.defineProperty(process, "platform", platform);
