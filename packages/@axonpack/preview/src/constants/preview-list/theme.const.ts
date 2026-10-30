@@ -147,7 +147,7 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   incompatibleHint: "Made for another native build, so they can't run here.",
   deleteAll: "Delete all",
   previewsTitle: "Published previews",
-  previewsNotConfigured: "Previews aren't set up",
+  previewsNotConfigured: "Not configured",
   previewsNotConfiguredHint:
     "Add s3Config.url to the preview config to list published previews.",
   devPreviewServersTitle: "Dev preview servers",

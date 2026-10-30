@@ -1141,7 +1141,7 @@ async function renderConfig(config: PreviewConfig) {
   return tree;
 }
 
-test("with no bucket URL, Published previews says previews aren't set up, with no error, and dev servers still show", async () => {
+test("with no bucket URL, Published previews says Not configured, with no error, and dev servers still show", async () => {
   for (const bucket of [
     {},
     { s3Config: { url: undefined as unknown as string } },
@@ -1154,7 +1154,7 @@ test("with no bucket URL, Published previews says previews aren't set up, with n
       ...bucket,
     });
     const all = texts(tree);
-    expect(all).toContain("Previews aren't set up");
+    expect(all).toContain("Not configured");
     expect(all).toContain(
       "Add s3Config.url to the preview config to list published previews.",
     );
@@ -1162,7 +1162,7 @@ test("with no bucket URL, Published previews says previews aren't set up, with n
     const [row] = byId(tree, "previews-not-configured");
     expect(row.type).toBe(Card);
     expect(all.indexOf("Published previews")).toBeLessThan(
-      all.indexOf("Previews aren't set up"),
+      all.indexOf("Not configured"),
     );
     expect(all).not.toContain("No previews published for this build yet.");
     expect(byId(tree, "list-error")).toEqual([]);
@@ -1184,7 +1184,7 @@ test("a relative bucket URL is set but wrong, so it still says which setting to 
     enabled: true,
     s3Config: { url: "/previews" },
   });
-  expect(texts(tree)).not.toContain("Previews aren't set up");
+  expect(texts(tree)).not.toContain("Not configured");
   const [hint] = byId(tree, "list-error-hint");
   expect(flat(hint)).toContain(
     'The bucket URL "/previews" is not a full address',
