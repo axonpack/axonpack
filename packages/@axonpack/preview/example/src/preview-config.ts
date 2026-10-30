@@ -14,11 +14,10 @@ export const previewConfig: PreviewConfig = {
   },
   // Lists this app's Metro servers on your computer (debug builds only): `bunx preview start`.
   devPreviewServers: {
+    enabled: true,
+    // Other computers running `preview start`, listed for everyone. The port is the registry's.
+    hosts: ["192.168.1.24"],
     // QA can add another computer's address in the list.
     allowCustomHosts: true,
-    // Other computers running `preview start`, listed for everyone. The port is the registry's.
-    hosts: [
-      // "192.168.1.24",
-    ],
   },
 };
