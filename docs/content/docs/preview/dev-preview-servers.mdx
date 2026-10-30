@@ -49,11 +49,15 @@ one grouped card. Each row has the server's title, its address and its branch, w
   started with `preview start`.
 - **Default bundle** on the Metro the app starts on with nothing picked. Metro only knows the app's
   name, which every server of the app shares, so this one is called **Default** unless
-  `preview start` gave it a title.
+  `preview start` gave it a title. Any other server without a title goes by its address.
+- **Offline** on the server the app runs from, once it stops answering. Its row stays, with the
+  title, branch and kind it had when it last answered, even after a reload. A server the app never
+  saw answering shows its address and a plain **Server** chip, since its kind is not known.
 - **Made for another native build** or **Native build unknown**. See below.
 
 Tap a row to restart the app on that server. The header card then names it, and **Use the default
-bundle** goes back. Stop a server with Ctrl+C and it leaves the list on its own.
+bundle** goes back. Stop a server with Ctrl+C and it leaves the list on its own, unless the app
+runs from it.
 
 On every start of a debug build the order is: the picked dev preview server, then a downloaded
 preview, then the default Metro. Switching to a preview in the list stops using the picked server,
@@ -72,11 +76,12 @@ fingerprint.
 
 ## How the app finds them
 
-Two sources, merged by port:
+Two sources, merged by host and port:
 
 - **The registry.** `preview start` runs `expo start` on a free port and announces it to a small
   registry on your computer, on port 19150, with the branch, the worktree and the native key
-  `publish` would use. The first `start` starts the registry, and it exits once no server is left.
+  `publish` would use. It announces once Metro answers, on the port Metro really took: Expo moves
+  to another port when it finds the first one taken. The first `start` starts the registry, and it exits once no server is left.
   A heartbeat every 5 seconds keeps a server listed; it drops out 15 seconds after the last, so a
   killed process goes too.
 - **A port scan.** The app asks each port from 8081 to 8099 for Metro's `/status`, then reads the

@@ -16,3 +16,6 @@
 - **What runs is what loaded**: a chosen preview that could not start no longer shows as running
 - **Switching to a preview while a dev server is picked** now loads the preview
 - **A missing or relative bucket URL** now says which setting to fix
+- **An offline server stays in view**: when the server the app runs from stops, the header card and its row say Offline and what to do, with the title, branch and kind it had when it last answered, after a reload too. `usePreviewStatus()` has `online`
+- **Servers go by their own names**: a server `preview start` did not name shows its address, never the app's name. One the app never saw answering shows a plain `Server` chip
+- **`preview start` announces the port Metro really took**, once it answers, so its title and kind no longer show on another server

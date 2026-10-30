@@ -17,7 +17,7 @@ Use this page to look up a name. If you are new, start with the
 | `usePreviewStatus(labels?)`    | What runs now and the build it runs in. See [below](#usepreviewstatus). Needs the provider |
 | `useRunning()`                 | What this start runs, as a [`Running`](#running). Needs the provider          |
 | `usePreviewsState()`           | The raw [store state](#usepreview), without the provider                      |
-| `useDevPreviewServersState()`  | `{ servers, activeUrl, error }` for dev preview servers                       |
+| `useDevPreviewServersState()`  | `{ servers, activeUrl, alive, error }` for dev preview servers. `alive` is every `host:port` that answered the last look, or null before one |
 
 ## PreviewList props
 
@@ -112,13 +112,14 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | --------------- | ------------------------------------------------------------------------------ |
 | `running`       | What runs now, as `useRunning()` returns it                                     |
 | `kind`          | `default`, `preview` or `local` (a server picked in the list)                  |
-| `bundleKind`    | Where it comes from: `built-in`, `expo-dev-server`, `dev-preview-server` or `preview`. Picks the header card's chip |
-| `title`         | The header card's title: the preview's or server's title, Default, or the kind's name |
+| `bundleKind`    | Where it comes from: `built-in`, `expo-dev-server`, `dev-preview-server`, `preview`, or `server` for a server no look has found, whose kind is not known. Picks the header card's chip |
+| `title`         | The header card's title: the preview's title, a `preview start` server's title, Default for the Metro the app starts on, another server's address, or the kind's name |
 | `id`            | The running preview's id, or null                                              |
 | `branch`        | The running preview's or server's branch, or null                              |
 | `address`       | A server's `host:port`, with loopback shown as localhost, or null              |
 | `label`         | One sentence for what runs, such as "Expo server, localhost:8081"              |
 | `isDefault`     | The default bundle runs: nothing picked, or what was picked is what the app starts on anyway |
+| `online`        | Whether the server the app runs from answers: false once a look for dev preview servers did not find it. Null for a preview or a bundle built into the app, before the first look, and with dev preview servers off |
 | `environment`   | The running preview's EAS environment, or null                                 |
 | `author`        | The running preview's author, or null                                          |
 | `commit`        | The running preview's full commit, or null                                     |
@@ -220,6 +221,10 @@ braces, such as `{host}`, is filled in. `status`, `statusShort` and `timeAgo` ar
 | `kindExpoDevServer`        | Expo server                   | What a screen reader says for the `server: Expo` chip  |
 | `kindDevPreviewServer`     | Preview server                | What a screen reader says for the `server: Preview` chip |
 | `kindPreview`              | Preview                       | The chip for a running preview                         |
+| `kindServer`               | Server                        | The chip, with no hue, for a server no look has found and nothing was saved about |
+| `offline`                  | Offline                       | The chip on the card and on the row of the server the app runs from, once it stops answering |
+| `offlineHint`              | Start this server again, or use the default bundle. | Under the chips when a picked server stops answering |
+| `offlineDefaultHint`       | Start Metro again, then reload. | Under the chips when the Metro the app starts on stops answering |
 | `serverPrefix`             | server:                       | Before a server's kind on its chip                     |
 | `serverExpo`               | Expo                          | A plain Expo server's kind on its chip                 |
 | `serverPreview`            | Preview                       | A `preview start` server's kind on its chip            |

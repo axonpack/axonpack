@@ -82,8 +82,9 @@ chips that does not fit scrolls sideways.
 
 ### The header card
 
-The title names what runs now: a preview's title, a server's title, **Default** for the Metro the
-app starts on when `preview start` gave it no title, or **Built into the app**. A server's address,
+The title names what runs now: a preview's title, a `preview start` server's title, **Default** for
+the Metro the app starts on when `preview start` gave it no title, another server's address, or
+**Built into the app**. A server's address,
 such as `localhost:8081`, is under it. Chips say what it is:
 
 | Chip              | When                                                                      |
@@ -91,12 +92,18 @@ such as `localhost:8081`, is under it. Chips say what it is:
 | `Preview`         | A published preview runs                                                  |
 | `server: Expo`    | A Metro started with `expo start` or `expo run`                           |
 | `server: Preview` | A Metro started with `preview start`                                      |
+| `Server`          | A server no look has found, so its kind is not known                      |
+| `Offline`         | The server the app runs from stopped answering                            |
 | `Default bundle`  | Nothing is switched in. This is what the app starts on anyway             |
 | `env: <name>`     | The preview was published with `--environment`                            |
 
 A preview also shows who published it and when. **Show details** opens the rest: the branch, the
 preview id, the environment, the app's name, version and build, the commit, the platform, what the
 build is matched by (app version or fingerprint) and its build key.
+
+When the server the app runs from stops, the card says **Offline** and what to do: start it again,
+or, for a picked server, use the default bundle. Its title and kind stay as they were when it last
+answered, after a reload too.
 
 When a preview or a picked server runs, **Use the default bundle** restarts on the bundle the app
 starts on, and stops using the server. In a debug build a running preview also says that Metro is
@@ -124,10 +131,11 @@ hides the snackbar. The raw error also goes to the console. More fixes are on
 In a debug build with `devPreviewServers` on, this app's Metro servers are one grouped card. Each row
 has the server's title, its address, its branch, and chips:
 
-- **Active:** the app runs from this server now. The row takes the header card's tint.
+- **Active:** the app runs from this server now. The row takes the header card's tint. If it stops
+  answering, its row stays and says **Offline**.
 - **`server: Expo`** or **`server: Preview`:** a plain Expo server, or one started with `preview start`.
 - **Default bundle:** the Metro the app starts on with nothing picked. Without a title from
-  `preview start` it is called **Default**.
+  `preview start` it is called **Default**. Any other server without one goes by its address.
 - **Made for another native build** or **Native build unknown:** it may not run on this build.
 
 Tap a row to restart the app on that server. The Active row does nothing. See

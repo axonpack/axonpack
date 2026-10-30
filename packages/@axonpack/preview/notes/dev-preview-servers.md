@@ -38,10 +38,14 @@ which takes the branch title. `publish` asks the same way for the title QA sees.
 
 **Two sources.** `preview start` runs `expo start` on a free port and announces it to a small
 registry on the computer (started by the first `start`, gone once no server is left), with the
-branch, worktree and the native key `publish` would use. Heartbeats every 5 s keep it listed; it
+branch, worktree and the native key `publish` would use. It announces only once Metro answers, on
+the port whose `/status` names its project root (`X-React-Native-Project-Root`), because Expo moves
+to another port when it finds the given one taken, and the app gives an announcement's title and
+kind to whatever answers on its port. It unannounces after Metro has exited, so the app's last look
+never sees it answering unannounced. Heartbeats every 5 s keep it listed; it
 drops out 15 s after the last, so a killed process goes too. Plain `expo start` servers are found
 by probing the port range for Metro's `/status`; each one's Expo manifest then gives its slug,
-name, version and bundle URL. A server found both ways uses the registry's details. While the list
+name, version and bundle URL. A server found both ways (same host and port) uses the registry's details. While the list
 is on screen the app looks every 2 s, and never starts a look while the last one runs. A probe gives
 up after 2 s: Android sends 5 requests per host at a time and the emulator takes about 400 ms to
 refuse a closed port, so a tighter limit dropped live servers there. A closed port on the computer
