@@ -6,20 +6,25 @@
 - **Back to default**: one button goes back from a preview or a picked dev server, to the default Metro in a debug build and to the bundle built into the app in a release build
 - **Errors in plain words**: a snackbar above the list says what went wrong and what to try, with Retry and Dismiss. On the Android emulator it says how to reach a bucket on localhost
 - **Dev servers in one card**: the server the app runs from says Active, the one it starts on says Default server, and a chip says `server: Expo` or `server: Preview`. Tap a row to switch to it
-- **Preview rows**: `status:` and `env:` chips, the branch, the changelog, who published it and how long ago, and one main action. A broken preview says what happened
+- **Preview rows**: `status:` and `env:` chips, the branch, the changelog cut to three lines with Show more, who published it and how long ago, and one main action. A broken preview says what happened
+- **Incompatible downloads in one card**: each shows its title, branch, environment, who published it and when, and its size
+- **Chips scroll sideways** when a row of them does not fit
 - **EAS environment on each preview**: `preview publish --environment` records it, and the list shows it as an `env:` chip
 - **Your own theme**: pass a partial theme, or the palette you give `@axonpack/expo-devtools`. New theme keys: `tint`, `tintBorder`, `dangerSurface`, `info`, `accent2` and `accent3`
 - **Style it like a FlatList**: `PreviewList` takes FlatList props, such as `contentContainerStyle`, `ListHeaderComponent` and `ListFooterComponent`
 - **`usePreviewStatus`**: a new hook that returns everything the header card shows, with `backToDefault()` and `refresh()`, for a banner or badge of your own
 - **`Running.kind` is now `"default"`** where 0.1.0 said `"base"`, in `useRunning` and `runningNow`. `source` says where the default bundle comes from
 - **Deprecated labels**: `title`, `base`, `backToBase`, `stopDevPreviewServer`, `localSuffix` and `status`. They are still accepted. Use `backToDefault` and `statusShort` instead
-- **What runs is what loaded**: a chosen preview that could not start no longer shows as running
+- **What runs is what loaded**: a chosen preview that could not start no longer shows as running. `usePreview()` has `runningId`
 - **Switching to a preview while a dev server is picked** now loads the preview
 - **A relative bucket URL** now says which setting to fix
 - **No bucket URL means not set up, not an error**: with `s3Config.url` undefined, empty or blank, the app reads nothing from a bucket and Published previews says previews aren't set up. `s3Config.url` is required in the type, so apps pass the env value with `as string`. `usePreview()` and `usePreviewStatus()` have `previewsConfigured`
 - **Bucket settings under `s3Config`**: `url`, `readAccessKeyId`, `readSecretAccessKey`, `region` and `headers` now go in `s3Config: { ... }`. The top-level fields of 0.1.0 still work but are deprecated. When both are set, `s3Config` wins and the app logs one warning
 - **An offline server stays in view**: when the server the app runs from stops, the header card and its row say Offline and what to do, with the title, branch and kind it had when it last answered, after a reload too. `usePreviewStatus()` has `online`
 - **Servers go by their own names**: a server `preview start` did not name shows its address, never the app's name. One the app never saw answering shows a plain `Server` chip
-- **A quieter server scan**: every 2 seconds the list asks only the registry and the servers it knows, so a `preview start` server still shows within two seconds. The full scan of ports 8081 to 8099 runs on open, on refresh and every 30 seconds, never in the background, with Scanning beside the heading. iOS no longer fills the Xcode console with a refused connection per port. `usePreviewStatus()` has `scanning`
-- **Hosts under the dev servers heading**: chips show where the list looks, and Add a host takes another computer's address, saved on the device. Another computer shows only its `preview start` servers, through its registry on port 19150, never a plain `expo start`. `devPreviewServers` also takes `{ enabled, allowCustomHosts, hosts }` for the app's own hosts, and a registry that refuses is asked again only on a full scan
+- **A quieter server scan**: every 2 seconds the list asks only the registry and the servers it knows, so a `preview start` server still shows within two seconds. The full scan of ports 8081 to 8099 runs on open, on refresh and every 30 seconds, never in the background, with a spinner beside the heading. iOS no longer fills the Xcode console with a refused connection per port. `usePreviewStatus()` has `scanning`
+- **Hosts at the end of the dev servers card**: a Hosts row lists where the list looks, and Add a host takes another computer's address, saved on the device. Another computer shows only its `preview start` servers, through its registry on port 19150, never a plain `expo start`. `devPreviewServers` also takes `{ enabled, allowCustomHosts, hosts }` for the app's own hosts, and a registry that refuses is asked again only on a full scan
 - **`preview start` announces the port Metro really took**, once it answers, so its title and kind no longer show on another server
+- **More in the dev servers state**: `useDevPreviewServersState()` has `alive`, `scanning` and `hosts`. `devPreviewServersStore` has `addHost()` and `removeHost()`, and `previewsStore` has `clearError()`
+- **New exports**: `runningLabel`, `runningKind`, `sameServer` and `fromDevtoolsPalette`, and the types `PreviewS3Config`, `DevPreviewServersOptions`, `DefaultSource`, `BundleKind`, `PreviewStatusInfo`, `PreviewListThemeInput`, `DevtoolsPaletteLike`, `DevServerHost` and `HostAddress`
+- **New labels** for every new piece of text, and a few defaults reworded. The reference lists them all
