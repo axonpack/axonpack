@@ -1,4 +1,4 @@
-import { devServersSetup, toS3Config } from "../config.util";
+import { bucketSettings, devServersSetup, toS3Config } from "../config.util";
 import { objectUrl } from "../../../services/s3/s3.service";
 
 const read = (url: string, key = "index/ios/fp.json") =>
@@ -81,7 +81,7 @@ test("extra headers go with every read", async () => {
 test("an empty bucket URL names the setting instead of failing on the path", () => {
   for (const url of ["", "  "]) {
     expect(() => toS3Config({ enabled: true, url })).toThrow(
-      /No bucket URL\. Set `url` in the preview config/,
+      /No bucket URL\. Set `s3Config\.url` in the preview config/,
     );
   }
 });
@@ -89,9 +89,44 @@ test("an empty bucket URL names the setting instead of failing on the path", () 
 test("a relative bucket URL says it is not a full address", () => {
   for (const url of ["/previews", "localhost:9000/previews"]) {
     expect(() => toS3Config({ enabled: true, url })).toThrow(
-      /is not a full address\. Set `url` in the preview config/,
+      /is not a full address\. Set `s3Config\.url` in the preview config/,
     );
   }
+});
+
+describe("s3Config", () => {
+  const bucket = {
+    url: "http://localhost:9000/previews-private",
+    readAccessKeyId: "reader",
+    readSecretAccessKey: "secret",
+    region: "auto",
+    headers: { "X-Tunnel-Skip-AntiPhishing-Page": "True" },
+  };
+
+  test("is read as given", () => {
+    expect(bucketSettings({ enabled: true, s3Config: bucket })).toEqual(bucket);
+  });
+
+  test("the flat fields of 0.1.0 still work", () => {
+    expect(bucketSettings({ enabled: true, ...bucket })).toEqual(bucket);
+  });
+
+  test("wins over the flat fields, with one warning per run", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const both = { enabled: true, s3Config: bucket, url: "http://old/b" };
+    expect(bucketSettings(both)).toBe(bucket);
+    expect(toS3Config(both).bucket).toBe("previews-private");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/Using `s3Config`/);
+    warn.mockRestore();
+  });
+
+  test("with neither, the missing URL names s3Config.url", () => {
+    expect(bucketSettings({ enabled: true }).url).toBe("");
+    expect(() => toS3Config({ enabled: true })).toThrow(
+      /No bucket URL\. Set `s3Config\.url` in the preview config/,
+    );
+  });
 });
 
 describe("devPreviewServers", () => {

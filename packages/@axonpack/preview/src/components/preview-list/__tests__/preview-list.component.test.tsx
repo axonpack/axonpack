@@ -1133,13 +1133,15 @@ test("a build with no bucket URL says which setting is missing", async () => {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
-      <PreviewProvider config={{ enabled: true, url: "" }}>
+      <PreviewProvider config={{ enabled: true, s3Config: { url: "" } }}>
         <PreviewList />
       </PreviewProvider>,
     );
   });
   const [hint] = byId(tree, "list-error-hint");
-  expect(flat(hint)).toContain("No bucket URL. Set url in the preview config");
+  expect(flat(hint)).toContain(
+    "No bucket URL. Set s3Config.url in the preview config",
+  );
   // Asking again can't help: the URL is in the build.
   expect(bannerButtons(tree)).toEqual(["Dismiss"]);
   await act(async () => tree.unmount());

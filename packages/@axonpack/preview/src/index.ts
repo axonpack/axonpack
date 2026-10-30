@@ -13,6 +13,7 @@ export { markLaunched } from "./services/native/native.service";
 export type {
   DevPreviewServersOptions,
   PreviewConfig,
+  PreviewS3Config,
 } from "./utils/config/config.util";
 export {
   previewsStore,

@@ -14,13 +14,42 @@ import {
 } from "../../services/s3/s3.service";
 
 /**
- * What the app passes in. It mirrors the publish side's `.env`: the same bucket URL, plus a
- * read-only key when the bucket is private. Nothing here is read from the environment; the app
- * decides where each value comes from.
+ * What the app passes in. Nothing here is read from the environment; the app decides where each
+ * value comes from.
  */
 export type PreviewConfig = {
   /** Previews are on only when this is true. The app decides per build; nothing is detected. */
   enabled: boolean;
+  /** Where the previews are and how to read them. */
+  s3Config?: PreviewS3Config;
+  /**
+   * Lists the Metro servers for this app running on the developer's computer, and switches
+   * between them live. Debug builds only; off unless `enabled` is true. `true` turns it on with the
+   * defaults; an object also sets the hosts.
+   */
+  devPreviewServers?: boolean | DevPreviewServersOptions;
+  /**
+   * This build's key (`version-<app version>` or `fingerprint-<hash>`), only when the config plugin
+   * is not used to bake it in.
+   */
+  buildKey?: string;
+  /** @deprecated Use `s3Config.url`. */
+  url?: string;
+  /** @deprecated Use `s3Config.readAccessKeyId`. */
+  readAccessKeyId?: string;
+  /** @deprecated Use `s3Config.readSecretAccessKey`. */
+  readSecretAccessKey?: string;
+  /** @deprecated Use `s3Config.region`. */
+  region?: string;
+  /** @deprecated Use `s3Config.headers`. */
+  headers?: Record<string, string>;
+};
+
+/**
+ * The bucket, as the app reads it. It mirrors the publish side's `.env`: the same bucket URL, plus
+ * a read-only key when the bucket is private.
+ */
+export type PreviewS3Config = {
   /**
    * Where the previews are. With a read key: `<endpoint>/<bucket>[/<folder>]`, the same value as
    * `PREVIEW_S3_URL` when publishing. Without one, any address the objects are public under:
@@ -32,19 +61,8 @@ export type PreviewConfig = {
   readSecretAccessKey?: string;
   /** Signing region. Default us-east-1, which MinIO and R2 accept. */
   region?: string;
-  /**
-   * Lists the Metro servers for this app running on the developer's computer, and switches
-   * between them live. Debug builds only; off unless `enabled` is true. `true` turns it on with the
-   * defaults; an object also sets the hosts.
-   */
-  devPreviewServers?: boolean | DevPreviewServersOptions;
   /** Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket. */
   headers?: Record<string, string>;
-  /**
-   * This build's key (`version-<app version>` or `fingerprint-<hash>`), only when the config plugin
-   * is not used to bake it in.
-   */
-  buildKey?: string;
 };
 
 /** `devPreviewServers` as an object, for more than on or off. */
@@ -98,33 +116,69 @@ export function checkBucketUrl(url: string): void {
   const value = url.trim();
   if (!value) {
     throw new Error(
-      "No bucket URL. Set `url` in the preview config (for example from EXPO_PUBLIC_PREVIEW_S3_URL in .env) and rebuild.",
+      "No bucket URL. Set `s3Config.url` in the preview config (for example from EXPO_PUBLIC_PREVIEW_S3_URL in .env) and rebuild.",
     );
   }
   if (!/^https?:\/\/[^/?#]+/i.test(value)) {
     throw new Error(
-      `The bucket URL "${value}" is not a full address. Set \`url\` in the preview config (for example from EXPO_PUBLIC_PREVIEW_S3_URL in .env) to one starting with https:// or http://.`,
+      `The bucket URL "${value}" is not a full address. Set \`s3Config.url\` in the preview config (for example from EXPO_PUBLIC_PREVIEW_S3_URL in .env) to one starting with https:// or http://.`,
     );
   }
 }
 
-export function toS3Config(config: PreviewConfig): S3Config {
-  checkBucketUrl(config.url);
-  const region = config.region ?? DEFAULT_REGION;
-  const { headers } = config;
-  // Signing needs the bucket apart from the endpoint; a plain read only needs the base address.
-  if (config.readAccessKeyId && config.readSecretAccessKey) {
+// toS3Config runs on every read, so a config that sets both says so once per run, not per read.
+let warnedBoth = false;
+
+/**
+ * The bucket settings from `s3Config`, or from the flat fields 0.1.0 took. When both are set,
+ * `s3Config` wins.
+ */
+export function bucketSettings(config: PreviewConfig): PreviewS3Config {
+  const {
+    s3Config,
+    url,
+    readAccessKeyId,
+    readSecretAccessKey,
+    region,
+    headers,
+  } = config;
+  if (!s3Config) {
     return {
-      ...parseBucketUrl(config.url),
+      url: url ?? "",
+      readAccessKeyId,
+      readSecretAccessKey,
+      region,
+      headers,
+    };
+  }
+  const flat = [url, readAccessKeyId, readSecretAccessKey, region, headers];
+  if (!warnedBoth && flat.some((value) => value !== undefined)) {
+    warnedBoth = true;
+    console.warn(
+      "@axonpack/preview: the preview config sets both `s3Config` and the old top-level bucket fields. Using `s3Config`. Remove `url`, `readAccessKeyId`, `readSecretAccessKey`, `region` and `headers` from the top level.",
+    );
+  }
+  return s3Config;
+}
+
+export function toS3Config(config: PreviewConfig): S3Config {
+  const s3 = bucketSettings(config);
+  checkBucketUrl(s3.url);
+  const region = s3.region ?? DEFAULT_REGION;
+  const { headers } = s3;
+  // Signing needs the bucket apart from the endpoint; a plain read only needs the base address.
+  if (s3.readAccessKeyId && s3.readSecretAccessKey) {
+    return {
+      ...parseBucketUrl(s3.url),
       region,
       credentials: {
-        accessKeyId: config.readAccessKeyId,
-        secretAccessKey: config.readSecretAccessKey,
+        accessKeyId: s3.readAccessKeyId,
+        secretAccessKey: s3.readSecretAccessKey,
       },
       headers,
     };
   }
-  return { endpoint: config.url.trim(), region, headers };
+  return { endpoint: s3.url.trim(), region, headers };
 }
 
 export const currentPlatform = (): Platform | null =>

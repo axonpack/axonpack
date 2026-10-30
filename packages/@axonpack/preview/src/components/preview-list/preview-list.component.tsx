@@ -24,6 +24,7 @@ import {
 import { buildSlug } from "../../services/native/build-info.service";
 import { nativeModule } from "../../services/native/native.service";
 import {
+  bucketSettings,
   currentPlatform,
   devServersSetup,
 } from "../../utils/config/config.util";
@@ -136,7 +137,7 @@ export function PreviewList(props: PreviewListProps) {
   const [pulling, setPulling] = useState(false);
   // What "2 minutes ago" counts from: when the list opened, then each refresh QA asks for.
   const [shownAt, setShownAt] = useState(Date.now);
-  const bucketUrl = config?.url ?? "";
+  const bucketUrl = config ? bucketSettings(config).url : "";
   // What QA asked for last, so Retry asks again. The first load is a refresh.
   const lastAction = useRef<() => unknown>(preview.refresh);
   const run =
