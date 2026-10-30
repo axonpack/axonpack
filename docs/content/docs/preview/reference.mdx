@@ -62,7 +62,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 
 ```ts
 s3Config: {
-  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL,
+  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string,
   readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
   readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
   region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,

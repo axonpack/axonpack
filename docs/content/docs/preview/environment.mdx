@@ -56,7 +56,7 @@ The package reads no environment variables in the app. You pass everything to th
 decide where each value comes from. The usual way is Expo's `EXPO_PUBLIC_*` variables:
 
 ```sh title=".env"
-EXPO_PUBLIC_PREVIEW_S3_URL=https://pub-<id>.r2.dev
+EXPO_PUBLIC_PREVIEW_S3_URL=https://pub-<id>.r2.dev/my-bucket
 # Private bucket only:
 # EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID=...
 # EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY=...
@@ -69,7 +69,7 @@ import type { PreviewConfig } from '@axonpack/preview';
 export const previewConfig: PreviewConfig = {
   enabled: true,
   s3Config: {
-    url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL,
+    url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string,
     readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
     readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
     region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
