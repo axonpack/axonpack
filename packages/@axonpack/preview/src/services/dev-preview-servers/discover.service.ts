@@ -7,6 +7,7 @@ import {
   type RegisteredServer,
 } from "../../constants/dev-preview-servers/dev-preview-servers.const";
 import type { ScannedServer } from "../../utils/dev-preview-servers/merge-servers.util";
+import { sameServer } from "../../utils/previews/running.util";
 
 // Generous on purpose. Android's HTTP client runs 5 requests per host at a time, so most of the
 // 19 probes wait in its queue, and the emulator's NAT takes about 400 ms even to refuse a closed
@@ -16,7 +17,7 @@ const PROBE_MS = 2000;
 
 /**
  * Runs one request, body read included, and aborts it after `ms`. The timer is cleared once the
- * request settles, so a fast answer leaves nothing pending: a poll round sends 20 of these.
+ * request settles, so a fast answer leaves nothing pending: a full sweep sends 20 of these.
  */
 async function within<T>(
   ms: number,
@@ -100,12 +101,13 @@ const manifests = new Map<
 
 /**
  * One look: every Metro in the range on the candidate hosts, plus the registry and the host it
- * answered on. `own` is the `host:port` the app runs from, asked directly. `alive` is every
- * `host:port` that answered.
+ * answered on. `ports` narrows the range to those ports (the registry's are always asked). `own`
+ * is the `host:port` the app runs from, asked directly. `alive` is every `host:port` that answered.
  */
 export async function discover(
   platform: Platform,
   own: string | null = null,
+  ports: number[] | null = null,
 ): Promise<{
   registry: RegisteredServer[];
   registryHost: string | null;
@@ -124,13 +126,21 @@ export async function discover(
       break;
     }
   }
-  const ports = new Set<number>(registry.map((r) => r.port));
-  for (let port = from; port <= to; port++) ports.add(port);
+  const asked = new Set<number>(registry.map((r) => r.port));
+  if (ports) ports.forEach((port) => asked.add(port));
+  else for (let port = from; port <= to; port++) asked.add(port);
+  // When the scan already asks the server the app runs from, asking it again only adds one more
+  // refused connection for iOS to log while it is down.
+  const ownAsked =
+    own !== null &&
+    [...asked].some((port) =>
+      hosts.some((host) => sameServer(`${host}:${port}`, own)),
+    );
 
   const scanned: ScannedServer[] = [];
   const alive: string[] = [];
   await Promise.all([
-    ...[...ports].map(async (port) => {
+    ...[...asked].map(async (port) => {
       for (const host of hosts) {
         const id = `${host}:${port}`;
         if (!(await isMetro(id))) continue;
@@ -149,6 +159,7 @@ export async function discover(
     }),
     // The server the app runs from can be on a host or port the scan does not cover.
     own &&
+      !ownAsked &&
       isMetro(own).then((up) => {
         if (up) alive.push(own);
       }),

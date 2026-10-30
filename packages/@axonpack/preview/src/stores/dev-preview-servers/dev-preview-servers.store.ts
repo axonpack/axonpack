@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { AppState, type NativeEventSubscription } from "react-native";
 
 import { buildKey, buildSlug } from "../../services/native/build-info.service";
 import { currentPlatform } from "../../utils/config/config.util";
@@ -43,10 +44,24 @@ const set = (patch: Partial<DevPreviewServersState>) => {
 };
 
 const POLL_MS = 2000;
+// Each closed port in the range is a refused connection, and iOS logs every one to the Xcode
+// console, which JS can't silence. So between full sweeps a poll asks only the servers already
+// known, and a new plain `expo start` server waits at most this long to show.
+const SWEEP_MS = 30000;
 let watchers = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
+let appState: NativeEventSubscription | null = null;
 
-let polling = false;
+let round: { sweep: boolean; done: Promise<void> } | null = null;
+let lastSweep = 0;
+/** Ports that answered in the last round. Quick polls keep asking them until they stop. */
+let known: number[] = [];
+
+const message = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+const portOf = (hostPort: string) =>
+  Number(hostPort.slice(hostPort.lastIndexOf(":") + 1));
 
 /** The server at `own` as saved before a reload, or marked unknown when nothing was. */
 async function savedOrUnknown(
@@ -56,11 +71,10 @@ async function savedOrUnknown(
 ): Promise<DevPreviewServer> {
   const saved = await readRunningServer();
   if (saved && sameServer(saved.hostPort, own)) return saved;
-  const at = own.lastIndexOf(":");
   return {
     hostPort: own,
-    host: own.slice(0, at),
-    port: Number(own.slice(at + 1)),
+    host: own.slice(0, own.lastIndexOf(":")),
+    port: portOf(own),
     url,
     title: "",
     name: "",
@@ -76,17 +90,25 @@ async function savedOrUnknown(
   };
 }
 
-async function poll() {
+/** One round: the whole port range on a sweep, else the registry and the servers already known. */
+async function poll(sweep: boolean) {
   const platform = currentPlatform();
   const appSlug = buildSlug();
-  // A round can outlast the interval on a slow host; overlapping rounds would land out of order.
-  if (!platform || !appSlug || polling) return;
-  polling = true;
+  if (!platform || !appSlug) return;
+  if (sweep) lastSweep = Date.now();
   try {
     // The Metro the app's JS came from; null for a preview or a bundle built into the app.
     const url = scriptUrl();
     const own = url ? hostPortOf(url) : null;
-    const found = await discover(platform, own);
+    const defaultMetro = nativeModule()?.state().defaultServer;
+    const found = await discover(
+      platform,
+      own,
+      sweep
+        ? null
+        : [...known, ...(defaultMetro ? [portOf(defaultMetro)] : [])],
+    );
+    known = found.alive.map(portOf);
     let servers = mergeServers({
       ...found,
       appSlug,
@@ -111,14 +133,30 @@ async function poll() {
       error: null,
     });
   } catch (error) {
-    set({ error: error instanceof Error ? error.message : String(error) });
-  } finally {
-    polling = false;
+    set({ error: message(error) });
   }
 }
 
-const message = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
+/**
+ * Rounds never overlap: one can outlast the interval on a slow host, and overlapping rounds would
+ * land out of order. A sweep asked for during a quick round runs once that round ends.
+ */
+function look(sweep: boolean): Promise<void> {
+  if (round)
+    return sweep && !round.sweep
+      ? round.done.then(() => look(true))
+      : round.done;
+  const done = poll(sweep).finally(() => {
+    round = null;
+  });
+  round = { sweep, done };
+  return done;
+}
+
+function tick() {
+  if (AppState.currentState === "background") return;
+  look(Date.now() - lastSweep >= SWEEP_MS);
+}
 
 export const devPreviewServersStore = {
   getState: () => state,
@@ -128,7 +166,8 @@ export const devPreviewServersStore = {
   },
 
   /**
-   * Looks every 2 s while something watches (the list is on screen), and stops when nothing does.
+   * While something watches (the list is on screen): sweeps the port range at once and every 30 s,
+   * and asks the servers already known every 2 s. Nothing while the app is in the background.
    * Debug builds only; returns a function that stops watching.
    */
   watch(): () => void {
@@ -137,19 +176,25 @@ export const devPreviewServersStore = {
     if (!timer) {
       // A round from an earlier visit may be old. Until this visit's first one, it is not known.
       set({ alive: null });
-      poll();
-      timer = setInterval(poll, POLL_MS);
+      look(true);
+      timer = setInterval(tick, POLL_MS);
+      appState = AppState.addEventListener("change", (next) => {
+        if (next === "active") look(false);
+      });
     }
     return () => {
       watchers--;
       if (watchers === 0 && timer) {
         clearInterval(timer);
         timer = null;
+        appState?.remove();
+        appState = null;
       }
     };
   },
 
-  refresh: () => poll(),
+  /** Sweeps the whole port range, as pull to refresh and the Refresh button ask. */
+  refresh: () => look(true),
 
   /** Restarts the app on a dev preview server, or back on what it ran before with null. */
   switchTo(server: DevPreviewServer | null) {
