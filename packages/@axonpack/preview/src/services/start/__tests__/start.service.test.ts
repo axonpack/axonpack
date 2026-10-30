@@ -1,6 +1,7 @@
+import { createServer as createHttpServer, type Server } from "node:http";
 import { createServer } from "node:net";
 
-import { freePort, registration } from "../start.service";
+import { freePort, metroPort, registration } from "../start.service";
 
 test("skips a port something already listens on", async () => {
   const busy = createServer();
@@ -59,5 +60,56 @@ test("in fingerprint mode the keys come from the fingerprints", () => {
   expect(server.keys).toEqual({
     android: "fingerprint-aa",
     ios: "fingerprint-bb",
+  });
+});
+
+/** A Metro stand-in on a free port: `/status` names its project root, as Expo's does. */
+async function metro(root: string): Promise<{ port: number; server: Server }> {
+  const server = createHttpServer((_, res) => {
+    res.setHeader("X-React-Native-Project-Root", encodeURI(root));
+    res.end("packager-status:running");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return { port: (server.address() as { port: number }).port, server };
+}
+
+describe("metroPort: where this project's Metro really answers", () => {
+  const ours = __dirname;
+  const range = (a: number, b: number): [number, number] => [
+    Math.min(a, b),
+    Math.max(a, b),
+  ];
+
+  test("on the port it was given", async () => {
+    const { port, server } = await metro(ours);
+    try {
+      expect(await metroPort(ours, port, [port, port])).toBe(port);
+    } finally {
+      server.close();
+    }
+  });
+
+  test("on another port when Expo moved, never on the given one that another project holds", async () => {
+    const other = await metro("/somewhere/else");
+    const moved = await metro(ours);
+    try {
+      expect(
+        await metroPort(ours, other.port, range(other.port, moved.port)),
+      ).toBe(moved.port);
+    } finally {
+      other.server.close();
+      moved.server.close();
+    }
+  });
+
+  test("null while it does not answer yet", async () => {
+    const other = await metro("/somewhere/else");
+    try {
+      expect(await metroPort(ours, other.port, [other.port, other.port])).toBe(
+        null,
+      );
+    } finally {
+      other.server.close();
+    }
   });
 });

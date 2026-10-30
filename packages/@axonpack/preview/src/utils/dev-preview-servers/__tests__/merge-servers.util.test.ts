@@ -92,3 +92,69 @@ test("an announced server that stopped answering is not listed", () => {
     merge({ registry: [registered(8083, { ios: "version-1.0.0" })] }),
   ).toEqual([]);
 });
+
+describe("an announcement belongs to its own port", () => {
+  const kinds = (servers: ReturnType<typeof merge>) =>
+    servers.map((s) => [s.port, s.announced, s.announced ? s.title : null]);
+  const atPort = (port: number) => registered(port, { ios: "version-1.0.0" });
+
+  test("preview start alone on 8081, the app's default Metro, keeps its own title", () => {
+    expect(
+      kinds(
+        merge({ scanned: [scanned(8081, "shop")], registry: [atPort(8081)] }),
+      ),
+    ).toEqual([[8081, true, "Task 1 login fix"]]);
+  });
+
+  test("then expo start on 8082: 8082 is a plain Expo server, 8081 stays announced", () => {
+    expect(
+      kinds(
+        merge({
+          scanned: [scanned(8081, "shop"), scanned(8082, "shop")],
+          registry: [atPort(8081)],
+        }),
+      ),
+    ).toEqual([
+      [8081, true, "Task 1 login fix"],
+      [8082, false, null],
+    ]);
+  });
+
+  test("the other way round: expo start on 8081, then preview start on 8082", () => {
+    expect(
+      kinds(
+        merge({
+          scanned: [scanned(8081, "shop"), scanned(8082, "shop")],
+          registry: [atPort(8082)],
+        }),
+      ),
+    ).toEqual([
+      [8081, false, null],
+      [8082, true, "Task 1 login fix"],
+    ]);
+  });
+
+  test("an announcement for a port the scan did not find names no other server", () => {
+    expect(
+      kinds(
+        merge({ scanned: [scanned(8081, "shop")], registry: [atPort(8085)] }),
+      ),
+    ).toEqual([[8081, false, null]]);
+  });
+
+  test("the same port on another machine is not the announced one", () => {
+    const lan = { ...scanned(8081, "shop"), host: "192.168.1.24" };
+    expect(
+      kinds(
+        merge({
+          scanned: [scanned(8081, "shop"), lan],
+          registry: [atPort(8081)],
+          registryHost: "127.0.0.1",
+        }),
+      ),
+    ).toEqual([
+      [8081, true, "Task 1 login fix"],
+      [8081, false, null],
+    ]);
+  });
+});

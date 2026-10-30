@@ -1,5 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { get } from "node:http";
 import { createServer } from "node:net";
 
 import {
@@ -29,10 +31,7 @@ const portIsFree = (port: number) =>
     probe.listen(port);
   });
 
-/**
- * The first port in the range nothing listens on and no other `start` has claimed. A claim counts
- * because Metro takes a few seconds to bind, and two starts close together would pick the same port.
- */
+/** The first port in the range nothing listens on and no other `start` has announced. */
 export async function freePort(
   [from, to]: [number, number],
   claimed: Set<number> = new Set(),
@@ -44,6 +43,47 @@ export async function freePort(
   throw new Error(
     `No free port between ${from} and ${to}; pass --ports <from>-<to>.`,
   );
+}
+
+const samePath = (a: string, b: string) => {
+  try {
+    return realpathSync(a) === realpathSync(b);
+  } catch {
+    return a === b;
+  }
+};
+
+/** Whether the Metro on `port` serves `projectRoot`, by the header Expo's `/status` sends. */
+const servesProject = (port: number, projectRoot: string) =>
+  new Promise<boolean>((resolve) => {
+    const req = get(
+      { host: "127.0.0.1", port, path: "/status", timeout: 500 },
+      (res) => {
+        res.resume();
+        const root = res.headers["x-react-native-project-root"];
+        resolve(
+          typeof root === "string" && samePath(decodeURI(root), projectRoot),
+        );
+      },
+    );
+    req.on("timeout", () => req.destroy());
+    req.on("error", () => resolve(false));
+  });
+
+/**
+ * The port this project's Metro answers on, or null until it does. Usually the one it was given,
+ * but Expo moves to another when it finds that one taken (it asks, and yes is the default).
+ */
+export async function metroPort(
+  projectRoot: string,
+  given: number,
+  [from, to]: [number, number],
+): Promise<number | null> {
+  if (await servesProject(given, projectRoot)) return given;
+  for (let port = from; port <= to; port++) {
+    if (port !== given && (await servesProject(port, projectRoot))) return port;
+  }
+  return null;
 }
 
 /** What the registry is told; the keys are made the way `publish` makes them. */
@@ -157,9 +197,10 @@ export type StartOptions = {
 };
 
 /**
- * Runs `expo start` on a free port and announces it, so the app's list shows it. The announcement
- * goes when Metro stops: on exit, on Ctrl+C, and through the registry's heartbeat timeout when the
- * process is killed outright.
+ * Runs `expo start` on a free port and announces it, so the app's list shows it. It is announced
+ * once Metro answers, on the port Metro really took, since the app gives the announced title and
+ * kind to whatever answers there. The announcement goes when Metro stops: on exit, on Ctrl+C, and
+ * through the registry's heartbeat timeout when the process is killed outright.
  */
 export async function start(options: StartOptions) {
   const registry = await ensureRegistry(options.registryPort, options.bin);
@@ -195,16 +236,34 @@ export async function start(options: StartOptions) {
       method: "DELETE",
     }).catch(() => undefined);
 
-  await register();
-  log(
-    `${server.title || server.name} on port ${port}, announced on ${registry}`,
-  );
-  let beats = 0;
+  let announced = false;
+  const announce = async () => {
+    const real = await metroPort(
+      options.projectRoot,
+      server.port,
+      options.ports,
+    );
+    if (real === null) return;
+    if (real !== server.port) {
+      server.port = real;
+      adbReverse([real]);
+    }
+    const first = !announced;
+    announced = true;
+    if (first)
+      log(
+        `${server.title || server.name} on port ${real}, announced on ${registry}`,
+      );
+    await register();
+  };
+  let ticks = 0;
   const heartbeat = setInterval(() => {
-    register();
+    ticks++;
+    // Every second until Metro answers, then a heartbeat.
+    if (!announced || ticks % (HEARTBEAT_MS / 1000) === 0) announce();
     // A restarted emulator forgets its reverse rules; renew them now and then.
-    if (++beats % 6 === 0) adbReverse([options.registryPort, port]);
-  }, HEARTBEAT_MS);
+    if (ticks % 30 === 0) adbReverse([options.registryPort, server.port]);
+  }, 1000);
 
   const child = spawn(
     "npx",
@@ -226,7 +285,9 @@ export async function start(options: StartOptions) {
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
     process.on(signal, () => {
       child.kill(signal);
-      stop(0);
+      // Unannounced only once Metro is gone (the exit above), or the app's last look sees it
+      // still answering with no announcement, as a plain Expo server.
+      setTimeout(() => stop(0), 5000);
     });
   }
 }

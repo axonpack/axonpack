@@ -98,17 +98,21 @@ const manifests = new Map<
   Promise<Awaited<ReturnType<typeof readManifest>> | null>
 >();
 
-/** One look: every Metro in the range on the candidate hosts, plus the registry. */
-export async function discover(
-  platform: Platform,
-): Promise<{ registry: RegisteredServer[]; scanned: ScannedServer[] }> {
+/** One look: every Metro in the range on the candidate hosts, plus the registry and its host. */
+export async function discover(platform: Platform): Promise<{
+  registry: RegisteredServer[];
+  registryHost: string | null;
+  scanned: ScannedServer[];
+}> {
   const [from, to] = DEFAULT_PORT_RANGE;
   const hosts = candidateHosts();
   let registry: RegisteredServer[] = [];
+  let registryHost: string | null = null;
   for (const host of hosts) {
     const found = await readRegistry(host, DEFAULT_REGISTRY_PORT);
     if (found) {
       registry = found;
+      registryHost = host;
       break;
     }
   }
@@ -134,5 +138,5 @@ export async function discover(
       for (const host of hosts) manifests.delete(`${host}:${port}`);
     }),
   );
-  return { registry, scanned };
+  return { registry, registryHost, scanned };
 }

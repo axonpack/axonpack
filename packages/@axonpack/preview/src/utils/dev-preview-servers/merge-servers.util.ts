@@ -5,6 +5,7 @@ import {
 } from "../config/expo-config.util";
 import { compatibilityKey, type Platform } from "../previews/layout.util";
 import type { RegisteredServer } from "../../constants/dev-preview-servers/dev-preview-servers.const";
+import { sameServer } from "../previews/running.util";
 
 /** A Metro server on the developer's computer that this app can run from (debug builds only). */
 export type DevPreviewServer = {
@@ -38,10 +39,13 @@ export type ScannedServer = {
 /**
  * Turns what the registry announced and what the scan found into this app's list: other apps'
  * servers (another slug) are left out, the same app with another native key is kept but marked
- * incompatible, and a server found both ways uses the registry's details.
+ * incompatible, and a server found both ways uses the registry's details. An announcement belongs
+ * to its host and port only, never to a server that merely shares the app's slug or name.
  */
 export function mergeServers(input: {
   registry: RegisteredServer[];
+  /** Where the registry answered, which is the machine its ports are on. Default: this computer. */
+  registryHost?: string | null;
   scanned: ScannedServer[];
   /** The slug the config plugin baked into the build. Only its servers are listed. */
   appSlug: string;
@@ -49,8 +53,11 @@ export function mergeServers(input: {
   platform: Platform;
 }): DevPreviewServer[] {
   const servers: DevPreviewServer[] = [];
+  const registryHost = input.registryHost ?? "localhost";
   for (const found of input.scanned) {
-    const announced = input.registry.find((r) => r.port === found.port);
+    const announced = input.registry.find((r) =>
+      sameServer(`${registryHost}:${r.port}`, `${found.host}:${found.port}`),
+    );
     const slug = announced?.slug ?? found.expo.slug ?? "";
     if (slug !== input.appSlug) continue;
     const key =
