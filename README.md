@@ -137,7 +137,7 @@ import { UpdatePrompt } from "@axonpack/in-app-updates";
 
 Hand QA the JS of every branch inside the build they already have. Publish one bundle per branch to
 your own S3-compatible bucket (S3, R2, MinIO); QA picks it from a list in the app, and the app
-restarts into it. No native rebuild, and the base build is one tap away. expo-updates keeps working
+restarts into it. No native rebuild, and the default bundle is one tap away. expo-updates keeps working
 underneath.
 
 ```sh
