@@ -63,7 +63,7 @@ export function DevServerRow(props: {
       ? { text: kindLabel(kind, labels), tone: KIND_TONE[kind] }
       : { text: kindLabel(kind, labels), kind: true },
     // Whether it runs or not, so the default is always easy to find.
-    props.isDefault ? { text: labels.defaultBundle } : null,
+    props.isDefault ? { text: labels.defaultServerChip } : null,
     // Still switchable: the warning says why it may not start.
     server.compatible === false
       ? { text: labels.localIncompatible, tone: "warning" }

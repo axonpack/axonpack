@@ -47,7 +47,7 @@ one grouped card. Each row has the server's title, its address and its branch, w
 - **Active** on the server the app runs from now. Its row takes the header card's tint.
 - **`server: Expo`** on a plain `expo start` or `expo run` Metro, and **`server: Preview`** on one
   started with `preview start`.
-- **Default bundle** on the Metro the app starts on with nothing picked. Metro only knows the app's
+- **Default server** on the Metro the app starts on with nothing picked. Metro only knows the app's
   name, which every server of the app shares, so this one is called **Default** unless
   `preview start` gave it a title. Any other server without a title goes by its address.
 - **Offline** on the server the app runs from, once it stops answering. Its row stays, with the
@@ -55,13 +55,13 @@ one grouped card. Each row has the server's title, its address and its branch, w
   saw answering shows its address and a plain **Server** chip, since its kind is not known.
 - **Made for another native build** or **Native build unknown**. See below.
 
-Tap a row to restart the app on that server. The header card then names it, and **Use the default
-bundle** goes back. Stop a server with Ctrl+C and it leaves the list on its own, unless the app
+Tap a row to restart the app on that server. The header card then names it, and **Back to default**
+goes back. Stop a server with Ctrl+C and it leaves the list on its own, unless the app
 runs from it.
 
 On every start of a debug build the order is: the picked dev preview server, then a downloaded
 preview, then the default Metro. Switching to a preview in the list stops using the picked server,
-and **Use the default bundle** stops both. Picking the Metro the app starts on anyway changes
+and **Back to default** stops both. Picking the Metro the app starts on anyway changes
 nothing, so it counts as the default.
 
 ## Which servers are listed

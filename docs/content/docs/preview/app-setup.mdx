@@ -54,7 +54,7 @@ enabled: process.env.EXPO_PUBLIC_PREVIEWS === 'on',
 ```
 
 It applies to debug builds too. A preview chosen in a debug build loads instead of Metro, and the
-list says Metro is bypassed. **Use the default bundle** returns to Metro.
+list says Metro is bypassed. **Back to default** returns to Metro.
 
 ## The ready-made list
 
@@ -70,7 +70,7 @@ Put it on a screen QA can reach: a tab in internal builds, a settings row, or a 
 [Show the list anywhere](#show-the-list-anywhere). From the top, it shows:
 
 - **An error snackbar**, only when something went wrong. See [Errors](#errors).
-- **The header card:** what runs now, and **Use the default bundle**.
+- **The header card:** what runs now, and **Back to default**.
 - **Dev preview servers**, in a debug build with that option on.
 - **Published previews** for this build.
 - **Incompatible:** downloads made for another native build, with **Delete all**.
@@ -94,7 +94,8 @@ such as `localhost:8081`, is under it. Chips say what it is:
 | `server: Preview` | A Metro started with `preview start`                                      |
 | `Server`          | A server no look has found, so its kind is not known                      |
 | `Offline`         | The server the app runs from stopped answering                            |
-| `Default bundle`  | Nothing is switched in. This is what the app starts on anyway             |
+| `Default server`  | The Metro the app starts on runs, with nothing switched in                |
+| `Default bundle`  | The bundle built into the app runs, as in a release build                 |
 | `env: <name>`     | The preview was published with `--environment`                            |
 
 A preview also shows who published it and when. **Show details** opens the rest: the branch, the
@@ -102,11 +103,12 @@ preview id, the environment, the app's name, version and build, the commit, the 
 build is matched by (app version or fingerprint) and its build key.
 
 When the server the app runs from stops, the card says **Offline** and what to do: start it again,
-or, for a picked server, use the default bundle. Its title and kind stay as they were when it last
+or, for a picked server, go back to default. Its title and kind stay as they were when it last
 answered, after a reload too.
 
-When a preview or a picked server runs, **Use the default bundle** restarts on the bundle the app
-starts on, and stops using the server. In a debug build a running preview also says that Metro is
+When a preview or a picked server runs, **Back to default** restarts on what the app starts on (the
+default Metro in a debug build, the bundle built into the app in a release build), and stops using
+the server. In a debug build a running preview also says that Metro is
 not used.
 
 ### Errors
@@ -134,7 +136,7 @@ has the server's title, its address, its branch, and chips:
 - **Active:** the app runs from this server now. The row takes the header card's tint. If it stops
   answering, its row stays and says **Offline**.
 - **`server: Expo`** or **`server: Preview`:** a plain Expo server, or one started with `preview start`.
-- **Default bundle:** the Metro the app starts on with nothing picked. Without a title from
+- **Default server:** the Metro the app starts on with nothing picked. Without a title from
   `preview start` it is called **Default**. Any other server without one goes by its address.
 - **Made for another native build** or **Native build unknown:** it may not run on this build.
 
@@ -335,7 +337,7 @@ export function MyPreviews() {
           <Button title="Switch" onPress={() => preview.switchTo(item.id)} />
         </View>
       )}
-      ListFooterComponent={<Button title="Use the default bundle" onPress={() => preview.switchTo(null)} />}
+      ListFooterComponent={<Button title="Back to default" onPress={() => preview.switchTo(null)} />}
     />
   );
 }
@@ -360,7 +362,7 @@ export function BundleBanner() {
     <View style={{ backgroundColor: '#1d4ed8', padding: 8 }}>
       <Text style={{ color: 'white' }}>{status.label}</Text>
       {status.environment ? <Text style={{ color: 'white' }}>env: {status.environment}</Text> : null}
-      <Button title="Use the default bundle" onPress={status.backToDefault} />
+      <Button title="Back to default" onPress={status.backToDefault} />
     </View>
   );
 }

@@ -216,14 +216,15 @@ braces, such as `{host}`, is filled in. `status`, `statusShort` and `timeAgo` ar
 | Label                      | Default                       | Where it shows                                         |
 | -------------------------- | ----------------------------- | ------------------------------------------------------ |
 | `running`                  | Running                       | What a screen reader says before what runs             |
-| `defaultBundle`            | Default bundle                | The chip on the default bundle, in the card and on a server row |
+| `defaultServerChip`        | Default server                | The chip on the Metro the app starts on: on its row, and in the card while it runs |
+| `defaultBundle`            | Default bundle                | The chip in the card while the bundle built into the app runs, as in a release build |
 | `kindBuiltIn`              | Built into the app            | The title for a bundle built into the app              |
 | `kindExpoDevServer`        | Expo server                   | What a screen reader says for the `server: Expo` chip  |
 | `kindDevPreviewServer`     | Preview server                | What a screen reader says for the `server: Preview` chip |
 | `kindPreview`              | Preview                       | The chip for a running preview                         |
 | `kindServer`               | Server                        | The chip, with no hue, for a server no look has found and nothing was saved about |
 | `offline`                  | Offline                       | The chip on the card and on the row of the server the app runs from, once it stops answering |
-| `offlineHint`              | Start this server again, or use the default bundle. | Under the chips when a picked server stops answering |
+| `offlineHint`              | Start this server again, or go back to default. | Under the chips when a picked server stops answering |
 | `offlineDefaultHint`       | Start Metro again, then reload. | Under the chips when the Metro the app starts on stops answering |
 | `serverPrefix`             | server:                       | Before a server's kind on its chip                     |
 | `serverExpo`               | Expo                          | A plain Expo server's kind on its chip                 |
@@ -244,8 +245,8 @@ braces, such as `{host}`, is filled in. `status`, `statusShort` and `timeAgo` ar
 | `compatibilityAppVersion`  | App version                   | Its value in `appVersion` mode                         |
 | `compatibilityFingerprint` | Fingerprint                   | Its value in `fingerprint` mode                        |
 | `compatibilityKey`         | Build key                     | Fact name                                              |
-| `backToDefault`            | Use the default bundle        | The card's action                                      |
-| `metroBypassed`            | Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again. | Under the facts while a preview runs in a debug build |
+| `backToDefault`            | Back to default               | The card's action: back to the default Metro in a debug build, to the bundle built into the app in a release build |
+| `metroBypassed`            | Debug build: Metro is not used while a preview runs. Back to default loads from Metro again. | Under the facts while a preview runs in a debug build |
 
 ### Error snackbar
 
@@ -315,10 +316,10 @@ Still accepted, so an app written for 0.1.0 type-checks.
 | Label                  | Default                          | Now                                                   |
 | ---------------------- | -------------------------------- | ----------------------------------------------------- |
 | `title`                | Previews                         | Not shown. The list opens with the header card        |
-| `base`                 | Base                             | Not shown. Use `defaultBundle`                        |
-| `backToBase`           | Use the default bundle           | Use `backToDefault`. Still shown when `backToDefault` is not set |
-| `stopServer`           | Stop server                      | Not shown. Use the default bundle stops a picked server |
-| `stopDevPreviewServer` | Stop using dev preview server    | Not shown. Use the default bundle stops a picked server |
+| `base`                 | Base                             | Not shown. The card names the default by what serves it |
+| `backToBase`           | Back to default                  | Use `backToDefault`. Still shown when `backToDefault` is not set |
+| `stopServer`           | Stop server                      | Not shown. Back to default stops a picked server      |
+| `stopDevPreviewServer` | Stop using dev preview server    | Not shown. Back to default stops a picked server      |
 | `localSuffix`          | local                            | Not shown. The chip names the server's kind           |
 | `status`               | One per status, as `statusShort`, with Broken: it stopped while starting | Use `statusShort`. Still shown for any status `statusShort` does not set |
 

@@ -113,7 +113,15 @@ export function HeroCard(props: {
       />
     ) : null,
     status.isDefault ? (
-      <Chip key="default" theme={theme} text={labels.defaultBundle} />
+      <Chip
+        key="default"
+        theme={theme}
+        text={
+          kindKey === "built-in"
+            ? labels.defaultBundle
+            : labels.defaultServerChip
+        }
+      />
     ) : null,
     status.environment ? (
       <EnvironmentChip

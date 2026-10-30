@@ -73,10 +73,18 @@ export type PreviewListLabels = {
   title: string;
   /** What is running now. */
   running: string;
-  /** @deprecated No longer shown: the app's own bundle is the "default bundle" now. */
+  /** @deprecated No longer shown: the default is named by what serves it, such as "Default server". */
   base: string;
-  /** Chip on the app's own bundle, whatever serves it: what runs without any switch. */
+  /**
+   * Chip on the bundle built into the app while it runs, such as in a release build: what runs
+   * without any switch. A Metro server is not a bundle, so it gets `defaultServerChip` instead.
+   */
   defaultBundle: string;
+  /**
+   * Chip on the Metro the app starts on with nothing picked: on its row, and on the header card
+   * while it runs.
+   */
+  defaultServerChip: string;
   /**
    * Kinds of bundle source: the hero card's chip for a preview, the banner, and what a screen
    * reader says for a server's chip.
@@ -114,7 +122,7 @@ export type PreviewListLabels = {
   /** What a screen reader says for a server row. `{title}` and `{address}` are filled in. */
   switchToServer: string;
   switchToServerHint: string;
-  /** @deprecated No longer shown: the header's Use the default bundle stops a picked server too. */
+  /** @deprecated No longer shown: the header's Back to default stops a picked server too. */
   stopServer: string;
   showDetails: string;
   hideDetails: string;
@@ -138,7 +146,10 @@ export type PreviewListLabels = {
   /** Before the environment name on its chip. */
   environmentPrefix: string;
   compatibilityKey: string;
-  /** Goes back to the default bundle, stopping a dev preview server too. */
+  /**
+   * Goes back to the default, stopping a picked dev preview server too: the Metro the app starts
+   * on in a debug build, the bundle built into the app in a release build.
+   */
   backToDefault: string;
   /** @deprecated Use `backToDefault`. Still shown when an app sets it and not `backToDefault`. */
   backToBase: string;
@@ -206,7 +217,7 @@ export type PreviewListLabels = {
   noDevPreviewServers: string;
   /** In place of the servers, when the build has no slug baked in by the config plugin. */
   noBuildSlug: string;
-  /** @deprecated No longer shown: the header's Use the default bundle stops a picked server. */
+  /** @deprecated No longer shown: the header's Back to default stops a picked server. */
   stopDevPreviewServer: string;
   /** @deprecated No longer shown: the running line names the kind instead. */
   localSuffix: string;

@@ -65,7 +65,7 @@ on Wi-Fi was started from the computer's LAN address, so the same rule finds the
 of a debug build the dev preview server wins, then a downloaded preview, then the default Metro. Android
 points React Native's dev support at the server (and puts the developer's own dev-menu host back
 afterwards); iOS starts from the server's bundle URL. Switching to a preview clears the picked server, since
-native would load the server first; "Use the default bundle" clears both. A picked server that is the
+native would load the server first; "Back to default" clears both. A picked server that is the
 Metro the app starts on anyway counts as the default. The server the app runs from is read from what the
 app actually loaded, so the default's Metro shows Active too, not only one picked by hand.
 Loopback names (`localhost`, `127.0.0.1`, the emulator's `10.0.2.2`) count as one machine.

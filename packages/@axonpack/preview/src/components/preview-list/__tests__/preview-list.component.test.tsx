@@ -205,7 +205,7 @@ test("a release build never shows it", async () => {
 });
 
 const METRO_NOTE =
-  "Debug build: Metro is not used while a preview runs. Use the default bundle to load from Metro again.";
+  "Debug build: Metro is not used while a preview runs. Back to default loads from Metro again.";
 
 /** The bucket lists one preview for this build, published with an EAS environment. */
 const bucketWithPreview = (environment: string | null = "staging") =>
@@ -265,7 +265,7 @@ test("a preview: its title and branch, the environment, who published it, and th
     "env: staging",
     "Ana",
     METRO_NOTE,
-    "Use the default bundle",
+    "Back to default",
   ])
     expect(all).toContain(text);
   expect(all).not.toContain("Stop server");
@@ -316,12 +316,12 @@ test("a dev preview server picked by hand: its address, one way back, and no Met
   expect(all).toContain("localhost:8082");
   expect(all).not.toContain("127.0.0.1:8082");
   expect(all).not.toContain("Stop server");
-  expect(all.filter((t) => t === "Use the default bundle")).toHaveLength(1);
+  expect(all.filter((t) => t === "Back to default")).toHaveLength(1);
   expect(all).not.toContain(METRO_NOTE);
   await act(async () => tree.unmount());
 });
 
-test("a server picked by hand, with no preview chosen, offers Use the default bundle, which clears it", async () => {
+test("a server picked by hand, with no preview chosen, offers Back to default, which clears it", async () => {
   mockNativeState = {
     localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
   };
@@ -329,9 +329,7 @@ test("a server picked by hand, with no preview chosen, offers Use the default bu
   const tree = await render(true);
   expect(texts(tree)).not.toContain("Stop server");
   mockSelectLocalServer.mockClear();
-  await act(async () =>
-    pressable(tree, "Use the default bundle").props.onPress(),
-  );
+  await act(async () => pressable(tree, "Back to default").props.onPress());
   expect(mockSelectLocalServer).toHaveBeenCalledWith(null, null);
   await act(async () => tree.unmount());
 });
@@ -350,8 +348,8 @@ test("the Metro the app starts on, picked by hand under another name, shows as t
   // Metro only knows the app's name, so the default is called by its role.
   expect(all).toContain("Default");
   expect(all).not.toContain("Shop");
-  expect(all).toContain("Default bundle");
-  expect(all).not.toContain("Use the default bundle");
+  expect(all).toContain("Default server");
+  expect(all).not.toContain("Back to default");
   expect(byId(tree, "hero-actions")).toEqual([]);
   // Each kind has its own hue, the default included.
   const chip = tree.root
@@ -412,7 +410,7 @@ test("the default Metro, with nothing picked, is Active and titled Default", asy
   for (const text of ["Default", "localhost:8081", "server: Expo"])
     expect(textsOf(row)).toContain(text);
   expect(row.props.accessibilityLabel).toBe(
-    "Default, localhost:8081, Active, Expo server, Default bundle",
+    "Default, localhost:8081, Active, Expo server, Default server",
   );
   // Metro knows only the app's name, which every server of the app shares, so another server
   // with no title of its own goes by its address, once.
@@ -472,7 +470,7 @@ test("a server picked by hand is Active; pressing the default Metro's row switch
     expect.arrayContaining(["Default", "server: Expo"]),
   );
   expect(fallback.props.accessibilityLabel).toBe(
-    "Switch to Default, localhost:8081, Expo server, Default bundle",
+    "Switch to Default, localhost:8081, Expo server, Default server",
   );
   expect(fallback.props.accessibilityHint).toBe(
     "Restarts the app on this server.",
@@ -486,7 +484,7 @@ test("a server picked by hand is Active; pressing the default Metro's row switch
   await act(async () => tree.unmount());
 });
 
-test("the default Metro's row says Default bundle whether it runs or not, and no other row does", async () => {
+test("the default Metro's row says Default server whether it runs or not, and no other row does", async () => {
   mockNativeState = {
     localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
     defaultServer: "localhost:8081",
@@ -503,7 +501,7 @@ test("the default Metro's row says Default bundle whether it runs or not, and no
   expect(textsOf(serverRow(tree, 8081))).toContain("Default");
   expect(chips(8081)).toEqual([
     ["server: Expo", "info"],
-    ["Default bundle", undefined],
+    ["Default server", undefined],
   ]);
   expect(chips(8082)).toEqual([
     ["Active", "success"],
@@ -531,7 +529,7 @@ test("the header's and the server rows' chips scroll sideways, and a server row 
   const fallback = serverRow(tree, 8081);
   expectSwitchable(fallback);
   const line = fallback.findByType(ChipRow);
-  expect(chipsIn(line)).toEqual(["server: Expo", "Default bundle"]);
+  expect(chipsIn(line)).toEqual(["server: Expo", "Default server"]);
   const scroll = line.findByType(ScrollView);
   expect(scroll.props.horizontal).toBe(true);
   // It stops at the chevron instead of sliding under it.
@@ -586,17 +584,17 @@ test("the default Metro that stops answering keeps its row and says so, until it
     ["Active", "success"],
     ["Offline", "danger"],
     ["server: Expo", "info"],
-    ["Default bundle", undefined],
+    ["Default server", undefined],
   ]);
   expect(row.props.accessibilityLabel).toBe(
-    "Default, localhost:8081, Active, Offline, Expo server, Default bundle",
+    "Default, localhost:8081, Active, Offline, Expo server, Default server",
   );
   expectSwitchable(serverRow(tree, 8082));
   expect(
     hero()
       .findAllByType(Chip)
       .map((chip) => chip.props.text),
-  ).toEqual(["server: Expo", "Offline", "Default bundle"]);
+  ).toEqual(["server: Expo", "Offline", "Default server"]);
   expect(offlineChips(hero())[0].props.tone).toBe("danger");
   expect(textsOf(hero())).toContain("Start Metro again, then reload.");
 
@@ -621,7 +619,7 @@ test("a chosen preview that did not load, on a stopped default Metro, offers no 
   await act(async () => tree.unmount());
 });
 
-test("a picked server that stops answering keeps its name, and Use the default bundle still shows", async () => {
+test("a picked server that stops answering keeps its name, and Back to default still shows", async () => {
   mockNativeState = {
     localServer: "http://127.0.0.1:8082/index.bundle?platform=ios",
     defaultServer: "localhost:8081",
@@ -643,8 +641,8 @@ test("a picked server that stops answering keeps its name, and Use the default b
     expect.arrayContaining([
       "Main-Branch",
       "Offline",
-      "Start this server again, or use the default bundle.",
-      "Use the default bundle",
+      "Start this server again, or go back to default.",
+      "Back to default",
     ]),
   );
   await act(async () => tree.unmount());
@@ -809,7 +807,9 @@ test("built into the app: the default bundle, no way back to offer, the build be
   expect(all).not.toContain("Shop");
   expect(all).not.toContain("1.0.0 (7)");
   expect(all).not.toContain(METRO_NOTE);
-  expect(all).not.toContain("Use the default bundle");
+  expect(all).not.toContain("Back to default");
+  // A bundle, not a server.
+  expect(all).not.toContain("Default server");
   expect(all).not.toContain("Stop server");
   await showDetails(tree);
   for (const text of [
@@ -832,7 +832,7 @@ test("the app's own bundle from Expo's Metro names the server and its address", 
   const all = texts(tree);
   expect(all).toContain("server: Expo");
   expect(all).toContain("localhost:8081");
-  expect(all).toContain("Default bundle");
+  expect(all).toContain("Default server");
   await act(async () => tree.unmount());
 });
 
@@ -919,7 +919,7 @@ test("the app's own bundle from a preview start server uses its title and branch
     "Main-Branch",
     "localhost:8082",
     "server: Preview",
-    "Default bundle",
+    "Default server",
   ])
     expect(hero).toContain(text);
   // Not at the top of the header: the branch is a Branch row in the details.

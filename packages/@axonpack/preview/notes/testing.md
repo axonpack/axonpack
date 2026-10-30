@@ -47,7 +47,7 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
    `bunx preview publish …` works too. Use `bunx` in this repo, not `npx`: `npx` can't read
    bun's install, so it looks for a `preview` package on npm and fails with a 404. An app
    installed with npm uses `npx`.
-7. In the app's Previews tab: Refresh, Download, Switch, then Use the default bundle. The banner at the top
+7. In the app's Previews tab: Refresh, Download, Switch, then Back to default. The banner at the top
    names what runs. Publish the same id again with other
    changes to see "Update available", or `bunx preview unpublish <id>` to see "Unpublished".
 8. Stop everything:
@@ -76,7 +76,7 @@ app needs `devPreviewServers: true` (the example has it).
    `--title <name>` skips the question, and so does a run with no terminal.
    A plain `npx expo start --port 8085` is found as well, with less detail (no branch).
 2. Open the Previews tab in the app. "Dev preview servers" shows each server for this app within about two
-   seconds, with its address and branch. Tap a row to run that server; "Use the default bundle" on the
+   seconds, with its address and branch. Tap a row to run that server; "Back to default" on the
    header card goes back.
 3. Stop a server with Ctrl+C; it leaves the list on its own.
 
