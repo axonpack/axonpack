@@ -2,8 +2,24 @@ import { useSyncExternalStore } from "react";
 import { AppState, type NativeEventSubscription } from "react-native";
 
 import { buildKey, buildSlug } from "../../services/native/build-info.service";
-import { currentPlatform } from "../../utils/config/config.util";
-import { discover } from "../../services/dev-preview-servers/discover.service";
+import {
+  type DevServersSetup,
+  currentPlatform,
+} from "../../utils/config/config.util";
+import {
+  builtInHosts,
+  discover,
+} from "../../services/dev-preview-servers/discover.service";
+import {
+  readHosts,
+  saveHosts,
+} from "../../services/dev-preview-servers/hosts.service";
+import { DEFAULT_REGISTRY_PORT } from "../../constants/dev-preview-servers/dev-preview-servers.const";
+import type {
+  DevServerHost,
+  HostAddress,
+  HostProblem,
+} from "../../utils/dev-preview-servers/hosts.util";
 import {
   type DevPreviewServer,
   mergeServers,
@@ -31,6 +47,11 @@ export type DevPreviewServersState = {
   error: string | null;
   /** A full sweep of the port range runs now. The quick look every 2 s does not count. */
   scanning: boolean;
+  /**
+   * Where the list looks: this computer under its usual names, the app's hosts, and the ones
+   * added on the device. Empty until the first look.
+   */
+  hosts: DevServerHost[];
 };
 
 let state: DevPreviewServersState = {
@@ -39,6 +60,7 @@ let state: DevPreviewServersState = {
   alive: null,
   error: null,
   scanning: false,
+  hosts: [],
 };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<DevPreviewServersState>) => {
@@ -59,6 +81,49 @@ let round: { sweep: boolean; done: Promise<void> } | null = null;
 let lastSweep = 0;
 /** Ports that answered in the last round. Quick polls keep asking them until they stop. */
 let known: number[] = [];
+
+let setup: Pick<DevServersSetup, "hosts" | "allowCustomHosts"> = {
+  hosts: [],
+  allowCustomHosts: false,
+};
+/** The hosts added on the device, read from its file on each mount. */
+let userHosts: HostAddress[] = [];
+let userHostsRead: Promise<void> | null = null;
+
+const sameAddress = (a: HostAddress, b: HostAddress) =>
+  a.host === b.host && a.port === b.port;
+
+function updateHosts() {
+  const user = setup.allowCustomHosts
+    ? userHosts.filter((u) => !setup.hosts.some((a) => sameAddress(a, u)))
+    : [];
+  set({
+    hosts: [
+      ...builtInHosts().map((host) => ({
+        host,
+        port: DEFAULT_REGISTRY_PORT,
+        source: "built-in" as const,
+      })),
+      ...setup.hosts.map((h) => ({ ...h, source: "app" as const })),
+      ...user.map((h) => ({ ...h, source: "user" as const })),
+    ],
+  });
+}
+
+function readUserHosts(): Promise<void> {
+  if (!userHostsRead)
+    userHostsRead = readHosts().then((found) => {
+      userHosts = found;
+      updateHosts();
+    });
+  return userHostsRead;
+}
+
+const SKIPPED: Record<HostProblem, string> = {
+  invalid: "it is not an IP address or a host name",
+  duplicate: "it is listed twice",
+  builtIn: "it is always checked",
+};
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -103,6 +168,8 @@ async function poll(sweep: boolean) {
     set({ scanning: true });
   }
   try {
+    await readUserHosts();
+    const remote = state.hosts.filter((h) => h.source !== "built-in");
     // The Metro the app's JS came from; null for a preview or a bundle built into the app.
     const url = scriptUrl();
     const own = url ? hostPortOf(url) : null;
@@ -113,8 +180,12 @@ async function poll(sweep: boolean) {
       sweep
         ? null
         : [...known, ...(defaultMetro ? [portOf(defaultMetro)] : [])],
+      remote,
     );
-    known = found.alive.map(portOf);
+    // Another computer's ports are asked through its registry, never scanned here.
+    known = found.alive
+      .filter((id) => !found.remote.some((r) => id.startsWith(`${r.host}:`)))
+      .map(portOf);
     let servers = mergeServers({
       ...found,
       appSlug,
@@ -173,6 +244,21 @@ export const devPreviewServersStore = {
   },
 
   /**
+   * The app's own hosts and whether hosts may be added on the device, from its config. Set it
+   * before `watch()`, which looks at once. Entries that are not hosts are skipped with a warning.
+   */
+  configure(
+    next: Pick<DevServersSetup, "hosts" | "allowCustomHosts" | "skipped">,
+  ) {
+    for (const { text, problem } of next.skipped)
+      console.warn(
+        `@axonpack/preview: devPreviewServers.hosts skips "${text}": ${SKIPPED[problem]}.`,
+      );
+    setup = next;
+    updateHosts();
+  },
+
+  /**
    * While something watches (the list is on screen): sweeps the port range at once and every 30 s,
    * and asks the servers already known every 2 s. Nothing while the app is in the background.
    * Debug builds only; returns a function that stops watching.
@@ -183,6 +269,7 @@ export const devPreviewServersStore = {
     if (!timer) {
       // A round from an earlier visit may be old. Until this visit's first one, it is not known.
       set({ alive: null });
+      userHostsRead = null;
       look(true);
       timer = setInterval(tick, POLL_MS);
       appState = AppState.addEventListener("change", (next) => {
@@ -202,6 +289,25 @@ export const devPreviewServersStore = {
 
   /** Sweeps the whole port range, as pull to refresh and the Refresh button ask. */
   refresh: () => look(true),
+
+  /** Adds a host on this device, saves it, and looks for its servers. */
+  async addHost(address: HostAddress) {
+    await readUserHosts();
+    if (userHosts.some((h) => sameAddress(h, address))) return;
+    userHosts = [...userHosts, address];
+    updateHosts();
+    await saveHosts(userHosts);
+    await look(true);
+  },
+
+  /** Removes a host added on this device. Its servers leave the list on the next look. */
+  async removeHost(address: HostAddress) {
+    await readUserHosts();
+    userHosts = userHosts.filter((h) => !sameAddress(h, address));
+    updateHosts();
+    await saveHosts(userHosts);
+    await look(false);
+  },
 
   /** Restarts the app on a dev preview server, or back on what it ran before with null. */
   switchTo(server: DevPreviewServer | null) {

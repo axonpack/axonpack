@@ -17,6 +17,8 @@ const base: State = {
   servers: [],
   devServersError: null,
   devServersScanning: false,
+  hosts: [],
+  allowCustomHosts: true,
   loading: false,
   buildKey: "version-1.0.0",
   items: [],
@@ -52,6 +54,7 @@ test("dev servers come first when on, each keyed by host and port", () => {
     shape({ showDevServers: true, servers: [server(8081), server(8082)] }),
   ).toEqual([
     "dev-servers",
+    "dev-server-hosts",
     "server:localhost:8081",
     "server:localhost:8082",
     "previews",
@@ -59,10 +62,12 @@ test("dev servers come first when on, each keyed by host and port", () => {
   ]);
   expect(shape({ showDevServers: true })).toEqual([
     "dev-servers",
+    "dev-server-hosts",
     "hint:noDevPreviewServers",
     "previews",
     "hint:empty",
   ]);
+  // No slug, no look, so no hosts either.
   expect(shape({ showDevServers: true, hasSlug: false })[1]).toBe(
     "hint:noBuildSlug",
   );
@@ -107,4 +112,23 @@ test("downloads for another build are one group too", () => {
   expect(
     list.flatMap((i) => (i.type === "incompatible" ? [i.position] : [])),
   ).toEqual(["first", "middle", "last"]);
+});
+
+test("the hosts sit under the dev servers heading, with whether one can be added", () => {
+  const hosts = [
+    { host: "localhost", port: 19150, source: "built-in" as const },
+  ];
+  expect(
+    buildListItems({
+      ...base,
+      showDevServers: true,
+      hosts,
+      allowCustomHosts: false,
+    })[1],
+  ).toEqual({
+    type: "dev-server-hosts",
+    key: "dev-server-hosts",
+    hosts,
+    allowCustomHosts: false,
+  });
 });

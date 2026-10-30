@@ -6,6 +6,7 @@ import {
 } from "../../stores/dev-preview-servers/dev-preview-servers.store";
 import { currentPlatform } from "../../utils/config/config.util";
 import type { Compatibility, Platform } from "../../utils/previews/layout.util";
+import type { DevServerHost } from "../../utils/dev-preview-servers/hosts.util";
 import {
   type BundleKind,
   type Running,
@@ -54,6 +55,11 @@ export type PreviewStatusInfo = {
   online: boolean | null;
   /** The app looks through every port for dev preview servers now: on open, on refresh, every 30 s. */
   scanning: boolean;
+  /**
+   * Where the app looks for dev preview servers, each `built-in`, from the app's config, or added on
+   * the device. Empty until the first look.
+   */
+  hosts: DevServerHost[];
   /** The running preview's EAS environment, author, full commit and ISO publish date. */
   environment: string | null;
   author: string | null;
@@ -88,7 +94,7 @@ export function usePreviewStatus(
 ): PreviewStatusInfo {
   const preview = usePreview();
   const running = useRunning();
-  const { alive, scanning } = useDevPreviewServersState();
+  const { alive, scanning, hosts } = useDevPreviewServersState();
   const words = { ...DEFAULT_LABELS, ...labels };
   const kind = bundleKind(running);
   const entry =
@@ -125,6 +131,7 @@ export function usePreviewStatus(
     isDefault: running.kind === "default",
     online: serverOnline(running, alive),
     scanning,
+    hosts,
     environment: entry?.environment || null,
     author: entry?.author || null,
     commit: entry?.commit || null,

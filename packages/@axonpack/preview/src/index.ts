@@ -64,3 +64,7 @@ export {
 } from "./stores/dev-preview-servers/dev-preview-servers.store";
 export type { DevPreviewServersState } from "./stores/dev-preview-servers/dev-preview-servers.store";
 export type { DevPreviewServer } from "./utils/dev-preview-servers/merge-servers.util";
+export type {
+  DevServerHost,
+  HostAddress,
+} from "./utils/dev-preview-servers/hosts.util";

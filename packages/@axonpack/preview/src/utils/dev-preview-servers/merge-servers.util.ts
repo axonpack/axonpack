@@ -41,6 +41,9 @@ export type ScannedServer = {
   expo: AppConfig & { slug?: string; name?: string };
 };
 
+/** What another computer's registry lists, by the host it was asked on. */
+export type RemoteRegistry = { host: string; servers: RegisteredServer[] };
+
 /**
  * Turns what the registry announced and what the scan found into this app's list: other apps'
  * servers (another slug) are left out, the same app with another native key is kept but marked
@@ -51,6 +54,8 @@ export function mergeServers(input: {
   registry: RegisteredServer[];
   /** Where the registry answered, which is the machine its ports are on. Default: this computer. */
   registryHost?: string | null;
+  /** Other computers' registries. Their servers are found only through these. */
+  remote?: RemoteRegistry[];
   scanned: ScannedServer[];
   /** The slug the config plugin baked into the build. Only its servers are listed. */
   appSlug: string;
@@ -58,11 +63,15 @@ export function mergeServers(input: {
   platform: Platform;
 }): DevPreviewServer[] {
   const servers: DevPreviewServer[] = [];
-  const registryHost = input.registryHost ?? "localhost";
+  const registries = [
+    { host: input.registryHost ?? "localhost", servers: input.registry },
+    ...(input.remote ?? []),
+  ];
   for (const found of input.scanned) {
-    const announced = input.registry.find((r) =>
-      sameServer(`${registryHost}:${r.port}`, `${found.host}:${found.port}`),
-    );
+    const at = `${found.host}:${found.port}`;
+    const announced = registries
+      .flatMap(({ host, servers: list }) => list.map((r) => ({ host, r })))
+      .find(({ host, r }) => sameServer(`${host}:${r.port}`, at))?.r;
     const slug = announced?.slug ?? found.expo.slug ?? "";
     if (slug !== input.appSlug) continue;
     const key =

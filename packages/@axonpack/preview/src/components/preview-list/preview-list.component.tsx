@@ -23,7 +23,10 @@ import {
 } from "../../stores/dev-preview-servers/dev-preview-servers.store";
 import { buildSlug } from "../../services/native/build-info.service";
 import { nativeModule } from "../../services/native/native.service";
-import { currentPlatform } from "../../utils/config/config.util";
+import {
+  currentPlatform,
+  devServersSetup,
+} from "../../utils/config/config.util";
 import { runsFromServer, sameServer } from "../../utils/previews/running.util";
 import { describeListError } from "../../utils/preview-list/list-error.util";
 import { previewsStore } from "../../stores/previews/previews.store";
@@ -39,6 +42,7 @@ import {
 import { Button } from "./ui/button.ui";
 import { SectionHeader } from "./ui/section-header.ui";
 import { Scanning } from "./ui/scanning.ui";
+import { DevServerHosts } from "./dev-server-hosts.component";
 import { DevServerRow } from "./dev-server-row.component";
 import { ErrorBanner } from "./error-banner.component";
 import { HeroCard } from "./hero-card.component";
@@ -115,6 +119,15 @@ export function PreviewList(props: PreviewListProps) {
   const showLocal = __DEV__ && preview.devPreviewServers;
   // Without the slug the plugin bakes in, other apps' servers can't be told apart, so none are listed.
   const appSlug = buildSlug();
+  const config = useContext(ConfigContext);
+  const setup = useMemo(
+    () => devServersSetup(config?.devPreviewServers),
+    [config?.devPreviewServers],
+  );
+  // Before the watch below, whose first look asks these hosts.
+  useEffect(() => {
+    if (showLocal) devPreviewServersStore.configure(setup);
+  }, [showLocal, setup]);
   // Look for servers only while the list is on screen.
   useEffect(
     () => (showLocal && appSlug ? devPreviewServersStore.watch() : undefined),
@@ -123,7 +136,7 @@ export function PreviewList(props: PreviewListProps) {
   const [pulling, setPulling] = useState(false);
   // What "2 minutes ago" counts from: when the list opened, then each refresh QA asks for.
   const [shownAt, setShownAt] = useState(Date.now);
-  const bucketUrl = useContext(ConfigContext)?.url ?? "";
+  const bucketUrl = config?.url ?? "";
   // What QA asked for last, so Retry asks again. The first load is a refresh.
   const lastAction = useRef<() => unknown>(preview.refresh);
   const run =
@@ -178,12 +191,14 @@ export function PreviewList(props: PreviewListProps) {
         servers: local.servers,
         devServersError: local.error,
         devServersScanning: local.scanning,
+        hosts: local.hosts,
+        allowCustomHosts: setup.allowCustomHosts,
         loading: preview.loading,
         buildKey: preview.buildKey,
         items: preview.items,
         incompatible: preview.incompatible,
       }),
-    [showLocal, appSlug, local, preview],
+    [showLocal, appSlug, local, preview, setup],
   );
 
   const deleteAll = (
@@ -211,6 +226,17 @@ export function PreviewList(props: PreviewListProps) {
               label={labels.scanning}
               visible={item.scanning}
             />
+          />
+        );
+      case "dev-server-hosts":
+        return (
+          <DevServerHosts
+            theme={theme}
+            labels={labels}
+            hosts={item.hosts}
+            allowCustomHosts={item.allowCustomHosts}
+            onAdd={devPreviewServersStore.addHost}
+            onRemove={devPreviewServersStore.removeHost}
           />
         );
       case "dev-server": {
@@ -313,6 +339,8 @@ export function PreviewList(props: PreviewListProps) {
 
   return (
     <FlatList<ListItem>
+      // A tap on Add while the keyboard is up adds, instead of only closing the keyboard.
+      keyboardShouldPersistTaps="handled"
       {...listProps}
       data={items}
       keyExtractor={keyOf}

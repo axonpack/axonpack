@@ -1,4 +1,5 @@
 import type { DevPreviewServer } from "../dev-preview-servers/merge-servers.util";
+import type { DevServerHost } from "../dev-preview-servers/hosts.util";
 import type { LocalPreview } from "../../services/previews/local-previews.service";
 import type { PreviewItem } from "../previews/preview-items.util";
 
@@ -27,6 +28,12 @@ export type ListItem =
       scanning: boolean;
     }
   | {
+      type: "dev-server-hosts";
+      key: string;
+      hosts: DevServerHost[];
+      allowCustomHosts: boolean;
+    }
+  | {
       type: "dev-server";
       key: string;
       server: DevPreviewServer;
@@ -51,6 +58,10 @@ export function buildListItems(state: {
   devServersError: string | null;
   /** A full sweep of the port range runs now. */
   devServersScanning: boolean;
+  /** Where the dev servers list looks. */
+  hosts: DevServerHost[];
+  /** "Add a host" shows after the hosts. */
+  allowCustomHosts: boolean;
   loading: boolean;
   buildKey: string | null;
   items: PreviewItem[];
@@ -64,6 +75,14 @@ export function buildListItems(state: {
       error: state.devServersError,
       scanning: state.devServersScanning,
     });
+    // Without a slug nothing is asked, so no host is checked.
+    if (state.hasSlug)
+      list.push({
+        type: "dev-server-hosts",
+        key: "dev-server-hosts",
+        hosts: state.hosts,
+        allowCustomHosts: state.allowCustomHosts,
+      });
     if (!state.hasSlug)
       list.push({
         type: "hint",

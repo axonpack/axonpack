@@ -216,6 +216,24 @@ export type PreviewListLabels = {
   devPreviewServersHint: string;
   /** Beside the heading while the app looks through every port for servers. */
   scanning: string;
+  /** Opens the field for another computer's address, after the hosts under the heading. */
+  addHost: string;
+  /** In the empty field. */
+  addHostPlaceholder: string;
+  /** Under the field. */
+  addHostHint: string;
+  /** Adds what is in the field. */
+  addHostConfirm: string;
+  /** Closes the field without adding. */
+  cancel: string;
+  /** What a screen reader says for a host's remove button. `{host}` is filled in. */
+  removeHost: string;
+  /** Under the field, in place of the hint, when what was typed can't be added. */
+  hostInvalid: string;
+  /** `{host}` is filled in. */
+  hostDuplicate: string;
+  /** For localhost and the other names of this computer. `{host}` is filled in. */
+  hostBuiltIn: string;
   noDevPreviewServers: string;
   /** In place of the servers, when the build has no slug baked in by the config plugin. */
   noBuildSlug: string;

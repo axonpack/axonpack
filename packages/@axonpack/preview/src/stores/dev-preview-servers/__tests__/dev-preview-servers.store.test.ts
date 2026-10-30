@@ -1,7 +1,10 @@
+import { File } from "expo-file-system";
 import { AppState, TurboModuleRegistry } from "react-native";
 
 import { devPreviewServersStore } from "../dev-preview-servers.store";
 import type { NativeState } from "../../../services/native/native.service";
+import { rootDirectory } from "../../../services/previews/local-previews.service";
+import { devServersSetup } from "../../../utils/config/config.util";
 
 jest.mock("expo-file-system", () =>
   require("../../../services/previews/__tests__/fake-file-system.test-helper"),
@@ -30,6 +33,11 @@ const RANGE = Array.from({ length: 19 }, (_, i) => 8081 + i);
 let up = new Set<number>();
 /** The ports the `preview start` registry announces, or null when it is not running. */
 let registry: number[] | null = null;
+/**
+ * Other computers by host: the ports their registry announces (null when it is not running), and
+ * the ports Metro answers on as this app.
+ */
+let machines: Record<string, { registry: number[] | null; up: number[] }> = {};
 let asked: string[] = [];
 const answer = (body: unknown) =>
   ({
@@ -39,31 +47,32 @@ const answer = (body: unknown) =>
 const refused = () => {
   throw new TypeError("Network request failed");
 };
+const announce = (ports: number[]) =>
+  answer({
+    servers: ports.map((port) => ({
+      id: String(port),
+      port,
+      title: "Login fix",
+      branch: "task-1",
+      worktree: "/w",
+      slug: "shop",
+      name: "Shop",
+      compatibility: "appVersion",
+      keys: { ios: "version-1.0.0" },
+      startedAt: "",
+    })),
+  });
 global.fetch = jest.fn(async (input: RequestInfo | URL) => {
   const url = String(input);
   asked.push(url);
+  const [, host, port] = /^http:\/\/([^/:]+):(\d+)\//.exec(url)!;
+  const machine = machines[host] ?? { registry, up: [...up] };
   if (url.endsWith(":19150/servers"))
-    return registry
-      ? answer({
-          servers: registry.map((port) => ({
-            id: String(port),
-            port,
-            title: "Login fix",
-            branch: "task-1",
-            worktree: "/w",
-            slug: "shop",
-            name: "Shop",
-            compatibility: "appVersion",
-            keys: { ios: "version-1.0.0" },
-            startedAt: "",
-          })),
-        })
-      : refused();
-  const port = Number(/:(\d+)\//.exec(url)?.[1]);
-  if (!up.has(port)) refused();
+    return machine.registry ? announce(machine.registry) : refused();
+  if (!machine.up.includes(Number(port))) refused();
   if (url.endsWith("/status")) return answer("packager-status:running");
   return answer({
-    launchAsset: { url: `http://localhost:${port}/index.bundle?platform=ios` },
+    launchAsset: { url: `http://${host}:${port}/index.bundle?platform=ios` },
     extra: { expoClient: { slug: "shop", name: "Shop", version: "1.0.0" } },
   });
 }) as typeof fetch;
@@ -78,6 +87,9 @@ const probed = () => {
 };
 const listed = () =>
   devPreviewServersStore.getState().servers.map((server) => server.port);
+const listedAt = () =>
+  devPreviewServersStore.getState().servers.map((server) => server.hostPort);
+const hostsFile = () => new File(rootDirectory(), "hosts.json");
 const alivePorts = () =>
   devPreviewServersStore
     .getState()
@@ -111,6 +123,9 @@ beforeEach(() => {
   mockNativeState = {};
   up = new Set([8081]);
   registry = null;
+  machines = {};
+  devPreviewServersStore.configure(devServersSetup(true));
+  hostsFile().delete();
   appState.currentState = realState;
   asked = [];
 });
@@ -285,4 +300,127 @@ test("nothing is asked once nothing watches", async () => {
   asked = [];
   await wait(60000);
   expect(asked).toEqual([]);
+});
+
+describe("other computers", () => {
+  const LAN = "192.168.1.30";
+  const onHost = (host: string) =>
+    asked.filter((url) => url.startsWith(`http://${host}:`));
+
+  test("a preview start server there shows with its host, and its registry is asked every 2 s", async () => {
+    devPreviewServersStore.configure(devServersSetup({ hosts: [LAN] }));
+    machines[LAN] = { registry: [8082], up: [8082] };
+    await watch();
+    expect(listedAt()).toEqual(["localhost:8081", `${LAN}:8082`]);
+    expect(devPreviewServersStore.getState().servers[1]).toMatchObject({
+      host: LAN,
+      title: "Login fix",
+      announced: true,
+      url: `http://${LAN}:8082/index.bundle?platform=ios`,
+    });
+    asked = [];
+    await wait(2000);
+    expect(onHost(LAN)).toEqual([
+      `http://${LAN}:19150/servers`,
+      `http://${LAN}:8082/status`,
+    ]);
+    // Its port is not asked on this computer.
+    expect(probed()).toEqual([8081, 8082]);
+    expect(asked).not.toContain("http://localhost:8082/status");
+  });
+
+  test("a plain expo start there never shows, and its ports are never scanned", async () => {
+    devPreviewServersStore.configure(devServersSetup({ hosts: [LAN] }));
+    machines[LAN] = { registry: [], up: [8081, 8083] };
+    await watch();
+    await devPreviewServersStore.refresh();
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    expect(new Set(onHost(LAN))).toEqual(
+      new Set([`http://${LAN}:19150/servers`]),
+    );
+  });
+
+  test("two computers on the same port are two rows", async () => {
+    registry = [8081];
+    devPreviewServersStore.configure(devServersSetup({ hosts: [LAN] }));
+    machines[LAN] = { registry: [8081], up: [8081] };
+    await watch();
+    expect(listedAt()).toEqual(["localhost:8081", `${LAN}:8081`]);
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081", `${LAN}:8081`]);
+  });
+
+  test("a host on another registry port is asked on that port", async () => {
+    devPreviewServersStore.configure(
+      devServersSetup({ hosts: [`${LAN}:19151`] }),
+    );
+    await watch();
+    expect(onHost(LAN)).toEqual([`http://${LAN}:19151/servers`]);
+  });
+
+  test("the app's hosts that are not hosts are skipped with a warning", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    devPreviewServersStore.configure(
+      devServersSetup({ hosts: [LAN, "not a host", "localhost"] }),
+    );
+    expect(warn.mock.calls.map(([text]) => text)).toEqual([
+      '@axonpack/preview: devPreviewServers.hosts skips "not a host": it is not an IP address or a host name.',
+      '@axonpack/preview: devPreviewServers.hosts skips "localhost": it is always checked.',
+    ]);
+    warn.mockRestore();
+  });
+});
+
+describe("hosts added on the device", () => {
+  const LAN = "192.168.1.30";
+  const sources = () =>
+    devPreviewServersStore
+      .getState()
+      .hosts.map((h) => `${h.source} ${h.host}:${h.port}`);
+
+  test("are read on mount, after this computer's names and the app's hosts", async () => {
+    await hostsFile().write(JSON.stringify([LAN, "bad host"]));
+    devPreviewServersStore.configure(
+      devServersSetup({ hosts: ["qa-mac.local"] }),
+    );
+    machines[LAN] = { registry: [8084], up: [8084] };
+    await watch();
+    expect(sources()).toEqual([
+      "built-in localhost:19150",
+      "built-in 127.0.0.1:19150",
+      "app qa-mac.local:19150",
+      `user ${LAN}:19150`,
+    ]);
+    expect(listedAt()).toContain(`${LAN}:8084`);
+  });
+
+  test("are saved when one is added or removed, and a removed one's servers go", async () => {
+    machines[LAN] = { registry: [8084], up: [8084] };
+    await watch();
+    await devPreviewServersStore.addHost({ host: LAN, port: 19150 });
+    await devPreviewServersStore.addHost({ host: "qa-mac.local", port: 19151 });
+    expect(JSON.parse(await hostsFile().text())).toEqual([
+      LAN,
+      "qa-mac.local:19151",
+    ]);
+    expect(listedAt()).toContain(`${LAN}:8084`);
+    await devPreviewServersStore.removeHost({ host: LAN, port: 19150 });
+    expect(JSON.parse(await hostsFile().text())).toEqual([
+      "qa-mac.local:19151",
+    ]);
+    await wait(2000);
+    expect(listedAt()).toEqual(["localhost:8081"]);
+    expect(sources()).not.toContain(`user ${LAN}:19150`);
+  });
+
+  test("are not asked when the app turns custom hosts off", async () => {
+    await hostsFile().write(JSON.stringify([LAN]));
+    devPreviewServersStore.configure(
+      devServersSetup({ allowCustomHosts: false }),
+    );
+    machines[LAN] = { registry: [8084], up: [8084] };
+    await watch();
+    expect(sources()).not.toContain(`user ${LAN}:19150`);
+    expect(asked.some((url) => url.includes(LAN))).toBe(false);
+  });
 });

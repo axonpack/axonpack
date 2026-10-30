@@ -148,8 +148,18 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   deleteAll: "Delete all",
   previewsTitle: "Published previews",
   devPreviewServersTitle: "Dev preview servers",
-  devPreviewServersHint: "Metro servers for this app on your computer.",
+  devPreviewServersHint: "Metro servers for this app on these hosts.",
   scanning: "Scanning…",
+  addHost: "Add a host",
+  addHostPlaceholder: "192.168.1.24 or qa-mac.local",
+  addHostHint:
+    "A computer running npx preview start. Add :port if its registry is not on 19150.",
+  addHostConfirm: "Add",
+  cancel: "Cancel",
+  removeHost: "Remove {host}",
+  hostInvalid: "That is not an IP address or a host name.",
+  hostDuplicate: "{host} is already in the list.",
+  hostBuiltIn: "{host} is always checked.",
   noDevPreviewServers:
     "No Metro server found. Start one with npx preview start.",
   noBuildSlug:

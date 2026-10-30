@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TurboModuleRegistry,
   View,
 } from "react-native";
@@ -19,7 +20,8 @@ import { PreviewList, type PreviewListProps } from "../preview-list.component";
 import type { PreviewListLabels } from "../preview-list.types";
 import { LIGHT_THEME } from "../../../constants/preview-list/theme.const";
 import { Card } from "../ui/card.ui";
-import { Chip } from "../ui/chip.ui";
+import { Chip, RemovableChip } from "../ui/chip.ui";
+import type { PreviewConfig } from "../../../utils/config/config.util";
 import { ChipRow } from "../ui/chip-row.ui";
 import { RowGap } from "../row-gap.component";
 import { Chevron } from "../ui/chevron.ui";
@@ -131,8 +133,9 @@ beforeEach(async () => {
   global.fetch = notFound();
   // The servers store lives for the whole file; one look clears a server an earlier test picked.
   await devPreviewServersStore.refresh();
-  // What an earlier test saved about the server it ran from.
+  // What an earlier test saved about the server it ran from, and the hosts it added.
   new File(rootDirectory(), "server.json").delete();
+  new File(rootDirectory(), "hosts.json").delete();
 });
 
 const textsOf = (node: ReactTestInstance) =>
@@ -149,7 +152,7 @@ const texts = (tree: ReactTestRenderer) =>
       node.children.filter((child) => typeof child === "string"),
     ) as string[];
 
-async function render(devPreviewServers?: boolean) {
+async function render(devPreviewServers?: PreviewConfig["devPreviewServers"]) {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
@@ -1303,4 +1306,94 @@ test("an app's own status labels still show on the chip, and statusShort wins ov
     expect(texts(tree)).toContain(shown);
     await act(async () => tree.unmount());
   }
+});
+
+describe("the hosts under the dev servers heading", () => {
+  const hostsBlock = (tree: ReactTestRenderer) =>
+    byId(tree, "dev-server-hosts")[0];
+  const field = (tree: ReactTestRenderer) => tree.root.findAllByType(TextInput);
+  const type = async (tree: ReactTestRenderer, text: string) => {
+    await act(async () => field(tree)[0].props.onChangeText(text));
+    await act(async () => pressable(tree, "Add").props.onPress());
+  };
+  const error = (tree: ReactTestRenderer) =>
+    byId(tree, "add-host-error").map(flat)[0];
+
+  test("this computer's names and the app's hosts are quiet chips, with Add a host after them", async () => {
+    const tree = await render({
+      hosts: ["qa-mac.local", "192.168.1.24:19151"],
+    });
+    await settle();
+    const block = hostsBlock(tree);
+    expect(block.findAllByType(Chip).map((chip) => chip.props.text)).toEqual([
+      "localhost",
+      "127.0.0.1",
+      "qa-mac.local",
+      "192.168.1.24:19151",
+    ]);
+    expect(block.findAllByType(RemovableChip)).toEqual([]);
+    expect(textsOf(block)).toContain("Add a host");
+    expect(field(tree)).toEqual([]);
+    await act(async () => tree.unmount());
+  });
+
+  test("no Add a host when the app turns custom hosts off", async () => {
+    const tree = await render({ allowCustomHosts: false });
+    await settle();
+    expect(hostsBlock(tree).findAllByType(Chip)).toHaveLength(2);
+    expect(texts(tree)).not.toContain("Add a host");
+    await act(async () => tree.unmount());
+  });
+
+  test("Add a host opens a field that says in plain words why a host can't be added", async () => {
+    const tree = await render({ hosts: ["qa-mac.local"] });
+    await settle();
+    await act(async () => pressable(tree, "Add a host").props.onPress());
+    expect(field(tree)).toHaveLength(1);
+    expect(field(tree)[0].props.placeholder).toBe(
+      "192.168.1.24 or qa-mac.local",
+    );
+    expect(texts(tree)).not.toContain("Add a host");
+    expect(texts(tree)).toContain(
+      "A computer running npx preview start. Add :port if its registry is not on 19150.",
+    );
+    await type(tree, "qa mac");
+    expect(error(tree)).toBe("That is not an IP address or a host name.");
+    await type(tree, "127.0.0.1");
+    expect(error(tree)).toBe("127.0.0.1 is always checked.");
+    await type(tree, "QA-Mac.local:19150");
+    expect(error(tree)).toBe("qa-mac.local is already in the list.");
+    // Typing again clears the error.
+    await act(async () => field(tree)[0].props.onChangeText("qa"));
+    expect(error(tree)).toBeUndefined();
+    await act(async () => pressable(tree, "Cancel").props.onPress());
+    expect(field(tree)).toEqual([]);
+    expect(texts(tree)).toContain("Add a host");
+    await act(async () => tree.unmount());
+  });
+
+  test("a host added there is saved, and its chip has a drawn remove button that removes it", async () => {
+    const tree = await render(true);
+    await settle();
+    await act(async () => pressable(tree, "Add a host").props.onPress());
+    await act(async () => field(tree)[0].props.onChangeText("192.168.1.30"));
+    await act(async () => field(tree)[0].props.onSubmitEditing());
+    await settle();
+    expect(field(tree)).toEqual([]);
+    const saved = async () =>
+      JSON.parse(await new File(rootDirectory(), "hosts.json").text());
+    expect(await saved()).toEqual(["192.168.1.30"]);
+    const chip = hostsBlock(tree).findByType(RemovableChip);
+    expect(chip.props.text).toBe("192.168.1.30");
+    const remove = pressable(tree, "Remove 192.168.1.30");
+    expect(remove.findAllByType(Text)).toEqual([]);
+    expect(
+      StyleSheet.flatten(remove.props.style({ pressed: false })),
+    ).toMatchObject({ width: 44, height: 44 });
+    await act(async () => remove.props.onPress());
+    await settle();
+    expect(hostsBlock(tree).findAllByType(RemovableChip)).toEqual([]);
+    expect(await saved()).toEqual([]);
+    await act(async () => tree.unmount());
+  });
 });
