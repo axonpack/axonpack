@@ -12,6 +12,7 @@ import {
 } from "./constants/dev-preview-servers/dev-preview-servers.const";
 import { readConfig } from "./services/cli/config.service";
 import { createRegistry } from "./services/registry/registry.service";
+import { advertise, thisMachine } from "./services/registry/bonjour.service";
 import { start } from "./services/start/start.service";
 import { askTitle } from "./services/cli/title.service";
 import { previewTitle } from "./utils/previews/preview-title.util";
@@ -46,7 +47,8 @@ const HELP = `preview <command> [options]
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
   start [-- <expo start args>]
-                     run Metro on a free port and announce it to the app's Dev preview servers
+                     run Metro on a free port and announce it to the app's Dev preview servers,
+                     on this computer and to phones on the same network (Bonjour)
     --title <title>    name the app's list shows; asked like publish, prefilled with a
                        readable form of the branch
     --ports <from>-<to> ports to pick from (default 8081-8099)
@@ -167,9 +169,16 @@ async function main() {
       bin: process.argv[1],
     });
   } else if (command === "registry") {
-    // Started by `preview start` when none is running; exits once no server is left.
+    // Started by `preview start` when none is running; exits once no server is left. It also
+    // announces the servers over Bonjour, so phones on the network find them with no address typed.
     const port = Number(values.port ?? DEFAULT_REGISTRY_PORT);
-    const { server } = createRegistry({ onIdle: () => process.exit(0) });
+    const machine = thisMachine();
+    const bonjour = advertise(machine, port);
+    const { server } = createRegistry({
+      machine,
+      onChange: bonjour.sync,
+      onIdle: () => process.exit(0),
+    });
     server.listen(port);
   } else {
     throw new Error(`Unknown command ${command}.\n\n${HELP}`);

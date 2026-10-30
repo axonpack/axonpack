@@ -1,7 +1,9 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 
 import {
+  type Machine,
   type RegisteredServer,
+  type RegistryAnswer,
   SERVER_TTL_MS,
 } from "../../constants/dev-preview-servers/dev-preview-servers.const";
 
@@ -41,15 +43,19 @@ const readBody = (req: IncomingMessage) =>
   });
 
 /**
- * `GET /servers` lists the live servers; `POST /servers` registers one or renews its heartbeat;
- * `DELETE /servers/<id>` removes one. Plain HTTP, so the app reads it with `fetch` and `curl`
- * shows it too. Once it has been empty for `idleExitMs`, `onIdle` is called.
+ * `GET /servers` lists the live servers, with this computer's id and LAN addresses; `POST /servers`
+ * registers one or renews its heartbeat; `DELETE /servers/<id>` removes one. Plain HTTP, so the app
+ * reads it with `fetch` and `curl` shows it too. Once it has been empty for `idleExitMs`, `onIdle`
+ * is called. `onChange` gets the live list after every change and once a second, which is when a
+ * server whose heartbeat stopped is dropped.
  */
 export function createRegistry(
   options: {
     ttlMs?: number;
     idleExitMs?: number;
     onIdle?: () => void;
+    onChange?: (servers: RegisteredServer[]) => void;
+    machine?: Machine;
     now?: () => number;
   } = {},
 ): { server: Server; list: ServerList } {
@@ -67,7 +73,11 @@ export function createRegistry(
     };
     try {
       if (req.method === "GET" && req.url === "/servers") {
-        send(200, { servers: list.alive(now()) });
+        send(200, {
+          servers: list.alive(now()),
+          machineId: options.machine?.id,
+          addresses: options.machine?.addresses,
+        } satisfies RegistryAnswer);
       } else if (req.method === "POST" && req.url === "/servers") {
         const entry = JSON.parse(await readBody(req)) as RegisteredServer;
         if (typeof entry.id !== "string" || typeof entry.port !== "number") {
@@ -76,9 +86,11 @@ export function createRegistry(
         }
         list.upsert(entry, now());
         send(204);
+        options.onChange?.(list.alive(now()));
       } else if (req.method === "DELETE" && req.url?.startsWith("/servers/")) {
         list.remove(decodeURIComponent(req.url.slice("/servers/".length)));
         send(204);
+        options.onChange?.(list.alive(now()));
       } else {
         send(404, { error: "not found" });
       }
@@ -89,9 +101,11 @@ export function createRegistry(
     }
   });
 
-  if (options.onIdle) {
+  if (options.onIdle || options.onChange) {
     const timer = setInterval(() => {
-      if (list.alive(now()).length > 0) emptySince = now();
+      const alive = list.alive(now());
+      options.onChange?.(alive);
+      if (alive.length > 0) emptySince = now();
       else if (now() - emptySince > (options.idleExitMs ?? 30000))
         options.onIdle?.();
     }, 1000);

@@ -69,3 +69,24 @@ test("registers, lists and removes over HTTP", async () => {
     await new Promise((resolve) => http.close(resolve));
   }
 });
+
+test("says which computer it is, and passes every change on", async () => {
+  const changes: string[][] = [];
+  const { server: http } = createRegistry({
+    machine: { id: "m1", name: "qa-mac", addresses: ["192.168.1.24"] },
+    onChange: (servers) => changes.push(servers.map((s) => s.id)),
+  });
+  await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
+  try {
+    await call(base, "POST", "/servers", JSON.stringify(server("run-1", 8083)));
+    expect((await call(base, "GET", "/servers")).json()).toMatchObject({
+      machineId: "m1",
+      addresses: ["192.168.1.24"],
+    });
+    await call(base, "DELETE", "/servers/run-1");
+    expect(changes.slice(0, 2)).toEqual([["run-1"], []]);
+  } finally {
+    await new Promise((resolve) => http.close(resolve));
+  }
+});
