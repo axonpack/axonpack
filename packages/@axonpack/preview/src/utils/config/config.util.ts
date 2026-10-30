@@ -3,6 +3,11 @@ import { Platform as RNPlatform } from "react-native";
 import { buildKey } from "../../services/native/build-info.service";
 import type { Platform } from "../previews/layout.util";
 import {
+  type HostAddress,
+  type HostProblem,
+  checkNewHost,
+} from "../dev-preview-servers/hosts.util";
+import {
   DEFAULT_REGION,
   S3Config,
   parseBucketUrl,
@@ -29,9 +34,10 @@ export type PreviewConfig = {
   region?: string;
   /**
    * Lists the Metro servers for this app running on the developer's computer, and switches
-   * between them live. Debug builds only; off unless `enabled` is true.
+   * between them live. Debug builds only; off unless `enabled` is true. `true` turns it on with the
+   * defaults; an object also sets the hosts.
    */
-  devPreviewServers?: boolean;
+  devPreviewServers?: boolean | DevPreviewServersOptions;
   /** Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket. */
   headers?: Record<string, string>;
   /**
@@ -40,6 +46,49 @@ export type PreviewConfig = {
    */
   buildKey?: string;
 };
+
+/** `devPreviewServers` as an object, for more than on or off. */
+export type DevPreviewServersOptions = {
+  /** Default true. */
+  enabled?: boolean;
+  /** Shows "Add a host", so QA can add another computer on the device. Default true. */
+  allowCustomHosts?: boolean;
+  /**
+   * Other computers whose `preview start` servers the list shows, as "192.168.1.24" or
+   * "qa-mac.local:19150". The port is their registry's, 19150 when left out. localhost, 127.0.0.1
+   * and, on Android, 10.0.2.2 are always checked and need no entry.
+   */
+  hosts?: string[];
+};
+
+/** `devPreviewServers` with the defaults filled in. */
+export type DevServersSetup = {
+  enabled: boolean;
+  allowCustomHosts: boolean;
+  /** The app's own hosts that read as hosts, each once. */
+  hosts: HostAddress[];
+  /** Entries left out of `hosts`, and why, for a warning. */
+  skipped: { text: string; problem: HostProblem }[];
+};
+
+export function devServersSetup(
+  input: PreviewConfig["devPreviewServers"],
+): DevServersSetup {
+  const options = input === true ? {} : input || { enabled: false };
+  const hosts: HostAddress[] = [];
+  const skipped: DevServersSetup["skipped"] = [];
+  for (const text of options.hosts ?? []) {
+    const host = checkNewHost(text, hosts);
+    if (typeof host === "string") skipped.push({ text, problem: host });
+    else hosts.push(host);
+  }
+  return {
+    enabled: options.enabled ?? true,
+    allowCustomHosts: options.allowCustomHosts ?? true,
+    hosts,
+    skipped,
+  };
+}
 
 /**
  * A build made without its `.env` passes an empty URL, and the bucket path then fails deep inside

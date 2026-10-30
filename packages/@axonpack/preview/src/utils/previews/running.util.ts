@@ -56,6 +56,10 @@ const THIS_COMPUTER = new Set([
   "10.0.2.2",
 ]);
 
+/** One of the names the developer's computer goes by, which the list always checks. */
+export const isThisComputer = (host: string): boolean =>
+  THIS_COMPUTER.has(host.toLowerCase());
+
 const splitHostPort = (hostPort: string) => {
   const at = hostPort.lastIndexOf(":");
   return {

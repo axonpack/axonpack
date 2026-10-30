@@ -1,4 +1,4 @@
-import { toS3Config } from "../config.util";
+import { devServersSetup, toS3Config } from "../config.util";
 import { objectUrl } from "../../../services/s3/s3.service";
 
 const read = (url: string, key = "index/ios/fp.json") =>
@@ -92,4 +92,57 @@ test("a relative bucket URL says it is not a full address", () => {
       /is not a full address\. Set `url` in the preview config/,
     );
   }
+});
+
+describe("devPreviewServers", () => {
+  const off = {
+    enabled: false,
+    allowCustomHosts: true,
+    hosts: [],
+    skipped: [],
+  };
+
+  test("left out or false is off", () => {
+    expect(devServersSetup(undefined)).toEqual(off);
+    expect(devServersSetup(false)).toEqual(off);
+  });
+
+  test("true is on, with Add a host and no hosts of the app's own", () => {
+    expect(devServersSetup(true)).toEqual({ ...off, enabled: true });
+  });
+
+  test("an object is on unless it says otherwise", () => {
+    expect(devServersSetup({}).enabled).toBe(true);
+    expect(devServersSetup({ enabled: false }).enabled).toBe(false);
+    expect(devServersSetup({ allowCustomHosts: false })).toMatchObject({
+      enabled: true,
+      allowCustomHosts: false,
+    });
+  });
+
+  test("the app's hosts are read, and bad ones left out with why", () => {
+    expect(
+      devServersSetup({
+        hosts: [
+          "192.168.1.24",
+          "qa-mac.local:19151",
+          "not a host",
+          "localhost",
+          "192.168.1.24:19150",
+        ],
+      }),
+    ).toEqual({
+      enabled: true,
+      allowCustomHosts: true,
+      hosts: [
+        { host: "192.168.1.24", port: 19150 },
+        { host: "qa-mac.local", port: 19151 },
+      ],
+      skipped: [
+        { text: "not a host", problem: "invalid" },
+        { text: "localhost", problem: "builtIn" },
+        { text: "192.168.1.24:19150", problem: "duplicate" },
+      ],
+    });
+  });
 });

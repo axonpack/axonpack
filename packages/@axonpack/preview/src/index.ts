@@ -10,7 +10,10 @@ export {
   selectPreview,
 } from "./services/previews/select.service";
 export { markLaunched } from "./services/native/native.service";
-export type { PreviewConfig } from "./utils/config/config.util";
+export type {
+  DevPreviewServersOptions,
+  PreviewConfig,
+} from "./utils/config/config.util";
 export {
   previewsStore,
   usePreviewsState,
