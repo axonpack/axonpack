@@ -77,6 +77,9 @@ export const previewConfig: PreviewConfig = {
 };
 ```
 
+`url` is required, and an env value is typed as possibly undefined, so it goes in with `as string`.
+Left out or empty at runtime, the list shows previews as not set up.
+
 These names are only a convention, the same ones the example app uses. Expo builds every
 `EXPO_PUBLIC_*` value into the bundle, so only a read-only key may go there. The values are read
 when the app is bundled, so restart Metro with `npx expo start --clear`, or rebuild, after a change.

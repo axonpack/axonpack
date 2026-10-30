@@ -131,8 +131,9 @@ hides the snackbar. The raw error also goes to the console. More fixes are on
 
 ### Not configured
 
-With no `s3Config`, or a `url` that is undefined, empty or blank, previews are not set up. That is
-not an error: the app reads nothing from a bucket and shows no snackbar. **Published previews** shows
+`s3Config.url` is required, but an env value can still be missing at runtime, such as in a build
+made without its `.env`. Left out or empty, the list shows previews as not set up. That is not an
+error: the app reads nothing from a bucket and shows no snackbar. **Published previews** shows
 one row, **Previews aren't set up**, with a line saying to add `s3Config.url`. Downloads already on
 the device are still listed, and dev preview servers and the header card work as usual.
 `usePreviewStatus().previewsConfigured` is false.
@@ -149,7 +150,9 @@ has the server's title, its address, its branch, and chips:
   `preview start` it is called **Default**. Any other server without one goes by its address.
 - **Made for another native build** or **Native build unknown:** it may not run on this build.
 
-Tap a row to restart the app on that server. The Active row does nothing. See
+Tap a row to restart the app on that server. The Active row does nothing. A spinner after the
+heading shows while the app scans every port. The card ends with a **Hosts** row, which opens the
+hosts the app checks, and **Add a host**, for another computer's address. See
 [Dev preview servers](/docs/preview/dev-preview-servers).
 
 ### Published previews

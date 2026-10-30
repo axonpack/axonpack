@@ -76,7 +76,7 @@ import { PreviewList, PreviewProvider } from '@axonpack/preview';
 export default function App() {
   return (
     <PreviewProvider
-      config={{ enabled: true, s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL } }}
+      config={{ enabled: true, s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string } }}
     >
       <PreviewList style={{ flex: 1 }} />
     </PreviewProvider>
@@ -130,7 +130,7 @@ this way the default and the preview look different.
 
 ### Switch to it
 
-Open the list in the app and tap **Refresh**. The preview is there. Tap **Download**, then
+Open the list in the app and pull it down, or tap the Refresh icon. The preview is there. Tap **Download**, then
 **Switch**. The app restarts into the preview and shows your change. Tap **Back to default** to return.
 
 Publish the same id again with another change and the row says **Update available**.

@@ -23,7 +23,7 @@ import { PreviewList, PreviewProvider } from '@axonpack/preview';
 export default function App() {
   return (
     <PreviewProvider
-      config={{ enabled: true, s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL } }}
+      config={{ enabled: true, s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string } }}
     >
       <PreviewList style={{ flex: 1 }} />
     </PreviewProvider>
