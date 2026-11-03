@@ -122,18 +122,29 @@ html > body[data-scroll-locked] {
   }
 }
 
-/* Sections arrive as they are scrolled to, driven by the scroll position itself rather than by an
-   observer, so there is no JS and nothing to run on a page nobody scrolls. Browsers without
-   scroll-driven animations skip the whole block and show the section outright, which is the correct
-   fallback rather than a degraded one. */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .reveal {
-      animation: rise linear both;
-      animation-timeline: view();
-      animation-range: entry 5% cover 26%;
-    }
-  }
+/* The hero's own ground: a step lighter than the page in light mode and a step darker in dark,
+   fading into the page at its foot so there is no hard edge above the next section. Mixed from the
+   page colour rather than picked, so it follows the theme if the ground ever changes. */
+.hero-shade {
+  --hero-shade: color-mix(in oklab, var(--color-fd-background), white 75%);
+  background-image: linear-gradient(to bottom, var(--hero-shade) 65%, transparent);
+}
+
+.dark .hero-shade {
+  --hero-shade: color-mix(in oklab, var(--color-fd-background), black 45%);
+}
+
+/* Light mode's muted grey reads at 4.4:1 on the page ground, under the 4.5 that body text needs.
+   The landing page sets most of its prose in it, so it takes a darker step here. */
+:root:not(.dark) .landing {
+  --color-fd-muted-foreground: hsl(220 9% 40%);
+}
+
+/* The landing page's links and buttons carry no focus style of their own, and the browser default
+   ring is easy to lose against the blue. One rule here covers them all. */
+.landing :where(a, button):focus-visible {
+  outline: 2px solid var(--color-fd-primary);
+  outline-offset: 2px;
 }
 
 /* The landing page's header deliberately has no line under it, and the docs pages have no top bar at

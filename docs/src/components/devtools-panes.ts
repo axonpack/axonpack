@@ -1,6 +1,7 @@
 import {
   ArrowDown,
   Bookmark,
+  Bot,
   CheckCheck,
   Database,
   Download,
@@ -85,7 +86,12 @@ export type Row =
   /** Storage. The type glyph is what tells the stores apart at a glance. */
   | { kind: 'entry'; glyph: string; tone: Tone; name: string; size: string; type: string; preview: string }
   /** Performance interactions. The left bar carries the severity. */
-  | { kind: 'metric'; label: string; sub: string; value: string; tone: Tone };
+  | { kind: 'metric'; label: string; sub: string; value: string; tone: Tone }
+  /**
+   * AI Usage. The command as typed after `devtools`, then matched of total (`action` for an action)
+   * and how long the app took. A refused or failed call shows its error in place of the count.
+   */
+  | { kind: 'query'; command: string; time: string; matched: string; took: string; error?: string };
 
 export type Pane = {
   tab: string;
@@ -449,5 +455,75 @@ export const panes: Pane[] = [
       ],
     },
   },
-
+  {
+    tab: 'AI Usage',
+    icon: Bot,
+    tools: [],
+    rows: [
+      {
+        kind: 'query',
+        command: 'network send DELETE https://api.acme.dev/v1/session',
+        time: '19:16:20',
+        matched: '-',
+        took: '0.2 ms',
+        error: 'DELETE can change data on the server, so it needs --yes',
+      },
+      {
+        kind: 'query',
+        command: 'network override https://api.acme.dev/v1/feed --status 503',
+        time: '19:16:11',
+        matched: 'action',
+        took: '0.4 ms',
+      },
+      {
+        kind: 'query',
+        command: 'storage --grep token',
+        time: '19:16:05',
+        matched: '2/41',
+        took: '3.1 ms',
+      },
+      {
+        kind: 'query',
+        command: 'get network xhr-1762172184120-4',
+        time: '19:16:02',
+        matched: '1/214',
+        took: '0.6 ms',
+      },
+      {
+        kind: 'query',
+        command: 'network --where state=error --since 10m',
+        time: '19:15:58',
+        matched: '1/214',
+        took: '1.4 ms',
+      },
+    ],
+    detail: {
+      // The real tab opens a sheet headed by the command, so the command is what heads this side.
+      tabs: ['get network xhr-1762172184120-4'],
+      blocks: [
+        {
+          kind: 'rows',
+          rows: [
+            ['Time', '19:16:02'],
+            ['Topic', 'network'],
+            ['Matched', '1/214'],
+            ['Took', '0.6 ms'],
+            ['Reply size', '1,284 chars'],
+          ],
+        },
+        {
+          kind: 'json',
+          lines: [
+            { indent: 0, caret: 'open', value: '{kind: "http", id: "xhr-1762…", …}' },
+            { indent: 1, key: 'method', value: '"GET"', kind: 'string' },
+            { indent: 1, key: 'url', value: '"https://api.acme.dev/v1/me"', kind: 'string' },
+            { indent: 1, key: 'statusCode', value: '401', kind: 'number' },
+            { indent: 1, key: 'responseBody', value: '"{\\"code\\":\\"TOKEN_EXPIRED\\",…"', kind: 'string' },
+            { indent: 1, key: 'duration', value: '190', kind: 'number' },
+            { indent: 1, caret: 'closed', key: 'requestHeaders', value: '{authorization: "[redacted]", …}' },
+          ],
+        },
+      ],
+    },
+  },
 ];

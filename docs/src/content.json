@@ -65,7 +65,7 @@
   "hero": {
     "title": "Axonpack ends the guesswork",
     "titleAccent": "when things break.",
-    "lead": "Answers you and your agent can both read. Every request, error, log and stored value, captured on the device and copied out as structured JSON.",
+    "lead": "Answers you and your agent can both read. Every request, error, log and stored value is captured on the device. Your agent can read it from the terminal, and mock or send requests from inside the app.",
     "actions": [
       {
         "label": "Read the docs",
@@ -81,64 +81,189 @@
         "external": true
       }
     ],
-    "install": "npx expo install @axonpack/expo-devtools"
-  },
-  "stats": [
-    {
-      "value": "10",
-      "label": "devtools tabs"
+    "start": {
+      "command": "npx skills add axonpack/axonpack --skill axonpack",
+      "ask": "Then ask your agent:",
+      "prompt": "Set up @axonpack/expo-devtools in this app",
+      "note": "The agent adds the package's own skill if it is missing, then follows its setup and checks each step.",
+      "links": [
+        {
+          "label": "Agent skills",
+          "href": "/docs/agent-skills/"
+        },
+        {
+          "label": "Install it yourself",
+          "href": "/docs/expo-devtools/installation/"
+        }
+      ]
     },
-    {
-      "value": "7",
-      "label": "built-in themes"
+    "terminal": {
+      "label": "An AI agent reading the app's failed requests from the terminal",
+      "command": "npx devtools network --where state=error --since 10m",
+      "output": [
+        "# network · my-app · iPhone 16 Pro · 1 of 214 match",
+        "id\tmethod\tcode\tstate\tms\turl",
+        "xhr-1762172184120-4\tGET\t401\terror\t190\thttps://api.acme.dev/v1/me",
+        "# next: --after xhr-1762172184120-4"
+      ]
     },
-    {
-      "value": "MIT",
-      "label": "licensed, no tiers"
-    }
-  ],
-  "usage": {
-    "title": "One provider, one flag",
-    "body": "No client to create and pass around, and no init call to place correctly. Wrap the app once, configure it inline or from a file, and one flag decides whether any of it runs.",
-    "filename": "App.tsx",
-    "code": "import { DevtoolsProvider } from '@axonpack/expo-devtools';\n\nexport default function App() {\n  return (\n    <DevtoolsProvider\n      config={{\n        // The whole production gate. Off means nothing is patched at all.\n        enabled: __DEV__,\n        defaultTheme: 'dark',\n        network: { http: true, websocket: true, sse: true },\n        console: { capture: true, repl: true },\n      }}>\n      <YourApp />\n    </DevtoolsProvider>\n  );\n}",
-    "note": "The patches go in as the provider renders, so the first screen is already covered, and nothing records anywhere unless enabled says so."
+    "panelLabel": "The Expo Devtools panel inside the app. Its Network tab lists the app's requests, and GET /v1/me failed with 401 TOKEN_EXPIRED."
   },
-  "principles": {
-    "title": "How they are built",
-    "body": "The point of a foundation library is that you stop thinking about it. These are what keep them that way.",
-    "items": [
+  "agent": {
+    "title": "Reading the running app from the terminal",
+    "scene": "You ask your coding agent why the profile screen is blank. It reads the code and guesses. Then it asks you to open the app, find the request that failed, and paste the response back into the chat.",
+    "answer": "With Expo Devtools in the app, the agent can ask the app instead. The devtools command comes with the package and finds the running app through Metro. Its replies are plain text, and you can run the same commands yourself.",
+    "steps": [
       {
-        "icon": "target",
-        "title": "Small and focused",
-        "body": "One package solves one problem. Nothing here grows into a framework that wants to own your app's structure."
+        "command": "npx devtools apps",
+        "text": "Lists the apps running on Metro and the device each one is on."
       },
       {
-        "icon": "feather",
-        "title": "Dependency-light",
-        "body": "Adding a package should not add a supply chain. Where one needs a library you may already have, you hand it over rather than having it installed for you."
+        "command": "npx devtools topics",
+        "text": "Lists what you can query, such as network, console, storage and crashes, with a row count for each."
       },
       {
-        "icon": "layers",
-        "title": "Independently published",
-        "body": "Each package versions and ships on its own, with its own documentation. Installing one never drags in another."
+        "command": "npx devtools network --where state=error --since 10m",
+        "text": "Lists the requests that failed in the last 10 minutes. `--where`, `--grep` and `--since` filter any topic."
       },
       {
-        "icon": "eye",
-        "title": "Honest about limits",
-        "body": "Every guide ends with what the thing cannot do, and why. A number that cannot be measured is not shown rather than invented."
+        "command": "npx devtools get network <id>",
+        "text": "Prints one row in full. For a request, that is its headers, body and timing."
+      },
+      {
+        "command": "npx devtools network override https://api.acme.dev/v1/me --status 503",
+        "text": "Answers the app's requests to that URL with a 503 until it reloads. The network topic can also block a URL, or send and replay requests from inside the app. Any method but GET needs `--yes`."
+      }
+    ],
+    "usage": {
+      "title": "The AI Usage tab",
+      "body": "It lists what an agent asked or changed, with the reply it got, on the phone and in React Native DevTools. Replies go through your redaction settings, and auth headers and cookies are always masked.",
+      "label": "The AI Usage tab, newest first: a DELETE refused for want of --yes, a mocked response, and three queries with how many rows each matched and how long the app took"
+    },
+    "skills": {
+      "title": "Agent skills",
+      "body": "Each package has a skill your coding agent can load. It takes the agent through setting the package up in your app with your own package manager, and each step ends with a check the agent runs before the next one.",
+      "command": "npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools"
+    },
+    "links": [
+      {
+        "label": "Use with AI agents",
+        "href": "/docs/expo-devtools/ai-agents/"
+      },
+      {
+        "label": "Agent skills",
+        "href": "/docs/agent-skills/"
+      },
+      {
+        "label": "Blog post on the devtools command",
+        "href": "/blog/expo-devtools-cli-for-ai-agents/"
       }
     ]
   },
-  "showcase": {
-    "title": "It runs on the device",
-    "body": "This is not a socket to a desktop window. The panel is part of the app, so it works on a real phone, over a tunnel, and in a release build you deliberately left it in.",
-    "imageLight": "/assets/network-light.webp",
-    "imageDark": "/assets/network-dark.webp",
-    "width": 640,
-    "height": 1385,
-    "alt": "A captured network request, opened inside the app",
-    "caption": "@axonpack/expo-devtools, running on the device"
+  "libraries": {
+    "title": "Packages",
+    "body": "Each one is versioned and released on its own. This list is read from npm when the site builds, so everything on it is published.",
+    "stories": {
+      "expo-devtools": {
+        "scene": "A tester says the feed is empty on their phone. On your simulator it loads. There is no cable and no log, and the tester can't tell you which request failed.",
+        "fix": "Expo Devtools runs inside the app. The tester taps a button and sees every request with its headers, body and timing, plus the console, crashes, storage and screens. One flag, `enabled`, decides whether any of it runs.",
+        "sample": {
+          "lang": "tsx",
+          "title": "app/_layout.tsx",
+          "code": "import { Stack } from 'expo-router';\nimport { DevtoolsProvider } from '@axonpack/expo-devtools';\n\nexport default function RootLayout() {\n  return (\n    <DevtoolsProvider\n      config={{ enabled: process.env.EXPO_PUBLIC_APP_ENV !== 'prod' }}>\n      <Stack />\n    </DevtoolsProvider>\n  );\n}"
+        }
+      },
+      "react-native-devtools-tab": {
+        "scene": "You want to know who is signed in while you debug. So you add a `console.log`, reload, read it and delete it. Next week you add it back.",
+        "fix": "React Native DevTools Tab puts a tab of your own beside Console and Sources. The tab is a component that runs in the app, so it reads your real store and its buttons call your real functions. Behind a `__DEV__` guard, a release build carries none of it.",
+        "sample": {
+          "lang": "tsx",
+          "title": "devtools.tsx",
+          "code": "import { ReactNativeDevtoolsPanel } from '@axonpack/react-native-devtools-tab';\n\nfunction Session() {\n  const { user } = session.use();\n\n  return (\n    <div style={{ padding: 12 }}>\n      <p>signed in as {user}</p>\n      <button onClick={() => auth.signOut()}>sign out</button>\n    </div>\n  );\n}\n\nReactNativeDevtoolsPanel.registerTab({ name: 'Session', component: Session });"
+        }
+      },
+      "react-pretty-print": {
+        "scene": "An API answers with a few hundred lines of JSON. On screen it is one `JSON.stringify` inside a `Text`, and you scroll past all of it to find one field.",
+        "fix": "React Pretty Print draws it as a tree that opens and closes, with a preview on every closed node. You pass in your own `View`, `Text` and `Pressable`, so the same component works in React Native and on the web. It has no dependencies and no native module, so it runs in Expo Go.",
+        "sample": {
+          "lang": "tsx",
+          "title": "Example.tsx",
+          "code": "import { Pressable, Text, View } from 'react-native';\nimport { JsonTree } from '@axonpack/react-pretty-print';\n\nconst Example = () => (\n  <JsonTree primitives={{ View, Text, Pressable }} value={response} />\n);"
+        }
+      },
+      "preview": {
+        "scene": "QA wants to try the login fix from a pull request. The change is only JavaScript, but getting it onto their phone still means a new native build and a wait while it uploads.",
+        "fix": "Preview publishes one JS bundle per branch to your own S3 bucket. In the app, QA picks the branch from a list and the app restarts into it. Going back to the base build is one tap, and each build lists only the previews made for its native code.",
+        "sample": {
+          "lang": "sh",
+          "title": "Terminal",
+          "code": "npx expo install @axonpack/preview expo-file-system\nnpx preview publish --id task-1-login-fix"
+        }
+      },
+      "in-app-updates": {
+        "scene": "You shipped 2.4.1 with a fix for a crash. A month later the same crash still comes in from people on 2.3.0, who never opened the store to update.",
+        "fix": "In-App Updates checks the App Store or Play Store for a newer version and opens an update prompt that already looks right, in light and dark mode. Set a minimum version and anything older has to update. It runs in Expo Go, with no native code to install.",
+        "sample": {
+          "lang": "tsx",
+          "title": "App.tsx",
+          "code": "import { UpdatePrompt } from '@axonpack/in-app-updates';\nimport { Text, View } from 'react-native';\n\nexport default function App() {\n  return (\n    <View style={{ flex: 1 }}>\n      <Text>My app</Text>\n      <UpdatePrompt />\n    </View>\n  );\n}"
+        }
+      }
+    }
+  },
+  "principles": {
+    "title": "Safety and dependencies",
+    "body": "What the agent tool can reach, and what the packages add to your app. Each point links to the page that explains it.",
+    "items": [
+      {
+        "title": "Queries are filtered in the app",
+        "body": "The devtools command asks the app over Metro's debugger connection. The app runs the filter and sends back only the rows that match.",
+        "link": {
+          "label": "Use with AI agents",
+          "href": "/docs/expo-devtools/ai-agents/"
+        }
+      },
+      {
+        "title": "Auth headers and cookies are masked",
+        "body": "The `authorization`, `cookie` and `set-cookie` headers and a page's `document.cookie` always come back as `[redacted]`. Your own redaction settings apply as well.",
+        "link": {
+          "label": "Redaction",
+          "href": "/docs/expo-devtools/ai-agents/#redaction"
+        }
+      },
+      {
+        "title": "Writes to a server need `--yes`",
+        "body": "`send` and `replay` refuse any method but GET without `--yes`. The app checks the flag itself, so a call that skips the command line needs it too.",
+        "link": {
+          "label": "Safety rules",
+          "href": "/docs/expo-devtools/ai-agents/#safety-rules"
+        }
+      },
+      {
+        "title": "Development builds only",
+        "body": "The app answers the command only in a development bundle with the devtools enabled. A release build has nothing it can talk to.",
+        "link": {
+          "label": "Production",
+          "href": "/docs/expo-devtools/production/#the-command-line-tool"
+        }
+      },
+      {
+        "title": "One native module, loaded optionally",
+        "body": "Expo Devtools has one native module, for the readings JavaScript can't reach. In Expo Go a few of those readings go quiet and the rest of the panel works.",
+        "link": {
+          "label": "Expo Go or a development build",
+          "href": "/docs/expo-devtools/installation/#expo-go-or-a-development-build"
+        }
+      },
+      {
+        "title": "No storage library installed for you",
+        "body": "The Storage tab reads the stores you pass in as adapters, so the package adds no AsyncStorage or MMKV to your app.",
+        "link": {
+          "label": "Registering your stores",
+          "href": "/docs/expo-devtools/storage/#registering-your-stores"
+        }
+      }
+    ]
   },
   "footer": {
     "blurb": "Free, open source tools and libraries for React and React Native. MIT licensed.",
