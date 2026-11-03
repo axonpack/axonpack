@@ -203,13 +203,21 @@ describe('a query', () => {
     expect(stderr).toContain('no app found on Metro ports 8081 to 8090');
   });
 
-  it('writes the whole reply to --out', async () => {
+  it('writes the entry alone to --out, so the file is JSON, and its # line to stdout', async () => {
     const fs = require('node:fs');
     const write = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    agent.run.mockReturnValue('# network n1\n{\n  "id": "n1"\n}');
     expect(await main(['get', 'network', 'n1', '--out', 'row.json'])).toBe(0);
     expect(agent.run).toHaveBeenCalledWith({ topic: 'network', get: 'n1', full: true });
-    expect(write).toHaveBeenCalledWith('row.json', expect.stringContaining('n1'));
-    expect(stdout).toContain('wrote');
+    expect(write).toHaveBeenCalledWith('row.json', '{\n  "id": "n1"\n}\n');
+    expect(JSON.parse(write.mock.calls[0][1] as string)).toEqual({ id: 'n1' });
+    expect(stdout).toBe('# network n1: wrote 16 chars to row.json\n');
+  });
+
+  it('prints nothing for --json with no rows', async () => {
+    agent.run.mockReturnValue('');
+    expect(await main(['network', '--json'])).toBe(0);
+    expect(stdout).toBe('');
   });
 });
 

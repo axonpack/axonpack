@@ -67,11 +67,11 @@ describe('the network topic', () => {
     expect(ask()).toBe(
       [
         '# network · 4 of 4 match',
-        'id\tmethod\tcode\tms\turl',
-        'h2\tPOST\t-\t-\thttps://api.test/upload',
-        's1\tGET\t200\t-\thttps://api.test/events',
-        'w1\tWS\t-\t-\twss://api.test/live',
-        'h1\tGET\t401\t120\thttps://api.test/me',
+        'id\tmethod\tcode\tstate\tms\turl',
+        'h2\tPOST\t-\tpending\t-\thttps://api.test/upload',
+        's1\tGET\t200\tsuccess\t-\thttps://api.test/events',
+        'w1\tWS\t-\topen\t-\twss://api.test/live',
+        'h1\tGET\t401\terror\t120\thttps://api.test/me',
         '# next: --after s1',
       ].join('\n')
     );
@@ -83,6 +83,42 @@ describe('the network topic', () => {
       ['{"id":"s1","msgs":1}', '{"id":"w1","msgs":1}'].join('\n')
     );
     expect(ids(ask({ where: ['code>=400'] }))).toEqual(['h1']);
+  });
+
+  it('keeps code to HTTP, and failed requests to 4xx/5xx and requests that never came back', () => {
+    networkLogStore.updateWebSocket('w1', { status: 'closed', closeCode: 1000, duration: 900 });
+    networkLogStore.add({
+      id: 'h3',
+      method: 'GET',
+      url: 'https://api.test/down',
+      status: 'error',
+      error: 'Network request failed',
+      startedAt: NOW - 500,
+      duration: 30,
+    });
+    // As the store keeps it: a 5xx that came back is a `success`.
+    networkLogStore.add({
+      id: 'h4',
+      method: 'GET',
+      url: 'https://api.test/flaky',
+      status: 'success',
+      statusCode: 503,
+      startedAt: NOW - 400,
+      duration: 40,
+    });
+
+    expect(ids(ask({ where: ['code>=400'] }))).toEqual(['h4', 'h1']);
+    expect(ids(ask({ where: ['state=error'] }))).toEqual(['h4', 'h3', 'h1']);
+    expect(ask({ where: ['id=h4,w1'], fields: 'id,code,close,state' })).toBe(
+      [
+        '# network · 2 of 6 match',
+        'id\tcode\tclose\tstate',
+        'h4\t503\t-\terror',
+        'w1\t-\t1000\tclosed',
+        // h2 is still in flight.
+        '# next: --after s1',
+      ].join('\n')
+    );
   });
 
   it('gets a socket with its frames and a stream with its events', () => {

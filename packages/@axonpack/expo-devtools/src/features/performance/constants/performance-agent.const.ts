@@ -38,4 +38,8 @@ export const PERFORMANCE_AGENT: AgentTopic<PerformanceAgentRow> = {
     detail: (e) => (e.kind === 'mark' || e.kind === 'measure' ? e.detail : undefined),
   },
   show: ['id', 'kind', 'name', 'ms'],
+  empty: () =>
+    performanceStore.isPaused()
+      ? 'paused: the Performance tab records only after record is pressed'
+      : undefined,
 };

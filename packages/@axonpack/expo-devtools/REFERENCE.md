@@ -827,22 +827,22 @@ is the only short flag.
 
 The same on every topic. `get` takes `--full`, `--json` and `--out`.
 
-| Flag         | Value                                  | Default             | What it does                                                                             | Example                             |
-| ------------ | -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
-| `--grep`     | text, or `/regex/flags`                | none                | Rows holding it in any value, bodies included. Text ignores case. Keys are not searched. | `--grep timeout`                    |
-| `--where`    | a [clause](#where-clauses), repeatable | none                | Rows where the clause holds. Every `--where` must hold.                                  | `--where 'code>=400'`               |
-| `--since`    | a [time](#times)                       | none                | Rows at or after it.                                                                     | `--since 10m`                       |
-| `--until`    | a [time](#times)                       | none                | Rows at or before it.                                                                    | `--until 2026-11-03T10:00:00Z`      |
-| `--limit`    | whole number from 1                    | `50`                | Rows to print, or groups with `--group-by`.                                              | `--limit 20`                        |
-| `--after`    | a row id                               | none                | Only rows newer than it, oldest first.                                                   | `--after fetch-1762172310455-212`   |
-| `--before`   | a row id                               | none                | Only rows older than it.                                                                 | `--before console-1762172290871-80` |
-| `--sort`     | field, or `-field`                     | newest first        | Sorts by that field, `-` for descending. Rows without a value go last. No cursors.       | `--sort -ms`                        |
-| `--fields`   | comma list of fields                   | the topic's columns | The columns to print.                                                                    | `--fields id,code,url`              |
-| `--count`    | none                                   | off                 | Prints only how many rows match.                                                         | `--count`                           |
-| `--group-by` | field                                  | none                | Prints how many rows have each value, most first.                                        | `--group-by code`                   |
-| `--full`     | none                                   | off                 | Strings whole. Without it, a string over 2,048 characters is cut.                        | `--full`                            |
-| `--json`     | none                                   | off                 | JSON lines, one object per row, with no `#` lines. `get` prints one line.                | `--json`                            |
-| `--out`      | file path                              | none                | Writes the reply whole (as with `--full`) to the file, and prints one line saying so.    | `--out response.json`               |
+| Flag         | Value                                  | Default             | What it does                                                                                                                     | Example                             |
+| ------------ | -------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `--grep`     | text, or `/regex/flags`                | none                | Rows holding it in any value, bodies included. Text ignores case. Keys are not searched.                                         | `--grep timeout`                    |
+| `--where`    | a [clause](#where-clauses), repeatable | none                | Rows where the clause holds. Every `--where` must hold.                                                                          | `--where 'code>=400'`               |
+| `--since`    | a [time](#times)                       | none                | Rows at or after it.                                                                                                             | `--since 10m`                       |
+| `--until`    | a [time](#times)                       | none                | Rows at or before it.                                                                                                            | `--until 2026-11-03T10:00:00Z`      |
+| `--limit`    | whole number from 1                    | `50`                | Rows to print, or groups with `--group-by`.                                                                                      | `--limit 20`                        |
+| `--after`    | a row id                               | none                | Only rows newer than it, oldest first.                                                                                           | `--after fetch-1762172310455-212`   |
+| `--before`   | a row id                               | none                | Only rows older than it.                                                                                                         | `--before console-1762172290871-80` |
+| `--sort`     | field, or `-field`                     | newest first        | Sorts by that field, `-` for descending. Rows without a value go last. No cursors.                                               | `--sort -ms`                        |
+| `--fields`   | comma list of fields                   | the topic's columns | The columns to print.                                                                                                            | `--fields id,code,url`              |
+| `--count`    | none                                   | off                 | Prints only how many rows match.                                                                                                 | `--count`                           |
+| `--group-by` | field                                  | none                | Prints how many rows have each value, most first.                                                                                | `--group-by code`                   |
+| `--full`     | none                                   | off                 | Strings whole. Without it, a string over 2,048 characters is cut.                                                                | `--full`                            |
+| `--json`     | none                                   | off                 | JSON lines, one object per row, with no `#` lines. `get` prints one line.                                                        | `--json`                            |
+| `--out`      | file path                              | none                | Writes the reply whole (as with `--full`) to the file, and prints one line saying so. With `get`, the file holds the JSON alone. | `--out response.json`               |
 
 #### App flags
 
@@ -892,23 +892,28 @@ HTTP requests, WebSockets and server-sent event streams since launch, the last 1
 socket's frames as `messages` and a stream's events as `events`. A request's initiator lists each
 frame as a file with its line and column, and keeps frames from libraries only with `--full`.
 
-| Field        | Value                                                                                            |
-| ------------ | ------------------------------------------------------------------------------------------------ |
-| **`id`**     | The row's id                                                                                     |
-| `t`          | When it started                                                                                  |
-| `kind`       | `http`, `ws` or `sse`                                                                            |
-| **`method`** | The HTTP method                                                                                  |
-| **`code`**   | The HTTP status, or a socket's close code                                                        |
-| `state`      | `pending`, `success` or `error`; a socket's `connecting`, `open`, `closing`, `closed` or `error` |
-| **`ms`**     | How long it took                                                                                 |
-| **`url`**    | The URL                                                                                          |
-| `error`      | Why it failed                                                                                    |
-| `type`       | The response's MIME type (HTTP)                                                                  |
-| `size`       | The response body's size in bytes (HTTP)                                                         |
-| `msgs`       | How many frames or events a socket or stream has                                                 |
-| `source`     | The name of the WebView that made it. Empty for the app's own                                    |
-| `request`    | The request body (HTTP)                                                                          |
-| `response`   | The response body (HTTP)                                                                         |
+`--where state=error` lists every request that failed: a 4xx or 5xx answer, a request that got no
+answer, and a socket that failed. `--where 'code>=400'` lists only the 4xx and 5xx answers. A socket
+has no `code`; how it closed is in `close`.
+
+| Field        | Value                                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **`id`**     | The row's id                                                                                                                         |
+| `t`          | When it started                                                                                                                      |
+| `kind`       | `http`, `ws` or `sse`                                                                                                                |
+| **`method`** | The HTTP method                                                                                                                      |
+| **`code`**   | The HTTP status. Empty for a socket                                                                                                  |
+| `close`      | A socket's close code, `1000` for a normal close. Empty for HTTP                                                                     |
+| **`state`**  | `pending`, `success` or `error` (a 4xx or 5xx answer, or no answer); a socket's `connecting`, `open`, `closing`, `closed` or `error` |
+| **`ms`**     | How long it took                                                                                                                     |
+| **`url`**    | The URL                                                                                                                              |
+| `error`      | Why it failed                                                                                                                        |
+| `type`       | The response's MIME type (HTTP)                                                                                                      |
+| `size`       | The response body's size in bytes (HTTP)                                                                                             |
+| `msgs`       | How many frames or events a socket or stream has                                                                                     |
+| `source`     | The name of the WebView that made it. Empty for the app's own                                                                        |
+| `request`    | The request body (HTTP)                                                                                                              |
+| `response`   | The response body (HTTP)                                                                                                             |
 
 #### console
 
@@ -927,7 +932,8 @@ Console lines since launch, the last 500. A line repeated in a row is one row wi
 #### performance
 
 Long tasks, slow interactions, marks and measures, newest first. Kept only while the Performance tab
-records, and it starts paused. Memory and frame-rate samples are not rows.
+records, and it starts paused. Memory and frame-rate samples are not rows. An empty list while the
+tab is paused ends in `# paused: the Performance tab records only after record is pressed`.
 
 | Field      | Value                                          |
 | ---------- | ---------------------------------------------- |
@@ -941,9 +947,10 @@ records, and it starts paused. Memory and frame-rate samples are not rows.
 
 #### storage
 
-Every key of every registered store, by store then key. Rows have no time. The first question about
-a store lists its keys; a list then reads the values on its page, and `--grep` or a `--where`,
-`--sort` or `--group-by` on `value`, `type`, `size` or `error` reads every key once.
+Every key of every registered store, by store then key. Rows have no time. Each query lists every
+store's keys again, so keys the app wrote since show up, and keeps the values already read. A list
+then reads the values on its page, and `--grep` or a `--where`, `--sort` or `--group-by` on `value`,
+`type`, `size` or `error` reads every key once. A value read earlier is not read again.
 
 | Field       | Value                                                                                                                         |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -1046,23 +1053,24 @@ Tab-separated, with a header row. In a cell, `-` is an empty value, a tab or lin
 `\t`, `\n` or `\r`, `t` is an ISO time, and a string over 2,048 characters ends in
 `... [cut at 2048 of <n> chars, --full for all]`.
 
-| Line                                                                                  | When                                                                                               |
-| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `# <topic> · <app> · <device> · <n> of <total> match`                                 | First line of a list. Ends in `· showing <n>` when `--limit` cut rows off.                         |
-| `# <topic> · <app> · <device> · <n> of <total> match · <k> values of <field>`         | First line of `--group-by`, above `<field>` and `count` columns.                                   |
-| `<n>`                                                                                 | The whole reply to `--count`.                                                                      |
-| `# next: --after <id>`                                                                | Last lines of an unsorted list: the cursor for the next poll. A row still in flight holds it back. |
-| `# more: --before <id>`                                                               | When the limit cut older rows off: the cursor for the next page.                                   |
-| `# <topic> is off: <reason>`                                                          | The whole reply for a topic the app turned off. Exit code 0.                                       |
-| `# <topic> <id>`                                                                      | First line of `get`, above the indented JSON.                                                      |
-| `# <topic>: wrote <n> chars to <file>`                                                | The whole reply with `--out`.                                                                      |
-| `# topics · <app> · <device>`                                                         | First line of `topics`.                                                                            |
-| `# ?: checking would close a DevTools window open on the app. --force checks anyway.` | Under `apps`, when a row shows `?`.                                                                |
-| `# wait: <what>`                                                                      | Never printed. The app says it is still reading; the tool asks again every 200 ms.                 |
+| Line                                                                                  | When                                                                                                    |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `# <topic> · <app> · <device> · <n> of <total> match`                                 | First line of a list. Ends in `· showing <n>` when `--limit` cut rows off.                              |
+| `# <topic> · <app> · <device> · <n> of <total> match · <k> values of <field>`         | First line of `--group-by`, above `<field>` and `count` columns.                                        |
+| `<n>`                                                                                 | The whole reply to `--count`.                                                                           |
+| `# next: --after <id>`                                                                | Last lines of an unsorted list: the cursor for the next poll. A row still in flight holds it back.      |
+| `# more: --before <id>`                                                               | When the limit cut older rows off: the cursor for the next page.                                        |
+| `# <topic> is off: <reason>`                                                          | The whole reply for a topic the app turned off. Exit code 0.                                            |
+| `# <topic> <id>`                                                                      | First line of `get`, above the indented JSON.                                                           |
+| `# <topic>: wrote <n> chars to <file>`                                                | The whole reply with `--out`. With `get` it starts `# <topic> <id>`, and the file holds the JSON alone. |
+| `# paused: the Performance tab records only after record is pressed`                  | Last line of an empty `performance` list while the tab is paused.                                       |
+| `# topics · <app> · <device>`                                                         | First line of `topics`.                                                                                 |
+| `# ?: checking would close a DevTools window open on the app. --force checks anyway.` | Under `apps`, when a row shows `?`.                                                                     |
+| `# wait: <what>`                                                                      | Never printed. The app says it is still reading; the tool asks again every 200 ms.                      |
 
 `--json` prints none of the `#` lines, so it has no cursors. Each row is one JSON object with the
 chosen fields; `--group-by` gives `{ "<field>": value, "count": n }`. Strings are still cut unless
-`--full`.
+`--full`. With no rows it prints nothing.
 
 ### Errors
 

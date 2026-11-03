@@ -53,6 +53,19 @@ describe('the performance topic', () => {
     });
   });
 
+  it('says the tab starts paused when it holds no rows', () => {
+    performanceStore.clear();
+    performanceStore.setPaused(true);
+    expect(ask()).toBe(
+      [
+        '# performance · 0 of 0 match',
+        'id\tkind\tname\tms',
+        '# paused: the Performance tab records only after record is pressed',
+      ].join('\n')
+    );
+    expect(ask({ json: true })).toBe('');
+  });
+
   it('says so when the store is off', () => {
     performanceStore.setEnabled(false);
     expect(ask()).toBe('# performance is off: the app turned it off in its devtools config');

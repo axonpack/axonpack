@@ -57,18 +57,36 @@ function readValues(entries: readonly StorageEntry[]): string | undefined {
 }
 
 /**
- * Lists a store's keys the first time it is asked about, as opening the tab does. Then a list reads
+ * True while this topic's last reply was a `# wait:`, so the CLI asking again carries on from there
+ * and the next new query lists the keys again.
+ * ponytail: one flag for every caller, so a query that comes in while another waits, or right after
+ * one the CLI gave up on, sees the keys of that listing. A query id from the CLI would tell them
+ * apart, if that ever matters.
+ */
+let waiting = false;
+
+function prepare(query: AgentQuery): string | undefined {
+  const reply = waitFor(query);
+  waiting = reply !== undefined;
+  return reply;
+}
+
+/**
+ * Lists every store's keys at the start of each query, since the app may have written keys since
+ * the last one. Values already read stay, so that costs one key listing per store. Then a list reads
  * the values of the page it returns, as the DevTools tab reads the rows it draws, and a search over
  * values reads every key once. Values stay in the store after, as the tab keeps them, so the next
  * search reads nothing.
  */
-function prepare(query: AgentQuery): string | undefined {
-  const unlisted = storageStore
-    .getSnapshot()
-    .adapters.filter((state) => state.status === 'idle' || state.status === 'reading');
-  for (const state of unlisted) if (state.status === 'idle') readAdapter(state.adapter);
-  if (unlisted.length > 0) {
-    return `listing the keys of ${unlisted.map((state) => state.adapter.id).join(', ')}`;
+function waitFor(query: AgentQuery): string | undefined {
+  for (const state of storageStore.getSnapshot().adapters) {
+    if (state.status === 'idle' || (!waiting && state.status !== 'reading')) {
+      readAdapter(state.adapter, true);
+    }
+  }
+  const listing = storageStore.getSnapshot().adapters.filter((state) => state.status === 'reading');
+  if (listing.length > 0) {
+    return `listing the keys of ${listing.map((state) => state.adapter.id).join(', ')}`;
   }
   if (query.get !== undefined) return readValues(rows().filter((e) => idOf(e) === query.get));
   return readValues(needsEveryValue(query) ? rows() : pageOf(query));

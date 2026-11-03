@@ -120,8 +120,11 @@ function answer(app: App, query: AgentQuery, reply: string, out?: string): numbe
   const { writeFileSync } = require('node:fs') as {
     writeFileSync: (path: string, data: string) => void;
   };
-  writeFileSync(out, `${text}\n`);
-  print(`# ${query.topic}: wrote ${text.length} chars to ${out}`);
+  // A `get` file holds the entry alone, so it parses as JSON. Its `# <topic> <id>` line stays here.
+  const head = query.get !== undefined && text.startsWith('# ') ? text.split('\n', 1)[0] : '';
+  const body = head ? text.slice(head.length + 1) : text;
+  writeFileSync(out, `${body}\n`);
+  print(`${head || `# ${query.topic}`}: wrote ${body.length} chars to ${out}`);
   return 0;
 }
 
@@ -206,8 +209,9 @@ const stillWaiting = (what: string) =>
 const noAgent = (app: App) =>
   `${label(app)} has no devtools agent. It needs @axonpack/expo-devtools with <DevtoolsProvider> mounted, in a dev build or Expo Go.`;
 
+/** Nothing for no text, so `--json` with no rows prints nothing rather than an empty line. */
 function print(text: string) {
-  process.stdout.write(`${text}\n`);
+  if (text) process.stdout.write(`${text}\n`);
 }
 
 function fail(code: number, message: string): number {

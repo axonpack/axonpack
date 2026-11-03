@@ -141,6 +141,8 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
   const done = (text: string): AgentReply => ({ text, matched: hits.length, total: rows.length });
   if (query.count) return done(String(hits.length));
   const summary = `# ${topic.name} · ${hits.length} of ${rows.length} match`;
+  const why = rows.length === 0 ? topic.empty?.() : undefined;
+  const emptyLine = why ? [`# ${why}`] : [];
 
   if (query.groupBy !== undefined) {
     const name = query.groupBy;
@@ -168,6 +170,7 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
         `${summary} · ${groups.size} values of ${name}`,
         `${name}\tcount`,
         ...top.map((group) => `${cell(name, group.value, full)}\t${group.count}`),
+        ...emptyLine,
       ].join('\n')
     );
   }
@@ -198,6 +201,7 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
     page.length < hits.length ? `${summary} · showing ${page.length}` : summary,
     columns.join('\t'),
     ...page.map((i) => columns.map((name, k) => cell(name, getters[k](rows[i]), full)).join('\t')),
+    ...emptyLine,
   ];
   // A sorted page is not a run of time, so no cursor can continue it.
   if (!sorted) {

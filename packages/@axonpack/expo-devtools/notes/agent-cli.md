@@ -42,10 +42,12 @@ so a new tab gets all of them by adding that description and one line in the lis
   every redaction option holds for the tool with no code of its own. On top, the tool masks
   `authorization`, `cookie`, `set-cookie` and a page's `document.cookie` with no way to turn it off,
   and filters run on the masked row so a search can't probe a masked value.
-- **Storage reads the way the tab reads.** The first question about a store lists its keys, a list
+- **Storage reads the way the tab reads.** Each query lists every store's keys again, keeping the
+  values already read, so keys the app wrote since show up for one key listing per store. A list
   reads the values on its page, and a search over values reads every key once. While the app reads,
-  it answers `# wait:` and the tool asks again every 200 ms. One read per key on the first search is
-  fine for stores the size apps keep.
+  it answers `# wait:` and the tool asks again every 200 ms; asking again carries on from there
+  rather than listing again. One read per key on the first search is fine for stores the size apps
+  keep.
 - **Metro's Origin rules.** dev-middleware refuses a debugger socket without an Origin, and Expo
   drops any Origin but exactly `http://127.0.0.1:<port>`. Node's built-in `WebSocket` can send one,
   which is why the tool needs Node 22.
@@ -56,6 +58,11 @@ so a new tab gets all of them by adding that description and one line in the lis
   when it resumes, so the tool gives up on its own and says why.
 - **A row in flight holds the poll cursor back**, so the next poll shows how it ended. An open socket
   or a live stream does not, since it can stay open all session.
+- **`code` is the HTTP status only.** A socket's close code is its own field, `close`, so
+  `code>=400` never takes in a socket that closed normally. The store keeps a 4xx or 5xx answer as
+  `success` and the panels paint it red; the tool calls it `error`, so `state=error` is every failed
+  request, and `state` is a default column as the panels show a socket's state where a request's
+  code goes.
 - **On React Native below 0.86** an app takes one debugger, and a second closes the DevTools window.
   There the tool asks through the open window, which `@axonpack/react-native-devtools-tab` relays on
   its own connection, and attaches directly only when no window is open. Without `withDevtools` it

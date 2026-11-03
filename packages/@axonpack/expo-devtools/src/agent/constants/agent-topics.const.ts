@@ -44,6 +44,8 @@ export type AgentTopic<T = any> = {
   show: string[];
   /** What `get` prints for a row, when that differs from the row itself. Lists and `--grep` never see it. */
   detail?: (row: T, full: boolean) => unknown;
+  /** Why the topic holds no rows, when that is worth a `#` line under an empty list. */
+  empty?: () => string | undefined;
   /** A row still in flight. The `next` cursor stops before it, so the next poll sees how it ended. */
   pending?: (row: T) => boolean;
 };

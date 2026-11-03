@@ -58,7 +58,7 @@ ${OUTPUT}
 Examples
   devtools apps
   devtools topics
-  devtools network --where 'code>=400' --since 10m
+  devtools network --where state=error --since 10m   requests that failed (4xx, 5xx, no answer)
   devtools network --grep timeout --fields id,method,url,error
   devtools network --group-by code
   devtools console --where 'level=error,warn' --limit 20

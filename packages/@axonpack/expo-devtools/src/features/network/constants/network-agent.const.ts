@@ -7,6 +7,7 @@ import {
   type ServerSentEvent,
   type WebSocketMessage,
 } from '../stores/network-log.store';
+import { isErrorStatus } from '../utils/formatters.util';
 
 /** A row with its socket frames or stream events beside it, so `get` and `--grep` reach them. */
 type NetworkAgentRow = NetworkEntry & {
@@ -19,12 +20,19 @@ function toAgentRow(entry: NetworkEntry): NetworkAgentRow {
   if (row.kind === 'websocket') {
     return { ...row, messages: networkLogStore.getWebSocketMessages(row.id) };
   }
-  return row.eventStream ? { ...row, events: networkLogStore.getStreamEvents(row.id) } : row;
+  // The store keeps a 4xx/5xx answer as `success`, and the panels paint it red with
+  // `isErrorStatus`. Here it is `error`, so `state=error` lists every request that failed.
+  const http =
+    row.status !== 'pending' && isErrorStatus(row.status, row.statusCode)
+      ? { ...row, status: 'error' as const }
+      : row;
+  return http.eventStream ? { ...http, events: networkLogStore.getStreamEvents(http.id) } : http;
 }
 
 export const NETWORK_AGENT: AgentTopic<NetworkAgentRow> = {
   name: 'network',
-  about: 'HTTP, WebSocket and SSE since launch, newest first; get shows frames and events',
+  about:
+    'HTTP, WebSocket and SSE since launch, newest first. state=error is every failed request; get shows frames and events',
   rows: () => networkLogStore.getMergedSnapshot().map(toAgentRow),
   enabled: networkLogStore.isEnabled,
   fields: {
@@ -32,7 +40,9 @@ export const NETWORK_AGENT: AgentTopic<NetworkAgentRow> = {
     t: (e) => e.startedAt,
     kind: (e) => (e.kind === 'websocket' ? 'ws' : e.eventStream ? 'sse' : 'http'),
     method: (e) => e.method,
-    code: (e) => (e.kind === 'http' ? e.statusCode : e.closeCode),
+    // The HTTP status only, so `code>=400` never takes in a socket that closed.
+    code: (e) => (e.kind === 'http' ? e.statusCode : undefined),
+    close: (e) => (e.kind === 'websocket' ? e.closeCode : undefined),
     state: (e) => e.status,
     ms: (e) => e.duration,
     url: (e) => e.url,
@@ -44,7 +54,8 @@ export const NETWORK_AGENT: AgentTopic<NetworkAgentRow> = {
     request: (e) => (e.kind === 'http' ? e.requestBody : undefined),
     response: (e) => (e.kind === 'http' ? e.responseBody : undefined),
   },
-  show: ['id', 'method', 'code', 'ms', 'url'],
+  // `state` too, as the panels show a socket's state where a request's code goes.
+  show: ['id', 'method', 'code', 'state', 'ms', 'url'],
   // Each frame's location is the whole bundle URL with Metro's query, so `get` keeps the file and
   // position as the panel shows them, and the vendor frames only with `--full`.
   detail: (e, full) =>

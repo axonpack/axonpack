@@ -30,9 +30,12 @@ const VALUES: Record<string, string> = {
 };
 const ALL_KEYS = Object.keys(VALUES);
 let reads: string[];
+/** Keys the app writes after the first listing. */
+let added: Record<string, string>;
 
 beforeEach(() => {
   reads = [];
+  added = {};
   configureStorageRedaction({});
   storageStore.reset();
   storageStore.setEnabled(true);
@@ -40,10 +43,10 @@ beforeEach(() => {
     resolveStorageAdapters([
       defineStorageAdapter({
         name: 'Memory',
-        getAllKeys: () => ALL_KEYS,
+        getAllKeys: () => [...ALL_KEYS, ...Object.keys(added)],
         getItem: (key: string) => {
           reads.push(key);
-          return VALUES[key] ?? null;
+          return VALUES[key] ?? added[key] ?? null;
         },
       }),
     ])
@@ -68,9 +71,33 @@ describe('the storage topic', () => {
       ].join('\n')
     );
     expect(reads).toEqual(['a', 'b']);
-    expect(ask({ where: ['key=c,secret,token'], fields: 'id,type', json: true })).toBe(
-      '# wait: reading 3 values'
+    expect(await answer({ where: ['key=c,secret,token'], fields: 'id,type', json: true })).toBe(
+      [
+        '{"id":"memory/c","type":"string"}',
+        '{"id":"memory/secret","type":"string"}',
+        '{"id":"memory/token","type":"string"}',
+      ].join('\n')
     );
+    expect(reads).toEqual(['a', 'b', 'c', 'secret', 'token']);
+  });
+
+  it('lists the keys again for each new query, keeping the values it read', async () => {
+    configureStorageRedaction({ keys: ['new'] });
+    await answer({ limit: 2 });
+    added = { new: 'hunter2', newer: 'four' };
+    const query = { where: ['key~new'], fields: 'id,value', json: true };
+
+    expect(ask(query)).toBe('# wait: listing the keys of memory');
+    await settle();
+    // Asked again while it waits, it carries on rather than listing again.
+    expect(ask(query)).toBe('# wait: reading 2 values');
+    await settle();
+    expect(ask(query)).toBe(
+      ['{"id":"memory/new","value":"[redacted]"}', '{"id":"memory/newer","value":"four"}'].join(
+        '\n'
+      )
+    );
+    expect(reads).toEqual(['a', 'b', 'new', 'newer']);
   });
 
   it.each([
@@ -78,6 +105,8 @@ describe('the storage topic', () => {
     ['--where on value', { where: ['value~two'] }],
   ])('reads every key once for %s, then answers', async (_flag, search) => {
     await answer({ limit: 1 });
+    expect(ask(search)).toBe('# wait: listing the keys of memory');
+    await settle();
     expect(ask(search)).toBe('# wait: reading 4 values');
     // Asked again while the reads are in flight: nothing is read twice.
     expect(ask(search)).toBe('# wait: reading 4 values');
@@ -89,8 +118,10 @@ describe('the storage topic', () => {
   it('does not read again for a second search', async () => {
     await answer({ grep: 'two' });
     expect(reads).toHaveLength(ALL_KEYS.length);
-    expect(ask({ where: ['value~three'], fields: 'id', json: true })).toBe('{"id":"memory/c"}');
-    expect(ask({ grep: 'one', count: true })).toBe('1');
+    expect(await answer({ where: ['value~three'], fields: 'id', json: true })).toBe(
+      '{"id":"memory/c"}'
+    );
+    expect(await answer({ grep: 'one', count: true })).toBe('1');
     expect(reads).toHaveLength(ALL_KEYS.length);
   });
 
@@ -108,9 +139,11 @@ describe('the storage topic', () => {
         '{"id":"memory/token","value":"[redacted]"}',
       ].join('\n')
     );
-    expect(ask({ grep: 'abc', count: true })).toBe('0');
-    expect(ask({ grep: 's3cret', count: true })).toBe('0');
-    expect(ask({ get: 'memory/secret' })).toMatch(/^error: no storage row "memory\/secret"/);
+    expect(await answer({ grep: 'abc', count: true })).toBe('0');
+    expect(await answer({ grep: 's3cret', count: true })).toBe('0');
+    expect(await answer({ get: 'memory/secret' })).toMatch(
+      /^error: no storage row "memory\/secret"/
+    );
   });
 
   it('reads one value for get', async () => {
