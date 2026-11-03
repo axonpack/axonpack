@@ -22,7 +22,7 @@ lives in React Native DevTools, so the app has to be one whose debugger is that 
 Chrome remote debugger.
 
 An [agent skill](https://axonpack.dev/docs/agent-skills) teaches your coding agent this package:
-`npx skills add axonpack/axonpack --skill axonpack axonpack-react-native-devtools-tab`.
+`npx skills add axonpack/skills --skill axonpack axonpack-react-native-devtools-tab`.
 
 ## Set it up
 

@@ -84,34 +84,32 @@ The landing page and the docs in one Next app, documented in `docs/README.md` ra
 - `commit-msg`: runs commitlint (`commitlint.config.js` at repo root): conventional-commit `type` restricted to a fixed enum, and if a scope is given it must be one of `@axonpack/expo-devtools`, `@axonpack/react-native-devtools-tab`, `@axonpack/react-pretty-print`, `@axonpack/in-app-updates`, `@axonpack/preview`, `linter` or `docs`. Extend `scope-enum` there when adding a package.
 - `post-merge`: runs `bun install`.
 
-## Agent skills (`skills/`)
+## Agent skills
 
-`skills/` holds the skills users install into their coding agent with the `skills` CLI
-(`npx skills add axonpack/axonpack`): `axonpack` for the whole set, and `axonpack-<package>` for each
-published package. The CLI reads them from `main`, the same branch the docs site builds from, so they
-follow the docs rules. `docs/content/docs/agent-skills.mdx` is the page on installing them.
+The skills users install into their coding agent live in their own repo, `axonpack/skills`
+(`npx skills add axonpack/skills`): `axonpack` for the whole set, and `axonpack-<package>` for each
+published package. They left this repo because it is too large for skills.sh. They hold no API: each
+one says what its package is for and tells the agent to read the live docs and set the package up
+from them. So the docs moving with the code is what keeps the skills current, and a release needs no
+skill edit. `docs/content/docs/agent-skills.mdx` is the page on installing them.
 
-- **A skill moves with its package's code.** A change a user can see (an export, a prop, a config
-  option, a CLI command, flag, output line or error, a default) updates the package's
-  `skills/axonpack-<package>/SKILL.md` in the same branch, like any other docs page.
-- **Only what is built.** A skill never describes a planned feature. Every install or run line works
-  for npm, yarn, pnpm and bun.
-- **An agent sets the package up from the skill alone.** Each package skill opens with a numbered
-  setup: the package manager from the lockfile, the version check, the install with its peers, each
-  config change with its file, env values, whether a native build is needed, and a verify step. Each
-  step ends with a check. Then setup problems, the main APIs briefly, and the docs links.
-- **Keep `SKILL.md` near 150 lines.** An agent loads all of it. Long tables and rarely needed detail
-  go in `references/*.md` beside it, linked from `SKILL.md`.
+- **An agent sets a package up from its docs alone.** The installation page (with the quick start
+  and the compatibility page where there is one) holds every requirement, the install line, each
+  config change with its file, whether a native build is needed, and a check for each step. A setup
+  problem goes on the troubleshooting page. Anything a skill used to say now lives in the docs.
+- **The skills read three URLs.** `https://axonpack.dev/llms.txt` (the index),
+  `https://axonpack.dev/llms.mdx/docs/<path>/content.md` (one page as markdown) and
+  `https://axonpack.dev/llms-full.txt`. Every installed skill depends on them, so keep their routes
+  in `docs/src/app/` and that URL form working.
 - **Test a setup change in a fresh app.** Create one in a scratch folder with
   `npx create-expo-app@latest --template blank-typescript`, install the package from `npm pack`,
-  follow the skill, then check `npx expo config`, `npx tsc --noEmit` and
+  follow the installation page as written, then check `npx expo config`, `npx tsc --noEmit` and
   `npx expo export --platform ios`. Delete the app after.
 - **Contributor skills stay hidden.** Every skill in `.claude/skills/` and `.agents/skills/` written
   for this repo carries `metadata.internal: true`, so the CLI doesn't offer it to users. A new one
   needs it too. Skills installed from elsewhere are listed in `skills-lock.json`, and the CLI skips
-  those already.
-- **Check with the CLI.** From a scratch folder, `npx skills add <path to this checkout> --list`
-  lists `axonpack` and one `axonpack-<package>` per published package, and nothing else.
+  those already. Check: from a scratch folder, `npx skills add <path to this checkout> --list` finds
+  no skills.
 
 ## Adding a new package
 
@@ -122,7 +120,7 @@ Copy a published sibling (`react-pretty-print` or `expo-devtools`) instead of gu
 - **`notes/`**: `README.md` plus one note per area, each owning its own feature status. Add a symlink for each under `notes/@axonpack/<name>/`, with `index.md` pointing at the README.
 - **Docs section** `docs/content/docs/<name>/`: a `meta.json` with `root`, `icon`, grouped pages and a `---Releases---` group ending in `changelog`. The index uses `<LatestRelease slug="<name>" />`, and every page has `title`, `description` and `icon`. Screenshots go in `docs/public/<name>/screenshots/`.
 - **`docs/scripts/sync-changelog.mjs`**: add the package to `PACKAGES`, which also writes its changelog page.
-- **Agent skill**: `skills/axonpack-<name>/SKILL.md` in a sibling's shape (see [Agent skills](#agent-skills-skills)), a row for it in `skills/axonpack/SKILL.md` and in `docs/content/docs/agent-skills.mdx`, and the README's `npx skills add axonpack/axonpack --skill axonpack axonpack-<name>` line.
+- **Agent skill**: the `axonpack` skill finds the package in `llms.txt` with no edit. For its own skill, copy a sibling's `skills/axonpack-<name>/SKILL.md` in the `axonpack/skills` repo and change the name, the package and the description. Add a row for it to `docs/content/docs/agent-skills.mdx` and that repo's README, and the `npx skills add axonpack/skills --skill axonpack axonpack-<name>` line to the package README and its docs index and installation pages.
 - **Every list that names the packages**: the root `README.md` (the table and a section), `docs/README.md`, the Start here cards in `docs/content/docs/index.mdx`, `CONTRIBUTING.md` (the intro and the scope list), `PUBLISHING.md`, this file (the overview, the workspace list and the commit scope sentence), `notes/plan.md`, the pkg.pr.new list in `.github/workflows/ci.yml`, the example `ios` and `android` folders in `.prettierignore`, and the `#build` and `#prepare` `outputs` in `turbo.json`. `docs/legacy/` is a frozen copy and stays as it is.
 - **Wiring**: add the scope to `commitlint.config.js`, and the example app to `workspaces` in the root `package.json`.
 - **Changeset**: one, in house style. A homepage or metadata fix needs its own patch changeset, because it changes the published package.
