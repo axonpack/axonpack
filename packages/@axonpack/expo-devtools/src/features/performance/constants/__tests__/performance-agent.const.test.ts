@@ -3,7 +3,7 @@ import { performanceStore } from '../../stores/performance.store';
 import { PERFORMANCE_AGENT } from '../performance-agent.const';
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([PERFORMANCE_AGENT], { topic: 'performance', ...rest });
+  runQuery([PERFORMANCE_AGENT], { topic: 'performance', ...rest }).text;
 
 let clock = 1_000_000;
 

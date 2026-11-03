@@ -8,7 +8,7 @@ import { storageStore } from '../../stores/storage.store';
 import { STORAGE_AGENT } from '../storage-agent.const';
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([STORAGE_AGENT], { topic: 'storage', ...rest });
+  runQuery([STORAGE_AGENT], { topic: 'storage', ...rest }).text;
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
 /** Asks again after each `# wait:`, as the CLI does. */

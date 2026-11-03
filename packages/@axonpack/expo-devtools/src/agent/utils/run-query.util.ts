@@ -41,30 +41,35 @@ const HAS_VALUE = /^([\w.-]+)\?$/;
 const REGEX = /^\/([\s\S]+)\/([a-z]*)$/;
 const TSV_ESCAPES: Record<string, string> = { '\t': '\\t', '\n': '\\n', '\r': '\\r' };
 
+/** The finished text, and for a list, count or `get` how many rows it matched of all the topic kept. */
+export type AgentReply = { text: string; matched?: number; total?: number };
+
 /**
- * Answers one agent query with the finished text. Never throws: the caller is a debugger evaluate,
- * so a bad query comes back as one `error:` line and the app never notices it.
+ * Answers one agent query. Never throws: the caller is a debugger evaluate, so a bad query comes
+ * back as one `error:` line and the app never notices it.
  */
-export function runQuery(topics: readonly AgentTopic[], query: AgentQuery): string {
+export function runQuery(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
   try {
     return answer(topics, query);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return `error: ${message.split('\n')[0]}`;
+    return { text: `error: ${message.split('\n')[0]}` };
   }
 }
 
-function answer(topics: readonly AgentTopic[], query: AgentQuery): string {
+function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
   const topic = topics.find((each) => each.name === query?.topic);
   if (!topic) {
     const names = topics.map((each) => each.name).join(', ') || 'none yet';
     throw new Error(`unknown topic "${query?.topic}". Topics: ${names}`);
   }
   if (topic.enabled?.() === false) {
-    return `# ${topic.name} is off: ${topic.off ?? 'the app turned it off in its devtools config'}`;
+    return {
+      text: `# ${topic.name} is off: ${topic.off ?? 'the app turned it off in its devtools config'}`,
+    };
   }
   const waitFor = topic.prepare?.(query);
-  if (waitFor) return `# wait: ${waitFor}`;
+  if (waitFor) return { text: `# wait: ${waitFor}` };
 
   const rows = topic.rows();
   const id = topic.fields.id;
@@ -88,7 +93,11 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): string {
   if (query.get !== undefined) {
     const row = rows[indexOf(query.get)];
     const text = JSON.stringify(row, cutStrings(full), query.json ? undefined : 2);
-    return query.json ? text : `# ${topic.name} ${query.get}\n${text}`;
+    return {
+      text: query.json ? text : `# ${topic.name} ${query.get}\n${text}`,
+      matched: 1,
+      total: rows.length,
+    };
   }
 
   const limit = query.limit ?? DEFAULT_LIMIT;
@@ -122,7 +131,8 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): string {
   const hits: number[] = [];
   for (let i = start; i < end; i++) if (tests.every((test) => test(rows[i]))) hits.push(i);
 
-  if (query.count) return String(hits.length);
+  const done = (text: string): AgentReply => ({ text, matched: hits.length, total: rows.length });
+  if (query.count) return done(String(hits.length));
   const summary = `# ${topic.name} · ${hits.length} of ${rows.length} match`;
 
   if (query.groupBy !== undefined) {
@@ -138,17 +148,21 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): string {
     }
     const top = [...groups.values()].sort((a, b) => b.count - a.count).slice(0, limit);
     if (query.json) {
-      return top
-        .map((group) =>
-          JSON.stringify({ [name]: group.value ?? null, count: group.count }, cutStrings(full))
-        )
-        .join('\n');
+      return done(
+        top
+          .map((group) =>
+            JSON.stringify({ [name]: group.value ?? null, count: group.count }, cutStrings(full))
+          )
+          .join('\n')
+      );
     }
-    return [
-      `${summary} · ${groups.size} values of ${name}`,
-      `${name}\tcount`,
-      ...top.map((group) => `${cell(name, group.value, full)}\t${group.count}`),
-    ].join('\n');
+    return done(
+      [
+        `${summary} · ${groups.size} values of ${name}`,
+        `${name}\tcount`,
+        ...top.map((group) => `${cell(name, group.value, full)}\t${group.count}`),
+      ].join('\n')
+    );
   }
 
   const sort = query.sort;
@@ -163,12 +177,14 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): string {
   const page = forward ? hits.slice(-limit).reverse() : hits.slice(0, limit);
 
   if (query.json) {
-    return page
-      .map((i) => {
-        const values = Object.fromEntries(columns.map((name, k) => [name, getters[k](rows[i])]));
-        return JSON.stringify(values, cutStrings(full));
-      })
-      .join('\n');
+    return done(
+      page
+        .map((i) => {
+          const values = Object.fromEntries(columns.map((name, k) => [name, getters[k](rows[i])]));
+          return JSON.stringify(values, cutStrings(full));
+        })
+        .join('\n')
+    );
   }
 
   const lines = [
@@ -184,7 +200,7 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): string {
       lines.push(`# more: --before ${id(rows[page[page.length - 1]])}`);
     }
   }
-  return lines.join('\n');
+  return done(lines.join('\n'));
 
   /**
    * The newest row this reply covered, unless a row in flight sits in that stretch: then the row

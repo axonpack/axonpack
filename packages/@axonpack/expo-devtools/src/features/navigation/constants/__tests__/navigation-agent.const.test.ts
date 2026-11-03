@@ -7,7 +7,7 @@ import {
 import { NAVIGATION_AGENT } from '../navigation-agent.const';
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([NAVIGATION_AGENT], { topic: 'navigation', ...rest });
+  runQuery([NAVIGATION_AGENT], { topic: 'navigation', ...rest }).text;
 
 function move(id: string, action: string, from: string | null, to: string, params?: object) {
   const record: NavigationMove = {

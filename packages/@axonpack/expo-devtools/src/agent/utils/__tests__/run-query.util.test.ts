@@ -87,7 +87,7 @@ const NET: AgentTopic<Row> = {
   pending: (r) => r.code === undefined,
 };
 
-const query = (rest: Partial<AgentQuery>) => runQuery([NET], { topic: 'net', ...rest });
+const query = (rest: Partial<AgentQuery>) => runQuery([NET], { topic: 'net', ...rest }).text;
 
 /** The first column of each data row, skipping `#` lines and the header. */
 const ids = (text: string) =>
@@ -240,10 +240,10 @@ describe('runQuery output', () => {
 
   it('says so when the app turned the topic off', () => {
     const off = { ...NET, enabled: () => false };
-    expect(runQuery([off], { topic: 'net' })).toBe(
+    expect(runQuery([off], { topic: 'net' }).text).toBe(
       '# net is off: the app turned it off in its devtools config'
     );
-    expect(runQuery([{ ...off, off: 'no client' }], { topic: 'net' })).toBe(
+    expect(runQuery([{ ...off, off: 'no client' }], { topic: 'net' }).text).toBe(
       '# net is off: no client'
     );
   });
@@ -253,8 +253,19 @@ describe('runQuery output', () => {
       asked.get ? `reading ${asked.get}` : undefined
     );
     const reading = { ...NET, prepare };
-    expect(runQuery([reading], { topic: 'net', get: 'r4' })).toBe('# wait: reading r4');
-    expect(runQuery([reading], { topic: 'net', count: true })).toBe('6');
+    expect(runQuery([reading], { topic: 'net', get: 'r4' }).text).toBe('# wait: reading r4');
+    expect(runQuery([reading], { topic: 'net', count: true }).text).toBe('6');
+  });
+
+  it('hands back how many rows matched of all the topic kept, beside the text', () => {
+    const counts = (rest: Partial<AgentQuery>) => {
+      const { matched, total } = runQuery([NET], { topic: 'net', ...rest });
+      return { matched, total };
+    };
+    expect(counts({ where: ['code>=400'], limit: 1 })).toEqual({ matched: 2, total: 6 });
+    expect(counts({ groupBy: 'method', json: true })).toEqual({ matched: 6, total: 6 });
+    expect(counts({ get: 'r4' })).toEqual({ matched: 1, total: 6 });
+    expect(counts({ where: ['nope=1'] })).toEqual({ matched: undefined, total: undefined });
   });
 });
 
@@ -315,8 +326,12 @@ describe('runQuery errors', () => {
   });
 
   it('names the topics there are', () => {
-    expect(runQuery([NET], { topic: 'nope' })).toBe('error: unknown topic "nope". Topics: net');
-    expect(runQuery([], { topic: 'net' })).toBe('error: unknown topic "net". Topics: none yet');
+    expect(runQuery([NET], { topic: 'nope' }).text).toBe(
+      'error: unknown topic "nope". Topics: net'
+    );
+    expect(runQuery([], { topic: 'net' }).text).toBe(
+      'error: unknown topic "net". Topics: none yet'
+    );
   });
 
   it('reports a bad regex', () => {
@@ -330,7 +345,7 @@ describe('runQuery errors', () => {
         throw new Error('store gone\nat somewhere');
       },
     };
-    expect(runQuery([broken], { topic: 'net' })).toBe('error: store gone');
+    expect(runQuery([broken], { topic: 'net' }).text).toBe('error: store gone');
   });
 });
 
@@ -369,7 +384,8 @@ describe('the agent mask', () => {
     },
     show: ['id', 'auth'],
   };
-  const ask = (rest: Partial<AgentQuery>) => runQuery([network], { topic: 'network', ...rest });
+  const ask = (rest: Partial<AgentQuery>) =>
+    runQuery([network], { topic: 'network', ...rest }).text;
 
   it('hides authorization, cookie, set-cookie and the page cookie in get, even with full', () => {
     const text = ask({ get: 'n1', full: true });

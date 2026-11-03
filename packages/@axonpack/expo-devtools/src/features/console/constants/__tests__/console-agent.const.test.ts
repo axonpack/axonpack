@@ -3,7 +3,7 @@ import { consoleLogStore, type ConsoleLogLevel } from '../../stores/console-log.
 import { CONSOLE_AGENT } from '../console-agent.const';
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([CONSOLE_AGENT], { topic: 'console', ...rest });
+  runQuery([CONSOLE_AGENT], { topic: 'console', ...rest }).text;
 
 function log(id: string, level: ConsoleLogLevel, text: string) {
   consoleLogStore.add({

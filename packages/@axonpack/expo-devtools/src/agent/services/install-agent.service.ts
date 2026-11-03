@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { aiUsageStore } from '../../features/ai-usage/stores/ai-usage.store';
 import { TOPICS } from '../constants/agent-topics.const';
 import { runQuery, type AgentQuery } from '../utils/run-query.util';
 
@@ -38,10 +39,18 @@ function hello() {
 
 export type AgentHello = ReturnType<typeof hello>;
 
+/**
+ * Every query passes through here and `hello` does not, so the AI Usage tab records each query and
+ * never a probe.
+ */
 function run(query: AgentQuery): string {
-  // TODO(agent): record the query and its reply for the AI Usage tab here. Every query passes
-  // through this one call and `hello` does not, so a probe is never recorded.
-  return runQuery(TOPICS, query);
+  const start = performance.now();
+  const reply = runQuery(TOPICS, query);
+  // The CLI asks again every 200 ms while it waits, and the answer it ends on is the one it shows.
+  if (!reply.text.startsWith('# wait: ')) {
+    aiUsageStore.record(query, reply, performance.now() - start);
+  }
+  return reply.text;
 }
 
 /**

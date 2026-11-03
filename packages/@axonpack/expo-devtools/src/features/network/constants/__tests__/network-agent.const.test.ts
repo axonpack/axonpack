@@ -4,7 +4,7 @@ import { NETWORK_AGENT } from '../network-agent.const';
 
 const NOW = Date.now();
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([NETWORK_AGENT], { topic: 'network', ...rest });
+  runQuery([NETWORK_AGENT], { topic: 'network', ...rest }).text;
 const ids = (text: string) =>
   text
     .split('\n')

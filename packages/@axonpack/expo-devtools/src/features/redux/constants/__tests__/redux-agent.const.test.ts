@@ -3,7 +3,7 @@ import { reduxStore } from '../../stores/redux.store';
 import { REDUX_AGENT } from '../redux-agent.const';
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([REDUX_AGENT], { topic: 'redux', ...rest });
+  runQuery([REDUX_AGENT], { topic: 'redux', ...rest }).text;
 
 // Once, since the store numbers its ids for the life of the module. The off test goes last.
 beforeAll(() => {

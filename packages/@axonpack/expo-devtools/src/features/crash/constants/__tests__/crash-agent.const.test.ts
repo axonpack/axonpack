@@ -3,7 +3,7 @@ import { crashStore, type CrashRecord } from '../../stores/crash.store';
 import { CRASH_AGENT } from '../crash-agent.const';
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([CRASH_AGENT], { topic: 'crash', ...rest });
+  runQuery([CRASH_AGENT], { topic: 'crash', ...rest }).text;
 
 function crash(patch: Partial<CrashRecord> & Pick<CrashRecord, 'id'>) {
   crashStore.add({

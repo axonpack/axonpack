@@ -1,3 +1,4 @@
+import { AI_USAGE_AGENT } from '../../features/ai-usage/constants/ai-usage-agent.const';
 import { CONSOLE_AGENT } from '../../features/console/constants/console-agent.const';
 import { CRASH_AGENT } from '../../features/crash/constants/crash-agent.const';
 import { NAVIGATION_AGENT } from '../../features/navigation/constants/navigation-agent.const';
@@ -54,4 +55,5 @@ export const TOPICS: AgentTopic[] = [
   NAVIGATION_AGENT,
   REDUX_AGENT,
   CRASH_AGENT,
+  AI_USAGE_AGENT,
 ];

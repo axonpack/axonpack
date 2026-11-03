@@ -31,7 +31,7 @@ function pageOf(query: AgentQuery): StorageEntry[] {
     full: true,
     count: false,
     groupBy: undefined,
-  });
+  }).text;
   if (reply.startsWith('error: ')) return [];
   const ids = new Set(
     reply

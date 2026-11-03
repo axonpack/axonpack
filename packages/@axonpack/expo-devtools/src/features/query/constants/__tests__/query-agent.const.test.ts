@@ -8,7 +8,7 @@ import { QUERY_AGENT } from '../query-agent.const';
 notifyManager.setScheduler((callback) => callback());
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([QUERY_AGENT], { topic: 'query', ...rest });
+  runQuery([QUERY_AGENT], { topic: 'query', ...rest }).text;
 
 let client: QueryClient;
 let clock = 1_000_000;

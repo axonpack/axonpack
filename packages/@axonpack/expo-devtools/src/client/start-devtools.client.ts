@@ -2,6 +2,7 @@ import { installAgent } from '../agent/services/install-agent.service';
 import type { BuiltInThemeId, ThemeConfig } from '../core/constants/theme.const';
 import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
 import { themeStore } from '../core/stores/theme.store';
+import { aiUsageStore } from '../features/ai-usage/stores/ai-usage.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
 import { patchConsole } from '../features/console/services/patch-console.service';
 import { setWebViewConsoleCapture } from '../features/console/services/webview-console-logger.service';
@@ -462,6 +463,15 @@ export type DevtoolsReduxConfig = {
   deny?: ActionTypeMatcher[];
 };
 
+/** The AI Usage tab: whether it starts recording the queries agents make with `npx devtools`. */
+export type DevtoolsAiUsageConfig = {
+  /**
+   * Open the AI Usage tab with recording paused, so no query is kept until the record button in its
+   * toolbar is pressed. Defaults to `false`. Agents can still query the app while it is paused.
+   */
+  disabledByDefault?: boolean;
+};
+
 /**
  * Everything `<DevtoolsProvider config={...} />` accepts. Every field is optional and the defaults
  * suit most apps — a provider with no config at all captures requests, console output and crashes.
@@ -521,6 +531,8 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   redux?: DevtoolsReduxConfig;
   /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
   crash?: DevtoolsCrashConfig;
+  /** The AI Usage tab: whether it starts recording. */
+  aiUsage?: DevtoolsAiUsageConfig;
 };
 
 let started = false;
@@ -575,6 +587,7 @@ export function startDevtools<TThemeName extends string = never>(
     allow: reduxAllow,
     deny: reduxDeny,
   } = config?.redux ?? {};
+  const { disabledByDefault: aiUsageStartsPaused = false } = config?.aiUsage ?? {};
   const {
     enabled: crashEnabled = true,
     enableWhileDevtoolsDisabled: crashSurvivesDisabled = false,
@@ -734,6 +747,7 @@ export function startDevtools<TThemeName extends string = never>(
   reduxStore.setEnabled(true);
   if (reduxStartsPaused) reduxStore.setPaused(true);
 
+  if (aiUsageStartsPaused) aiUsageStore.setPaused(true);
   installAgent();
 
   // Last, so the launcher button appears only once there is a working panel behind it. Anything
