@@ -43,8 +43,9 @@ export type DevtoolsProviderProps<TThemeName extends string = never> = DevtoolsO
  * }
  * ```
  *
- * With `enabled: false` it renders its children and the crash sheet and nothing else: no patches, no
- * button, no panel. That makes the mount safe to leave in a release build unguarded.
+ * With `enabled: false` it renders its children and the crash sheet, inside preview's provider when
+ * `config.preview` set one up, and nothing else: no patches, no button, no panel. That makes the
+ * mount safe to leave in a release build unguarded.
  *
  * Mounted inside a React Navigation container, it finds that container on its own; above one, the
  * app hands the container over with `useDevtoolsNavigation`.
