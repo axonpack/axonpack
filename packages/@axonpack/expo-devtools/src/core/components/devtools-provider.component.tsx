@@ -7,6 +7,7 @@ import {
 import { startDevtools, type DevtoolsConfig } from '../../client/start-devtools.client';
 import { CrashReportOverlay } from '../../features/crash/components/crash-report-overlay.component';
 import { NavigationContextBridge } from '../../features/navigation/components/navigation-context-bridge.component';
+import { PreviewHost } from '../../features/preview/components/preview-host.component';
 
 /**
  * Props for `<DevtoolsProvider />`. All optional: the loose ones style the launcher button (see
@@ -66,8 +67,10 @@ export function DevtoolsProvider<TThemeName extends string = never>({
 
   const enabled = config?.enabled ?? true;
 
+  // Preview's provider goes around the panel too, so the Preview tab reads the same config. It
+  // mounts with the devtools off as well, since a preview's own start needs it.
   return (
-    <>
+    <PreviewHost>
       {children}
       {/* The crash sheet is the one thing that works with the devtools off, so it is mounted either
           way. `DevtoolsOverlay` mounts its own, and they de-duplicate. */}
@@ -79,6 +82,6 @@ export function DevtoolsProvider<TThemeName extends string = never>({
       ) : (
         <CrashReportOverlay />
       )}
-    </>
+    </PreviewHost>
   );
 }

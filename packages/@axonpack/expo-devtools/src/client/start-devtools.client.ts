@@ -1,3 +1,5 @@
+import type { PreviewConfig } from '@axonpack/preview';
+
 import { installAgent } from '../agent/services/install-agent.service';
 import type { BuiltInThemeId, ThemeConfig } from '../core/constants/theme.const';
 import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
@@ -46,6 +48,7 @@ import {
   type MeasureOptions,
 } from '../features/performance/services/user-timing.service';
 import { performanceStore } from '../features/performance/stores/performance.store';
+import { setUpPreview } from '../features/preview/services/set-up-preview.service';
 import { queryStore, type QueryClientLike } from '../features/query/stores/query.store';
 import { reduxStore } from '../features/redux/stores/redux.store';
 import type { ActionTypeMatcher } from '../features/redux/utils/action-type-lists.util';
@@ -533,6 +536,28 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   crash?: DevtoolsCrashConfig;
   /** The AI Usage tab: whether it starts recording. */
   aiUsage?: DevtoolsAiUsageConfig;
+  /**
+   * `@axonpack/preview`'s own config, the one its `PreviewProvider` takes. Set it and the devtools
+   * set preview up for you: its provider goes around your app and a Preview tab joins the panel, so
+   * the app mounts no preview provider of its own.
+   *
+   * ```ts
+   * preview: {
+   *   enabled: true,
+   *   s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
+   *   devPreviewServers: true,
+   * }
+   * ```
+   *
+   * `@axonpack/preview` is a separate install with native code and a config plugin. With this set
+   * and the package missing, the devtools throw at start and say how to install it.
+   *
+   * Unlike the rest of this config, it applies with `enabled: false` too. A preview is a release
+   * bundle, where `__DEV__` is false, and preview's provider has to mount on every start or a
+   * preview is marked broken. Preview's own `enabled` decides whether previews are on. Unset by
+   * default, which leaves preview alone and the Preview tab out of the panel.
+   */
+  preview?: PreviewConfig;
 };
 
 let started = false;
@@ -550,6 +575,8 @@ export function startDevtools<TThemeName extends string = never>(
   config?: DevtoolsConfig<TThemeName>
 ) {
   if (started) return;
+  // Before `started`, so a missing package is reported on every render until it is installed.
+  if (config?.preview) setUpPreview(config.preview, config.enabled ?? true);
   started = true;
 
   const enabled = config?.enabled ?? true;

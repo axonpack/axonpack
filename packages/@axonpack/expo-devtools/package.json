@@ -82,6 +82,7 @@
     "@expo/vector-icons": "^15.1.1"
   },
   "devDependencies": {
+    "@axonpack/preview": "*",
     "@babel/core": "^7.26.0",
     "@babel/runtime": "^7.28.4",
     "@tanstack/query-core": "^5.104.1",
@@ -117,6 +118,7 @@
     }
   },
   "peerDependencies": {
+    "@axonpack/preview": ">=0.2.0",
     "expo": "*",
     "expo-clipboard": "*",
     "react": "*",
@@ -124,5 +126,9 @@
     "react-native-safe-area-context": "*",
     "react-native-webview": "*"
   },
-  "peerDependenciesMeta": {}
+  "peerDependenciesMeta": {
+    "@axonpack/preview": {
+      "optional": true
+    }
+  }
 }
