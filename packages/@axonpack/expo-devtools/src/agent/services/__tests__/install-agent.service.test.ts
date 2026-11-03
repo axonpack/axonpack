@@ -19,15 +19,36 @@ const LOG: AgentTopic<{ id: string; t: number; text: string }> = {
   show: ['id', 'text'],
 };
 
+const REAL_TOPICS = [...TOPICS];
+
+beforeEach(() => {
+  TOPICS.splice(0, TOPICS.length, LOG);
+});
+
 afterEach(() => {
   delete (globalThis as any).__AXONPACK_AGENT__;
-  TOPICS.length = 0;
+});
+
+afterAll(() => {
+  TOPICS.splice(0, TOPICS.length, ...REAL_TOPICS);
+});
+
+it('lists one topic per feature', () => {
+  expect(REAL_TOPICS.map((topic) => topic.name)).toEqual([
+    'network',
+    'console',
+    'performance',
+    'storage',
+    'query',
+    'navigation',
+    'redux',
+    'crash',
+  ]);
 });
 
 describe('installAgent', () => {
   it('puts hello and run on the global', () => {
     installAgent();
-    TOPICS.push(LOG);
 
     expect(agent().hello()).toEqual({
       version: require('../../../../package.json').version,
@@ -43,9 +64,7 @@ describe('installAgent', () => {
 
   it('answers a bad query with an error line', () => {
     installAgent();
-    expect(agent().run({ topic: 'network' })).toBe(
-      'error: unknown topic "network". Topics: none yet'
-    );
+    expect(agent().run({ topic: 'nope' })).toBe('error: unknown topic "nope". Topics: log');
   });
 
   it('does nothing outside a dev build', () => {

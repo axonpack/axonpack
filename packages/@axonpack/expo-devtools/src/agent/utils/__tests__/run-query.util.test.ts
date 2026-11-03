@@ -240,7 +240,21 @@ describe('runQuery output', () => {
 
   it('says so when the app turned the topic off', () => {
     const off = { ...NET, enabled: () => false };
-    expect(runQuery([off], { topic: 'net' })).toBe("# net is off in this app's devtools config");
+    expect(runQuery([off], { topic: 'net' })).toBe(
+      '# net is off: the app turned it off in its devtools config'
+    );
+    expect(runQuery([{ ...off, off: 'no client' }], { topic: 'net' })).toBe(
+      '# net is off: no client'
+    );
+  });
+
+  it('answers wait while the topic still has to read something', () => {
+    const prepare = jest.fn((asked: AgentQuery) =>
+      asked.get ? `reading ${asked.get}` : undefined
+    );
+    const reading = { ...NET, prepare };
+    expect(runQuery([reading], { topic: 'net', get: 'r4' })).toBe('# wait: reading r4');
+    expect(runQuery([reading], { topic: 'net', count: true })).toBe('6');
   });
 });
 

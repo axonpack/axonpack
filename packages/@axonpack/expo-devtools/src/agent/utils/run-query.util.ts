@@ -60,7 +60,11 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): string {
     const names = topics.map((each) => each.name).join(', ') || 'none yet';
     throw new Error(`unknown topic "${query?.topic}". Topics: ${names}`);
   }
-  if (topic.enabled?.() === false) return `# ${topic.name} is off in this app's devtools config`;
+  if (topic.enabled?.() === false) {
+    return `# ${topic.name} is off: ${topic.off ?? 'the app turned it off in its devtools config'}`;
+  }
+  const waitFor = topic.prepare?.(query);
+  if (waitFor) return `# wait: ${waitFor}`;
 
   const rows = topic.rows();
   const id = topic.fields.id;
