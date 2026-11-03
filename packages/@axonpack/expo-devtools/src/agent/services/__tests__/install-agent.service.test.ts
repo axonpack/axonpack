@@ -22,6 +22,7 @@ const LOG: AgentTopic<{ id: string; t: number; text: string }> = {
 };
 
 const REAL_TOPICS = [...TOPICS];
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeEach(() => {
   TOPICS.splice(0, TOPICS.length, LOG);
@@ -58,7 +59,7 @@ describe('installAgent', () => {
       slug: 'my-app',
       name: 'My App',
       platform: Platform.OS,
-      topics: [{ name: 'log', about: 'fake lines', rows: 1 }],
+      topics: [{ name: 'log', about: 'fake lines', rows: 1, actions: [] }],
     });
     expect(agent().run({ topic: 'log' })).toBe(
       ['# log · 1 of 1 match', 'id\ttext', 'l1\thello', '# next: --after l1'].join('\n')
@@ -68,7 +69,12 @@ describe('installAgent', () => {
   it('says a topic is off rather than counting it', () => {
     TOPICS.push({ ...LOG, name: 'off', enabled: () => false });
     installAgent();
-    expect(agent().hello().topics[1]).toEqual({ name: 'off', about: 'fake lines', rows: null });
+    expect(agent().hello().topics[1]).toEqual({
+      name: 'off',
+      about: 'fake lines',
+      rows: null,
+      actions: [],
+    });
   });
 
   it('answers a bad query with an error line', () => {
@@ -117,6 +123,125 @@ describe('installAgent', () => {
     const [entry] = aiUsageStore.getSnapshot();
     expect(entry).toMatchObject({ topic: 'ai-usage', matched: 1, total: 1, size: reply.length });
     expect(entry.reply).toBeUndefined();
+  });
+
+  describe('act', () => {
+    let lines: string[];
+    let finish: (text: string) => void;
+    const ACTIONS: AgentTopic['actions'] = {
+      add: {
+        usage: '<text>',
+        args: [1, 1],
+        run: ([text]) => {
+          lines.push(text);
+          return `# log · added ${text}`;
+        },
+      },
+      slow: {
+        usage: "[--header 'Name: value']",
+        args: [0, 0],
+        options: ['header'],
+        run: () => ({
+          waitingFor: 'sending',
+          answer: new Promise<string>((resolve) => {
+            finish = resolve;
+          }),
+        }),
+      },
+    };
+
+    beforeEach(() => {
+      lines = [];
+      aiUsageStore.clear();
+      TOPICS.splice(0, TOPICS.length, { ...LOG, actions: ACTIONS });
+      installAgent();
+    });
+
+    it("lists a topic's actions in hello", () => {
+      expect(agent().hello().topics[0].actions).toEqual(['add', 'slow']);
+    });
+
+    it('runs an action and records it in AI Usage, marked as one', () => {
+      const reply = agent().act({ topic: 'log', action: 'add', args: ['hi there'] });
+
+      expect(reply).toBe('# log · added hi there');
+      expect(lines).toEqual(['hi there']);
+      expect(aiUsageStore.getSnapshot()).toEqual([
+        expect.objectContaining({
+          command: "log add 'hi there'",
+          topic: 'log',
+          action: 'add',
+          reply,
+          size: reply.length,
+        }),
+      ]);
+    });
+
+    it('answers a wait until the action is done, records it once, and never runs it twice', async () => {
+      const call = { topic: 'log', action: 'slow', ref: 'r1' };
+      expect(agent().act(call)).toBe('# wait: sending');
+      expect(agent().act(call)).toBe('# wait: sending');
+      expect(aiUsageStore.getSnapshot()).toEqual([]);
+
+      finish('# log · sent');
+      await settle();
+      expect(aiUsageStore.getSnapshot()).toEqual([
+        expect.objectContaining({ action: 'slow', reply: '# log · sent' }),
+      ]);
+      expect(agent().act(call)).toBe('# log · sent');
+      // Asked for once, so the same call now starts a new one.
+      expect(agent().act(call)).toBe('# wait: sending');
+    });
+
+    it('masks a secret header in the recorded command', async () => {
+      agent().act({
+        topic: 'log',
+        action: 'slow',
+        options: { header: ['Authorization: Bearer SECRET', 'X-Debug: 1'] },
+      });
+      finish('# log · sent');
+      await settle();
+      const [entry] = aiUsageStore.getSnapshot();
+      expect(entry.command).toBe(
+        "log slow --header 'Authorization: [redacted]' --header 'X-Debug: 1'"
+      );
+    });
+
+    it.each([
+      [{ topic: 'nope', action: 'add' }, 'error: unknown topic "nope". Topics: log'],
+      [{ topic: 'log', action: 'drop' }, 'error: log has no action "drop". Actions: add, slow'],
+      [
+        { topic: 'log', action: 'toString' },
+        'error: log has no action "toString". Actions: add, slow',
+      ],
+      [{ topic: 'log', action: 'add' }, 'error: usage: devtools log add <text>'],
+      [{ topic: 'log', action: 'add', args: ['a', 'b'] }, 'error: usage: devtools log add <text>'],
+      [
+        { topic: 'log', action: 'add', args: ['a'], options: { yes: true } },
+        'error: log add takes no --yes. usage: devtools log add <text>',
+      ],
+      [
+        { topic: 'log', action: 'slow', options: { header: 'X: 1' } },
+        "error: bad --header. usage: devtools log slow [--header 'Name: value']",
+      ],
+    ])('answers %j with one error line, and records it', (call, error) => {
+      expect(agent().act(call)).toBe(error);
+      expect(lines).toEqual([]);
+      expect(aiUsageStore.getSnapshot()[0]).toMatchObject({ error: error.slice(7) });
+    });
+
+    it('says a topic without actions has none, and an off topic is off', () => {
+      TOPICS.push(
+        { ...LOG, name: 'plain' },
+        { ...LOG, name: 'off', enabled: () => false, actions: ACTIONS }
+      );
+      expect(agent().act({ topic: 'plain', action: 'add' })).toBe(
+        'error: plain has no actions, only queries'
+      );
+      expect(agent().act({ topic: 'off', action: 'add', args: ['x'] })).toBe(
+        'error: off is off: the app turned it off in its devtools config'
+      );
+    });
   });
 
   it('does nothing outside a dev build', () => {

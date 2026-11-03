@@ -48,6 +48,38 @@ export type AgentTopic<T = any> = {
   empty?: () => string | undefined;
   /** A row still in flight. The `next` cursor stops before it, so the next poll sees how it ended. */
   pending?: (row: T) => boolean;
+  /** What `devtools <topic> <action> ...` can change in the app, by action name. */
+  actions?: Record<string, AgentAction>;
+};
+
+/**
+ * The options an action can take, as the CLI parsed them. A fixed set, since the CLI has to know
+ * which flags take a value; `--body-file` arrives as `body`, read by the CLI.
+ */
+export type AgentActionOptions = {
+  status?: string;
+  body?: string;
+  contentType?: string;
+  header?: string[];
+  yes?: boolean;
+  all?: boolean;
+};
+
+export type AgentAction = {
+  /** What follows the action name, for a usage error: `<url> [--status <n>]`. */
+  usage: string;
+  /** How many words may follow the action name: at least the first, at most the second. */
+  args: readonly [number, number];
+  /** The options it reads. Any other is an error, so a typo never passes as a default. */
+  options?: readonly (keyof AgentActionOptions)[];
+  /**
+   * Throws a one-line Error for a call it refuses. One that waits on the app (a request) answers
+   * what it is waiting for and a promise of the finished text, and the CLI asks again until it has it.
+   */
+  run: (
+    args: string[],
+    options: AgentActionOptions
+  ) => string | { waitingFor: string; answer: Promise<string> };
 };
 
 export const TOPICS: AgentTopic[] = [

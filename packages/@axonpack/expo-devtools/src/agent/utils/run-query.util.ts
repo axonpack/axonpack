@@ -1,3 +1,4 @@
+import { errorLine } from './run-action.util';
 import type { AgentTopic } from '../constants/agent-topics.const';
 
 /** What the CLI sends: one key per flag, already parsed. */
@@ -52,8 +53,7 @@ export function runQuery(topics: readonly AgentTopic[], query: AgentQuery): Agen
   try {
     return answer(topics, query);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { text: `error: ${message.split('\n')[0]}` };
+    return { text: errorLine(error) };
   }
 }
 

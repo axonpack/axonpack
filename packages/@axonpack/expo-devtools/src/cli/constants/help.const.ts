@@ -47,6 +47,8 @@ Usage
   devtools topics                what you can query in the app, with row counts
   devtools <topic> [flags]       a topic's rows, newest first
   devtools get <topic> <id>      one row, whole
+  devtools <topic> <action> ...  change something in the app: mock or block a request, send
+                                 one from the app. See devtools network --help
   devtools <command> --help      more on one command
 
 ${QUERY_FLAGS}
@@ -64,7 +66,9 @@ Examples
   devtools console --where 'level=error,warn' --limit 20
   devtools console --after <id from "# next:">     what is new since the last call
   devtools get network <id> --full
-  devtools storage --grep token --app my-app --device pixel`;
+  devtools storage --grep token --app my-app --device pixel
+  devtools network override https://api.example.com/v1/me --status 500 --body '{"error":"down"}'
+  devtools network send GET https://api.example.com/v1/me`;
 
 const APPS = `devtools apps: the apps running on Metro ports 8081 to 8090
 
@@ -88,8 +92,9 @@ Examples
 
 const TOPICS = `devtools topics: what you can query in the app
 
-One row per topic: its name, how many rows it holds now ("off" when the app turned it off), and
-what a row is. Query one with \`devtools <topic>\`.
+One row per topic: its name, how many rows it holds now ("off" when the app turned it off), the
+actions it takes, and what a row is. Query one with \`devtools <topic>\`, and see a topic's
+actions with \`devtools <topic> --help\`.
 
 ${APP_FLAGS}
 
@@ -136,4 +141,55 @@ Examples
   devtools get network <id> --out response.json
   devtools get crash <id> --full`;
 
-export const HELP = { main: MAIN, apps: APPS, topics: TOPICS, query: QUERY, get: GET };
+const NETWORK = `devtools network <action> [args] [flags]: change what the app's requests get
+
+Overrides match the exact URL the app requests, scheme and query included. No patterns, no
+prefixes: copy the URL from a network row. They apply to fetch and XMLHttpRequest, show in the
+Network tab's Overrides view, and last until the app reloads or you remove them.
+
+  override <url>      answer every request to <url> with this response, without the network
+    --status <n>          200 to 599 (default 200)
+    --body <text>         the response body (default empty)
+    --body-file <path>    read the body from a file on this computer instead
+    --content-type <type> default application/json
+  block <url>         make every request to <url> fail, as if offline
+  unoverride <url>    remove the override or block on <url>
+  unoverride --all    remove every one
+  overrides           list them: url, action, status, type, body size
+
+  send <METHOD> <url> send a request from inside the app, through its own fetch, so it is a row
+                      in the network log, overrides and conditions included
+    --header 'Name: value'  repeat for more
+    --body <text>           or --body-file <path>. Not for GET
+    --yes                   needed for any method but GET, since it can change data on the
+                            server. The app checks it, not only this CLI
+  replay <id>         send a logged request again, as the Sandbox would. The same flags edit it:
+                      a --header replaces one of the same name, --body replaces the body. A
+                      header the app's redactHeaders config removed goes as [redacted]
+
+send and replay answer with the new row (id, method, code, state, ms, url, error), so
+\`devtools get network <id>\` shows the response. Each action shows in \`devtools ai-usage\` and
+the AI Usage tab, marked as an action. A header's value is masked there as in the log.
+
+Exit codes: 0 done, 1 an "error:" reply (bad argument, no such row, --yes missing), 2 no app.
+
+${APP_FLAGS}
+
+Examples
+  devtools network override https://api.example.com/v1/me --status 404 --body '{"error":"gone"}'
+  devtools network override https://api.example.com/v1/feed --body-file feed.json
+  devtools network block https://cdn.example.com/avatar.png
+  devtools network overrides
+  devtools network unoverride --all
+  devtools network send GET https://api.example.com/v1/me --header 'Accept: application/json'
+  devtools network send POST https://api.example.com/v1/notes --body '{"text":"hi"}' --yes
+  devtools network replay <id> --header 'X-Debug: 1'`;
+
+export const HELP = {
+  main: MAIN,
+  apps: APPS,
+  topics: TOPICS,
+  query: QUERY,
+  get: GET,
+  network: NETWORK,
+};

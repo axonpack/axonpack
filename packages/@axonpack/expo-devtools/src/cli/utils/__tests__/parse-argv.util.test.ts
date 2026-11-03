@@ -66,6 +66,7 @@ describe('parseArgv', () => {
     expect(args).toEqual({
       words: ['get', 'network', 'n1'],
       query: {},
+      options: {},
       app: 'my-app',
       device: 'Pixel',
       port: 8082,
@@ -73,6 +74,41 @@ describe('parseArgv', () => {
       force: true,
       help: false,
     });
+  });
+
+  it('reads an action: its words, its options, and --body-file left for the CLI to read', () => {
+    const args = parseArgv([
+      'network',
+      'send',
+      'POST',
+      'https://api.test/notes?x=1',
+      '--header',
+      'Accept: application/json',
+      '--header=X-Debug: 1',
+      '--body-file',
+      'note.json',
+      '--yes',
+    ]);
+
+    expect(args.words).toEqual(['network', 'send', 'POST', 'https://api.test/notes?x=1']);
+    expect(args.query).toEqual({});
+    expect(args.options).toEqual({ header: ['Accept: application/json', 'X-Debug: 1'], yes: true });
+    expect(args.bodyFile).toBe('note.json');
+
+    expect(
+      parseArgv([
+        'network',
+        'override',
+        'https://api.test/me',
+        '--status',
+        '404',
+        '--body',
+        '-1',
+        '--content-type',
+        'text/plain',
+      ]).options
+    ).toEqual({ status: '404', body: '-1', contentType: 'text/plain' });
+    expect(parseArgv(['network', 'unoverride', '--all']).options).toEqual({ all: true });
   });
 
   it('reads --help and -h anywhere', () => {
@@ -87,6 +123,7 @@ describe('parseArgv', () => {
     [['network', '--limit', 'ten'], 'bad --limit ten: use a whole number from 1'],
     [['network', '--limit', '0'], 'bad --limit 0: use a whole number from 1'],
     [['apps', '--port', '80.5'], 'bad --port 80.5: use a whole number from 1'],
+    [['network', 'send', 'GET', 'https://x', '--header'], '--header needs a value'],
   ])('rejects %j', (argv, message) => {
     expect(() => parseArgv(argv)).toThrow(message);
   });

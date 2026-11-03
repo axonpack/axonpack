@@ -1,4 +1,10 @@
-import { formatCommand, parseReply } from '../format-ai-usage.util';
+import {
+  formatAction,
+  formatCommand,
+  formatMatched,
+  parseReply,
+  queryInfo,
+} from '../format-ai-usage.util';
 
 describe('formatCommand', () => {
   it('writes the query back as the command line that asks it', () => {
@@ -20,6 +26,50 @@ describe('formatCommand', () => {
     expect(formatCommand({ topic: 'console', grep: "it's down" })).toBe(
       "console --grep 'it'\\''s down'"
     );
+  });
+});
+
+describe('formatAction', () => {
+  it('writes the action back as its command line, a long body cut and no ref', () => {
+    expect(
+      formatAction({
+        topic: 'network',
+        action: 'override',
+        args: ['https://api.test/me?a=1&b=2'],
+        options: { status: '404', contentType: 'text/plain', body: 'gone' },
+        ref: 'abc',
+      })
+    ).toBe(
+      "network override 'https://api.test/me?a=1&b=2' --status 404 --content-type text/plain --body gone"
+    );
+    expect(
+      formatAction({
+        topic: 'network',
+        action: 'send',
+        args: ['POST', 'https://api.test/n'],
+        options: { header: ['X-A: 1'], body: 'x'.repeat(250), yes: true },
+      })
+    ).toBe(
+      `network send POST https://api.test/n --header 'X-A: 1' --body '${'x'.repeat(200)}... [250 chars]' --yes`
+    );
+    expect(formatAction({ topic: 'network', action: 'unoverride', options: { all: true } })).toBe(
+      'network unoverride --all'
+    );
+  });
+
+  it('marks an action in the matched column and the detail', () => {
+    const entry = {
+      id: 'q1',
+      timestamp: 0,
+      command: 'network block x',
+      topic: 'network',
+      action: 'block',
+      duration: 1,
+      size: 1,
+    };
+    expect(formatMatched(entry)).toBe('action');
+    expect(queryInfo(entry)).toContainEqual(['Action', 'block']);
+    expect(formatMatched({ matched: 1, total: 2 })).toBe('1/2');
   });
 });
 

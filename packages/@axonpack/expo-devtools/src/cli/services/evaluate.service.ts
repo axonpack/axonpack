@@ -8,7 +8,7 @@ export const NO_REPLY = Symbol('no reply');
 export const asciiOnly = (source: string) =>
   source.replace(/[\u007f-￿]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
-type AgentMethod = 'hello' | 'run';
+type AgentMethod = 'hello' | 'run' | 'act';
 
 /** `__AXONPACK_AGENT__.<method>(arg)`, or null in an app that has no agent installed. */
 export function agentCall(method: AgentMethod, arg?: unknown): string {

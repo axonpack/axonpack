@@ -50,4 +50,19 @@ describe('the ai-usage topic', () => {
     expect(entry.reply).toBeUndefined();
     expect(entry.size).toBeGreaterThan(0);
   });
+
+  // Last, since the tests above count the two queries from beforeAll.
+  it('lists actions with action?, by their name', () => {
+    aiUsageStore.recordAction(
+      { topic: 'network', action: 'overrides' },
+      '# network · 0 overrides',
+      1
+    );
+    expect(
+      ask({ where: ['action?'], fields: 'action,command' })
+        .split('\n')
+        .slice(1, 3)
+    ).toEqual(['action\tcommand', 'overrides\tnetwork overrides']);
+    expect(ask({ where: ['action=overrides'], count: true })).toBe('1');
+  });
 });

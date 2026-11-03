@@ -52,8 +52,9 @@ export function AiUsageView() {
             </View>
             <Text style={styles.title}>No agent queries yet</Text>
             <Text style={styles.lede}>
-              An AI agent, or you, can read this app's devtools from a terminal. Each query and the
-              reply it got shows up here. Start in the app's project folder:
+              An AI agent, or you, can read this app's devtools from a terminal, mock a request or
+              send one. Each query and action shows up here with the reply it got. Start in the
+              app's project folder:
             </Text>
             <ReadOnlyTextInput value="npx devtools topics" style={styles.snippet} />
           </View>

@@ -64,3 +64,16 @@ export function redactNetworkEntry<T extends NetworkEntry>(entry: T): T | null {
 export function maskNetworkEntryForAgent<T extends NetworkEntry>(entry: T): T {
   return entry.kind === 'http' ? (redactHttpHeaders(entry, AGENT_MASKED_HEADERS) as T) : entry;
 }
+
+/**
+ * A `Name: value` line an agent passed to an action, masked as a logged header would be, before the
+ * AI Usage tab shows it in the command.
+ */
+export function maskHeaderLine(line: string): string {
+  const colon = line.indexOf(':');
+  if (colon < 1) return line;
+  const name = line.slice(0, colon).trim().toLowerCase();
+  return AGENT_MASKED_HEADERS.has(name) || redactedHeaders.has(name)
+    ? `${line.slice(0, colon)}: ${REDACTED}`
+    : line;
+}

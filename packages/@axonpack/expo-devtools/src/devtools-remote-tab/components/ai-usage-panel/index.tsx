@@ -65,8 +65,9 @@ export function AiUsagePanel() {
             <div className="axonpack-net-editor">
               <strong>No agent queries yet</strong>
               <p className="axonpack-net-none">
-                An AI agent, or you, can read this app's devtools from a terminal. Each query and
-                the reply it got shows up here. Start in the app's project folder:
+                An AI agent, or you, can read this app's devtools from a terminal, mock a request or
+                send one. Each query and action shows up here with the reply it got. Start in the
+                app's project folder:
               </p>
               <pre className="axonpack-net-code">npx devtools topics</pre>
             </div>

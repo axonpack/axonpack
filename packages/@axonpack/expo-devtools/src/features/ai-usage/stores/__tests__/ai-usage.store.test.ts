@@ -38,6 +38,33 @@ describe('aiUsageStore', () => {
     expect(entry).toMatchObject({ size: 70_000, cut: true });
   });
 
+  it('records an action marked as one, with its command, reply and error', () => {
+    aiUsageStore.recordAction(
+      { topic: 'network', action: 'block', args: ['https://x.test/a'], ref: 'r1' },
+      '# network · blocking https://x.test/a',
+      0.84
+    );
+    aiUsageStore.recordAction(
+      { topic: 'network', action: 'send', args: ['POST', 'https://x.test/a'] },
+      'error: POST can change data on the server, so it needs --yes',
+      0.1
+    );
+
+    const [refused, blocked] = aiUsageStore.getSnapshot();
+    expect(blocked).toMatchObject({
+      command: 'network block https://x.test/a',
+      topic: 'network',
+      action: 'block',
+      duration: 0.8,
+      reply: '# network · blocking https://x.test/a',
+    });
+    expect(blocked.matched).toBeUndefined();
+    expect(refused).toMatchObject({
+      action: 'send',
+      error: 'POST can change data on the server, so it needs --yes',
+    });
+  });
+
   it('pulls the message out of an error reply', () => {
     ask('nope', 'error: unknown topic "nope"');
     expect(aiUsageStore.getSnapshot()[0].error).toBe('unknown topic "nope"');

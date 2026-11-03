@@ -9,7 +9,7 @@ const sockets: FakeSocket[] = [];
 /** `windows`: the pages a DevTools window is open on, or undefined for a Metro with no route. */
 let metro: Record<number, { pages: Page[]; slug?: string; windows?: string[] }> = {};
 /** What the DevTools window was asked to call, through Metro's route. */
-let relayed: { page: string; call: 'hello' | 'run'; arg?: unknown }[] = [];
+let relayed: { page: string; call: 'hello' | 'run' | 'act'; arg?: unknown }[] = [];
 /** What the app answers an evaluate with. Runs the real expression against a fake agent. */
 let answer: (expression: string, socket: FakeSocket) => unknown;
 let stdout = '';
@@ -18,6 +18,7 @@ let stderr = '';
 const agent = {
   hello: jest.fn(),
   run: jest.fn(),
+  act: jest.fn(),
 };
 
 class FakeSocket {
@@ -82,10 +83,11 @@ beforeEach(() => {
     version: '3.8.0',
     platform: 'ios',
     topics: [
-      { name: 'network', about: 'HTTP since launch', rows: 214 },
-      { name: 'query', about: 'TanStack Query cache', rows: null },
+      { name: 'network', about: 'HTTP since launch', rows: 214, actions: ['block', 'send'] },
+      { name: 'query', about: 'TanStack Query cache', rows: null, actions: [] },
     ],
   });
+  agent.act.mockReset().mockReturnValue('# network · blocking https://x');
   agent.run.mockReset().mockReturnValue('# network · 1 of 214 match\nid\turl\nn1\thttps://x');
   (globalThis as any).__AXONPACK_AGENT__ = agent;
   (globalThis as any).WebSocket = FakeSocket;
@@ -324,6 +326,134 @@ describe('# wait:', () => {
   });
 });
 
+describe('an action', () => {
+  const PAGE = 'device=iPhone 16&page=1';
+
+  it('passes the action, its words and options to act, and prints the reply with the app', async () => {
+    expect(
+      await main([
+        'network',
+        'send',
+        'POST',
+        'https://x',
+        '--header',
+        'Accept: */*',
+        '--body',
+        '{}',
+        '--yes',
+      ])
+    ).toBe(0);
+
+    expect(agent.act).toHaveBeenCalledWith({
+      topic: 'network',
+      action: 'send',
+      args: ['POST', 'https://x'],
+      options: { header: ['Accept: */*'], body: '{}', yes: true },
+      ref: expect.any(String),
+    });
+    expect(agent.run).not.toHaveBeenCalled();
+    expect(stdout).toBe('# network · my-app · iPhone 16 · blocking https://x\n');
+  });
+
+  it('reads --body-file here and sends its text as the body', async () => {
+    const fs = require('node:fs');
+    jest.spyOn(fs, 'readFileSync').mockImplementation((path) => {
+      if (path === 'feed.json') return '[{"id":1}]';
+      throw new Error(`ENOENT: no such file, open '${path}'`);
+    });
+
+    expect(await main(['network', 'override', 'https://x', '--body-file', 'feed.json'])).toBe(0);
+    expect(agent.act.mock.calls[0][0].options).toEqual({ body: '[{"id":1}]' });
+
+    expect(await main(['network', 'override', 'https://x', '--body-file', 'nope.json'])).toBe(1);
+    expect(stderr).toBe(
+      "error: can't read --body-file nope.json: ENOENT: no such file, open 'nope.json'\n"
+    );
+    expect(agent.act).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      ['network', 'send', 'GET', 'https://x', '--json'],
+      "query flags such as --where, --json and --out don't go with an action, and network send is one",
+    ],
+    [['network', 'block', 'https://x', '--out', 'x.txt'], "don't go with an action"],
+    [
+      ['network', '--status', '404'],
+      '--status, --body, --body-file, --content-type, --header, --yes and --all go with an action',
+    ],
+    [['get', 'network', 'n1', '--yes'], 'go with an action'],
+    [
+      ['network', 'override', 'https://x', '--body', 'a', '--body-file', 'b'],
+      'pass --body or --body-file, not both',
+    ],
+  ])('refuses %j before looking for apps', async (argv, message) => {
+    expect(await main(argv)).toBe(1);
+    expect(stderr).toContain(message);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('exits 1 on an error reply, such as a POST without --yes', async () => {
+    agent.act.mockReturnValue(
+      'error: POST can change data on the server, so it needs --yes. GET goes without'
+    );
+    expect(await main(['network', 'send', 'POST', 'https://x'])).toBe(1);
+    expect(stdout).toBe(
+      'error: POST can change data on the server, so it needs --yes. GET goes without\n'
+    );
+  });
+
+  it('asks again with the same call while the app waits on the request', async () => {
+    agent.act
+      .mockReturnValueOnce('# wait: sending GET https://x as n7')
+      .mockReturnValue('# network · sent GET https://x as n7\nid\tcode\nn7\t200');
+
+    expect(await main(['network', 'send', 'GET', 'https://x'])).toBe(0);
+    expect(agent.act).toHaveBeenCalledTimes(2);
+    expect(agent.act.mock.calls[1][0]).toEqual(agent.act.mock.calls[0][0]);
+    expect(stdout).toBe(
+      '# network · my-app · iPhone 16 · sent GET https://x as n7\nid\tcode\nn7\t200\n'
+    );
+  });
+
+  it('says where the outcome lands, not to run it again, when the time runs out', async () => {
+    jest.useFakeTimers();
+    agent.act.mockReturnValue('# wait: sending GET https://x as n7');
+
+    const code = main(['network', 'send', 'GET', 'https://x']);
+    for (let i = 0; i < 60; i++) await jest.advanceTimersByTimeAsync(100);
+
+    expect(await code).toBe(1);
+    expect(stderr).toBe(
+      "error: still sending GET https://x as n7 after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.\n"
+    );
+  });
+
+  it('goes through the open DevTools window like a query', async () => {
+    metro[8081] = {
+      ...metro[8081],
+      pages: [page('iPhone 16', 8081, { multi: false })],
+      windows: [PAGE],
+    };
+
+    expect(await main(['network', 'unoverride', '--all'])).toBe(0);
+    expect(relayed).toEqual([
+      {
+        page: PAGE,
+        call: 'act',
+        arg: {
+          topic: 'network',
+          action: 'unoverride',
+          args: [],
+          options: { all: true },
+          ref: expect.any(String),
+        },
+      },
+    ]);
+    expect(sockets).toHaveLength(0);
+  });
+});
+
 describe('apps', () => {
   it('lists one row per app and device across Metro ports', async () => {
     metro = {
@@ -401,9 +531,9 @@ describe('topics', () => {
     expect(stdout).toBe(
       [
         '# topics · my-app · iPhone 16',
-        'topic\trows\tabout',
-        'network\t214\tHTTP since launch',
-        'query\toff\tTanStack Query cache',
+        'topic\trows\tactions\tabout',
+        'network\t214\tblock,send\tHTTP since launch',
+        'query\toff\t-\tTanStack Query cache',
         '',
       ].join('\n')
     );
@@ -462,7 +592,9 @@ describe('--help', () => {
     [['apps', '--help'], HELP.apps],
     [['topics', '-h'], HELP.topics],
     [['get', '--help'], HELP.get],
-    [['network', '--help'], HELP.query],
+    [['network', '--help'], `${HELP.query}\n\n${HELP.network}`],
+    [['network', 'send', '--help'], HELP.network],
+    [['console', '--help'], HELP.query],
   ])('%j prints its help without looking for apps', async (argv, help) => {
     expect(await main(argv)).toBe(0);
     expect(stdout).toBe(`${help}\n`);

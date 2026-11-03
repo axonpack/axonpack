@@ -87,6 +87,7 @@ describe('enabled: false', () => {
     expect((globalThis as any).__AXONPACK_AGENT__).toEqual({
       hello: expect.any(Function),
       run: expect.any(Function),
+      act: expect.any(Function),
     });
   });
 
