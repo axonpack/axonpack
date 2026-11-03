@@ -86,21 +86,25 @@ The landing page and the docs in one Next app, documented in `docs/README.md` ra
 
 ## Agent skills
 
-The skills users install into their coding agent live in their own repo, `axonpack/skills`
-(`npx skills add axonpack/skills`): `axonpack` for the whole set, and `axonpack-<package>` for each
-published package. They left this repo because it is too large for skills.sh. They hold no API: each
-one says what its package is for and tells the agent to read the live docs and set the package up
-from them. So the docs moving with the code is what keeps the skills current, and a release needs no
-skill edit. `docs/content/docs/agent-skills.mdx` is the page on installing them.
+There is one agent skill, `axonpack`, in its own repo `axonpack/skills` (`npx skills add
+axonpack/skills`), because this repo is too large for skills.sh. It holds no facts: it lists where
+things are and sends the agent to `https://axonpack.dev/llms.txt` and the agent guide
+(`docs/content/docs/agent-guide.mdx`), then has it answer from the pages. So a release or a new
+package needs no skill change, and the docs (the agent guide plus each package's pages) must hold
+everything an agent needs. `docs/content/docs/agent-skills.mdx` is the page on installing it.
 
+- **The agent guide holds only what every package shares**: where to look, the setup steps, and how
+  to answer from the pages. What belongs to one package goes on that package's pages.
 - **An agent sets a package up from its docs alone.** The installation page (with the quick start
   and the compatibility page where there is one) holds every requirement, the install line, each
   config change with its file, whether a native build is needed, and a check for each step. A setup
-  problem goes on the troubleshooting page. Anything a skill used to say now lives in the docs.
-- **The skills read three URLs.** `https://axonpack.dev/llms.txt` (the index),
-  `https://axonpack.dev/llms.mdx/docs/<path>/content.md` (one page as markdown) and
-  `https://axonpack.dev/llms-full.txt`. Every installed skill depends on them, so keep their routes
-  in `docs/src/app/` and that URL form working.
+  problem goes on the troubleshooting page.
+- **Installed skills depend on the docs URLs.** The skill names `llms.txt` (which links each page's
+  markdown copy), `llms-full.txt`, `/docs/<path>/`, `/llms.mdx/docs/<path>/content.md`, the agent
+  guide, and the page names `installation`, `quick-start`, `compatibility`, `troubleshooting`,
+  `changelog` and expo-devtools' `ai-agents`, `reference/cli` and `reference/ai-usage-tab`. Keep
+  their routes in `docs/src/app/` and those paths working, and keep the guide's "Where to look"
+  table in step with the skill's list.
 - **Test a setup change in a fresh app.** Create one in a scratch folder with
   `npx create-expo-app@latest --template blank-typescript`, install the package from `npm pack`,
   follow the installation page as written, then check `npx expo config`, `npx tsc --noEmit` and
@@ -120,7 +124,7 @@ Copy a published sibling (`react-pretty-print` or `expo-devtools`) instead of gu
 - **`notes/`**: `README.md` plus one note per area, each owning its own feature status. Add a symlink for each under `notes/@axonpack/<name>/`, with `index.md` pointing at the README.
 - **Docs section** `docs/content/docs/<name>/`: a `meta.json` with `root`, `icon`, grouped pages and a `---Releases---` group ending in `changelog`. The index uses `<LatestRelease slug="<name>" />`, and every page has `title`, `description` and `icon`. Screenshots go in `docs/public/<name>/screenshots/`.
 - **`docs/scripts/sync-changelog.mjs`**: add the package to `PACKAGES`, which also writes its changelog page.
-- **Agent skill**: the `axonpack` skill finds the package in `llms.txt` with no edit. For its own skill, copy a sibling's `skills/axonpack-<name>/SKILL.md` in the `axonpack/skills` repo and change the name, the package and the description. Add a row for it to `docs/content/docs/agent-skills.mdx` and that repo's README, and the `npx skills add axonpack/skills --skill axonpack axonpack-<name>` line to the package README and its docs index and installation pages.
+- **Agent skill**: nothing to add. Check that the package's section is in the built `llms.txt` and that its installation page is complete for an agent (see "Agent skills" above).
 - **Every list that names the packages**: the root `README.md` (the table and a section), `docs/README.md`, the Start here cards in `docs/content/docs/index.mdx`, `CONTRIBUTING.md` (the intro and the scope list), `PUBLISHING.md`, this file (the overview, the workspace list and the commit scope sentence), `notes/plan.md`, the pkg.pr.new list in `.github/workflows/ci.yml`, the example `ios` and `android` folders in `.prettierignore`, and the `#build` and `#prepare` `outputs` in `turbo.json`. `docs/legacy/` is a frozen copy and stays as it is.
 - **Wiring**: add the scope to `commitlint.config.js`, and the example app to `workspaces` in the root `package.json`.
 - **Changeset**: one, in house style. A homepage or metadata fix needs its own patch changeset, because it changes the published package.

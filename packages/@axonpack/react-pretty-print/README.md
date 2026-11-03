@@ -20,7 +20,7 @@ React 18 or newer is a peer dependency. There is no native module, so no `pod in
 prebuild — it runs in Expo Go.
 
 An [agent skill](https://axonpack.dev/docs/agent-skills) teaches your coding agent this package:
-`npx skills add axonpack/skills --skill axonpack axonpack-react-pretty-print`.
+`npx skills add axonpack/skills`.
 
 ## Usage
 

@@ -76,13 +76,14 @@ a topic as well, so `npx devtools ai-usage --where 'action?'` prints every actio
 
 ## Agent skills
 
-Axonpack has an agent skill for each package, plus one for Axonpack as a whole. Your coding agent
-loads a skill when a task needs it. A skill reads these docs live, so it always matches the latest
-release. It finds the package manager from the lockfile, checks the version, follows the
-installation page with the package's peers and config changes, then runs each check the page gives.
+Axonpack has one agent skill for every package. Your coding agent loads it when a task needs it,
+and it sends the agent to these docs, so it always matches the latest release. There the
+[agent guide](/docs/agent-guide) has the agent find the package manager from the lockfile, check
+the version, follow the installation page with the package's peers and config changes, then run
+each check the page gives.
 
-The `axonpack-expo-devtools` skill also points the agent at the `devtools` guide and its reference,
-so it learns each topic, flag and exit code from the current docs.
+For this package, the agent learns each topic, flag and exit code from the current `devtools` guide
+and its reference.
 
 ## How it works
 
@@ -226,7 +227,7 @@ name, so use `npx @axonpack/expo-devtools apps` there.
 To teach your agent the tool, install the skill:
 
 ```sh
-npx skills add axonpack/skills --skill axonpack axonpack-expo-devtools
+npx skills add axonpack/skills
 ```
 
 Or paste the short snippet from the guide into your `AGENTS.md` or `CLAUDE.md`.

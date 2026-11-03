@@ -81,7 +81,7 @@
       }
     ],
     "start": {
-      "command": "npx skills add axonpack/skills --skill axonpack",
+      "command": "npx skills add axonpack/skills",
       "ask": "Then ask your agent:",
       "prompt": "Set up @axonpack/expo-devtools in this app",
       "note": "The skill reads these docs live, so the agent follows the package's current installation page and checks each step.",
@@ -141,8 +141,8 @@
     },
     "skills": {
       "title": "Agent skills",
-      "body": "Each package has a skill your coding agent can load. It reads these docs live, so it always matches the latest release, and it takes the agent through setting the package up in your app with your own package manager, checking each step before the next one.",
-      "command": "npx skills add axonpack/skills --skill axonpack axonpack-expo-devtools"
+      "body": "One skill covers every package. Your coding agent loads it, and it has the agent read these docs live, so it always matches the latest release. The agent sets the package up in your app with your own package manager and checks each step before the next one.",
+      "command": "npx skills add axonpack/skills"
     },
     "links": [
       {
