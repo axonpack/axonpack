@@ -1,6 +1,7 @@
 # Agent CLI
 
-Reading what the devtools recorded in a running app from a terminal, for an AI agent or a person.
+Reading what the devtools recorded in a running app from a terminal, for an AI agent or a person,
+and mocking, blocking or sending a request in it.
 
 ## Features
 
@@ -17,7 +18,9 @@ Reading what the devtools recorded in a running app from a terminal, for an AI a
 - [x] Works on React Native below 0.86 through an open DevTools window, without closing it
 - [x] Runs with any package manager, from one npx line
 - [ ] Walked end to end on iOS, Android and a phone on the local network
-- [ ] Act from the terminal: clear a tab, override a response, navigate, throttle
+- [x] Act on the network from the terminal: mock or block an exact URL, list and remove those
+      overrides, send a request from the app, replay a logged one with edits
+- [ ] Act on other tabs: clear a tab, navigate, throttle
 - [ ] The commands in the Expo dev server's menu and Expo's own agent tools
 
 ## How it works
@@ -30,6 +33,11 @@ config, only public CDP, so parallel calls are safe.
 A tab joins by describing its rows once: what a row is, how to read each field, which columns to
 show. Every operation (filters, paging, sort, count, output) is written once and runs over any tab,
 so a new tab gets all of them by adding that description and one line in the list of topics.
+
+An action is the same evaluate of a second method, `__AXONPACK_AGENT__.act(call)`. A topic lists
+its actions by name, each with how many words it takes, the flags it reads and a handler. The
+checks (unknown action, word count, a flag it doesn't take) and the AI Usage record are written
+once. Only `network` has actions.
 
 ## Decisions worth knowing
 
@@ -70,7 +78,33 @@ so a new tab gets all of them by adding that description and one line in the lis
 - **No middleware chain on the computer side.** It would need raw rows sent over, which is the
   cost the one evaluate avoids. If an outside plugin ever needs to wrap other topics, that is one
   hook in the app, not a chain.
-- **Read-only first.** Actions would be an optional key on a topic, added when there is a need.
+- **Actions reuse what the tab already does.** `override`, `block` and `unoverride` write the same
+  overrides store the Network tab's editor writes, so they show in its Overrides view and in
+  DevTools. `send` and `replay` go through the Sandbox's own send function and its own way of
+  turning a logged row into a request, so there is one fetch path and the request is a row in the
+  log like any other.
+- **Actions are one more method on the same global.** `act` sits beside `run`, and the relay in
+  `@axonpack/react-native-devtools-tab` already calls any own method by name, so actions work
+  through an open DevTools window with no change to it.
+- **An action that waits is polled.** Hermes returns the promise itself to a
+  `Runtime.evaluate` with `awaitPromise` (checked live on iOS), and the relay can't await either. So
+  an action that waits answers `# wait:` and the tool asks again with the same call (it carries a
+  random `ref`) every 200 ms, as a storage read does. The app keeps the answer until it is asked
+  for, at most 20 at once. Running the command again would send the request again, so a timeout
+  points at `ai-usage` instead.
+- **`--yes` is checked in the app.** A call through the relay never passes through the CLI, so a
+  method other than GET is refused in the handler unless the call says `yes`.
+- **Exact URLs only**, as the store already matches. A pattern that matches more than you meant is a
+  request you can't explain, and the row the agent copies the URL from always has it whole.
+- **A fixed set of action flags.** The tool has to know which flags take a value before it knows the
+  action, so `--status`, `--body`, `--body-file`, `--content-type`, `--header`, `--yes` and `--all`
+  are parsed for any action and the app refuses the ones an action doesn't take. `--body-file` is
+  read by the tool, since the app can't see the computer's files.
+- **A replay sends what the app sent.** It rebuilds the request from the stored row, the app's own
+  headers included, to the same URL. The agent sees them only masked, in the reply and in the new
+  row. A header the app's `redactHeaders` removed before storing is gone, and goes as `[redacted]`.
+- **Actions are recorded when they end,** refused ones too, with a masked header shown as
+  `[redacted]` and a long body cut to its start in the command.
 - **`npx devtools` is the documented form, and `npx @axonpack/expo-devtools` the one that always
   works.** The bin is `devtools`, which is also the name of an unrelated npm package, so in a
   monorepo, or outside the app's folder, `npx devtools` can miss the local install and fetch that

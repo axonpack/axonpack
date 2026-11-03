@@ -152,6 +152,8 @@ for one of the server's own replies, and the filter panel's **Only overridden or
 exactly those.
 
 Rules live in memory for the session. There is no config option for them and nothing is persisted.
+The `devtools` command line tool sets and removes the same rules; see
+[its network actions](/docs/expo-devtools/reference/cli#network-actions).
 
 ## Detail sheet
 
@@ -253,4 +255,5 @@ and they are shared with the whole app, not just this request. Code Snippet is t
 cURL command, kept in step with the fields.
 
 Sandbox requests go out through the same patched `fetch`, so they appear in the log like any other
-request.
+request. `devtools network send` and `replay` send through the same code; see
+[the CLI reference](/docs/expo-devtools/reference/cli#network-actions).

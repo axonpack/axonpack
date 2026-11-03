@@ -11,13 +11,13 @@ Each package has its own skill with a step-by-step setup and a check for each st
 
 ## Which package
 
-| Package                               | Use it for                                                                                                                                                           | Skill                                |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `@axonpack/expo-devtools`             | Devtools inside the app: network, console, performance, storage, TanStack Query, navigation, Redux and crashes. An agent reads them from a terminal with `devtools`. | `axonpack-expo-devtools`             |
-| `@axonpack/react-native-devtools-tab` | A tab of your own in React Native DevTools, drawn from a React component that runs in the app.                                                                       | `axonpack-react-native-devtools-tab` |
-| `@axonpack/react-pretty-print`        | Collapsible JSON and XML trees and a syntax highlighter for 38 languages, one implementation for React and React Native.                                             | `axonpack-react-pretty-print`        |
-| `@axonpack/in-app-updates`            | Check the App Store or Play Store for a newer version and show an update prompt, soft or forced.                                                                     | `axonpack-in-app-updates`            |
-| `@axonpack/preview`                   | Publish a JS bundle per branch to an S3-compatible bucket, and let QA switch to it in the installed app with no native rebuild.                                      | `axonpack-preview`                   |
+| Package                               | Use it for                                                                                                                                                                                         | Skill                                |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `@axonpack/expo-devtools`             | Devtools inside the app: network, console, performance, storage, TanStack Query, navigation, Redux and crashes. An agent reads them, and mocks or sends requests, from a terminal with `devtools`. | `axonpack-expo-devtools`             |
+| `@axonpack/react-native-devtools-tab` | A tab of your own in React Native DevTools, drawn from a React component that runs in the app.                                                                                                     | `axonpack-react-native-devtools-tab` |
+| `@axonpack/react-pretty-print`        | Collapsible JSON and XML trees and a syntax highlighter for 38 languages, one implementation for React and React Native.                                                                           | `axonpack-react-pretty-print`        |
+| `@axonpack/in-app-updates`            | Check the App Store or Play Store for a newer version and show an update prompt, soft or forced.                                                                                                   | `axonpack-in-app-updates`            |
+| `@axonpack/preview`                   | Publish a JS bundle per branch to an S3-compatible bucket, and let QA switch to it in the installed app with no native rebuild.                                                                    | `axonpack-preview`                   |
 
 If a package's skill isn't installed, add it with this one:
 `npx skills add axonpack/axonpack --skill axonpack axonpack-<package>` (`yarn dlx`, `pnpm dlx` or

@@ -1,13 +1,14 @@
 ---
 title: Use with AI agents
-description: An AI agent, or you, reads what the app recorded from a terminal. Requests, logs, crashes, storage and every other tab, filtered down to the rows you need.
+description: An AI agent, or you, reads what the app recorded from a terminal, mocks a response or sends a request from the app. Requests, logs, crashes, storage and every other tab, filtered down to the rows you need.
 ---
 
 An AI agent working on your app can't see the phone. The package comes with a command line tool,
 `devtools`, that reads what the devtools recorded in the running app: every request with its
 headers and bodies, the console, crashes, stored values, screens, the TanStack Query cache, Redux
 actions and performance events. The agent runs a command and gets plain text back, filtered down
-to the rows it asked for. You can run the same commands yourself.
+to the rows it asked for. It can also [mock a response or send a request](#mocking-and-sending-requests)
+from inside the app. You can run the same commands yourself.
 
 ```sh
 npx devtools network --where state=error --since 10m
@@ -22,7 +23,7 @@ fetch-1762172290871-198   GET     500   error  92   https://api.example.com/v1/o
 ```
 
 There is nothing to set up beyond the [provider](/docs/expo-devtools/quick-start): the tool ships
-inside the package. Every query an agent makes, and the reply it got, is listed in the
+inside the package. Every query and action an agent makes, and the reply it got, is listed in the
 [AI Usage tab](#the-ai-usage-tab).
 
 ## Requirements
@@ -70,6 +71,7 @@ Every flag, field, output line and error message is listed in the
 | `devtools topics`           | What you can query in the app, with how many rows each has |
 | `devtools <topic> [flags]`  | A topic's rows, newest first                               |
 | `devtools get <topic> <id>` | One row, whole                                             |
+| `devtools network <action>` | Mock, block or send a request. See [below](#mocking-and-sending-requests) |
 | `devtools <command> --help` | Every flag of one command, with examples                   |
 
 ### apps
@@ -91,14 +93,15 @@ command exits with 2 when no app is running.
 ```
 $ devtools topics
 # topics · my-app · iPhone 16 Pro
-topic     rows  about
-network   214   HTTP, WebSocket and SSE since launch, newest first. state=error is every failed request; get shows frames and events
-console   87    console lines since launch (last 500), newest first; repeats fold into one row
-query     off   TanStack Query cache: queries (id is the query hash) and mutations, last updated first
+topic     rows  actions                                          about
+network   214   override,block,unoverride,overrides,send,replay  HTTP, WebSocket and SSE since launch, newest first. state=error is every failed request; get shows frames and events
+console   87    -                                                console lines since launch (last 500), newest first; repeats fold into one row
+query     off   -                                                TanStack Query cache: queries (id is the query hash) and mutations, last updated first
 ...
 ```
 
-`off` means the app turned that feature off, or never set it up. Asking an off topic answers with
+`actions` lists what a topic can change in the app. `off` means the app turned that feature off, or
+never set it up. Asking an off topic answers with
 one line that says why, such as `# query is off: no QueryClient in config.query.client`.
 
 ### A topic's rows
@@ -177,7 +180,7 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 | `navigation`  | A move the navigator made. The last 200                                                       | `id action from to`                | `id t action from to path params container noop`                                    |
 | `redux`       | A dispatched action and what it changed in the state. The last 200                            | `id type changed`                  | `id t type action changed changes`                                                  |
 | `crash`       | A captured crash                                                                              | `id kind name message`             | `id t kind name message route previous seen`                                        |
-| `ai-usage`    | A query an agent made, with the reply it got. The last 100                                    | `id command matched total ms`      | `id t command topic matched total ms size error cut reply`                          |
+| `ai-usage`    | A query or action an agent made, with the reply it got. The last 100                          | `id command matched total ms`      | `id t command topic action matched total ms size error cut reply`                   |
 
 - In `network`, `code` is the HTTP status only, and a socket's close code is `close` (`-` on an
   HTTP row). `state` is `error` for a 4xx or 5xx answer, a request that got no answer and a socket
@@ -231,6 +234,60 @@ answers with a `# wait:` line while it reads. The tool asks again every 200 ms w
 seconds, and prints only the answer it ends on. If the read takes longer, the error says what the
 app is still doing, and running the same command again picks up where it stopped.
 
+## Mocking and sending requests
+
+The `network` topic takes actions too. They work on the same overrides as the Network tab, and send
+through the same code as its Sandbox, so whatever an agent does shows in the tab and in React Native
+DevTools.
+
+### Mock a response
+
+```sh
+devtools network override https://api.example.com/v1/me --status 500 --body '{"error":"down"}'
+```
+
+```
+# network · my-app · iPhone 16 Pro · override on https://api.example.com/v1/me: 500, application/json, 16 chars. The app's requests to that exact URL get it, without reaching the network
+```
+
+From then on the app's own requests to that URL get the mock, and its rows in `devtools network`
+show it. `--body-file <path>` reads a longer body from a file, and `--content-type` sets the type
+(default `application/json`). `devtools network block <url>` makes the requests fail as if offline,
+`devtools network overrides` lists what is active, and `devtools network unoverride <url>` or
+`--all` removes it. Overrides last until the app reloads.
+
+An override matches the **exact URL** the app requests, scheme and query included, as the tab's own
+overrides do. There are no patterns or prefixes, so copy the URL from a `devtools network` row.
+
+### Send a request
+
+```sh
+devtools network send GET https://api.example.com/v1/me --header 'Accept: application/json'
+```
+
+```
+# network · my-app · iPhone 16 Pro · sent GET https://api.example.com/v1/me as fetch-1762172310455-215. devtools get network fetch-1762172310455-215 shows it whole
+id                        method  code  state    ms   url                               error
+fetch-1762172310455-215   GET     200   success  392  https://api.example.com/v1/me     -
+```
+
+The request goes out from inside the app, through its own `fetch`, so overrides and network
+conditions apply and it is a row in the log. The reply is that row, ready for `devtools get network
+<id>`. `devtools network replay <id>` sends a logged request again, as the Sandbox would, with the
+app's own headers; `--header` and `--body` change it on the way. Every action, its arguments and
+flags are in the [CLI reference](/docs/expo-devtools/reference/cli#actions).
+
+### Safety rules
+
+- **Anything but GET needs `--yes`.** A POST, PUT, PATCH or DELETE can change data on the server, so
+  `send` and `replay` refuse it without `--yes`, with one line saying why. The app checks this, not
+  only the tool, so a call through the [DevTools window relay](#older-react-native) needs it too.
+- **Replies are masked like every other reply.** The new row goes through the same redaction, so an
+  `Authorization` header you sent shows as `[redacted]`. A replay sends the app's own headers to the
+  same URL, but the agent only ever sees them masked.
+- **Every action is recorded**, refused ones too, in the [AI Usage tab](#the-ai-usage-tab).
+- **Development only**, like the rest of the tool.
+
 ## Redaction
 
 Everything the tool reads comes from the same stores the tabs read, and those redact before they
@@ -279,24 +336,26 @@ menu) doesn't take calls, so the tool doesn't know about it, and connecting clos
 
 ## The AI Usage tab
 
-Every query an agent makes is listed in the **AI Usage** tab, on the device and in
+Every query and action an agent makes is listed in the **AI Usage** tab, on the device and in
 [React Native DevTools](/docs/expo-devtools/react-native-devtools#ai-usage), with the reply it got.
 The reply is taken after every redaction, so the tab shows exactly what left the app.
 
 - A row shows the command as you would type it after `devtools`, the time, how many rows it matched
-  of how many the topic held, and how long the app took. An error shows in red.
+  of how many the topic held, and how long the app took. An action reads `action` where a query
+  shows its match count. An error shows in red.
 - Tap a row for the topic, the reply's size and any error, then the reply itself: a JSON tree for
   `get` or `--json`, text otherwise. Copy copies the reply.
 - Record and Clear sit in the toolbar. The tab keeps the last 100 queries, and up to 64 K characters
   of each reply.
 - `apps` and `topics` are not listed: they are probes, not queries.
-- `aiUsage: { disabledByDefault: true }` opens the tab paused. Agents can still query the app while
-  it is paused; their queries are just not kept.
+- `aiUsage: { disabledByDefault: true }` opens the tab paused. Agents can still query and act while
+  it is paused; what they do is just not kept.
 
 The tab is also a topic, so you or another agent can check what was asked and answered:
 
 ```sh
 devtools ai-usage --since 1h --where 'topic=network'
+devtools ai-usage --where 'action?'
 devtools get ai-usage q12
 ```
 
@@ -318,6 +377,8 @@ This app uses @axonpack/expo-devtools. With the app open in a dev build or Expo 
 - `npx @axonpack/expo-devtools console --where 'level=error,warn' --limit 20` lists recent errors.
 - `npx @axonpack/expo-devtools get network <id>` shows one request whole: headers, bodies, timing.
 - `npx @axonpack/expo-devtools <topic> --help` lists every flag, with examples.
+- `npx @axonpack/expo-devtools network --help` lists the actions: mock or block a URL, send or replay
+  a request from the app. Anything but GET needs `--yes`.
 
 Pass the topic and each flag as separate arguments. Output is tab-separated, and `#` lines are a
 summary or a cursor: rerun with the `# next: --after <id>` line to get only new rows. Exit code 2
@@ -342,10 +403,13 @@ npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
 | `"network --limit 8" isn't a topic`                        | The whole command reached the tool as one argument. Pass the topic and each flag as separate arguments.       |
 | `2 apps match. Pick one:`                                  | Add one of the `--app` and `--device` pairs it lists.                                                         |
 | `... can't share its debugger ...`                         | See [Older React Native](#older-react-native).                                                                |
+| `POST can change data on the server, so it needs --yes`    | Add `--yes` if you mean to send it. GET needs none.                                                           |
+| `still sending ... after 5 s`                              | The request carries on in the app. `devtools ai-usage --where 'action?'` shows how it ended.                  |
 
 ## Limits
 
-- **It reads, it doesn't act.** Nothing can be cleared, overridden or navigated from the terminal.
+- **It acts on the network only.** Mocking, blocking, sending and replaying requests are the only
+  changes it makes. Nothing can be cleared or navigated from the terminal.
 - **It sees what the tabs keep.** A row that aged out of a tab's buffer is gone for the tool too,
   and Performance has rows only while its tab records.
 - **Development only.** A release build installs nothing the tool can talk to.

@@ -78,14 +78,15 @@ this package depends on no storage library and cannot discover one.
 ## For AI agents
 
 An AI agent, or you, can read what the devtools recorded from a terminal: requests with their bodies,
-logs, crashes, stored values and every other tab, filtered down to the rows it needs.
+logs, crashes, stored values and every other tab, filtered down to the rows it needs. It can also mock
+or block a URL, and send a request from inside the app.
 
 ```sh
-npx devtools network --where 'code>=400' --since 10m
+npx devtools network --where state=error --since 10m
 ```
 
 It works with any package manager, needs Node 22 or newer and `expo start`, and keeps every redaction
-you configured. The AI Usage tab lists each query and the reply it got.
+you configured. The AI Usage tab lists each query and action, and the reply it got.
 [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) has every command, and a
 snippet to paste into your `AGENTS.md` or `CLAUDE.md`. The `axonpack-expo-devtools`
 [agent skill](https://axonpack.dev/docs/agent-skills) teaches your agent the whole tool:

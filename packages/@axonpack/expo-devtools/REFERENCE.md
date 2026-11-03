@@ -530,33 +530,36 @@ anywhere in the tab, and no way to add a key that isn't already there.
 
 ## AI Usage tab
 
-Every query an AI agent, or you, made of the app with
+Every query and [action](#actions) an AI agent, or you, made in the app with
 [the `devtools` command line tool](#the-devtools-command-line-tool), newest first, with the reply it
 got. Holds the **100** most recent. The reply is recorded after every redaction, so the tab shows
 exactly what left the app. The same list is a panel in the React Native DevTools tab, and the
 `ai-usage` topic of the tool.
 
 Record (⏺) and Clear (⊘) open the toolbar, as on the other tabs that record. Paused, agents can still
-query the app, and their queries are not kept. `aiUsage.disabledByDefault` opens the tab paused.
+query and act, and nothing they do is kept. `aiUsage.disabledByDefault` opens the tab paused.
 
-| Row element | Meaning                                                                                                  |
-| ----------- | -------------------------------------------------------------------------------------------------------- |
-| Command     | The query as you would type it after `devtools`, flags included, quoted only where a shell needs it.     |
-| Time        | Wall-clock time the app answered.                                                                        |
-| Matched     | Rows the query matched, of the rows the topic held, as `2/214`. `-` for an error or a topic that is off. |
-| Error       | In place of Matched, in red, when the reply was an `error:` line.                                        |
-| Took        | How long the app took to answer.                                                                         |
+| Row element | Meaning                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Command     | The query or action as you would type it after `devtools`, flags included, quoted only where a shell needs it.                     |
+| Time        | Wall-clock time the app answered.                                                                                                  |
+| Matched     | Rows the query matched, of the rows the topic held, as `2/214`. `-` for an error or a topic that is off. `action` marks an action. |
+| Error       | In place of Matched, in red, when the reply was an `error:` line.                                                                  |
+| Took        | How long the app took to answer.                                                                                                   |
 
 Tap a row for its detail sheet: the command and **Copy** (the reply) in the header, then Time, Topic,
-Matched, Took, Reply size and any Error, then the **Reply** section, a JSON tree for `get` or
+Matched (Action and its name, for an action), Took, Reply size and any Error, then the **Reply** section, a JSON tree for `get` or
 `--json` output and monospace text otherwise.
 
 - `apps` and `topics` are probes and are not listed.
 - Up to 64 K characters of each reply are kept. Reply size then says `cut to the first 64 K`.
 - A query of `ai-usage` itself is listed without its reply, which would otherwise repeat every
   earlier reply.
-- With no query yet, the tab says **No agent queries yet** and shows `npx devtools topics` to start
-  with.
+- Every action is listed, refused ones too. One that waits on the app (`network send`, `replay`) is
+  listed when it ends. In its command a masked header shows as `[redacted]`, and a body over 200
+  characters as its start and length.
+- With no query yet, the tab says **No agent queries yet**, says an agent can read the devtools, mock
+  a request or send one, and shows `npx devtools topics` to start with.
 
 ---
 
@@ -778,8 +781,8 @@ The sent request is also a row in the log, on both surfaces.
 
 ## The `devtools` command line tool
 
-The `devtools` command line tool reads what the devtools recorded in a running app. This section
-lists everything it takes and prints, as does
+The `devtools` command line tool reads what the devtools recorded in a running app, and can mock,
+block or send a request in it. This section lists everything it takes and prints, as does
 [the CLI reference](https://axonpack.dev/docs/expo-devtools/reference/cli) on the docs site.
 [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) shows how to use it, with a
 snippet for your agent.
@@ -806,13 +809,14 @@ for whichever form you use.
 
 ### Commands
 
-| Command                     | What it prints                                                                                    |
-| --------------------------- | ------------------------------------------------------------------------------------------------- |
-| `devtools apps`             | One row per app and device on Metro: `app`, `name`, `device`, `devtools`, `metro`, `note`.        |
-| `devtools topics`           | One row per topic in the picked app: `topic`, `rows` (`off` when the app turned it off), `about`. |
-| `devtools <topic> [flags]`  | The topic's rows, newest first, with the [query flags](#query-flags).                             |
-| `devtools get <topic> <id>` | One row as indented JSON.                                                                         |
-| `devtools <command> --help` | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. |
+| Command                                    | What it prints                                                                                                                                                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `devtools apps`                            | One row per app and device on Metro: `app`, `name`, `device`, `devtools`, `metro`, `note`.                                                                                                                     |
+| `devtools topics`                          | One row per topic in the picked app: `topic`, `rows` (`off` when the app turned it off), `actions` (comma-separated, `-` for none), `about`.                                                                   |
+| `devtools <topic> [flags]`                 | The topic's rows, newest first, with the [query flags](#query-flags).                                                                                                                                          |
+| `devtools get <topic> <id>`                | One row as indented JSON.                                                                                                                                                                                      |
+| `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                                                                                                                                                         |
+| `devtools <command> --help`                | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. |
 
 `apps` and `topics` are probes: the [AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab)
 doesn't list them. In `apps`, the `devtools` column is the package version in the app, `-` when the
@@ -857,6 +861,7 @@ Needed only when more than one app is running, or for an app on another port.
 | `--help`, `-h` | none         | off          | Print the help for the command instead of running it.                                                                                 | `network --help` |
 
 `apps` takes `--port`, `--force` and `--json`. `topics` takes the app flags and `--json`.
+An action takes the app flags and its [action flags](#action-flags).
 
 #### Where clauses
 
@@ -1030,22 +1035,87 @@ Captured crashes, newest first. `get` adds the stack, the breadcrumbs and the de
 
 #### ai-usage
 
-The queries agents made, the last 100, each with the reply it got. A query of `ai-usage` keeps no
-reply.
+The queries and actions agents made, the last 100, each with the reply it got. A query of
+`ai-usage` keeps no reply. `--where 'action?'` lists the actions alone.
 
-| Field         | Value                                                           |
-| ------------- | --------------------------------------------------------------- |
-| **`id`**      | `q<n>`                                                          |
-| `t`           | When the app answered                                           |
-| **`command`** | The query as you would type it after `devtools`                 |
-| `topic`       | The topic it asked about                                        |
-| **`matched`** | Rows it matched                                                 |
-| **`total`**   | Rows the topic held                                             |
-| **`ms`**      | How long the app took                                           |
-| `size`        | The whole reply's length in characters                          |
-| `error`       | The message of an `error:` reply                                |
-| `cut`         | True when only the first 64 K characters of the reply were kept |
-| `reply`       | The reply as the agent got it                                   |
+| Field         | Value                                                                                                                                                |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**      | `q<n>`                                                                                                                                               |
+| `t`           | When the app answered                                                                                                                                |
+| **`command`** | The query or action as you would type it after `devtools`. A masked header shows as `[redacted]`, a body over 200 characters as its start and length |
+| `topic`       | The topic it asked about                                                                                                                             |
+| `action`      | The action's name. Empty for a query                                                                                                                 |
+| **`matched`** | Rows it matched                                                                                                                                      |
+| **`total`**   | Rows the topic held                                                                                                                                  |
+| **`ms`**      | How long the app took                                                                                                                                |
+| `size`        | The whole reply's length in characters                                                                                                               |
+| `error`       | The message of an `error:` reply                                                                                                                     |
+| `cut`         | True when only the first 64 K characters of the reply were kept                                                                                      |
+| `reply`       | The reply as the agent got it                                                                                                                        |
+
+### Actions
+
+`devtools <topic> <action> [args] [flags]` changes something in the app. Only `network` has actions;
+`devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
+don't go with an action, and action flags don't go with a query: either is an error before the tool
+looks for an app. Every action, refused ones too, is listed in the
+[AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab), marked as an action.
+
+#### Action flags
+
+| Flag             | Value                       | Taken by                     | What it does                                                                                       |
+| ---------------- | --------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `--status`       | whole number, 200 to 599    | `override`                   | The mocked status. Default `200`.                                                                  |
+| `--body`         | text                        | `override`, `send`, `replay` | The body. Default empty for `override`. Not for a GET or HEAD request.                             |
+| `--body-file`    | file path                   | `override`, `send`, `replay` | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                    |
+| `--content-type` | MIME type                   | `override`                   | The mocked `content-type`. Default `application/json`.                                             |
+| `--header`       | `'Name: value'`, repeatable | `send`, `replay`             | A request header. In `replay` it replaces a header of the same name, any case.                     |
+| `--yes`          | none                        | `send`, `replay`             | Needed for any method but GET. The app checks it, so a call through the window relay needs it too. |
+| `--all`          | none                        | `unoverride`                 | Remove every override instead of one.                                                              |
+
+#### network actions
+
+Overrides match the exact URL the app requests, scheme and query included, as the Network tab's
+own overrides do. There are no patterns or prefixes: copy the URL from a row. They are the same
+overrides the tab makes, so they show in its Overrides view and in React Native DevTools. They apply
+to `fetch` and `XMLHttpRequest`, and last until the app reloads or they are removed.
+
+| Action       | Args             | Flags                                                   | Reply                                                                                                                                   |
+| ------------ | ---------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `override`   | `<url>`          | `--status`, `--body` or `--body-file`, `--content-type` | `# network · override on <url>: <status>, <type>, <n> chars. The app's requests to that exact URL get it, without reaching the network` |
+| `block`      | `<url>`          | none                                                    | `# network · blocking <url>: the app's requests to that exact URL fail as if offline`                                                   |
+| `unoverride` | `<url>`, or none | `--all` (with no `<url>`)                               | `# network · removed the override on <url>`, or `# network · removed <n> overrides`                                                     |
+| `overrides`  | none             | none                                                    | `# network · <n> overrides`, then the columns `url action status type size` (`-` for a block)                                           |
+| `send`       | `<METHOD> <url>` | `--header`, `--body` or `--body-file`, `--yes`          | The new row, as below                                                                                                                   |
+| `replay`     | `<id>`           | `--header`, `--body` or `--body-file`, `--yes`          | The new row, as below                                                                                                                   |
+
+`send` sends the request from inside the app, through the same function as the Network tab's
+Sandbox, and so through the app's own `fetch`. Overrides and network conditions apply to it, and it
+is a row in the log like any other request. The method is case-insensitive.
+
+`replay` takes a logged HTTP request and sends it again as the Sandbox would: the same method, URL,
+headers and body, with `--header` and `--body` on top. The app's own headers go with it, including
+ones the tool shows you only as `[redacted]`. A header that `network.redactHeaders` removed before
+the request was logged goes as the text `[redacted]`; pass it again with `--header`.
+
+Both answer with the new row, in the network columns plus `error`:
+
+```
+# network · my-app · iPhone 16 Pro · sent POST https://api.example.com/v1/notes as fetch-1762172310455-215. devtools get network fetch-1762172310455-215 shows it whole
+id	method	code	state	ms	url	error
+fetch-1762172310455-215	POST	201	success	312	https://api.example.com/v1/notes	-
+```
+
+`replay` starts `replayed <id> as <new id>`. A request that failed (blocked, offline, no answer) is
+still a row, with `state` `error`, and exit code 0. When the request is not in the log (recording
+is paused, or `network.redact` dropped it) the reply is
+`# network · sent <METHOD> <url>: <status> in <ms> ms. Not in the log: recording is paused, or the app's network redact config dropped it`,
+and its body is not shown.
+
+While the request is in flight the app answers `# wait: sending <METHOD> <url> as <id>`, and the
+tool asks again every 200 ms within the [5 seconds](#timing). A request that takes longer carries on
+in the app. Running the command again would send it again, so the error points at `ai-usage`
+instead, where the action is listed once it ends.
 
 ### Output
 
@@ -1053,20 +1123,21 @@ Tab-separated, with a header row. In a cell, `-` is an empty value, a tab or lin
 `\t`, `\n` or `\r`, `t` is an ISO time, and a string over 2,048 characters ends in
 `... [cut at 2048 of <n> chars, --full for all]`.
 
-| Line                                                                                  | When                                                                                                    |
-| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `# <topic> · <app> · <device> · <n> of <total> match`                                 | First line of a list. Ends in `· showing <n>` when `--limit` cut rows off.                              |
-| `# <topic> · <app> · <device> · <n> of <total> match · <k> values of <field>`         | First line of `--group-by`, above `<field>` and `count` columns.                                        |
-| `<n>`                                                                                 | The whole reply to `--count`.                                                                           |
-| `# next: --after <id>`                                                                | Last lines of an unsorted list: the cursor for the next poll. A row still in flight holds it back.      |
-| `# more: --before <id>`                                                               | When the limit cut older rows off: the cursor for the next page.                                        |
-| `# <topic> is off: <reason>`                                                          | The whole reply for a topic the app turned off. Exit code 0.                                            |
-| `# <topic> <id>`                                                                      | First line of `get`, above the indented JSON.                                                           |
-| `# <topic>: wrote <n> chars to <file>`                                                | The whole reply with `--out`. With `get` it starts `# <topic> <id>`, and the file holds the JSON alone. |
-| `# paused: the Performance tab records only after record is pressed`                  | Last line of an empty `performance` list while the tab is paused.                                       |
-| `# topics · <app> · <device>`                                                         | First line of `topics`.                                                                                 |
-| `# ?: checking would close a DevTools window open on the app. --force checks anyway.` | Under `apps`, when a row shows `?`.                                                                     |
-| `# wait: <what>`                                                                      | Never printed. The app says it is still reading; the tool asks again every 200 ms.                      |
+| Line                                                                                  | When                                                                                                              |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `# <topic> · <app> · <device> · <n> of <total> match`                                 | First line of a list. Ends in `· showing <n>` when `--limit` cut rows off.                                        |
+| `# <topic> · <app> · <device> · <n> of <total> match · <k> values of <field>`         | First line of `--group-by`, above `<field>` and `count` columns.                                                  |
+| `<n>`                                                                                 | The whole reply to `--count`.                                                                                     |
+| `# next: --after <id>`                                                                | Last lines of an unsorted list: the cursor for the next poll. A row still in flight holds it back.                |
+| `# more: --before <id>`                                                               | When the limit cut older rows off: the cursor for the next page.                                                  |
+| `# <topic> is off: <reason>`                                                          | The whole reply for a topic the app turned off. Exit code 0.                                                      |
+| `# <topic> <id>`                                                                      | First line of `get`, above the indented JSON.                                                                     |
+| `# <topic>: wrote <n> chars to <file>`                                                | The whole reply with `--out`. With `get` it starts `# <topic> <id>`, and the file holds the JSON alone.           |
+| `# paused: the Performance tab records only after record is pressed`                  | Last line of an empty `performance` list while the tab is paused.                                                 |
+| `# topics · <app> · <device>`                                                         | First line of `topics`.                                                                                           |
+| `# <topic> · <app> · <device> · <what it did>`                                        | First line of an action's reply. See [Actions](#actions).                                                         |
+| `# ?: checking would close a DevTools window open on the app. --force checks anyway.` | Under `apps`, when a row shows `?`.                                                                               |
+| `# wait: <what>`                                                                      | Never printed. The app says it is still reading, or an action is still sending; the tool asks again every 200 ms. |
 
 `--json` prints none of the `#` lines, so it has no cursors. Each row is one JSON object with the
 chosen fields; `--group-by` gives `{ "<field>": value, "count": n }`. Strings are still cut unless
@@ -1092,6 +1163,27 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `bad regex <pattern>: <why>`                                                                  | 1    |
 | `bad --since "<value>": use 30s, 10m, 2h, 1d or an ISO time` (and `--until`)                  | 1    |
 
+#### From the app, for an action
+
+| Message                                                                                                | Code |
+| ------------------------------------------------------------------------------------------------------ | ---- |
+| `<topic> has no action "<name>". Actions: <list>`                                                      | 1    |
+| `<topic> has no actions, only queries`                                                                 | 1    |
+| `<topic> is off: <reason>`                                                                             | 1    |
+| `usage: devtools <topic> <action> <args>`, such as `usage: devtools network unoverride <url> \| --all` | 1    |
+| `<topic> <action> takes no --<flag>. usage: devtools <topic> <action> <args>`                          | 1    |
+| `bad --<flag>. usage: ...`, for a value of the wrong kind (only through the window relay)              | 1    |
+| `"<url>" is not a whole URL. Use the exact URL the app requests, https:// and query included`          | 1    |
+| `bad --status <value>: use 200 to 599`                                                                 | 1    |
+| `no override on <url>. devtools network overrides lists them`                                          | 1    |
+| `bad method "<method>": use GET, POST, ...`                                                            | 1    |
+| `<METHOD> can change data on the server, so it needs --yes. GET goes without`                          | 1    |
+| `a GET request has no body, so drop --body` (and `HEAD`)                                               | 1    |
+| `bad --header: use 'Name: value'`                                                                      | 1    |
+| `no network row "<id>", it may have aged out of the buffer`                                            | 1    |
+| `<id> is a WebSocket. replay sends HTTP requests only`                                                 | 1    |
+| `<METHOD> <url> failed: <why>`, only when the request is also not in the log                           | 1    |
+
 #### From the tool
 
 | Message                                                                                                                                                                                                                                               | Code |
@@ -1101,9 +1193,14 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `--<flag> needs a value`                                                                                                                                                                                                                              | 1    |
 | `bad --limit <value>: use a whole number from 1` (and `--port`)                                                                                                                                                                                       | 1    |
 | `usage: devtools get <topic> <id>. See devtools get --help`                                                                                                                                                                                           | 1    |
-| `usage: devtools <topic>. See devtools <topic> --help`                                                                                                                                                                                                | 1    |
+| `usage: devtools apps. See devtools apps --help` (and `topics`)                                                                                                                                                                                       | 1    |
+| `--status, --body, --body-file, --content-type, --header, --yes and --all go with an action, such as devtools network override <url>. See devtools network --help`                                                                                    | 1    |
+| `query flags such as --where, --json and --out don't go with an action, and <topic> <action> is one. See devtools <topic> --help`                                                                                                                     | 1    |
+| `pass --body or --body-file, not both`                                                                                                                                                                                                                | 1    |
+| `can't read --body-file <path>: <why>`                                                                                                                                                                                                                | 1    |
 | `no reply from <app> on <device> in 5 s. Its JS may be paused at a breakpoint: resume it, then run the command again.`                                                                                                                                | 1    |
 | `still <what> after 5 s. The app keeps going, so run the same command again to pick up where it stopped.`                                                                                                                                             | 1    |
+| `still <what> after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.` (an action)                                                                                                                           | 1    |
 | `could not reach Metro on port <port>`                                                                                                                                                                                                                | 1    |
 | `could not attach to <socket url>`                                                                                                                                                                                                                    | 1    |
 | `the debugger socket closed (<code>: <reason>)`                                                                                                                                                                                                       | 1    |
@@ -1122,7 +1219,7 @@ In `apps`, an app that couldn't be asked shows why in its `note` column instead,
 
 | Code | Meaning                                                                                                             |
 | ---- | ------------------------------------------------------------------------------------------------------------------- |
-| `0`  | It answered, including a topic that is off and a query that matched nothing.                                        |
+| `0`  | It answered, including a topic that is off, a query that matched nothing, and a sent request that failed.           |
 | `1`  | An error: a bad command or flag, an app's `error:` reply, Node older than 22, a socket error, or no answer in time. |
 | `2`  | No app to ask: none running, none or several matching, no devtools in it, or it needs `--force`.                    |
 
@@ -1138,7 +1235,8 @@ In `apps`, an app that couldn't be asked shows why in its `note` column instead,
 
 Only what the stores keep, after every redaction in the config. The `authorization`, `cookie` and
 `set-cookie` headers and a page's `document.cookie` are always `[redacted]`, in every output, and
-filters run on the masked row. The tool can't change anything in the app. See
+filters run on the masked row. An action's reply goes through the same masking. The only changes the
+tool can make are the [actions](#actions). See
 [Redaction](https://axonpack.dev/docs/expo-devtools/ai-agents#redaction) and
 [Older React Native](https://axonpack.dev/docs/expo-devtools/ai-agents#older-react-native).
 

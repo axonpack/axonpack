@@ -117,7 +117,8 @@ parameters, headers, cookies, auth, or the body, then Send and watch the real re
 Handy for "does this break if the token is missing?" without touching your code.
 
 Sandbox requests go out through the same patched `fetch`, so they appear in the log like any other
-request.
+request. An AI agent can do the same from a terminal with `devtools network send` and
+`devtools network replay`; see [Use with AI agents](/docs/expo-devtools/ai-agents#mocking-and-sending-requests).
 
 ## Blocking a URL, or faking the answer
 
@@ -133,7 +134,9 @@ Rules are keyed by the whole URL, not a pattern, so one can never match more tha
 rule answered is badged **Blocked here** or **Overridden here** in the list, so it never reads as one
 of the server's own replies, and the filter panel's **Only overridden or blocked** narrows to them.
 
-Rules live in memory for the session, and are gone on the next launch.
+Rules live in memory for the session, and are gone on the next launch. An AI agent can set, list and
+remove the same rules from a terminal with `devtools network override`, `block`, `overrides` and
+`unoverride`; see [Use with AI agents](/docs/expo-devtools/ai-agents#mocking-and-sending-requests).
 
 ## Taking it with you
 

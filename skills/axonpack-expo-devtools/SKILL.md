@@ -131,6 +131,8 @@ devtools network --where state=error --since 10m    # failed: 4xx/5xx, no answer
 devtools console --where 'level=error,warn' --limit 20
 devtools get network <id>                           # one request: headers, bodies, timing
 devtools crash                                      # then: devtools get crash <id> --full
+devtools network override <url> --status 500 --body '{"error":"down"}'  # mock that exact URL
+devtools network send GET <url>                     # a request from the app, logged like any other
 ```
 
 - More than one app running: add `--app <slug>` or `--device <name>` to every command.
@@ -139,10 +141,13 @@ devtools crash                                      # then: devtools get crash <
 - Storage, Query and Redux are `off` until the app sets them up: see
   [references/config.md](references/config.md). Performance has rows only while its tab records,
   and it starts paused, so ask the user to press record.
-- It only reads, after the app's redaction. The `authorization`, `cookie` and `set-cookie` headers
-  are always masked. Every query and its reply shows in the app's AI Usage tab.
+- Replies come after the app's redaction. The `authorization`, `cookie` and `set-cookie` headers
+  are always masked. Every query and action, with its reply, shows in the app's AI Usage tab.
+- Network actions change the app: `override`, `block`, `unoverride <url> | --all`, `overrides`,
+  `send`, `replay <id>`. Overrides match the exact URL. Anything but GET needs `--yes`: ask the user
+  first. Remove your overrides when done (`devtools network unoverride --all`).
 
-Every topic and field, every flag, the exit codes, recipes and each error message:
+Every topic and field, every flag and action, the exit codes, recipes and each error message:
 [references/cli.md](references/cli.md).
 
 ## Docs
