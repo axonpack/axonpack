@@ -93,7 +93,11 @@ once. Only `network` has actions.
   for, at most 20 at once. Running the command again would send the request again, so a timeout
   points at `ai-usage` instead.
 - **`--yes` is checked in the app.** A call through the relay never passes through the CLI, so a
-  method other than GET is refused in the handler unless the call says `yes`.
+  method other than GET, HEAD and OPTIONS is refused in the handler unless the call says `yes`.
+  Those three only read, so they go without.
+- **`--status` takes the editor's range, 100 to 599.** `new Response` refuses anything outside 200
+  to 599, so the fetch patch builds the override as a 200 and sets the real status, `ok` and
+  `statusText` on it (and its `clone`). XMLHttpRequest already reads the status from a getter.
 - **Exact URLs only**, as the store already matches. A pattern that matches more than you meant is a
   request you can't explain, and the row the agent copies the URL from always has it whole.
 - **A fixed set of action flags.** The tool has to know which flags take a value before it knows the

@@ -144,8 +144,8 @@ devtools network send GET <url>                     # a request from the app, lo
 - Replies come after the app's redaction. The `authorization`, `cookie` and `set-cookie` headers
   are always masked. Every query and action, with its reply, shows in the app's AI Usage tab.
 - Network actions change the app: `override`, `block`, `unoverride <url> | --all`, `overrides`,
-  `send`, `replay <id>`. Overrides match the exact URL. Anything but GET needs `--yes`: ask the user
-  first. Remove your overrides when done (`devtools network unoverride --all`).
+  `send`, `replay <id>`. Overrides match the exact URL. Anything but GET, HEAD and OPTIONS needs
+  `--yes`: ask the user first. Remove your overrides when done (`devtools network unoverride --all`).
 
 Every topic and field, every flag and action, the exit codes, recipes and each error message:
 [references/cli.md](references/cli.md).

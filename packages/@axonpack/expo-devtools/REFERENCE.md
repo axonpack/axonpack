@@ -729,11 +729,11 @@ A copy shows **Copied**, or why it could not copy, at the foot of the tab.
 
 Opens in the request pane, with ✕ to go back to the request.
 
-| Field        | What it is                                                                     |
-| ------------ | ------------------------------------------------------------------------------ |
-| Status       | The code to answer with. Anything that is not a status from 100 to 599 is 200. |
-| Content type | Sent as the response's `Content-Type`. Empty means `application/json`.         |
-| Body         | What the app gets back.                                                        |
+| Field        | What it is                                                                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Status       | The code to answer with. Anything that is not a status from 100 to 599 is 200. The app gets the status as set, 1xx included. |
+| Content type | Sent as the response's `Content-Type`. Empty means `application/json`.                                                       |
+| Body         | What the app gets back.                                                                                                      |
 
 It starts from the rule the URL already has, or from what the server really answered. **Save**
 applies it to every request to that exact URL, **Remove** drops it, **Cancel** goes back. While a rule
@@ -1063,15 +1063,15 @@ looks for an app. Every action, refused ones too, is listed in the
 
 #### Action flags
 
-| Flag             | Value                       | Taken by                     | What it does                                                                                       |
-| ---------------- | --------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| `--status`       | whole number, 200 to 599    | `override`                   | The mocked status. Default `200`.                                                                  |
-| `--body`         | text                        | `override`, `send`, `replay` | The body. Default empty for `override`. Not for a GET or HEAD request.                             |
-| `--body-file`    | file path                   | `override`, `send`, `replay` | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                    |
-| `--content-type` | MIME type                   | `override`                   | The mocked `content-type`. Default `application/json`.                                             |
-| `--header`       | `'Name: value'`, repeatable | `send`, `replay`             | A request header. In `replay` it replaces a header of the same name, any case.                     |
-| `--yes`          | none                        | `send`, `replay`             | Needed for any method but GET. The app checks it, so a call through the window relay needs it too. |
-| `--all`          | none                        | `unoverride`                 | Remove every override instead of one.                                                              |
+| Flag             | Value                       | Taken by                     | What it does                                                                                                         |
+| ---------------- | --------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `--status`       | whole number, 100 to 599    | `override`                   | The mocked status. Default `200`.                                                                                    |
+| `--body`         | text                        | `override`, `send`, `replay` | The body. Default empty for `override`. Not for a GET or HEAD request.                                               |
+| `--body-file`    | file path                   | `override`, `send`, `replay` | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                                      |
+| `--content-type` | MIME type                   | `override`                   | The mocked `content-type`. Default `application/json`.                                                               |
+| `--header`       | `'Name: value'`, repeatable | `send`, `replay`             | A request header. In `replay` it replaces a header of the same name, any case.                                       |
+| `--yes`          | none                        | `send`, `replay`             | Needed for any method but GET, HEAD and OPTIONS. The app checks it, so a call through the window relay needs it too. |
+| `--all`          | none                        | `unoverride`                 | Remove every override instead of one.                                                                                |
 
 #### network actions
 
@@ -1174,10 +1174,10 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `<topic> <action> takes no --<flag>. usage: devtools <topic> <action> <args>`                          | 1    |
 | `bad --<flag>. usage: ...`, for a value of the wrong kind (only through the window relay)              | 1    |
 | `"<url>" is not a whole URL. Use the exact URL the app requests, https:// and query included`          | 1    |
-| `bad --status <value>: use 200 to 599`                                                                 | 1    |
+| `bad --status <value>: use 100 to 599`                                                                 | 1    |
 | `no override on <url>. devtools network overrides lists them`                                          | 1    |
 | `bad method "<method>": use GET, POST, ...`                                                            | 1    |
-| `<METHOD> can change data on the server, so it needs --yes. GET goes without`                          | 1    |
+| `<METHOD> can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without`          | 1    |
 | `a GET request has no body, so drop --body` (and `HEAD`)                                               | 1    |
 | `bad --header: use 'Name: value'`                                                                      | 1    |
 | `no network row "<id>", it may have aged out of the buffer`                                            | 1    |

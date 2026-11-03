@@ -81,9 +81,9 @@ export const NETWORK_AGENT: AgentTopic<NetworkAgentRow> = {
       options: ['status', 'body', 'contentType'],
       run: ([url], { status = '200', body = '', contentType = 'application/json' }) => {
         const code = Number(status);
-        // `new Response` throws outside 200 to 599, which would break the app's own request.
-        if (!Number.isInteger(code) || code < 200 || code > 599) {
-          throw new Error(`bad --status ${status}: use 200 to 599`);
+        // The editor's range, so a rule the CLI sets is one the editor could have saved.
+        if (!Number.isInteger(code) || code < 100 || code > 599) {
+          throw new Error(`bad --status ${status}: use 100 to 599`);
         }
         networkOverridesStore.set({
           url: wholeUrl(url),
@@ -175,6 +175,9 @@ export const NETWORK_AGENT: AgentTopic<NetworkAgentRow> = {
   },
 };
 
+/** The methods that only read, so they go without --yes. */
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 /** Overrides match the exact URL a request uses, so a path or a pattern would never match. */
 function wholeUrl(url: string): string {
   if (!/^https?:\/\//i.test(url)) {
@@ -213,8 +216,10 @@ function sendFromApp(
 ) {
   const { method, url } = request;
   if (!/^[A-Z]+$/.test(method)) throw new Error(`bad method "${method}": use GET, POST, ...`);
-  if (method !== 'GET' && options.yes !== true) {
-    throw new Error(`${method} can change data on the server, so it needs --yes. GET goes without`);
+  if (!SAFE_METHODS.has(method) && options.yes !== true) {
+    throw new Error(
+      `${method} can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without`
+    );
   }
   if (options.body !== undefined && (method === 'GET' || method === 'HEAD')) {
     throw new Error(`a ${method} request has no body, so drop --body`);

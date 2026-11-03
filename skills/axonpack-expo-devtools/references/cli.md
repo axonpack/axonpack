@@ -105,7 +105,7 @@ devtools network replay <id> --header 'X-Debug: 1'
 
 | Action                        | Flags                                                                                        | Reply                                                                 |
 | ----------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `override <url>`              | `--status <200-599>` (200), `--body` or `--body-file`, `--content-type` (`application/json`) | `# network · override on <url>: <status>, <type>, <n> chars. ...`     |
+| `override <url>`              | `--status <100-599>` (200), `--body` or `--body-file`, `--content-type` (`application/json`) | `# network · override on <url>: <status>, <type>, <n> chars. ...`     |
 | `block <url>`                 | none                                                                                         | `# network · blocking <url>: ...`                                     |
 | `unoverride <url>` or `--all` | `--all`                                                                                      | `# network · removed the override on <url>` / `removed <n> overrides` |
 | `overrides`                   | none                                                                                         | `# network · <n> overrides`, then `url action status type size` rows  |
@@ -118,8 +118,9 @@ devtools network replay <id> --header 'X-Debug: 1'
 - `send` goes out from inside the app through its own fetch, so overrides and network conditions
   apply and it is a row in the log. `replay` sends a logged request again as the Sandbox would, with
   the app's own headers; a header the app's `redactHeaders` removed goes as `[redacted]`.
-- **Anything but GET needs `--yes`**, checked in the app. Without it the reply is
-  `error: POST can change data on the server, so it needs --yes. GET goes without`, exit 1. Ask the
+- **Anything but GET, HEAD and OPTIONS needs `--yes`**, checked in the app. Without it the reply
+  is `error: POST can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without`,
+  exit 1. Ask the
   user before passing `--yes`.
 - The reply row is masked like any other. Take its id to `devtools get network <id>` for the body.
 - A failed request is still a row, `state` `error`, exit 0. With network recording paused there is

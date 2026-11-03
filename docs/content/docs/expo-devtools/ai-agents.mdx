@@ -279,8 +279,8 @@ flags are in the [CLI reference](/docs/expo-devtools/reference/cli#actions).
 
 ### Safety rules
 
-- **Anything but GET needs `--yes`.** A POST, PUT, PATCH or DELETE can change data on the server, so
-  `send` and `replay` refuse it without `--yes`, with one line saying why. The app checks this, not
+- **Anything but GET, HEAD and OPTIONS needs `--yes`.** A POST, PUT, PATCH or DELETE can change
+  data on the server, so `send` and `replay` refuse it without `--yes`, with one line saying why. The app checks this, not
   only the tool, so a call through the [DevTools window relay](#older-react-native) needs it too.
 - **Replies are masked like every other reply.** The new row goes through the same redaction, so an
   `Authorization` header you sent shows as `[redacted]`. A replay sends the app's own headers to the
@@ -378,7 +378,7 @@ This app uses @axonpack/expo-devtools. With the app open in a dev build or Expo 
 - `npx @axonpack/expo-devtools get network <id>` shows one request whole: headers, bodies, timing.
 - `npx @axonpack/expo-devtools <topic> --help` lists every flag, with examples.
 - `npx @axonpack/expo-devtools network --help` lists the actions: mock or block a URL, send or replay
-  a request from the app. Anything but GET needs `--yes`.
+  a request from the app. Anything but GET, HEAD and OPTIONS needs `--yes`.
 
 Pass the topic and each flag as separate arguments. Output is tab-separated, and `#` lines are a
 summary or a cursor: rerun with the `# next: --after <id>` line to get only new rows. Exit code 2
@@ -403,7 +403,7 @@ npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
 | `"network --limit 8" isn't a topic`                        | The whole command reached the tool as one argument. Pass the topic and each flag as separate arguments.       |
 | `2 apps match. Pick one:`                                  | Add one of the `--app` and `--device` pairs it lists.                                                         |
 | `... can't share its debugger ...`                         | See [Older React Native](#older-react-native).                                                                |
-| `POST can change data on the server, so it needs --yes`    | Add `--yes` if you mean to send it. GET needs none.                                                           |
+| `POST can change data on the server, so it needs --yes`    | Add `--yes` if you mean to send it. GET, HEAD and OPTIONS need none.                                         |
 | `still sending ... after 5 s`                              | The request carries on in the app. `devtools ai-usage --where 'action?'` shows how it ended.                  |
 
 ## Limits

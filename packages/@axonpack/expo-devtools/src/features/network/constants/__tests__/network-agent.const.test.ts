@@ -4,6 +4,7 @@ import { runQuery, type AgentQuery } from '../../../../agent/utils/run-query.uti
 import { patchFetch } from '../../services/patch-fetch.service';
 import { networkLogStore } from '../../stores/network-log.store';
 import { networkOverridesStore } from '../../stores/network-overrides.store';
+import { saveOverride } from '../../utils/override-draft.util';
 import { NETWORK_AGENT } from '../network-agent.const';
 
 const NOW = Date.now();
@@ -278,11 +279,26 @@ describe('network actions', () => {
       );
     });
 
+    it.each([99, 100, 102, 599, 600])(
+      'takes --status %i only when the editor would save it',
+      async (code) => {
+        saveOverride('https://api.test/editor', {
+          status: String(code),
+          contentType: '',
+          body: '',
+        });
+        const editorKeeps = networkOverridesStore.find('https://api.test/editor')?.status === code;
+
+        const reply = await act('override', ['https://api.test/me'], { status: String(code) });
+        expect(reply.startsWith('error:')).toBe(!editorKeeps);
+      }
+    );
+
     it.each([
       [['override', ['/v1/me']], 'error: "/v1/me" is not a whole URL'],
       [
         ['override', ['https://api.test/me'], { status: '99' }],
-        'error: bad --status 99: use 200 to 599',
+        'error: bad --status 99: use 100 to 599',
       ],
       [['override', ['https://api.test/me'], { status: 'ok' }], 'error: bad --status ok'],
       [['block', ['api.test/me']], 'error: "api.test/me" is not a whole URL'],
@@ -322,10 +338,10 @@ describe('network actions', () => {
       expect(sentHeaders()).toEqual({ Accept: 'application/json' });
     });
 
-    it('needs --yes for any method but GET, checked here, and sends nothing without it', async () => {
+    it('needs --yes for any method but GET, HEAD and OPTIONS, checked here, and sends nothing without it', async () => {
       const rows = networkLogStore.getSnapshot().length;
       expect(await act('send', ['POST', 'https://api.test/notes'], { body: '{"text":"hi"}' })).toBe(
-        'error: POST can change data on the server, so it needs --yes. GET goes without'
+        'error: POST can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without'
       );
       expect(server).not.toHaveBeenCalled();
       expect(networkLogStore.getSnapshot()).toHaveLength(rows);
@@ -334,6 +350,20 @@ describe('network actions', () => {
         await act('send', ['POST', 'https://api.test/notes'], { body: '{"text":"hi"}', yes: true })
       ).toContain('\tPOST\t201\tsuccess\t');
       expect(server.mock.calls[0][1]).toMatchObject({ method: 'POST', body: '{"text":"hi"}' });
+    });
+
+    it('sends HEAD and OPTIONS without --yes, as they only read, and still refuses PUT', async () => {
+      for (const method of ['HEAD', 'OPTIONS']) {
+        expect(await act('send', [method, 'https://api.test/notes'])).toContain(
+          `\t${method}\t201\tsuccess\t`
+        );
+      }
+      expect(server.mock.calls.map(([, init]) => init?.method)).toEqual(['HEAD', 'OPTIONS']);
+
+      expect(await act('send', ['PUT', 'https://api.test/notes'])).toBe(
+        'error: PUT can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without'
+      );
+      expect(server).toHaveBeenCalledTimes(2);
     });
 
     it('masks a secret header it sent in the row the agent reads', async () => {
@@ -406,7 +436,7 @@ describe('network actions', () => {
 
     it('needs --yes to replay a POST', async () => {
       expect(await act('replay', ['h2'])).toBe(
-        'error: POST can change data on the server, so it needs --yes. GET goes without'
+        'error: POST can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without'
       );
       expect(server).not.toHaveBeenCalled();
       expect(await act('replay', ['h2'], { yes: true, body: 'edited' })).toContain('\tPOST\t201\t');

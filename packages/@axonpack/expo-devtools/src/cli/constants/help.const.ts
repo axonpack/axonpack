@@ -148,7 +148,7 @@ prefixes: copy the URL from a network row. They apply to fetch and XMLHttpReques
 Network tab's Overrides view, and last until the app reloads or you remove them.
 
   override <url>      answer every request to <url> with this response, without the network
-    --status <n>          200 to 599 (default 200)
+    --status <n>          100 to 599 (default 200)
     --body <text>         the response body (default empty)
     --body-file <path>    read the body from a file on this computer instead
     --content-type <type> default application/json
@@ -161,8 +161,8 @@ Network tab's Overrides view, and last until the app reloads or you remove them.
                       in the network log, overrides and conditions included
     --header 'Name: value'  repeat for more
     --body <text>           or --body-file <path>. Not for GET
-    --yes                   needed for any method but GET, since it can change data on the
-                            server. The app checks it, not only this CLI
+    --yes                   needed for any method but GET, HEAD and OPTIONS, since it can
+                            change data on the server. The app checks it, not only this CLI
   replay <id>         send a logged request again, as the Sandbox would. The same flags edit it:
                       a --header replaces one of the same name, --body replaces the body. A
                       header the app's redactHeaders config removed goes as [redacted]

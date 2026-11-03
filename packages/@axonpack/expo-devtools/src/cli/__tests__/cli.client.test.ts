@@ -395,11 +395,11 @@ describe('an action', () => {
 
   it('exits 1 on an error reply, such as a POST without --yes', async () => {
     agent.act.mockReturnValue(
-      'error: POST can change data on the server, so it needs --yes. GET goes without'
+      'error: POST can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without'
     );
     expect(await main(['network', 'send', 'POST', 'https://x'])).toBe(1);
     expect(stdout).toBe(
-      'error: POST can change data on the server, so it needs --yes. GET goes without\n'
+      'error: POST can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without\n'
     );
   });
 
