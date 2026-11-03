@@ -143,6 +143,18 @@ export const devtoolsConfig = {
     },
   },
   query: { client: queryClient },
+  // Preview through the devtools: no PreviewProvider of the app's own, and a Preview tab in the
+  // panel. Without EXPO_PUBLIC_PREVIEW_S3_URL in .env (see the preview example's .env.example) the
+  // tab says previews aren't set up, and the dev preview servers still show.
+  preview: {
+    enabled: true,
+    s3Config: {
+      url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string,
+      readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
+      readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
+    },
+    devPreviewServers: true,
+  },
   // `satisfies` rather than a plain object: it is what checks `defaultTheme` against the themes
   // declared above, which is the job the old factory call used to do.
 } satisfies DevtoolsConfig<'midnight' | 'empathika'>;
