@@ -6,7 +6,10 @@ type Page = ReturnType<typeof page>;
 
 const SILENT = Symbol('silent');
 const sockets: FakeSocket[] = [];
-let metro: Record<number, { pages: Page[]; slug?: string }> = {};
+/** `windows`: the pages a DevTools window is open on, or undefined for a Metro with no route. */
+let metro: Record<number, { pages: Page[]; slug?: string; windows?: string[] }> = {};
+/** What the DevTools window was asked to call, through Metro's route. */
+let relayed: { page: string; call: 'hello' | 'run'; arg?: unknown }[] = [];
 /** What the app answers an evaluate with. Runs the real expression against a fake agent. */
 let answer: (expression: string, socket: FakeSocket) => unknown;
 let stdout = '';
@@ -70,6 +73,7 @@ const evalExpression = (expression: string) => new Function(`return ${expression
 
 beforeEach(() => {
   sockets.length = 0;
+  relayed = [];
   stdout = '';
   stderr = '';
   metro = { 8081: { pages: [page('iPhone 16', 8081)], slug: 'my-app' } };
@@ -85,16 +89,28 @@ beforeEach(() => {
   agent.run.mockReset().mockReturnValue('# network · 1 of 214 match\nid\turl\nn1\thttps://x');
   (globalThis as any).__AXONPACK_AGENT__ = agent;
   (globalThis as any).WebSocket = FakeSocket;
-  (globalThis as any).fetch = jest.fn(async (url: string, init: { headers?: any }) => {
+  (globalThis as any).fetch = jest.fn(async (url: string, init: { headers?: any; body?: any }) => {
     const { port, pathname } = new URL(url);
     const server = metro[Number(port)];
     if (!server) throw new TypeError('fetch failed');
     const reply = (body: unknown) => ({
-      text: async () => String(body),
+      text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
       json: async () => body,
     });
     if (pathname === '/status') return reply('packager-status:running');
     if (pathname === '/json/list') return reply(server.pages);
+    if (pathname === '/axonpack-rn-devtools-tab/agent' && server.windows) {
+      if (!init?.body) return reply(server.windows);
+      // The window makes the call on its own connection: the same agent, reached another way.
+      const call = JSON.parse(init.body);
+      relayed.push(call);
+      const app = (globalThis as any).__AXONPACK_AGENT__;
+      try {
+        return reply({ value: app ? app[call.call](call.arg) : null });
+      } catch (error) {
+        return reply({ error: `the app threw: ${error}\n    at run (app.js:1:1)` });
+      }
+    }
     if (init.headers?.['expo-platform'] && server.slug) {
       return reply({ extra: { expoClient: { slug: server.slug, name: 'My App' } } });
     }
@@ -187,16 +203,6 @@ describe('a query', () => {
     expect(stderr).toContain('no app found on Metro ports 8081 to 8090');
   });
 
-  it('will not attach to a page that cannot share its debugger without --force', async () => {
-    metro[8081].pages = [page('iPhone 16', 8081, { multi: false })];
-
-    expect(await main(['network'])).toBe(2);
-    expect(stderr).toContain('Pass --force');
-    expect(sockets).toHaveLength(0);
-
-    expect(await main(['network', '--force'])).toBe(0);
-  });
-
   it('writes the whole reply to --out', async () => {
     const fs = require('node:fs');
     const write = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
@@ -204,6 +210,69 @@ describe('a query', () => {
     expect(agent.run).toHaveBeenCalledWith({ topic: 'network', get: 'n1', full: true });
     expect(write).toHaveBeenCalledWith('row.json', expect.stringContaining('n1'));
     expect(stdout).toContain('wrote');
+  });
+});
+
+describe('the way in', () => {
+  const PAGE = 'device=iPhone 16&page=1';
+
+  it('attaches its own debugger where the app shares it, window or not', async () => {
+    metro[8081].windows = [PAGE];
+    expect(await main(['network'])).toBe(0);
+    expect(sockets).toHaveLength(1);
+    expect(relayed).toHaveLength(0);
+  });
+
+  it('asks the open DevTools window where the app allows one debugger', async () => {
+    metro[8081] = {
+      ...metro[8081],
+      pages: [page('iPhone 16', 8081, { multi: false })],
+      windows: [PAGE],
+    };
+
+    expect(await main(['network', '--limit', '5'])).toBe(0);
+    expect(relayed).toEqual([{ page: PAGE, call: 'run', arg: { topic: 'network', limit: 5 } }]);
+    expect(sockets).toHaveLength(0);
+    expect(stdout).toBe(
+      '# network · my-app · iPhone 16 · 1 of 214 match\nid\turl\nn1\thttps://x\n'
+    );
+  });
+
+  it('prints what the window answered when the call failed', async () => {
+    metro[8081] = {
+      ...metro[8081],
+      pages: [page('iPhone 16', 8081, { multi: false })],
+      windows: [PAGE],
+    };
+    agent.run.mockImplementation(() => {
+      throw new TypeError('x');
+    });
+
+    expect(await main(['network'])).toBe(1);
+    expect(stderr).toBe('error: the app threw: TypeError: x\n');
+  });
+
+  it('attaches directly where no window is open, since there is none to close', async () => {
+    metro[8081] = {
+      ...metro[8081],
+      pages: [page('iPhone 16', 8081, { multi: false })],
+      windows: [],
+    };
+    expect(await main(['network'])).toBe(0);
+    expect(sockets).toHaveLength(1);
+    expect(relayed).toHaveLength(0);
+  });
+
+  it('needs --force where Metro has no route to tell whether a window is open', async () => {
+    metro[8081].pages = [page('iPhone 16', 8081, { multi: false })];
+
+    expect(await main(['network'])).toBe(2);
+    expect(stderr).toContain('metro.config.js has no withDevtools');
+    expect(stderr).toContain('Pass --force');
+    expect(sockets).toHaveLength(0);
+
+    expect(await main(['network', '--force'])).toBe(0);
+    expect(sockets).toHaveLength(1);
   });
 });
 
@@ -271,12 +340,32 @@ describe('apps', () => {
       [
         'app\tname\tdevice\tdevtools\tmetro\tnote',
         'my-app\tMy App\tiPhone 16\t3.8.0\t8081\t-',
-        "my-app\tMy App\tPixel 8\t?\t8081\tcan't share its debugger: --force closes its open DevTools window",
+        "my-app\tMy App\tPixel 8\t?\t8081\tcan't share its debugger, and metro.config.js has no withDevtools",
         'com.example.app\t-\tiPad\t-\t8083\t-',
+        '# ?: checking would close a DevTools window open on the app. --force checks anyway.',
         '',
       ].join('\n')
     );
     expect(sockets.map((socket) => socket.url)).not.toContain('ws://old');
+  });
+
+  it('asks through the open window, with no footnote when no row shows ?', async () => {
+    metro[8081] = {
+      ...metro[8081],
+      pages: [page('Pixel 8', 8081, { multi: false })],
+      windows: ['device=Pixel 8&page=1'],
+    };
+
+    expect(await main(['apps'])).toBe(0);
+    expect(stdout).toBe(
+      [
+        'app\tname\tdevice\tdevtools\tmetro\tnote',
+        'my-app\tMy App\tPixel 8\t3.8.0\t8081\t-',
+        '',
+      ].join('\n')
+    );
+    expect(relayed).toEqual([{ page: 'device=Pixel 8&page=1', call: 'hello' }]);
+    expect(sockets).toHaveLength(0);
   });
 
   it('prints JSON lines with --json', async () => {

@@ -1,5 +1,5 @@
 import { HELP } from './constants/help.const';
-import { NO_REPLY, agentCall, evaluate } from './services/evaluate.service';
+import { NO_REPLY, callAgent, type Way } from './services/evaluate.service';
 import { DEFAULT_PORTS, findApps, pickApp, type App } from './services/find-apps.service';
 import { parseArgv, type CliArgs } from './utils/parse-argv.util';
 import type { AgentHello } from '../agent/services/install-agent.service';
@@ -51,36 +51,48 @@ async function command(args: CliArgs): Promise<number> {
     const ports = args.port ? `port ${args.port}` : 'ports 8081 to 8090';
     return fail(
       2,
-      `no app found on Metro ${ports}. Open the app in a dev build with \`expo start\` running, or pass --port.`
+      `no app found on Metro ${ports}. Open the app in a dev build or Expo Go with \`expo start\` running, or pass --port.`
     );
   }
   if (name === 'apps') return listApps(apps, args);
 
   const app = pickApp(apps, { app: args.app, device: args.device });
   if (typeof app === 'string') return fail(2, app);
-  if (!app.multipleDebuggers && !args.force) {
+  const way = wayIn(app, args.force);
+  if (!way) {
     return fail(
       2,
-      `${label(app)} can't share its debugger (React Native below 0.86, or Expo started headless), so attaching would close a DevTools window open on it. Pass --force to attach anyway.`
+      `${label(app)} can't share its debugger (React Native below 0.86, or Expo started headless), and metro.config.js has no withDevtools to ask through its DevTools window, so attaching could close one open on it. Pass --force to attach anyway.`
     );
   }
 
-  if (name === 'topics') return listTopics(app, args);
+  if (name === 'topics') return listTopics(app, way, args);
   const query: AgentQuery =
     name === 'get'
       ? { ...args.query, topic: rest[0], get: rest[1] }
       : { ...args.query, topic: name };
   // A file gets the reply whole.
   if (args.out) query.full = true;
-  return ask(app, query, args.out);
+  return ask(app, way, query, args.out);
+}
+
+/**
+ * How to reach the app without closing a DevTools window open on it, or undefined when only
+ * `--force` can say.
+ */
+function wayIn(app: App, force: boolean): Way | undefined {
+  if (app.multipleDebuggers) return 'socket';
+  if (app.windowOpen) return 'window';
+  // With the route there and no window open, there is nothing to close. Without it, no telling.
+  return app.windowOpen === false || force ? 'socket' : undefined;
 }
 
 /** Asks again on `# wait:`, which a topic still reading (storage keys, values) answers with. */
-async function ask(app: App, query: AgentQuery, out?: string): Promise<number> {
+async function ask(app: App, way: Way, query: AgentQuery, out?: string): Promise<number> {
   const deadline = Date.now() + TIMEOUT_MS;
   let waitingFor: string | undefined;
   for (;;) {
-    const reply = await evaluate(app, agentCall('run', query), deadline - Date.now());
+    const reply = await callAgent(app, way, 'run', query, deadline - Date.now());
     if (reply === NO_REPLY) return fail(1, waitingFor ? stillWaiting(waitingFor) : noReply(app));
     if (reply == null) return fail(2, noAgent(app));
     const text = String(reply);
@@ -124,14 +136,15 @@ async function listApps(apps: readonly App[], args: CliArgs): Promise<number> {
         metro: app.port,
         note: null as string | null,
       };
-      if (!app.multipleDebuggers && !args.force) {
+      const way = wayIn(app, args.force);
+      if (!way) {
         return {
           ...row,
-          note: "can't share its debugger: --force closes its open DevTools window",
+          note: "can't share its debugger, and metro.config.js has no withDevtools",
         };
       }
       try {
-        const hello = await evaluate(app, agentCall('hello'), TIMEOUT_MS);
+        const hello = await callAgent(app, way, 'hello', undefined, TIMEOUT_MS);
         if (hello === NO_REPLY) {
           return { ...row, note: 'no reply in 5 s: JS may be paused at a breakpoint' };
         }
@@ -142,11 +155,14 @@ async function listApps(apps: readonly App[], args: CliArgs): Promise<number> {
     })
   );
   printTable(rows, args.query.json);
+  if (!args.query.json && apps.some((app) => !wayIn(app, args.force))) {
+    print('# ?: checking would close a DevTools window open on the app. --force checks anyway.');
+  }
   return 0;
 }
 
-async function listTopics(app: App, args: CliArgs): Promise<number> {
-  const hello = (await evaluate(app, agentCall('hello'), TIMEOUT_MS)) as
+async function listTopics(app: App, way: Way, args: CliArgs): Promise<number> {
+  const hello = (await callAgent(app, way, 'hello', undefined, TIMEOUT_MS)) as
     AgentHello | null | typeof NO_REPLY;
   if (hello === NO_REPLY) return fail(1, noReply(app));
   if (hello == null) return fail(2, noAgent(app));
@@ -188,7 +204,7 @@ const stillWaiting = (what: string) =>
   `still ${what} after 5 s. The app keeps going, so run the same command again to pick up where it stopped.`;
 
 const noAgent = (app: App) =>
-  `${label(app)} has no devtools agent. It needs @axonpack/expo-devtools with <DevtoolsProvider> mounted, in a dev build.`;
+  `${label(app)} has no devtools agent. It needs @axonpack/expo-devtools with <DevtoolsProvider> mounted, in a dev build or Expo Go.`;
 
 function print(text: string) {
   process.stdout.write(`${text}\n`);

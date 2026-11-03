@@ -3,7 +3,8 @@ const APP_FLAGS = `App flags (only needed when more than one app is running)
   --device <text>     part of the device name, any case
   --port <n>          look on this Metro port only (default: 8081 to 8090)
   --force             attach to an app that can't share its debugger (React Native below
-                      0.86, or Expo started headless). It closes a DevTools window open on it`;
+                      0.86, or Expo started headless) when metro.config.js has no
+                      withDevtools to ask through its DevTools window. It closes that window`;
 
 const QUERY_FLAGS = `Query flags (the same for every topic)
   --grep <text>       rows holding this text in any value, bodies included; or '/regex/i'
@@ -43,7 +44,7 @@ Usage
   devtools <command> --help      more on one command
 
 Run it from the app's project folder: elsewhere, \`npx devtools\` downloads an unrelated package.
-Needs Node 22 or newer, the app open in a dev build, and \`expo start\` running.
+Needs Node 22 or newer, the app open in a dev build or Expo Go, and \`expo start\` running.
 
 ${QUERY_FLAGS}
 
@@ -73,7 +74,7 @@ One row per app and device:
   note      why an app can't be queried as is
 
   --port <n>   look on this Metro port only
-  --force      ask apps that can't share their debugger too (closes their open DevTools window)
+  --force      ask the "?" apps too, which closes a DevTools window open on them
   --json       JSON lines
 
 Exit code 2 when no app is running.

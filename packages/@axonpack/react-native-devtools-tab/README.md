@@ -297,6 +297,38 @@ nothing you write can get that wrong.
 so an emoji does too. It is text rather than an image because React Native DevTools' own icon slots
 take an element, and every way of putting one there loses its drawing.
 
+## Calling the app from a terminal
+
+A script or an AI agent on the computer running Metro can call into the app through the DevTools
+window that is open on it. The window makes the call on its own debugger connection. On a React
+Native that allows one debugger per app (below 0.86, or Expo started headless), a second connection
+would close that window, so this is how a tool gets in without doing that.
+
+The app puts an object on `globalThis.__AXONPACK_AGENT__`, and the tool posts to Metro:
+
+```sh
+curl -s http://127.0.0.1:8081/axonpack-rn-devtools-tab/agent \
+  -d '{"page":"device=<id>&page=<id>","call":"run","arg":{"topic":"network"}}'
+```
+
+The window open on that page runs `__AXONPACK_AGENT__.run({ topic: "network" })` and the reply is
+`{"value": ...}`, the return value as JSON, or `{"error": "..."}` when it threw. `page` is the query
+string of the page's `webSocketDebuggerUrl` in Metro's `/json/list`. `GET` on the same URL lists the
+pages a window is open on.
+
+- **A call, never code.** `call` is the name of one of that object's own methods, and `arg` is one
+  JSON object or nothing. The window builds the call from them, so nothing else can be evaluated.
+- **This computer only.** A request from another address, or from a web page whose Origin or Host
+  isn't localhost, gets 403.
+- **Small calls.** A call over 64 KB gets 413, and a body that isn't such a call gets 400. A reply
+  can be up to 64 MB.
+- **Only a window opened from Metro's shortcut.** That is the one this package serves, so it is the
+  one that takes calls. A page with no such window open gets 404, so a tool knows there is none of
+  ours to close.
+
+The window has to be open for this to work, and a call waits while JS is paused at a breakpoint, so
+give it a timeout of your own.
+
 ## In a release build
 
 `registerTab` is safe to call unguarded. A release build installs no debugger dispatcher, so nothing

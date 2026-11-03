@@ -8,11 +8,60 @@ export const NO_REPLY = Symbol('no reply');
 export const asciiOnly = (source: string) =>
   source.replace(/[\u007f-￿]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
+type AgentMethod = 'hello' | 'run';
+
 /** `__AXONPACK_AGENT__.<method>(arg)`, or null in an app that has no agent installed. */
-export function agentCall(method: 'hello' | 'run', arg?: unknown): string {
+export function agentCall(method: AgentMethod, arg?: unknown): string {
   const agent = 'globalThis.__AXONPACK_AGENT__';
   const args = arg === undefined ? '' : JSON.stringify(arg);
   return asciiOnly(`${agent} ? ${agent}.${method}(${args}) : null`);
+}
+
+/** The Metro route `withDevtools` adds, from `@axonpack/react-native-devtools-tab`. */
+export const RELAY_ROUTE = '/axonpack-rn-devtools-tab/agent';
+
+/** A page as the relay names it: the query of its debugger URL, `device=...&page=...`. */
+export const pageOf = (url: string) => url.slice(url.indexOf('?') + 1);
+
+/**
+ * `socket` attaches a debugger of our own. `window` asks the DevTools window open on the page to
+ * make the call on its connection, where a socket of ours would close that window.
+ */
+export type Way = 'socket' | 'window';
+
+export function callAgent(
+  target: { url: string; port: number },
+  way: Way,
+  method: AgentMethod,
+  arg: unknown,
+  timeoutMs: number
+): Promise<unknown> {
+  return way === 'window'
+    ? relay(target, method, arg, timeoutMs)
+    : evaluate(target, agentCall(method, arg), timeoutMs);
+}
+
+async function relay(
+  target: { url: string; port: number },
+  method: AgentMethod,
+  arg: unknown,
+  timeoutMs: number
+): Promise<unknown> {
+  let text: string;
+  try {
+    const response = await fetch(`http://127.0.0.1:${target.port}${RELAY_ROUTE}`, {
+      method: 'POST',
+      body: JSON.stringify({ page: pageOf(target.url), call: method, arg }),
+      signal: AbortSignal.timeout(Math.max(0, timeoutMs)),
+    });
+    text = await response.text();
+  } catch (error) {
+    if ((error as Error).name === 'TimeoutError') return NO_REPLY;
+    throw new Error(`could not reach Metro on port ${target.port}`);
+  }
+  const reply = JSON.parse(text) as { value?: unknown; error?: string };
+  if (reply.error !== undefined) throw new Error(String(reply.error).split('\n')[0]);
+  return reply.value;
 }
 
 /**

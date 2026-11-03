@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import {
+  DEVTOOLS_AGENT,
   DEVTOOLS_ID,
   DEVTOOLS_FOCUS,
   DEVTOOLS_ROUTE,
@@ -39,11 +40,15 @@ import {
 // directory is a fine base: nothing resolved through it lives outside the project.
 const require = createRequire(__filename);
 
+/** Under DEVTOOLS_ROUTE: where a tool on this computer calls the app's agent global. */
+const AGENT_PATH = "/agent";
+
 function hostScript(): string {
   const ROUTE = DEVTOOLS_ROUTE;
   const id = DEVTOOLS_ID;
   const tabs = DEVTOOLS_TABS;
   const focus = DEVTOOLS_FOCUS;
+  const agent = DEVTOOLS_AGENT;
   return `
 import * as UI from '${ROUTE}/ui/legacy/legacy.js';
 import * as SDK from '${ROUTE}/core/sdk/sdk.js';
@@ -51,6 +56,8 @@ import * as SDK from '${ROUTE}/core/sdk/sdk.js';
 const DOMAIN = ${JSON.stringify(id)};
 const TABS = ${JSON.stringify(tabs)};
 const FOCUS = ${JSON.stringify(focus)};
+const AGENT = ${JSON.stringify(agent)};
+const AGENT_ROUTE = '${ROUTE}${AGENT_PATH}';
 const DISPATCHER = '__FUSEBOX_REACT_DEVTOOLS_DISPATCHER__';
 
 // The frontend builds itself after DOMContentLoaded, and the tab strip is the last thing to appear.
@@ -80,6 +87,49 @@ const getRuntime = () => {
   const targets = SDK.TargetManager.TargetManager.instance();
   const target = targets.primaryPageTarget() ?? targets.rootTarget();
   return target?.model(SDK.RuntimeModel.RuntimeModel) ?? null;
+};
+
+/**
+ * Takes calls to the app's agent global off the dev server and makes them on this window's own
+ * connection, where a second debugger would close this window. Only a method name and a JSON object
+ * ever arrive, and the call is built here from them, so nothing else can be evaluated. The stream
+ * stays open while the window does, which is how the dev server knows a window is on this page.
+ */
+const relayAgentCalls = () => {
+  const params = new URLSearchParams(location.search);
+  const socket = params.get('ws') ?? params.get('wss');
+  if (!socket) return;
+  // The query of the page's debugger URL, which is how a tool reading /json/list names it too.
+  const page = socket.slice(socket.indexOf('?') + 1);
+  const calls = new EventSource(AGENT_ROUTE + '/window?page=' + encodeURIComponent(page));
+  calls.onmessage = async (event) => {
+    const { id, call, arg } = JSON.parse(event.data);
+    const target = 'globalThis.' + AGENT;
+    const method = JSON.stringify(call);
+    let reply;
+    try {
+      const runtime = getRuntime();
+      if (!runtime) throw new Error('this DevTools window is not connected to the app');
+      const result = await runtime.agent.invoke_evaluate({
+        // Own methods only, so a name like toString reaches nothing of Object's.
+        expression: asciiOnly(
+          'Object.prototype.hasOwnProperty.call(' + target + ' || {}, ' + method + ') ? ' +
+            target + '[' + method + '](' + (arg === undefined ? '' : JSON.stringify(arg)) + ') : null',
+        ),
+        returnByValue: true,
+      });
+      const thrown = result.exceptionDetails;
+      const failed = result.getError?.();
+      reply = thrown
+        ? { error: 'the app threw: ' + (thrown.exception?.description ?? thrown.text) }
+        : failed
+          ? { error: failed }
+          : { value: result.result?.value };
+    } catch (error) {
+      reply = { error: String(error?.message ?? error) };
+    }
+    void fetch(AGENT_ROUTE + '/reply?id=' + id, { method: 'POST', body: JSON.stringify(reply) });
+  };
 };
 
 /**
@@ -235,6 +285,8 @@ const main = async () => {
   });
 };
 
+// Not behind main: a call needs only the connection, not the app's tab dispatcher.
+relayAgentCalls();
 main().catch((error) => console.error('[devtools] panel failed to start', error));
 `;
 }
@@ -242,11 +294,15 @@ main().catch((error) => console.error('[devtools] panel failed to start', error)
 type Incoming = {
   url?: string;
   method?: string;
+  headers?: Record<string, string | string[] | undefined>;
+  socket?: { remoteAddress?: string };
   on: (event: string, fn: (chunk?: unknown) => void) => void;
 };
 type Outgoing = {
   end: (body?: string | Uint8Array) => void;
   setHeader: (name: string, value: string) => void;
+  write: (chunk: string) => void;
+  on: (event: string, fn: () => void) => void;
   statusCode?: number;
 };
 type Middleware = (
@@ -410,6 +466,173 @@ function sendFile(
   });
 }
 
+// A call is a method name and a small JSON object. A reply can be a whole log, so it gets room.
+const CALL_LIMIT = 64 * 1024;
+const REPLY_LIMIT = 64 * 1024 * 1024;
+// The Origin hosts React Native's own debugger socket accepts, plus IPv6 loopback.
+const LOOPBACK_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "[::1]",
+  "0.0.0.0",
+  "[::]",
+]);
+
+/**
+ * This computer only. The address keeps other machines out. The Origin and Host keep out a web page
+ * open in a browser here, which can post to any port on localhost, or reach this one by pointing a
+ * domain of its own at 127.0.0.1.
+ */
+function isLocal(request: Incoming): boolean {
+  const address = request.socket?.remoteAddress ?? "";
+  if (address !== "::1" && !/^(::ffff:)?127\./.test(address)) return false;
+  const { origin, host } = request.headers ?? {};
+  return [origin, host === undefined ? undefined : `http://${host}`].every(
+    (url) => {
+      if (url === undefined) return true;
+      try {
+        return LOOPBACK_HOSTS.has(new URL(String(url)).hostname);
+      } catch {
+        return false;
+      }
+    },
+  );
+}
+
+/** The body as text, or null once it runs past `limit` bytes. */
+function readBody(request: Incoming, limit: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const decoder = new TextDecoder();
+    let text = "";
+    let size = 0;
+    request.on("data", (chunk) => {
+      size += (chunk as Uint8Array).byteLength;
+      if (size <= limit) {
+        text += decoder.decode(chunk as Uint8Array, { stream: true });
+      }
+    });
+    request.on("end", () =>
+      resolve(size > limit ? null : text + decoder.decode()),
+    );
+  });
+}
+
+function sendJson(response: Outgoing, status: number, body: unknown): void {
+  response.statusCode = status;
+  serve(response, JSON.stringify(body), "application/json");
+}
+
+type AgentCall = { page: string; call: string; arg?: object };
+
+/** Never an expression: a page, a method name, and a JSON object or nothing. */
+function parseCall(body: string): AgentCall | null {
+  let call: Partial<AgentCall> | null;
+  try {
+    call = JSON.parse(body);
+  } catch {
+    return null;
+  }
+  const arg: unknown = call?.arg;
+  const isObject =
+    arg === undefined ||
+    (typeof arg === "object" && arg !== null && !Array.isArray(arg));
+  return typeof call?.page === "string" &&
+    typeof call.call === "string" &&
+    /^\w+$/.test(call.call) &&
+    isObject
+    ? (call as AgentCall)
+    : null;
+}
+
+/**
+ * `${DEVTOOLS_ROUTE}/agent`, which calls the app's agent global through the DevTools window open on
+ * it. The host script holds `GET /agent/window` open as an event stream for as long as the window
+ * lives, takes each call off it, and posts the result to `/agent/reply`.
+ */
+function createAgentRelay() {
+  // The window open on each page, as the stream its host script holds.
+  const windows = new Map<string, Outgoing>();
+  // Each call sent to a window, holding the request of whoever asked.
+  const asking = new Map<number, Outgoing>();
+  let lastId = 0;
+
+  return async (
+    request: Incoming,
+    response: Outgoing,
+    path: string,
+  ): Promise<void> => {
+    if (!isLocal(request)) {
+      return sendJson(response, 403, { error: "this computer only" });
+    }
+    const params = new URLSearchParams((request.url ?? "").split("?")[1]);
+    const route = `${request.method} ${path}`;
+    const page = params.get("page");
+
+    if (route === `GET ${AGENT_PATH}`) {
+      return sendJson(response, 200, [...windows.keys()]);
+    }
+
+    if (route === `GET ${AGENT_PATH}/window` && page) {
+      response.setHeader("Content-Type", "text/event-stream");
+      // A compression middleware in front would hold the events back without no-transform.
+      response.setHeader("Cache-Control", "no-cache, no-transform");
+      response.write(": open\n\n");
+      // The newest wins: React Native has already disconnected an older window on the page.
+      windows.set(page, response);
+      response.on("close", () => {
+        if (windows.get(page) === response) windows.delete(page);
+      });
+      return;
+    }
+
+    if (route === `POST ${AGENT_PATH}`) {
+      const body = await readBody(request, CALL_LIMIT);
+      if (body === null) {
+        return sendJson(response, 413, { error: "a call is at most 64 KB" });
+      }
+      const call = parseCall(body);
+      if (!call) {
+        return sendJson(response, 400, {
+          error:
+            "expected { page, call, arg }: a method name and a JSON object",
+        });
+      }
+      const stream = windows.get(call.page);
+      if (!stream) {
+        return sendJson(response, 404, {
+          error: "no DevTools window is open on this page",
+        });
+      }
+      const id = ++lastId;
+      asking.set(id, response);
+      // The asker gave up: its own timeout, or JS paused at a breakpoint.
+      response.on("close", () => asking.delete(id));
+      stream.write(
+        `data: ${JSON.stringify({ id, call: call.call, arg: call.arg })}\n\n`,
+      );
+      return;
+    }
+
+    if (route === `POST ${AGENT_PATH}/reply`) {
+      const body = await readBody(request, REPLY_LIMIT);
+      const id = Number(params.get("id"));
+      const asker = asking.get(id);
+      asking.delete(id);
+      if (asker && body === null) {
+        sendJson(asker, 502, { error: "the reply was over 64 MB" });
+      } else if (asker && body !== null) {
+        // Passed on as the window wrote it, rather than parsed and written again.
+        serve(asker, body, "application/json");
+      }
+      response.statusCode = 204;
+      response.end();
+      return;
+    }
+
+    sendJson(response, 404, { error: "no such route" });
+  };
+}
+
 export type ReactNativeDevtoolsTabOptions = {
   /**
    * Where React Native DevTools' own files are, for a layout this cannot work out for itself. A
@@ -446,6 +669,7 @@ export function withReactNativeDevtoolsTab<
   );
 
   pointDebuggerAt(roots);
+  const relay = createAgentRelay();
 
   /** Answers one of our routes, or reports that the request was not ours. */
   const handle = (request: Incoming, response: Outgoing): boolean => {
@@ -453,6 +677,11 @@ export function withReactNativeDevtoolsTab<
     if (!url.startsWith(base)) return false;
 
     const rest = url.slice(base.length) || "/";
+
+    if (rest === AGENT_PATH || rest.startsWith(`${AGENT_PATH}/`)) {
+      void relay(request, response, rest);
+      return true;
+    }
 
     if (rest === "/host.js") {
       serve(response, hostScript(), "application/javascript");

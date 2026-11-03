@@ -1,3 +1,5 @@
+import { RELAY_ROUTE, pageOf } from './evaluate.service';
+
 export const DEFAULT_PORTS = Array.from({ length: 10 }, (_, i) => 8081 + i);
 
 /** The page dev-middleware adds for React Native below 0.76, which has no stable page of its own. */
@@ -28,6 +30,11 @@ export type App = {
    * Native DevTools window that is open on the app.
    */
   multipleDebuggers: boolean;
+  /**
+   * Whether a DevTools window served by `withDevtools` is open on the page, which the CLI then asks
+   * instead of attaching. Undefined when Metro has no such route.
+   */
+  windowOpen?: boolean;
 };
 
 export async function findApps(ports: readonly number[]): Promise<App[]> {
@@ -43,13 +50,18 @@ async function appsOnPort(port: number): Promise<App[]> {
 
   // Read once per command: while a device has no page yet, each read prints a 7-line warning in
   // Metro's terminal.
-  const [pages, manifest] = await Promise.all([
+  const [pages, manifest, windows] = await Promise.all([
     get(`${base}/json/list`)
       .then((response) => response.json() as Promise<MetroPage[]>)
       .catch((): MetroPage[] => []),
     // In Expo Go every page's appId is `host.exp.Exponent`, so the slug has to come from here.
     get(base, { accept: 'application/expo+json', 'expo-platform': 'ios' })
       .then((response) => response.json())
+      .catch(() => null),
+    // The pages a window is open on. Anything but a list means Metro has no route.
+    get(`${base}${RELAY_ROUTE}`)
+      .then((response) => response.json())
+      .then((list: unknown) => (Array.isArray(list) ? list : null))
       .catch(() => null),
   ]);
   const expo: { slug?: string; name?: string } | undefined = manifest?.extra?.expoClient;
@@ -68,6 +80,7 @@ async function appsOnPort(port: number): Promise<App[]> {
     port,
     url: page.webSocketDebuggerUrl,
     multipleDebuggers: page.reactNative?.capabilities?.supportsMultipleDebuggers === true,
+    windowOpen: windows?.includes(pageOf(page.webSocketDebuggerUrl)),
   }));
 }
 
