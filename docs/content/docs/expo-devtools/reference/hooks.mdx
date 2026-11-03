@@ -28,7 +28,7 @@ const panel = useDevtoolsPanel();
 It reads the same state the launcher button does, so the two stay in step. Branch your own trigger on
 `enabled` and a release build has no dead button in it.
 
-## `useDevtoolsWebView(name)`
+## `useDevtoolsWebView(source?)`
 
 Returns the props one `<WebView />` needs to report in. See
 [In-app browsers](/docs/expo-devtools/in-app-browsers) for the whole story.
@@ -97,10 +97,33 @@ import { devtools } from '@axonpack/expo-devtools';
 | `clearMarks(name?)`                        | Drops recorded marks, all of them or one name.                                                                                                                                        |
 | `clearMeasures(name?)`                     | Drops recorded measures, all of them or one name.                                                                                                                                     |
 | `setCrashContext(context)`                 | Keys attached to every crash record from here on: user id, feature flags. Replaces rather than merges; `null` clears it.                                                        |
-| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore`, `navigationStore`, `crashStore` | The underlying stores, if you want to read or drive them yourself.                                                                  |
+| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore`, `navigationStore`, `reduxStore`, `crashStore` | The underlying stores, if you want to read or drive them yourself. `reduxStore.getSnapshot()` returns the last 200 actions as `ReduxActionEntry` rows, newest first. |
 
 Nothing on it does anything until a provider has started with `enabled: true`, so call sites need no
 guard of their own.
+
+## `devtoolsReduxEnhancer()`
+
+A Redux store enhancer that feeds the Redux tab. The package takes no redux dependency, so you add it
+to the store you already create. Put it after `applyMiddleware`, so it sees the actions a thunk
+dispatches.
+
+```ts
+import { devtoolsReduxEnhancer } from '@axonpack/expo-devtools';
+
+// Redux Toolkit
+configureStore({
+  reducer,
+  enhancers: (getDefaultEnhancers) => getDefaultEnhancers().concat(devtoolsReduxEnhancer()),
+});
+
+// Plain Redux
+createStore(reducer, compose(applyMiddleware(thunk), devtoolsReduxEnhancer()));
+```
+
+Until the provider has started with `enabled: true` it only passes actions on, so it is safe to leave
+in a release build. It records an action only when it is an object with a string `type`. Which types
+it keeps is set by `redux.allow` and `redux.deny` in [the provider config](/docs/expo-devtools/reference/provider#redux).
 
 ## User timing
 

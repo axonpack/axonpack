@@ -143,7 +143,8 @@ Two items on a row's ⋮ menu answer a request instead of the network.
 
 The editor is seeded from what was actually captured, so overriding a response means editing the real
 one rather than retyping it. Reopening it on a URL that already has a rule loads that rule instead. A
-status that is not a number between 100 and 599 is saved as 200.
+status that is not a number between 100 and 599 is saved as 200. Any status in that range, 1xx
+included, reaches the app as set, through fetch and XMLHttpRequest alike.
 
 Rules are keyed by the **whole URL**, never a pattern: a rule that matched more than you meant is a
 request you cannot explain, and the row a rule is made from always knows its exact URL. A row a rule
@@ -152,6 +153,8 @@ for one of the server's own replies, and the filter panel's **Only overridden or
 exactly those.
 
 Rules live in memory for the session. There is no config option for them and nothing is persisted.
+The `devtools` command line tool sets and removes the same rules; see
+[its network actions](/docs/expo-devtools/reference/cli#network-actions).
 
 ## Detail sheet
 
@@ -253,4 +256,5 @@ and they are shared with the whole app, not just this request. Code Snippet is t
 cURL command, kept in step with the fields.
 
 Sandbox requests go out through the same patched `fetch`, so they appear in the log like any other
-request.
+request. `devtools network send` and `replay` send through the same code; see
+[the CLI reference](/docs/expo-devtools/reference/cli#network-actions).

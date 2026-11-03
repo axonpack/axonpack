@@ -10,8 +10,9 @@ import type { DevtoolsConfig, Palette } from '@axonpack/expo-devtools';
 ## Configuration
 
 `DevtoolsConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
-`DevtoolsStorageConfig`, `DevtoolsNavigationConfig`, `DevtoolsCrashConfig`, `DevtoolsProviderProps`,
-`DevtoolsPanelControls`, `DevtoolsWebViewProps`, `DevtoolsErrorBoundaryProps`.
+`DevtoolsStorageConfig`, `DevtoolsQueryConfig`, `DevtoolsNavigationConfig`, `DevtoolsReduxConfig`,
+`DevtoolsCrashConfig`, `DevtoolsAiUsageConfig`, `DevtoolsProviderProps`, `DevtoolsPanelControls`,
+`DevtoolsWebViewProps`, `DevtoolsErrorBoundaryProps`.
 
 ## Theming
 
@@ -36,10 +37,21 @@ import type { DevtoolsConfig, Palette } from '@axonpack/expo-devtools';
 `StorageKeyBlacklist`, `StorageAdapterState`, `StorageEntry`, `StorageReadResult`, `StorageValueType`,
 `StoredValueKind`, `AsyncStorageLikeDriver`, `MmkvLikeDriver`, `SecureStoreLikeDriver`.
 
+## Query
+
+`QueryClientLike`: the part of a TanStack Query v5 `QueryClient` the Query tab calls, its two caches
+and `refetchQueries`, `invalidateQueries`, `resetQueries` and `removeQueries`.
+
 ## Navigation
 
 `NavigationMove`, `NavigationRoute`, `NavigationRouterKind`, `NavigationState`,
 `NavigationContainerRefLike`, `NavigationContainerLike`.
+
+## Redux
+
+`ReduxAction` (a plain object with a string `type`), `ReduxActionEntry` (one row: `id`, `timestamp`,
+`type`, `action`, `prevState`, `state`), `ActionTypeMatcher` (`string | RegExp`, for `redux.allow` and
+`redux.deny`).
 
 ## Crash
 

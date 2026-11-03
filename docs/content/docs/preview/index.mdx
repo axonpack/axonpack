@@ -8,7 +8,7 @@ This package lets QA try the JS of a branch or pull request without a new native
 one bundle per branch to your own S3-compatible bucket. In the app, QA opens a list, picks a
 preview, and the app restarts into it. Going back to the base build is one tap.
 
-It works like EAS Update or CodePush, but only for previews. Your store releases and expo-updates
+It is an over-the-air JS update made only for previews. Your store releases and expo-updates
 keep working as they do.
 
 ```sh
@@ -32,6 +32,19 @@ export default function App() {
 ```sh
 npx preview publish   # builds this branch for Android and iOS and uploads it
 ```
+
+## For AI agents
+
+The `axonpack-preview` agent skill teaches your coding agent the config plugin, the list in the app,
+and the `preview` CLI that publishes, removes and prunes previews. [Agent skills](/docs/agent-skills)
+has the command for each package manager.
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-preview
+```
+
+Agents working in separate git worktrees can each start a Metro with `npx preview start`, and one
+debug build switches between them live. See [Dev preview servers](/docs/preview/dev-preview-servers).
 
 ## How it works
 

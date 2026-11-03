@@ -16,7 +16,7 @@ import styles from './devtools-panel.module.css';
 /**
  * A drawing of the panel rather than a screenshot, so it themes with the page, weighs nothing and
  * can walk its own tabs. The track repeats the first pane at the end: the loop's wrap then lands on
- * an identical frame instead of snapping backwards through five panes.
+ * an identical frame instead of snapping backwards through every pane.
  *
  * It owns its motion and knows nothing about where it is mounted, so it outlives the hero.
  *
@@ -68,7 +68,7 @@ function Chip({ text, tone }: { text: string; tone?: Tone }) {
 }
 
 /** The record button is a ring around a square, not a glyph, so it is drawn rather than imported. */
-function RecordDot() {
+export function RecordDot() {
   return (
     <span className="grid size-5 shrink-0 place-items-center rounded-full border-[1.5px] border-rose-500">
       <span className="size-2 rounded-[2px] bg-rose-500" />
@@ -218,6 +218,25 @@ function MetricRow({ row }: { row: Extract<Row, { kind: 'metric' }> }) {
       <span className="truncate">{row.label}</span>
       <span className="ms-auto shrink-0 text-[0.6875rem] text-fd-muted-foreground">{row.sub}</span>
       <span className={`shrink-0 text-[0.6875rem] font-bold ${TEXT[row.tone]}`}>{row.value}</span>
+    </li>
+  );
+}
+
+export function QueryRow({ row }: { row: Extract<Row, { kind: 'query' }> }) {
+  return (
+    <li className="space-y-0.5 px-3 py-2 font-mono">
+      <div className="flex items-baseline gap-2">
+        <span className="truncate text-[0.6875rem] font-semibold">{row.command}</span>
+        <span className="ms-auto shrink-0 text-[0.625rem] text-fd-muted-foreground">{row.time}</span>
+      </div>
+      <div className="flex items-baseline gap-2 text-[0.6875rem] text-fd-muted-foreground">
+        {row.error ? (
+          <span className="truncate font-sans text-rose-600 dark:text-rose-400">{row.error}</span>
+        ) : (
+          <span className={row.matched === 'action' ? 'font-semibold text-fd-primary' : ''}>{row.matched}</span>
+        )}
+        <span className="ms-auto shrink-0">{row.took}</span>
+      </div>
     </li>
   );
 }
@@ -409,6 +428,7 @@ function RowList({ rows }: { rows: Row[] }) {
         if (row.kind === 'log') return <LogRow key={i} row={row} />;
         if (row.kind === 'card') return <CardRow key={i} row={row} />;
         if (row.kind === 'entry') return <EntryRow key={i} row={row} />;
+        if (row.kind === 'query') return <QueryRow key={i} row={row} />;
         return <MetricRow key={i} row={row} />;
       })}
     </ul>
@@ -490,7 +510,7 @@ export function DevtoolsPanel() {
             <span
               key={pane.tab}
               className={`${styles.tab} relative isolate flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.75rem] font-medium`}
-              style={{ animationDelay: `${4 * i - 20}s` }}
+              style={{ animationDelay: `${4 * i - 4 * panes.length}s` }}
             >
               <span className="absolute inset-0 -z-10 rounded-md bg-fd-card" />
               <pane.icon className="size-3.5 shrink-0 text-fd-primary" />

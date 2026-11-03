@@ -15,6 +15,9 @@ bun run start   # Expo Go / dev client
 bun run ios     # or: bun run android (full native build)
 ```
 
+iOS 27 needs Expo SDK 58 or later, which the example is on. After an upgrade, regenerate the native
+project with `npx expo prebuild --clean -p ios`, since a stale `ios/` folder crashes at launch.
+
 ## What each screen does
 
 - **Requests** has a sub-tab per way a request can leave the app:

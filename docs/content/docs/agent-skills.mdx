@@ -1,0 +1,65 @@
+---
+title: Agent skills
+description: Teach your AI coding agent every Axonpack package with one command, through the open skills CLI.
+icon: Bot
+---
+
+The repository has an agent skill for each package, and one for Axonpack as a whole. A skill is a
+`SKILL.md` file your coding agent loads when a task needs it. Each one covers setup, the main APIs
+with short examples, the mistakes to avoid, and links to these docs, and describes only what is
+published.
+
+| Skill                                | What it teaches                                                                                                  |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `axonpack`                           | Which package fits a task, installing with any package manager, rebuilding after a config plugin, and where the docs are |
+| `axonpack-expo-devtools`             | Setting up `@axonpack/expo-devtools`, and reading the running app (or mocking and sending its requests) from a terminal with the [`devtools` CLI](/docs/expo-devtools/ai-agents) |
+| `axonpack-react-native-devtools-tab` | Writing and registering a tab of your own in React Native DevTools                                               |
+| `axonpack-react-pretty-print`        | JSON and XML trees and syntax highlighting, on the web and in React Native                                       |
+| `axonpack-in-app-updates`            | The update prompt, forced updates, providers, and faking a release to test it                                    |
+| `axonpack-preview`                   | The config plugin, the preview list in the app, and the `preview` CLI                                            |
+
+## Install them
+
+Run this in your app's project folder:
+
+| Package manager | Command                                  |
+| --------------- | ---------------------------------------- |
+| npm             | `npx skills add axonpack/axonpack`       |
+| yarn            | `yarn dlx skills add axonpack/axonpack`  |
+| pnpm            | `pnpm dlx skills add axonpack/axonpack`  |
+| bun             | `bunx skills add axonpack/axonpack`      |
+
+The CLI lists the skills and the coding agents it finds on your computer, then installs the ones you
+pick into the project. It needs Node 22.20 or newer, and `yarn dlx` needs Yarn 2 or later.
+
+## Choose on the command line
+
+The examples use `npx`. The other forms take the same flags.
+
+```sh
+# List the skills without installing anything
+npx skills add axonpack/axonpack --list
+
+# One skill
+npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
+
+# Several
+npx skills add axonpack/axonpack --skill axonpack axonpack-preview
+
+# One agent, with no questions
+npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools -a <agent> -y
+```
+
+- `-a` takes the name of any agent the CLI supports. Its
+  [agent list](https://github.com/vercel-labs/skills/blob/main/docs/agents.md) has the names and
+  where each one keeps its skills.
+- `-g` installs for your user instead of this project, so every project on the computer has them.
+- `npx skills update` brings installed skills up to date with the repository.
+
+## Without the CLI
+
+Each skill is a folder in [`skills/`](https://github.com/axonpack/axonpack/tree/main/skills) in the
+repository. Copy one to wherever your agent reads skills from.
+
+For `@axonpack/expo-devtools` alone, [Use with AI agents](/docs/expo-devtools/ai-agents#tell-your-agent-about-it)
+has a short snippet for your `AGENTS.md` or `CLAUDE.md` instead.

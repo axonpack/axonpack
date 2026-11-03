@@ -68,6 +68,12 @@ Metro reads the config when it builds for release too, so keep `@axonpack/expo-d
 `dependencies`, not `devDependencies`, if your release install skips dev dependencies. A `__DEV__`
 check cannot guard the line: `metro.config.js` runs in Node, where `__DEV__` does not exist.
 
+## The command line tool
+
+The app answers the [`devtools` command line tool](/docs/expo-devtools/ai-agents) only in a
+development bundle with the devtools enabled. A release build installs nothing the tool can talk to,
+whatever `enabled` says.
+
 ## Next step
 
 <Cards>

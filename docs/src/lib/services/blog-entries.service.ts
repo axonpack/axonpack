@@ -4,8 +4,8 @@ import { packages } from '@/lib/services/packages.service';
  * Releases are not written by hand. Each is a section of a library's CHANGELOG.md, parsed at build
  * time and dated from npm's publish times.
  *
- * Posts used to live alongside these in an Astro content collection. There are none yet, and this
- * app has fumadocs' MDX pipeline available for when there are, so nothing here reads a collection.
+ * Posts are written by hand and live apart from these, as MDX in `content/blog/`, read through
+ * `blog` in `lib/source.ts`.
  */
 export type ReleaseEntry = {
   date: Date;

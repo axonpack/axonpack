@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { source } from '@/lib/source';
+import { blog, source } from '@/lib/source';
 import { canonicalPath, siteUrl } from '@/lib/shared';
 
 /**
@@ -17,8 +17,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // The docs index is one of `getPages()`, so listing it here as well put it in twice.
   const fixed = ['/', '/blog'];
   const docs = source.getPages().map((page) => page.url);
+  const posts = blog.getPages().map((post) => post.url);
 
-  return [...fixed, ...docs].map((path) => ({
+  return [...fixed, ...docs, ...posts].map((path) => ({
     url: new URL(canonicalPath(path), siteUrl).href,
     lastModified,
   }));

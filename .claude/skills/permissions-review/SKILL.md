@@ -1,6 +1,8 @@
 ---
 name: permissions-review
 description: Audit what a native change actually obliges an app to declare — runtime permissions, iOS required-reason APIs and privacy manifests, Android manifest merging, entitlements. Trigger before adding or reviewing native code, or on "does this need a permission", "permission review", "privacy manifest", "required reason API", "is this safe to ship".
+metadata:
+  internal: true
 ---
 
 # Permissions review

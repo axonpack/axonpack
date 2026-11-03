@@ -12,6 +12,7 @@
     "performance-tab",
     "storage-tab",
     "navigation-tab",
+    "ai-usage-tab",
     "debug-tab",
     "devtools-tab",
     "---API---",
@@ -20,6 +21,8 @@
     "storage-adapters",
     "themes",
     "types",
+    "---Command line---",
+    "cli",
     "---Platform---",
     "development-build"
   ]

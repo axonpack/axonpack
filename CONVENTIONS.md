@@ -38,6 +38,20 @@
   inside its feature until a second feature actually imports it. `client/create-devtools-client.client.ts`
   is outside both — one factory for the whole package, and the only thing at the root beside `index.ts`.
 
+  **`agent/` and `cli/` are the two halves of the `devtools` command line tool**, and sit beside
+  `features/` and `core/` with the same layer subfolders. `agent/` runs in the app:
+  `constants/agent-topics.const.ts` holds the `AgentTopic` type and the `TOPICS` list,
+  `services/install-agent.service.ts` puts `__AXONPACK_AGENT__` on `globalThis` in development, and
+  `utils/run-query.util.ts` runs every query operation for every topic. `cli/` runs in Node and is
+  bundled to `build/cli.cjs`: `cli.client.ts` is its entry point. Nothing in the app imports `cli/`,
+  and `cli/` imports only types from `agent/`, so neither side pulls the other into its bundle.
+
+  **A feature joins the tool with one file**, `features/<f>/constants/<f>-agent.const.ts`, which
+  exports one `AgentTopic` (its rows, field getters and default columns, read from the feature's
+  store, which has already redacted), plus one line in `TOPICS`. It writes no query code: filters,
+  paging, sorting and output come from `run-query.util.ts`. Its test, seeded from the store, goes in
+  the `__tests__/` folder beside it.
+
 - **Stores are built on `createAxonStore`** (`src/core/stores/axon.store.ts`), which matches
   zustand's semantics without the dependency. Hand it the initial state and an actions factory
   `(set, get) => ({ ... })`; it supplies `getState`, `setState`, `getInitialState`, `subscribe` and

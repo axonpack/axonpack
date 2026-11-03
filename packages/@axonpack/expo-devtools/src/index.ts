@@ -19,6 +19,7 @@ export type {
   DevtoolsNavigationConfig,
   DevtoolsQueryConfig,
   DevtoolsReduxConfig,
+  DevtoolsAiUsageConfig,
 } from './client/start-devtools.client';
 export type { QueryClientLike } from './features/query/stores/query.store';
 export { DevtoolsProvider } from './core/components/devtools-provider.component';

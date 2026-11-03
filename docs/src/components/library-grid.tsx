@@ -1,128 +1,109 @@
 import Link from 'next/link';
-import { Download, Package } from 'lucide-react';
-import { BUMP_STYLES } from '@/lib/constants/bump-styles.const';
-import { formatDate } from '@/lib/utils/format-date.util';
+import { ServerCodeBlock } from 'fumadocs-ui/components/codeblock.rsc';
+import { content } from '@/lib/services/content.service';
+import { Prose } from '@/components/prose';
 import { packages } from '@/lib/services/packages.service';
 
+const { libraries } = content;
+
 /**
- * A card per library. Everything on it comes from npm and from the package's own changelog, so it
- * says what is actually published rather than what someone remembered to write down: the version,
- * the keywords the package ships with, its licence, its downloads and its last few releases.
- *
- * An `article` rather than one big link, because the card carries several of its own. A link inside
- * a link is invalid, and the whole card being one target would make the changelog unreachable.
- *
- * A package without docs points at npm instead. Publishing is one job and writing the pages is
- * another, so a card cannot assume the second happened.
+ * Story order comes from content.json. A package npm has that content.json has no story for still
+ * shows, last, with its npm description, so publishing one never leaves it off the page. A story
+ * for a package npm does not have never shows, which keeps unshipped work off the site.
+ */
+const order = Object.keys(libraries.stories);
+const rank = (slug: string) => (order.includes(slug) ? order.indexOf(slug) : order.length);
+const listed = [...packages].sort((a, b) => rank(a.slug) - rank(b.slug));
+
+/**
+ * One package per row: the scene that sends someone looking for it, what it does about it, and a
+ * sample from its docs. The version, downloads and links come from npm, so they are what is
+ * actually published.
  */
 export function LibraryGrid() {
   return (
-    <section className="border-b px-5 py-24">
-      <div className="reveal mx-auto max-w-5xl">
+    <section aria-labelledby="libraries-title" className="border-t px-5 pt-20 pb-8 sm:pt-28 sm:pb-12">
+      <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-[clamp(1.75rem,1.3rem+1.6vw,2.5rem)] leading-tight font-semibold tracking-tight text-balance">
-            Libraries
+          <h2
+            id="libraries-title"
+            className="text-[clamp(1.75rem,1.2rem+2vw,2.75rem)] leading-tight font-semibold tracking-[-0.03em] text-balance"
+          >
+            {libraries.title}
           </h2>
-          <p className="mt-4 text-fd-muted-foreground text-pretty">
-            Every library is released and documented on its own, and this list comes straight from
-            npm. If it is here, it is installable today.
-          </p>
+          <p className="mt-4 text-fd-muted-foreground text-pretty">{libraries.body}</p>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2">
-          {packages.map((pkg) => (
-            <article
-              key={pkg.name}
-              className="relative flex flex-col rounded-xl border bg-fd-card p-5 transition-colors hover:border-fd-primary"
-            >
-              <div className="flex items-center gap-2">
-                <Package className="size-4 shrink-0 text-fd-primary" />
-                <h3 className="font-medium tracking-tight">
-                  <Link
-                    href={pkg.hasDocs ? pkg.docsHref : pkg.npmHref}
-                    className="after:absolute after:inset-0 hover:underline"
+        <div className="mt-12 divide-y border-t">
+          {listed.map((pkg) => {
+            const story = libraries.stories[pkg.slug];
+            return (
+              <article
+                key={pkg.name}
+                aria-labelledby={`pkg-${pkg.slug}`}
+                className="grid grid-cols-1 gap-8 py-12 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-14"
+              >
+                <div className="min-w-0">
+                  <h3
+                    id={`pkg-${pkg.slug}`}
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[1.5rem] leading-tight font-semibold tracking-[-0.02em]"
                   >
                     {pkg.title}
-                  </Link>
-                </h3>
-                <span className="ms-auto rounded-full border bg-fd-secondary px-2 py-0.5 font-mono text-[0.7rem] text-fd-muted-foreground">
-                  v{pkg.version}
-                </span>
-              </div>
+                    <span className="font-mono text-xs font-normal tracking-normal text-fd-muted-foreground">
+                      v{pkg.version}
+                    </span>
+                  </h3>
 
-              <p className="mt-3 text-sm text-fd-muted-foreground text-pretty">{pkg.description}</p>
+                  {story ? (
+                    <>
+                      <p className="mt-5 border-s-2 ps-4 leading-relaxed text-fd-muted-foreground text-pretty">
+                        <Prose text={story.scene} />
+                      </p>
+                      <p className="mt-4 leading-relaxed text-pretty"><Prose text={story.fix} /></p>
+                    </>
+                  ) : (
+                    <p className="mt-5 leading-relaxed text-pretty">{pkg.description}</p>
+                  )}
 
-              {pkg.keywords.length > 0 && (
-                <ul className="mt-4 flex flex-wrap gap-1.5">
-                  {/* Six is what fits on two rows at the narrowest the card gets. */}
-                  {pkg.keywords.slice(0, 6).map((keyword) => (
-                    <li
-                      key={keyword}
-                      className="rounded-full border px-2 py-0.5 text-[0.7rem] text-fd-muted-foreground"
+                  <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+                    <Link
+                      href={pkg.hasDocs ? pkg.docsHref : pkg.npmHref}
+                      className="font-medium text-fd-primary underline-offset-4 hover:underline"
                     >
-                      {keyword}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {pkg.releases.length > 0 && (
-                <div className="mt-5 border-t pt-4">
-                  <div className="flex items-baseline justify-between">
-                    <h4 className="text-[0.7rem] font-medium tracking-wide text-fd-muted-foreground uppercase">
-                      Recent releases
-                    </h4>
-                    {pkg.hasChangelog && (
-                      <Link
-                        href={`${pkg.docsHref}changelog`}
-                        className="relative z-10 text-xs text-fd-primary hover:underline"
-                      >
-                        All {pkg.releases.length} &rarr;
-                      </Link>
+                      {pkg.title} docs
+                    </Link>
+                    <a
+                      href={pkg.npmHref}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-fd-muted-foreground underline-offset-4 hover:text-fd-foreground hover:underline"
+                    >
+                      npm
+                    </a>
+                    {pkg.totalDownloads !== null && (
+                      <span className="text-fd-muted-foreground">
+                        {pkg.totalDownloads.toLocaleString('en')} downloads
+                      </span>
                     )}
-                  </div>
-                  <ul className="mt-2.5 space-y-2">
-                    {pkg.releases.slice(0, 3).map((release) => (
-                      <li key={release.version} className="flex items-center gap-2 text-xs">
-                        <span className="font-mono text-fd-foreground">{release.version}</span>
-                        {release.bump && (
-                          <span
-                            className={`rounded-full border px-1.5 py-px text-[0.65rem] ${BUMP_STYLES[release.bump] ?? BUMP_STYLES.patch}`}
-                          >
-                            {release.bump}
-                          </span>
-                        )}
-                        {release.date && (
-                          <span className="ms-auto text-fd-muted-foreground">
-                            {formatDate(new Date(release.date))}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                    {pkg.license && <span className="text-fd-muted-foreground">{pkg.license}</span>}
+                  </p>
+                  <p className="mt-2 text-sm text-fd-muted-foreground">
+                    Agent skill: <code className="font-mono text-[0.8125rem] text-fd-foreground">axonpack-{pkg.slug}</code>
+                  </p>
                 </div>
-              )}
 
-              {/* Pushed down so the footers line up however long the descriptions above them are. */}
-              <div className="mt-auto flex items-center gap-3 pt-5 text-xs text-fd-muted-foreground">
-                {pkg.totalDownloads !== null && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Download className="size-3" />
-                    {pkg.totalDownloads.toLocaleString()} downloads
-                  </span>
+                {story && (
+                  <div className="min-w-0">
+                    <ServerCodeBlock
+                      code={story.sample.code}
+                      lang={story.sample.lang}
+                      codeblock={{ title: story.sample.title }}
+                    />
+                  </div>
                 )}
-                {pkg.license && <span>{pkg.license}</span>}
-                <a
-                  href={pkg.npmHref}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="relative z-10 ms-auto hover:text-fd-foreground"
-                >
-                  npm ↗
-                </a>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>

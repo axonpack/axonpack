@@ -3,17 +3,20 @@
 import { useState } from 'react';
 import { Check, Copy, Terminal } from 'lucide-react';
 
-/** The only interactive part of the hero, so the only thing that needs to be a client component. */
-export function InstallChip({ command }: { command: string }) {
+/** A client component of its own, so the sections that show a command can stay server components. */
+export function InstallChip({ command, label = 'Copy install command' }: { command: string; label?: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
     <div className="mt-6 inline-flex max-w-full items-center gap-2.5 rounded-lg border bg-fd-card py-2 pr-2 pl-3.5 font-mono text-[0.8125rem] text-fd-muted-foreground">
       <Terminal className="size-3.5 shrink-0 opacity-60" />
-      <code className="overflow-x-auto whitespace-nowrap text-fd-foreground">{command}</code>
+      {/* Wraps on a phone, where a long command would otherwise hide half of itself in a scroll. */}
+      <code className="text-start text-fd-foreground [overflow-wrap:anywhere] sm:overflow-x-auto sm:whitespace-nowrap">
+        {command}
+      </code>
       <button
         type="button"
-        aria-label="Copy install command"
+        aria-label={label}
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(command);

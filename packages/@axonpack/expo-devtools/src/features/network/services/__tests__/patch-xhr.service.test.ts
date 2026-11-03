@@ -339,6 +339,16 @@ describe('patchXHR with a rule in the way', () => {
     expect(networkLogStore.getSnapshot()[0]?.intercepted).toBe('overridden');
   });
 
+  it.each([102, 599])('delivers a %i override as it is, and logs it', (status) => {
+    networkOverridesStore.set({ url: URL, action: 'respond', status, body: 'mocked' });
+    const xhr = open();
+    xhr.send();
+    xhr.finish();
+
+    expect(xhr.status).toBe(status);
+    expect(networkLogStore.getSnapshot()[0]?.statusCode).toBe(status);
+  });
+
   // An app that asked for `json` expects an object, so handing it the string would break the code
   // the override exists to exercise.
   it('parses the body for a responseType of json', () => {

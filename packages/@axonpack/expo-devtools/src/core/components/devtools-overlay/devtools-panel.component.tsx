@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
 import { MetroStrip } from './metro-strip.component';
 import { ThemePicker } from './theme-picker.component';
+import { AiUsageView } from '../../../features/ai-usage/components/ai-usage-view.component';
 import { ConsoleView } from '../../../features/console/components/console-view.component';
 import {
   consoleLogStore,
@@ -66,6 +67,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         return <ReduxView />;
       case 'crashes':
         return <CrashView />;
+      case 'ai-usage':
+        return <AiUsageView />;
       case 'debug':
         return <DebugView />;
       default:

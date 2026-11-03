@@ -3,6 +3,7 @@ import { Logo } from '@/components/logo';
 import { appName, gitConfig } from './shared';
 import { documented, packages } from './services/packages.service';
 import { getReleases } from './services/blog-entries.service';
+import { blog } from './source';
 import { navLink } from './services/content.service';
 
 /**
@@ -12,6 +13,7 @@ import { navLink } from './services/content.service';
  */
 export function baseOptions(): BaseLayoutProps {
   const releases = getReleases();
+  const posts = blog.getPages().length;
   const community = navLink('Community');
 
   return {
@@ -40,7 +42,11 @@ export function baseOptions(): BaseLayoutProps {
         type: 'menu',
         text: 'Blog',
         items: [
-          { text: 'Writing', description: 'Nothing published yet', url: '/blog' },
+          {
+            text: 'Writing',
+            description: posts ? `${posts} post${posts === 1 ? '' : 's'}` : 'Nothing published yet',
+            url: '/blog',
+          },
           // Each library keeps its changelog in its own docs, so the menu lists them rather than
           // linking one aggregate page. Only the documented ones: a package can be on npm before
           // its pages are written, and linking to those 404s.

@@ -65,15 +65,20 @@ function unreadEntry(adapterId: string, key: string): StorageEntry {
  * view report no change.
  *
  * A failure listing the keys is the adapter's failure and shows as one.
+ *
+ * With `keepValues`, a key already read keeps its value and only new keys arrive unread, so the CLI
+ * can list keys on every query without reading every value again.
  */
-export async function readAdapter(adapter: StorageAdapter): Promise<void> {
+export async function readAdapter(adapter: StorageAdapter, keepValues = false): Promise<void> {
   if (!storageStore.isEnabled()) return;
 
   storageStore.beginRead(adapter.id);
 
   try {
     const allKeys = await adapter.getAllKeys();
-    const entries = sortKeys(allKeys).map((key) => unreadEntry(adapter.id, key));
+    // Taken after the await, so a value read while the keys were listed is kept too.
+    const kept = keepValues ? currentEntries(adapter.id) : undefined;
+    const entries = sortKeys(allKeys).map((key) => kept?.get(key) ?? unreadEntry(adapter.id, key));
 
     storageStore.setEntries(adapter.id, entries, {
       totalKeys: allKeys.length,
