@@ -74,6 +74,9 @@ npx preview publish
 The write key is for publishing only. Never put it in the app: the app gets the bucket's public
 address, or a read-only key for a private bucket.
 
+An [agent skill](https://axonpack.dev/docs/agent-skills) teaches your coding agent this package:
+`npx skills add axonpack/axonpack --skill axonpack axonpack-preview`.
+
 ## Documentation
 
 Everything else is on the docs site.

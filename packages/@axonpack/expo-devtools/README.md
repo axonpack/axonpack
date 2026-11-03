@@ -87,7 +87,9 @@ npx devtools network --where 'code>=400' --since 10m
 It works with any package manager, needs Node 22 or newer and `expo start`, and keeps every redaction
 you configured. The AI Usage tab lists each query and the reply it got.
 [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) has every command, and a
-snippet to paste into your `AGENTS.md` or `CLAUDE.md`.
+snippet to paste into your `AGENTS.md` or `CLAUDE.md`. The `axonpack-expo-devtools`
+[agent skill](https://axonpack.dev/docs/agent-skills) teaches your agent the whole tool:
+`npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools`.
 
 ## Documentation
 
