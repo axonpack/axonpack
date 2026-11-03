@@ -15,9 +15,13 @@ npx expo install @axonpack/preview expo-file-system
 | Needs                  | Why                                                                                      |
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Expo SDK 53 or later   | The iOS hook the package uses came with SDK 53                                           |
-| The New Architecture   | The default from SDK 53. Under the old one the package logs one warning and always loads the base bundle |
-| Hermes                 | Previews are Hermes bytecode, the same as a release build                                |
+| React Native 0.79 or later | The version SDK 53 ships                                                             |
+| The New Architecture   | The default from SDK 53. Under the old one the package logs one warning and always loads the base bundle. On SDK 53 and 54, check the app config doesn't set `newArchEnabled` to `false` |
+| Hermes                 | Previews are Hermes bytecode, the same as a release build. On SDK 53 and 54, check the app config doesn't set `jsEngine` to `jsc` |
 | A native build         | The package has native code, so it does not run in Expo Go. A development or release build both work |
+
+iOS 27 needs Expo SDK 58 or later. After moving an app to it, regenerate the iOS project with
+`npx expo prebuild --clean -p ios`, since a stale `ios/` folder crashes at launch.
 
 <Callout type="warn" title="The old architecture">
 Under the old architecture nothing breaks, but nothing switches either. The package logs one warning
@@ -38,7 +42,8 @@ The CLI, `preview`, comes with the package. It runs from your app's root and use
 
 ## Add the config plugin
 
-Add the plugin to `app.json` (or `app.config.js`):
+Add the plugin to `app.json`, or to the `plugins` array that `app.config.js` or `app.config.ts`
+returns:
 
 ```json
 {
@@ -53,7 +58,8 @@ key, and the app's slug. The app uses the key to ask the bucket only for preview
 slug tells this app's [dev preview servers](/docs/preview/dev-preview-servers) apart from other
 apps'. Which setting to pick is on [Compatibility](/docs/preview/compatibility).
 
-Then make a native build:
+`npx expo config --type public` prints the config when the plugin is found, and fails when it
+isn't. Then make a native build:
 
 ```sh
 npx expo prebuild

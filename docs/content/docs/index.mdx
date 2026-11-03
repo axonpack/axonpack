@@ -67,6 +67,32 @@ Inside a package, the shape is always the same:
   />
 </Cards>
 
+## Several packages in one app
+
+Each package's installation page is complete on its own. When an app takes several of them, a few
+things are shared:
+
+- Check the requirements once, against the strictest package you are adding, then install them all
+  in one `npx expo install` with each package's peers.
+- `@axonpack/expo-devtools` and `@axonpack/react-native-devtools-tab` both wrap `metro.config.js`.
+  `withDevtools` is the same wrap as `withReactNativeDevtoolsTab` and serves your own tabs too, so
+  use one of them, not both.
+- Every provider and prompt is mounted once, in the root component, one inside the other:
+
+  ```tsx
+  <PreviewProvider config={previewConfig}>
+    <DevtoolsProvider config={{ enabled: __DEV__ }}>
+      {/* the app */}
+      <UpdatePrompt />
+    </DevtoolsProvider>
+  </PreviewProvider>
+  ```
+
+- Add `@axonpack/preview` last. It needs a native build for its config plugin, and that one build
+  also links the optional native modules of `@axonpack/expo-devtools` and `@axonpack/in-app-updates`.
+- iOS 27 needs Expo SDK 58 or later. After moving to it, regenerate the iOS project with
+  `npx expo prebuild --clean -p ios`, since a stale `ios/` folder crashes at launch.
+
 ## For AI agents
 
 Each package has an agent skill that teaches your coding agent to set it up and use it.
