@@ -1,4 +1,5 @@
 import type { AgentTopic } from '../../../agent/constants/agent-topics.const';
+import { formatFrameLocation } from '../../../core/utils/frame-location.util';
 import { maskNetworkEntryForAgent } from '../services/redact-network.service';
 import {
   networkLogStore,
@@ -44,6 +45,17 @@ export const NETWORK_AGENT: AgentTopic<NetworkAgentRow> = {
     response: (e) => (e.kind === 'http' ? e.responseBody : undefined),
   },
   show: ['id', 'method', 'code', 'ms', 'url'],
+  // Each frame's location is the whole bundle URL with Metro's query, so `get` keeps the file and
+  // position as the panel shows them, and the vendor frames only with `--full`.
+  detail: (e, full) =>
+    e.kind === 'http' && e.initiator
+      ? {
+          ...e,
+          initiator: e.initiator
+            .filter((frame) => full || !frame.vendor)
+            .map((frame) => ({ ...frame, location: formatFrameLocation(frame.location) })),
+        }
+      : e,
   // Pending only while the code or the outcome can still change. A stream already has its code,
   // and an open socket can stay open all session, so neither may hold the `next` cursor back.
   pending: (e) =>

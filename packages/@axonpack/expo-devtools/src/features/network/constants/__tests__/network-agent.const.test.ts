@@ -91,6 +91,27 @@ describe('the network topic', () => {
     expect(ids(ask({ grep: 'hello frame' }))).toEqual(['w1']);
   });
 
+  it('gets the initiator as short locations, with vendor frames only when full', () => {
+    const bundle = 'http://localhost:8081/example/index.bundle//&platform=ios&dev=true';
+    networkLogStore.add({
+      id: 'h3',
+      method: 'POST',
+      url: 'https://api.test/login',
+      status: 'error',
+      startedAt: NOW,
+      initiator: [
+        { fn: 'fetchJson', location: `${bundle}:120:8`, vendor: true },
+        { fn: 'login', location: `${bundle}:4410:12`, vendor: false },
+      ],
+    });
+    const login = { fn: 'login', location: 'index.bundle:4410:12', vendor: false };
+    expect(JSON.parse(ask({ get: 'h3', json: true })).initiator).toEqual([login]);
+    expect(JSON.parse(ask({ get: 'h3', json: true, full: true })).initiator).toEqual([
+      { fn: 'fetchJson', location: 'index.bundle:120:8', vendor: true },
+      login,
+    ]);
+  });
+
   it('masks authorization and cookies in get, lists and filters', () => {
     const row = JSON.parse(ask({ get: 'h1', json: true, full: true }));
     expect(row.requestHeaders).toEqual({ authorization: '[redacted]', accept: 'json' });

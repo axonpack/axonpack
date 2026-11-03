@@ -60,6 +60,12 @@ export function runQuery(topics: readonly AgentTopic[], query: AgentQuery): Agen
 function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
   const topic = topics.find((each) => each.name === query?.topic);
   if (!topic) {
+    // An agent that passed the whole command as one argument, so its flags never reached the CLI.
+    if (/\s/.test(query?.topic ?? '')) {
+      throw new Error(
+        `"${query.topic}" isn't a topic. Pass the topic and each flag as separate arguments: devtools ${query.topic.trim()}`
+      );
+    }
     const names = topics.map((each) => each.name).join(', ') || 'none yet';
     throw new Error(`unknown topic "${query?.topic}". Topics: ${names}`);
   }
@@ -92,7 +98,8 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
 
   if (query.get !== undefined) {
     const row = rows[indexOf(query.get)];
-    const text = JSON.stringify(row, cutStrings(full), query.json ? undefined : 2);
+    const shown = topic.detail ? topic.detail(row, full) : row;
+    const text = JSON.stringify(shown, cutStrings(full), query.json ? undefined : 2);
     return {
       text: query.json ? text : `# ${topic.name} ${query.get}\n${text}`,
       matched: 1,

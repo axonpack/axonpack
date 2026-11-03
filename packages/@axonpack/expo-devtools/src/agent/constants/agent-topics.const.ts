@@ -42,6 +42,8 @@ export type AgentTopic<T = any> = {
   >;
   /** The columns a list shows when the query names none. */
   show: string[];
+  /** What `get` prints for a row, when that differs from the row itself. Lists and `--grep` never see it. */
+  detail?: (row: T, full: boolean) => unknown;
   /** A row still in flight. The `next` cursor stops before it, so the next poll sees how it ended. */
   pending?: (row: T) => boolean;
 };

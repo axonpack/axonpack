@@ -334,6 +334,12 @@ describe('runQuery errors', () => {
     );
   });
 
+  it('says to split a whole command passed as one argument', () => {
+    expect(runQuery([NET], { topic: 'net --limit 8' }).text).toBe(
+      'error: "net --limit 8" isn\'t a topic. Pass the topic and each flag as separate arguments: devtools net --limit 8'
+    );
+  });
+
   it('reports a bad regex', () => {
     expect(query({ grep: '/(/' })).toMatch(/^error: bad regex \/\(\/: [^\n]+$/);
   });
