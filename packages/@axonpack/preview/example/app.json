@@ -12,7 +12,9 @@
       "bundleIdentifier": "io.github.axonpack.previewexample",
       "infoPlist": {
         "NSLocalNetworkUsageDescription": "Finds preview servers on your network.",
-        "NSBonjourServices": ["_axon-preview._tcp"]
+        "NSBonjourServices": [
+          "_axon-preview._tcp"
+        ]
       }
     },
     "android": {
@@ -47,7 +49,10 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
