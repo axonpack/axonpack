@@ -786,16 +786,17 @@ snippet for your agent.
 
 ### Running it
 
-| Package manager | Command                                 | Where                                                  |
-| --------------- | --------------------------------------- | ------------------------------------------------------ |
-| any (npm)       | `npx @axonpack/expo-devtools <command>` | Anywhere. Uses the installed copy in the app's folder. |
-| yarn            | `yarn devtools <command>`               | The app's project folder                               |
-| pnpm            | `pnpm exec devtools <command>`          | The app's project folder                               |
-| bun             | `bunx devtools <command>`               | The app's project folder                               |
+| Package manager | Command                        | Where                    |
+| --------------- | ------------------------------ | ------------------------ |
+| npm             | `npx devtools <command>`       | The app's project folder |
+| yarn            | `yarn devtools <command>`      | The app's project folder |
+| pnpm            | `pnpm exec devtools <command>` | The app's project folder |
+| bun             | `bunx devtools <command>`      | The app's project folder |
 
-`bun devtools` runs a `devtools.ts` file first if the folder has one. Plain `npx devtools` outside a
-project with this package downloads the unrelated `devtools` package. Below, `devtools` stands for
-whichever form you use.
+`bun devtools` runs a `devtools.ts` file first if the folder has one. In a monorepo, or outside the
+app's folder, `npx devtools` can miss the local install and fetch an unrelated npm package named
+`devtools`. `npx @axonpack/expo-devtools <command>` always runs this one. Below, `devtools` stands
+for whichever form you use.
 
 | Needs                | Why                                                                                            |
 | -------------------- | ---------------------------------------------------------------------------------------------- |

@@ -222,7 +222,7 @@ Crash capture is the only part of this package that runs with the devtools off.
 | `crash.popupDetail`                 | `'auto' \| 'full' \| 'compact'`            | `'auto'` | Which sheet a crash opens. `'auto'` is the full sheet when the devtools are enabled, compact when not. |
 | `crash.disableDefaultLogBox`        | `boolean`                                  | `false`  | Uninstall React Native's LogBox, so a JS error is reported here and nowhere else.                |
 | `crash.breadcrumbs`                 | `boolean`                                  | `true`   | Attach the recent console, network and navigation entries to each record.                                    |
-| `crash.maxBreadcrumbs`              | `number`                                   | none     | Not used yet: a record carries every breadcrumb the Console and Network tabs hold, whatever this says. |
+| `crash.maxBreadcrumbs`              | `number`                                   | none     | Not used yet: a record carries every breadcrumb the Console, Network and Navigation tabs hold, whatever this says. |
 | `crash.maxRecords`                  | `number`                                   | `25`     | Reports kept in memory.                                                                          |
 | `crash.persistNonFatal`             | `boolean`                                  | `false`  | Also write non-fatal records to disk.                                                            |
 | `crash.redact`                      | `(record: CrashRecord) => CrashRecord \| null` | `undefined` | Runs before the record reaches the store, the disk or `onCrash`. Return `null` to drop it.  |

@@ -6,10 +6,11 @@
 
 **Browser-style devtools that live inside your React Native or Expo app.**
 
-Tap a floating button for six tabs on the device itself: **Network** (every request, resendable, with
+Tap a floating button for ten tabs on the device itself: **Network** (every request, resendable, with
 throttling), **Console** (every log, plus a prompt that answers), **Performance** (frame rate, memory,
-the moments the app froze), **Storage** (every key you've saved), **Crashes** and **Debug**. No desktop
-debugger, no cable, and nothing captured unless you switch it on.
+the moments the app froze), **Storage** (every key you've saved), **Query**, **Navigation**,
+**Redux**, **Crashes**, **AI Usage** and **Debug**. No desktop debugger, no cable, and nothing
+captured unless you switch it on.
 
 **[Documentation](https://axonpack.dev/docs/expo-devtools)** · [Quick start](https://axonpack.dev/docs/expo-devtools/quick-start) · [Reference](https://axonpack.dev/docs/expo-devtools/reference) · [Upgrading](https://axonpack.dev/docs/expo-devtools/upgrading) · [Changelog](https://axonpack.dev/docs/expo-devtools/changelog)
 
@@ -80,7 +81,7 @@ An AI agent, or you, can read what the devtools recorded from a terminal: reques
 logs, crashes, stored values and every other tab, filtered down to the rows it needs.
 
 ```sh
-npx @axonpack/expo-devtools network --where 'code>=400' --since 10m
+npx devtools network --where 'code>=400' --since 10m
 ```
 
 It works with any package manager, needs Node 22 or newer and `expo start`, and keeps every redaction

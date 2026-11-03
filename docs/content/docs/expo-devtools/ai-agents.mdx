@@ -10,7 +10,7 @@ actions and performance events. The agent runs a command and gets plain text bac
 to the rows it asked for. You can run the same commands yourself.
 
 ```sh
-npx @axonpack/expo-devtools network --where 'code>=400' --since 10m
+npx devtools network --where 'code>=400' --since 10m
 ```
 
 ```
@@ -38,26 +38,24 @@ inside the package. Every query an agent makes, and the reply it got, is listed 
 ## Running it
 
 ```sh
-npx @axonpack/expo-devtools <command>
+npx devtools <command>
 ```
 
-That form works with any package manager, since `npx` comes with Node. In the app's project folder
-it runs the copy you installed, and anywhere else it fetches this package. It can never run the
-unrelated `devtools` package on npm.
+Run it in the app's project folder, where it runs the copy you installed. Each package manager has
+its own form:
 
-In the app's project folder, each package manager also has a short form:
-
-| Package manager | Command                                  |
-| --------------- | ---------------------------------------- |
-| npm             | `npx @axonpack/expo-devtools <command>`  |
-| yarn            | `yarn devtools <command>`                |
-| pnpm            | `pnpm exec devtools <command>`           |
-| bun             | `bunx devtools <command>`                |
+| Package manager | Command                        |
+| --------------- | ------------------------------ |
+| npm             | `npx devtools <command>`       |
+| yarn            | `yarn devtools <command>`      |
+| pnpm            | `pnpm exec devtools <command>` |
+| bun             | `bunx devtools <command>`      |
 
 - With bun, use `bunx`. `bun devtools` runs a `devtools.ts` file first if the folder has one, and
   the example app keeps its devtools config in a file of that name.
-- Plain `npx devtools` works in a project that has the package, but anywhere else it downloads the
-  unrelated `devtools` package.
+- In a monorepo, or outside the app's folder, `npx devtools` can miss the local install and fetch
+  an unrelated npm package named `devtools`. `npx @axonpack/expo-devtools <command>` always runs
+  this one.
 
 The rest of this page writes `devtools` for whichever form you use.
 

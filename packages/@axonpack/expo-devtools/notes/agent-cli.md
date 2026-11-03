@@ -64,9 +64,11 @@ so a new tab gets all of them by adding that description and one line in the lis
   cost the one evaluate avoids. If an outside plugin ever needs to wrap other topics, that is one
   hook in the app, not a chain.
 - **Read-only first.** Actions would be an optional key on a topic, added when there is a need.
-- **`npx @axonpack/expo-devtools` is the documented form.** The bin is `devtools`, which is also the
-  name of an unrelated npm package, so a plain `npx devtools` outside a project with this package
-  installs that one.
+- **`npx devtools` is the documented form, and `npx @axonpack/expo-devtools` the one that always
+  works.** The bin is `devtools`, which is also the name of an unrelated npm package, so in a
+  monorepo, or outside the app's folder, `npx devtools` can miss the local install and fetch that
+  one. The long form goes only where it must always work: the snippet for `AGENTS.md`, and one
+  line in the guide, the CLI reference and `--help` saying when to use it.
 
 ## Won't do
 
