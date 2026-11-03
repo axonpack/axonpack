@@ -4,13 +4,12 @@ import { patchFetch } from '../patch-fetch.service';
 
 type FetchModule = { fetch: typeof globalThis.fetch };
 
-// Virtual, because this package does not depend on Expo's internals — the patch is guarded precisely
-// so that a missing module is a no-op rather than a crash.
-jest.mock(
-  'expo/src/winter/fetch/fetch',
-  () => ({ fetch: async () => new Response('from expo fetch') }),
-  { virtual: true }
-);
+// Not virtual. Jest caches the id a file resolves a module to per worker, and that cache ignores
+// virtual mocks. Once another suite in the worker has called `patchFetch` against the real module,
+// a virtual mock here never reaches the service, so the suite failed or passed by test order.
+jest.mock('expo/src/winter/fetch/fetch', () => ({
+  fetch: async () => new Response('from expo fetch'),
+}));
 
 const expoFetchModule = jest.requireMock<FetchModule>('expo/src/winter/fetch/fetch');
 const rawExpoFetch = expoFetchModule.fetch;
