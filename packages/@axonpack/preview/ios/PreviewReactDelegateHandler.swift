@@ -54,9 +54,9 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
     Self.rootViewFactory = rootViewFactory
     let base = unsafeBitCast(current as AnyObject, to: BundleURLBlock.self)
     let block: BundleURLBlock = {
-      // A local Metro server wins over a downloaded preview and the default (debug builds only).
-      // React's own URL is read under a local server too, so JS can tell a picked server that is
-      // the same Metro. Not under a preview, which starts without asking Metro.
+      // A local Metro server that answers wins over a downloaded preview and the default (debug
+      // builds only). React's own URL is read under a local server too, so JS can tell a picked
+      // server that is the same Metro. Not under a preview, which starts without asking Metro.
       let local = PreviewState.localServerURL
       let preview = local == nil ? PreviewState.bundleToLoad() : nil
       Self.defaultURL = preview == nil ? base() : nil
@@ -76,12 +76,12 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
    */
   static func startOnSelectedPreview() {
     // The plain lookup, not `bundleToLoad`: that would count this start as a preview start and the
-    // reload below as a second one.
+    // reload below as a second one. The server is asked last, so a start with no preview asks no one.
     guard
       !hopped,
-      PreviewState.localServerURL == nil,
       let preview = PreviewState.selectedBundle(),
-      PreviewState.newArchitecture
+      PreviewState.newArchitecture,
+      PreviewState.localServerURL == nil
     else {
       return
     }

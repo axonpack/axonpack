@@ -10,7 +10,12 @@ import com.facebook.react.internal.featureflags.ReactNativeFeatureFlags
 import com.facebook.react.modules.systeminfo.AndroidInfoHelpers
 import com.facebook.react.packagerconnection.PackagerConnectionSettings
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.UUID
+import java.util.concurrent.Callable
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -86,7 +91,8 @@ internal object PreviewState {
     val settings = devSupport.devSettings?.packagerConnectionSettings
     val local = localServerHostPort(context)
     if (local != null && settings != null) {
-      // A local Metro server wins over a downloaded preview and the default Metro (debug only).
+      // A local Metro server that answers wins over a downloaded preview and the default Metro
+      // (debug only). One that doesn't gets the developer's own host put back below.
       saveDebugHost(context)
       settings.debugServerHost = local
       devSupport.bundleFilePath = null
@@ -100,10 +106,60 @@ internal object PreviewState {
   // Local Metro servers (debug builds only). `localServer` sits next to the preview fields and
   // never changes them, so stopping a local server brings back whatever preview was chosen.
 
-  /** The chosen local server as `host:port`, or null; always null in a release build. */
-  fun localServerHostPort(context: Context): String? {
+  /** The chosen local server as `host:port`, whether it answers or not; always null in a release build. */
+  fun pickedServer(context: Context): String? {
     if (!ReactBuildConfig.DEBUG) return null
     return readJson(context).optJSONObject("localServer")?.optString("hostPort")?.ifEmpty { null }
+  }
+
+  /**
+   * The chosen local server as `host:port` while its Metro answers, else null; always null in a
+   * release build. A server that stopped would leave the app with no bundle and no JS to switch
+   * away from, so that start goes on without it. The choice stays, and the next start uses the
+   * server again once it answers.
+   */
+  fun localServerHostPort(context: Context): String? {
+    val hostPort = pickedServer(context) ?: return null
+    // One start looks it up several times (the app's start, dev support, the bundle file), so the
+    // server is asked once per start. A reload from the dev menu keeps the dev support host its
+    // start set, so it keeps this answer too.
+    val known = checked
+    val answers =
+      if (known != null && known.first == token() && known.second == hostPort) known.third
+      else metroAnswers(hostPort).also {
+        if (!it) Log.w(TAG, "The picked server $hostPort does not answer, so this start loads without it")
+        checked = Triple(token(), hostPort, it)
+      }
+    return hostPort.takeIf { answers }
+  }
+
+  @Volatile private var checked: Triple<String, String, Boolean>? = null
+
+  /**
+   * Metro's `/status`, as React Native asks it. One second at most, since the start waits on it: a
+   * server on this computer or the network answers in milliseconds, and a stopped one on this
+   * computer refuses at once, so only a host that left the network costs the whole second. Asked
+   * on a thread of its own, since Android refuses network calls on the main one.
+   */
+  private fun metroAnswers(hostPort: String): Boolean {
+    val status = FutureTask(
+      Callable {
+        val connection = URL("http://$hostPort/status").openConnection() as HttpURLConnection
+        connection.connectTimeout = 1000
+        connection.readTimeout = 1000
+        try {
+          connection.inputStream.bufferedReader().use { it.readText() } == "packager-status:running"
+        } finally {
+          connection.disconnect()
+        }
+      }
+    )
+    Thread(status).start()
+    return try {
+      status.get(1, TimeUnit.SECONDS)
+    } catch (e: Exception) {
+      false
+    }
   }
 
   fun selectLocalServer(context: Context, url: String?, hostPort: String?) {

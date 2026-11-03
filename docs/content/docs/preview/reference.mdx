@@ -176,7 +176,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `previewsConfigured` | A bucket URL is set. False when `s3Config.url` is undefined, empty or blank, and then nothing is read from a bucket |
 | `loading`       | The previews list is loading                                                   |
 | `error`         | The last error, as text, or null                                               |
-| `canGoBack`     | A preview is chosen (even one that could not load) or a server is picked       |
+| `canGoBack`     | A preview is chosen (even one that could not load) or a server is picked (even one that did not answer) |
 
 | Action            | What it does                                                               |
 | ----------------- | -------------------------------------------------------------------------- |
@@ -276,7 +276,7 @@ braces, such as `{host}`, is filled in. `status`, `statusShort` and `timeAgo` ar
 | `kindDevPreviewServer`     | Preview server                | What a screen reader says for the `server: Preview` chip |
 | `kindPreview`              | Preview                       | The chip for a running preview                         |
 | `kindServer`               | Server                        | The chip, with no hue, for a server no look has found and nothing was saved about |
-| `offline`                  | Offline                       | The chip on the card and on the row of the server the app runs from, once it stops answering |
+| `offline`                  | Offline                       | The chip on the card and on the row of the server the app runs from, once it stops answering, and on the row of a picked server the app started without |
 | `offlineHint`              | Start this server again, or go back to default. | Under the chips when a picked server stops answering |
 | `offlineDefaultHint`       | Start Metro again, then reload. | Under the chips when the Metro the app starts on stops answering |
 | `serverPrefix`             | server:                       | Before a server's kind on its chip                     |

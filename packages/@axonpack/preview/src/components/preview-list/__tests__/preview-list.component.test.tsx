@@ -697,11 +697,12 @@ test("a stopped preview start server keeps its title, branch and kind, after a r
   // A reload: the store starts with no servers, then `preview start` on 8083 stops (it leaves the
   // registry too).
   global.fetch = metros([8081]);
-  const scriptUrl = mockScriptUrl;
+  const [scriptUrl, nativeState] = [mockScriptUrl, mockNativeState];
   mockScriptUrl = null;
+  mockNativeState = {};
   await devPreviewServersStore.refresh();
   expect(devPreviewServersStore.getState().servers).toHaveLength(1);
-  mockScriptUrl = scriptUrl;
+  [mockScriptUrl, mockNativeState] = [scriptUrl, nativeState];
   const tree = await render(true);
   await settle();
   const row = serverRow(tree, 8083);
@@ -752,6 +753,37 @@ test("a stopped server nothing is known about goes by its address, with no kind"
     expect(textsOf(row)).not.toContain(guess);
     expect(textsOf(hero)).not.toContain(guess);
   }
+  await act(async () => tree.unmount());
+});
+
+test("a picked server the app started without says Offline, and the header shows the default that loaded", async () => {
+  // Native found 8083 down at start and loaded the default Metro; 8083 stays picked.
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8083/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+    loaded: { kind: "default" },
+  };
+  mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
+  global.fetch = metros([8081]);
+  const tree = await render(true);
+  await settle();
+  expectActive(serverRow(tree, 8081));
+  const picked = serverRow(tree, 8083);
+  expectSwitchable(picked);
+  expect(picked.findAllByType(Chip).map((chip) => chip.props.text)).toEqual([
+    "Offline",
+    "Server",
+  ]);
+  const hero = tree.root.findByType(HeroCard);
+  expect(textsOf(hero)[0]).toBe("Default");
+  expect(offlineChips(hero)).toHaveLength(0);
+  // The way to forget the pick.
+  expect(textsOf(hero)).toContain("Back to default");
+
+  global.fetch = metros([8081, 8083]);
+  await act(() => devPreviewServersStore.refresh());
+  expect(offlineChips(tree.root)).toHaveLength(0);
+  expectSwitchable(serverRow(tree, 8083));
   await act(async () => tree.unmount());
 });
 

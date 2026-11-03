@@ -177,19 +177,50 @@ enum PreviewState {
   // Local Metro servers (debug builds only). `localServer` sits next to the preview fields and
   // never changes them, so stopping a local server brings back whatever preview was chosen.
 
-  /// The chosen local server's bundle URL, or nil; always nil in a release build.
+  /// The chosen local server's bundle URL while its Metro answers, else nil; always nil in a release
+  /// build. A server that stopped would leave the app on "Could not connect to development server",
+  /// with no JS to switch away from, so that start goes on without it. The choice stays, and the
+  /// next start or reload uses the server again once it answers.
   static var localServerURL: URL? {
     #if DEBUG
     guard
       let server = readJson()["localServer"] as? [String: Any],
-      let url = server["url"] as? String
+      let url = (server["url"] as? String).flatMap(URL.init(string:))
     else {
       return nil
     }
-    return URL(string: url)
+    guard metroAnswers(at: url) else {
+      previewLog.warning("The picked server \(url.host ?? "", privacy: .public):\(url.port ?? 0) does not answer, so this start loads without it")
+      return nil
+    }
+    return url
     #else
     return nil
     #endif
+  }
+
+  /// Metro's `/status`, as React Native asks it. One second at most, since the start waits on it: a
+  /// server on this computer or the network answers in milliseconds, and a stopped one on this
+  /// computer refuses at once, so only a host that left the network costs the whole second.
+  private static func metroAnswers(at bundle: URL) -> Bool {
+    guard var status = URLComponents(url: bundle, resolvingAgainstBaseURL: false) else {
+      return false
+    }
+    status.path = "/status"
+    status.query = nil
+    status.fragment = nil
+    guard let url = status.url else {
+      return false
+    }
+    let running = OSAllocatedUnfairLock(initialState: false)
+    let done = DispatchSemaphore(value: 0)
+    let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 1)
+    URLSession.shared.dataTask(with: request) { data, _, _ in
+      running.withLock { $0 = data.flatMap { String(data: $0, encoding: .utf8) } == "packager-status:running" }
+      done.signal()
+    }.resume()
+    _ = done.wait(timeout: .now() + 1)
+    return running.withLock { $0 }
   }
 
   /// `host:port` of the Metro the app starts on with nothing chosen; always nil in a release build.

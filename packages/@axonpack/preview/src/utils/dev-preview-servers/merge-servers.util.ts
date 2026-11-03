@@ -30,8 +30,9 @@ export type DevPreviewServer = {
   /** The name of the computer it runs on, when Bonjour found it on the network. */
   machine?: string;
   /**
-   * Only on the server the app runs from, when no look ever found it answering and nothing was
-   * saved about it: whether it is an Expo or a preview server, and its name, are not known.
+   * Only on the server the app runs from or the one picked in the list, when no look ever found it
+   * answering and nothing was saved about it: whether it is an Expo or a preview server, and its
+   * name, are not known.
    */
   unknown?: true;
 };

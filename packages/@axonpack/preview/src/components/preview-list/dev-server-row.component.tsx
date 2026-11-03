@@ -31,7 +31,10 @@ export function DevServerRow(props: {
   server: DevPreviewServer;
   /** The app runs from this server now. */
   active: boolean;
-  /** The app runs from it and it stopped answering. Its row stays, so QA sees why. */
+  /**
+   * The app runs from it, or it is picked, and it did not answer the last look. Its row stays, so QA
+   * sees why.
+   */
   offline: boolean;
   /** The Metro the app starts on with nothing picked. */
   isDefault: boolean;

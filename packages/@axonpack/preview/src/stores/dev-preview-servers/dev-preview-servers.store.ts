@@ -36,8 +36,8 @@ import type { BonjourService } from "../../utils/dev-preview-servers/bonjour.uti
 
 export type DevPreviewServersState = {
   /**
-   * This app's servers. The one the app runs from stays when a look misses it, as it was last
-   * seen answering (saved, so a reload still knows it), or marked `unknown` if it never was.
+   * This app's servers. The one the app runs from, and the one picked in the list, stay when a look
+   * misses them, as last seen answering (saved, so a reload still knows it), or marked `unknown`.
    */
   servers: DevPreviewServer[];
   /** The bundle URL of the dev preview server the next start uses, or null. */
@@ -235,13 +235,22 @@ async function poll(sweep: boolean) {
     // The Metro the app's JS came from; null for a preview or a bundle built into the app.
     const url = scriptUrl();
     const own = url ? hostPortOf(url) : null;
-    const defaultMetro = nativeModule()?.state().defaultServer;
+    const native = nativeModule()?.state();
+    const defaultMetro = native?.defaultServer;
+    // The server picked in the list. It is not what runs when it did not answer as the app started.
+    const picked = native?.localServer ?? null;
+    const pickedAt = picked ? hostPortOf(picked) : null;
     const found = await discover(
       platform,
       own,
       sweep
         ? null
-        : [...known, ...(defaultMetro ? [portOf(defaultMetro)] : [])],
+        : [
+            ...known,
+            ...[defaultMetro, pickedAt].flatMap((at) =>
+              at ? [portOf(at)] : [],
+            ),
+          ],
       remote,
       bonjour,
       appSlug,
@@ -256,6 +265,19 @@ async function poll(sweep: boolean) {
       buildKey: buildKey(),
       platform,
     });
+    // The picked server stays too, so QA sees why the app started without it. Read before the
+    // running server is saved below, which replaces what was saved about the picked one.
+    if (
+      picked &&
+      pickedAt &&
+      !(own && sameServer(pickedAt, own)) &&
+      !servers.some((s) => sameServer(s.hostPort, pickedAt))
+    )
+      servers = [
+        ...servers,
+        state.servers.find((s) => sameServer(s.hostPort, pickedAt)) ??
+          (await savedOrUnknown(pickedAt, picked, appSlug)),
+      ].sort((a, b) => a.port - b.port);
     if (url && own) {
       const seen = servers.find((s) => sameServer(s.hostPort, own));
       const last = state.servers.find((s) => sameServer(s.hostPort, own));
@@ -269,7 +291,7 @@ async function poll(sweep: boolean) {
     }
     set({
       servers,
-      activeUrl: nativeModule()?.state().localServer ?? null,
+      activeUrl: picked,
       alive: found.alive,
       error: null,
       scanning: false,

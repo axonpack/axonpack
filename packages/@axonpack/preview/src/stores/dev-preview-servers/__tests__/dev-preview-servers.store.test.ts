@@ -330,6 +330,25 @@ test("the running server and the default Metro are asked on every tick, even whi
   expect(alivePorts()).toEqual([8083]);
 });
 
+test("a picked server the app started without stays listed, is asked on every tick, and is found once it answers", async () => {
+  // Native found 8083 down at start, so the app runs from the default Metro and 8083 stays picked.
+  mockScriptUrl = "http://127.0.0.1:8081/index.bundle?platform=ios";
+  mockNativeState = {
+    localServer: "http://127.0.0.1:8083/index.bundle?platform=ios",
+    defaultServer: "localhost:8081",
+  };
+  await watch();
+  expect(listed()).toEqual([8081, 8083]);
+  expect(alivePorts()).toEqual([8081]);
+  probed();
+  await wait(2000);
+  expect(probed()).toEqual([8081, 8083]);
+  up = new Set([8081, 8083]);
+  await wait(2000);
+  expect(alivePorts()).toEqual([8081, 8083]);
+  expect(devPreviewServersStore.getState().servers[1].unknown).toBeUndefined();
+});
+
 test("nothing is asked once nothing watches", async () => {
   await watch();
   stop();

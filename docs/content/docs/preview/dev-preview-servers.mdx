@@ -67,7 +67,8 @@ and its branch, with chips:
 - **Default server** on the Metro the app starts on with nothing picked. Metro only knows the app's
   name, which every server of the app shares, so this one is called **Default** unless
   `preview start` gave it a title. Any other server without a title goes by its address.
-- **Offline** on the server the app runs from, once it stops answering. Its row stays, with the
+- **Offline** on the server the app runs from, once it stops answering, and on a picked server
+  the app had to start without (see below). Its row stays, with the
   title, branch and kind it had when it last answered, even after a reload. A server the app never
   saw answering shows its address and a plain **Server** chip, since its kind is not known.
 - **Made for another native build** or **Native build unknown**. See below.
@@ -80,6 +81,13 @@ On every start of a debug build the order is: the picked dev preview server, the
 preview, then the default Metro. Switching to a preview in the list stops using the picked server,
 and **Back to default** stops both. Picking the Metro the app starts on anyway changes
 nothing, so it counts as the default.
+
+On each start the app first asks the picked server's Metro for `/status`, and waits up to a
+second. If it gets no answer, that start skips the server and goes on to the preview or the
+default Metro, so a stopped server can't leave the app on "Could not connect to development
+server". The server stays picked: its row says **Offline**, the header card shows what loaded, and
+**Back to default** forgets it. Once the server runs again, the next start uses it, or tap its row
+to switch now.
 
 ## Hosts
 

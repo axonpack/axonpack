@@ -252,7 +252,12 @@ export function PreviewList(props: PreviewListProps) {
             labels={labels}
             server={item.server}
             active={active}
-            offline={active && status.online === false}
+            // Every other row answered in the last look. Only the server the app runs from and the
+            // picked one, which the app may have started without, stay listed when they don't.
+            offline={
+              local.alive !== null &&
+              !local.alive.some((at) => sameServer(at, item.server.hostPort))
+            }
             isDefault={
               defaultMetro !== null &&
               sameServer(item.server.hostPort, defaultMetro)

@@ -12,8 +12,10 @@ import {
   type Running,
   bundleKind,
   displayHostPort,
+  hostPortOf,
   kindLabel,
   runningLabel,
+  sameServer,
   serverOnline,
 } from "../../utils/previews/running.util";
 import {
@@ -21,6 +23,7 @@ import {
   buildCompatibility,
   buildKey,
 } from "../native/build-info.service";
+import { nativeModule } from "../native/native.service";
 import { usePreview } from "./use-preview.service";
 import { useRunning } from "./use-running.service";
 
@@ -82,7 +85,7 @@ export type PreviewStatusInfo = {
   /** The previews list is loading, and the last thing that went wrong with it. */
   loading: boolean;
   error: string | null;
-  /** A preview is chosen (even one that could not load) or a server is picked. */
+  /** A preview is chosen (even one that could not load) or a server is picked (even one that did not answer). */
   canGoBack: boolean;
   /** Restarts on the default bundle, clearing the chosen preview and the picked server. */
   backToDefault: () => Promise<void>;
@@ -122,6 +125,13 @@ export function usePreviewStatus(
           ? words.defaultServerTitle
           : (address ?? kindLabel(kind, words));
   const showLocal = __DEV__ && preview.devPreviewServers;
+  // A picked server that did not answer as the app started left the default running, and the next
+  // start tries it again. Going back to default forgets it. Picking the default Metro changes nothing.
+  const native = showLocal ? nativeModule()?.state() : undefined;
+  const pickedAt = native?.localServer ? hostPortOf(native.localServer) : null;
+  const picked =
+    pickedAt !== null &&
+    !(native?.defaultServer && sameServer(pickedAt, native.defaultServer));
 
   return {
     running,
@@ -149,7 +159,7 @@ export function usePreviewStatus(
     previewsConfigured: preview.previewsConfigured,
     loading: preview.loading,
     error: preview.error,
-    canGoBack: Boolean(preview.activeId) || running.kind === "local",
+    canGoBack: Boolean(preview.activeId) || running.kind === "local" || picked,
     backToDefault: () => preview.switchTo(null),
     refresh: async () => {
       await Promise.all([

@@ -14,6 +14,7 @@ between them live.
 - [x] Starts Metro on a free port and announces it with one command, `preview start`
 - [x] Asks for the name the app shows, prefilled from the branch (`--title` or no terminal skips it)
 - [x] Keeps the server the app runs from in the list when it stops, marked Offline, with the name it last had
+- [x] Starts without a picked server that doesn't answer, and keeps it picked and listed as Offline until it does
 - [x] Shows the hosts it checks, and lets QA add another computer's address on the device
 - [x] Lists another computer's `preview start` servers through its registry, never its plain Expo servers
 - [x] Takes the team's own computers from the app's config, and can hide adding one on the device
@@ -161,7 +162,9 @@ the Xcode console, so a sweep adds a burst there.
 **Offline.** The server the app runs from stays in the list when a look misses it, marked Offline,
 with the title, branch and kind it had when it last answered. That is saved in
 `Documents/preview/server.json`, so a reload still knows it. A server the app never saw answering
-goes by its address, with a plain Server chip. Registry details are joined to what the scan found by
+goes by its address, with a plain Server chip. A picked server the app started without stays listed
+and Offline too, and the 2 s looks ask its port like the default Metro's, so it shows as soon as it
+answers. Registry details are joined to what the scan found by
 host and port only, so a `preview start` server's name never lands on another server.
 
 **Which servers.** Only the app's own slug, which the config plugin bakes into the build. A server
@@ -177,7 +180,13 @@ on Wi-Fi was started from the computer's LAN address, so the same rule finds the
 **Switching.** The choice is stored next to the preview choice and never changes it. On every start
 of a debug build the dev preview server wins, then a downloaded preview, then the default Metro. Android
 points React Native's dev support at the server (and puts the developer's own dev-menu host back
-afterwards); iOS starts from the server's bundle URL. Switching to a preview clears the picked server, since
+afterwards); iOS starts from the server's bundle URL. Native first asks the server's Metro for
+`/status` (one second at most, since the start waits on it). With no answer, that start goes on to
+the preview or the default and leaves the choice in `state.json`, because a stopped server would
+leave the app at "Could not connect to development server" with no JS to switch back from. iOS asks
+on every start and reload. Android asks once per start: dev support keeps the host its start set
+through a dev-menu reload, and `onCreate` still points dev support when the server is down, to put the
+developer's own host back. Switching to a preview clears the picked server, since
 native would load the server first; "Back to default" clears both. A picked server that is the
 Metro the app starts on anyway counts as the default. The server the app runs from is read from what the
 app actually loaded, so the default's Metro shows Active too, not only one picked by hand.
