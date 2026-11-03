@@ -87,7 +87,7 @@
       "note": "The skill reads these docs live, so the agent follows the package's current installation page and checks each step.",
       "links": [
         {
-          "label": "Agent skills",
+          "label": "Agent skill",
           "href": "/docs/agent-skills/"
         },
         {
@@ -140,7 +140,7 @@
       "label": "The AI Usage tab, newest first: a DELETE refused for want of --yes, a mocked response, and three queries with how many rows each matched and how long the app took"
     },
     "skills": {
-      "title": "Agent skills",
+      "title": "Agent skill",
       "body": "One skill covers every package. Your coding agent loads it, and it has the agent read these docs live, so it always matches the latest release. The agent sets the package up in your app with your own package manager and checks each step before the next one.",
       "command": "npx skills add axonpack/skills"
     },
@@ -150,7 +150,7 @@
         "href": "/docs/expo-devtools/ai-agents/"
       },
       {
-        "label": "Agent skills",
+        "label": "Agent skill",
         "href": "/docs/agent-skills/"
       },
       {
