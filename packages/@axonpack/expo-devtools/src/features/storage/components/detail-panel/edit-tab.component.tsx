@@ -40,6 +40,14 @@ export function EditTab({ entry, adapter }: { entry: StorageEntry; adapter: Stor
     );
   }
 
+  if (entry.redacted) {
+    return (
+      <View style={detailStyles.section}>
+        <Text style={detailStyles.emptyText}>A redacted value cannot be edited here.</Text>
+      </View>
+    );
+  }
+
   if (!isEditableValueType(entry.valueType)) {
     return (
       <View style={detailStyles.section}>

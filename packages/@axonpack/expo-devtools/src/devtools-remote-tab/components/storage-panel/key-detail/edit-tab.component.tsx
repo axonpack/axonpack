@@ -32,6 +32,9 @@ export function EditTab({ entry, adapter }: { entry: StorageEntry; adapter: Stor
       </p>
     );
   }
+  if (entry.redacted) {
+    return <p className="axonpack-net-none">A redacted value cannot be edited here.</p>;
+  }
   if (!isEditableValueType(entry.valueType)) {
     return <p className="axonpack-net-none">A binary value cannot be edited here.</p>;
   }

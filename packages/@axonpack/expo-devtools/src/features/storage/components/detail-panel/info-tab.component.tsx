@@ -25,8 +25,8 @@ export function InfoTab({
     ['Stored as', entry.valueType],
     ['Size', `${formatSize(entry.size)} (${entry.text?.length ?? 0} characters)`],
     ['Read', formatReadTime(state.readAt)],
-    ['Editable', adapter.canEdit ? 'yes' : 'no'],
-    ['Deletable', adapter.canDelete ? 'yes' : 'no'],
+    ['Editable', adapter.canEdit && !entry.redacted ? 'yes' : 'no'],
+    ['Deletable', adapter.canDelete && !entry.redacted ? 'yes' : 'no'],
   ];
 
   return (

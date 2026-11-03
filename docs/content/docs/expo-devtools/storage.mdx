@@ -92,6 +92,52 @@ Two more options on an adapter are worth knowing:
   whatever went in, so they declare `['string']` for you; MMKV takes all four. The Add-key sheet offers
   only these, so you cannot write something the store would flatten.
 
+## Redaction
+
+The tab shows every value as stored, and that includes a session token. Two options in the provider's
+`storage` config keep a secret out of it while the key stays on the list:
+
+```tsx
+<DevtoolsProvider
+  config={{
+    enabled: __DEV__,
+    storage: {
+      adapters: [asyncStorageAdapter({ driver: AsyncStorage })],
+      redactKeys: ['authToken', /^session\./],
+      redact: (entry) =>
+        entry.key === 'user' && entry.text
+          ? { ...entry, text: entry.text.replace(/"token":"[^"]*"/, '"token":"[redacted]"') }
+          : entry,
+    },
+  }}
+>
+  <App />
+</DevtoolsProvider>
+```
+
+- **`redactKeys`** replaces the value of each matching key with `[redacted]`, in every registered
+  store. A string matches a whole key without regard to case, and a `RegExp` is tested as written. The
+  list is empty by default, so nothing is redacted until you name it.
+- **`redact`** is for everything else, such as one field of a JSON value, or every value of one store
+  (`entry.adapterId` tells them apart). It runs after `redactKeys`, so it already sees the
+  placeholder. Return the entry with its `text` changed, the entry as it is, or `null` to hide the key.
+  Only `text` is taken from what it returns.
+- If `redact` throws, the key is hidden. Showing it after your own redaction broke could show the very
+  value it was written to hide.
+- A hidden key stays on the list until its value is read, then drops off. To keep a key off the list
+  entirely, and never read it at all, use the adapter's `blacklist`.
+
+Both run as a value is read, before the tab keeps it, so nothing sees the real value: not the list,
+the detail sheet, the copy menu, export or the React Native DevTools tab. A live change from the store
+goes through them too.
+
+A redacted value can't be edited or deleted from the tab, since the editor would start from the
+placeholder and saving it would overwrite the real value. An export marks each redacted value, and an
+import skips it, so `[redacted]` is never written back. An import also skips a key that is redacted in
+the store it goes into, whatever the file holds.
+
+Both options are in the [provider reference](/docs/expo-devtools/reference/provider#storage).
+
 ## In React Native DevTools
 
 The same stores are on the Storage panel of the Axonpack tab in
