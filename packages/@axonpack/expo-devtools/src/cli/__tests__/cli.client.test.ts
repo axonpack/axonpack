@@ -460,4 +460,11 @@ describe('--help', () => {
     expect(stdout).toBe(`${help}\n`);
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it('leads with the npx form that can never run the unrelated `devtools` package', () => {
+    expect(HELP.main.split('\n')[2]).toContain('npx @axonpack/expo-devtools <command>');
+    for (const runner of ['bunx devtools', 'yarn devtools', 'pnpm exec devtools']) {
+      expect(HELP.main).toContain(runner);
+    }
+  });
 });

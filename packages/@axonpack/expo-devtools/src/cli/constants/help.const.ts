@@ -36,15 +36,17 @@ Exit codes
 
 const MAIN = `devtools: read what @axonpack/expo-devtools recorded in a running app
 
+Run it as \`npx @axonpack/expo-devtools <command>\`, which works with any package manager. In the
+app's project folder, \`bunx devtools\`, \`yarn devtools\` and \`pnpm exec devtools\` work too.
+Outside a project that has the package, plain \`npx devtools\` downloads an unrelated package.
+Needs Node 22 or newer, the app open in a dev build or Expo Go, and \`expo start\` running.
+
 Usage
   devtools apps                  the apps running on Metro, and whether they have devtools
   devtools topics                what you can query in the app, with row counts
   devtools <topic> [flags]       a topic's rows, newest first
   devtools get <topic> <id>      one row, whole
   devtools <command> --help      more on one command
-
-Run it from the app's project folder: elsewhere, \`npx devtools\` downloads an unrelated package.
-Needs Node 22 or newer, the app open in a dev build or Expo Go, and \`expo start\` running.
 
 ${QUERY_FLAGS}
 
