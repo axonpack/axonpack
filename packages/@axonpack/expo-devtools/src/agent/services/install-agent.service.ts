@@ -19,7 +19,7 @@ try {
 
 const VERSION: string = require('../../../package.json').version;
 
-/** What `devtools apps` shows for this app. */
+/** What `devtools apps` and `devtools topics` show for this app. */
 function hello() {
   const config = expoConstants?.expoConfig;
   return {
@@ -27,9 +27,16 @@ function hello() {
     slug: config?.slug,
     name: config?.name,
     platform: Platform.OS,
-    topics: TOPICS.map((topic) => topic.name),
+    topics: TOPICS.map((topic) => ({
+      name: topic.name,
+      about: topic.about,
+      // null for a feature the app turned off, so `topics` can say so.
+      rows: topic.enabled?.() === false ? null : topic.rows().length,
+    })),
   };
 }
+
+export type AgentHello = ReturnType<typeof hello>;
 
 function run(query: AgentQuery): string {
   // TODO(agent): record the query and its reply for the AI Usage tab here. Every query passes

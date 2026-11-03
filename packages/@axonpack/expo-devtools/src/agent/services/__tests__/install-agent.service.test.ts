@@ -55,11 +55,17 @@ describe('installAgent', () => {
       slug: 'my-app',
       name: 'My App',
       platform: Platform.OS,
-      topics: ['log'],
+      topics: [{ name: 'log', about: 'fake lines', rows: 1 }],
     });
     expect(agent().run({ topic: 'log' })).toBe(
       ['# log · 1 of 1 match', 'id\ttext', 'l1\thello', '# next: --after l1'].join('\n')
     );
+  });
+
+  it('says a topic is off rather than counting it', () => {
+    TOPICS.push({ ...LOG, name: 'off', enabled: () => false });
+    installAgent();
+    expect(agent().hello().topics[1]).toEqual({ name: 'off', about: 'fake lines', rows: null });
   });
 
   it('answers a bad query with an error line', () => {
