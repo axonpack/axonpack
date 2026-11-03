@@ -1,7 +1,6 @@
 {
   "brand": {
     "name": "Axonpack",
-    "logo": "/assets/logo.png",
     "logoDark": "/assets/logo-dark.png",
     "url": "/"
   },

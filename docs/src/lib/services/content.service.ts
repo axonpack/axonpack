@@ -14,7 +14,7 @@ export type Story = {
 };
 
 export type Content = {
-  brand: { name: string; logo: string; logoDark: string; url: string };
+  brand: { name: string; logoDark: string; url: string };
   nav: { links: NavLink[]; github: { href: string; repo: string; label: string } };
   hero: {
     title: string;
