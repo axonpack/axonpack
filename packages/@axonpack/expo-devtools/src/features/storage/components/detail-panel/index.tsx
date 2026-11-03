@@ -92,7 +92,9 @@ export function DetailPanel({
 
   const menuItems: ContextMenuItem[] = [
     ...buildStorageCopyMenuItems(active),
-    ...(adapter.canDelete ? [{ label: 'Delete key', onPress: confirmDelete }] : []),
+    ...(adapter.canDelete && !active.redacted
+      ? [{ label: 'Delete key', onPress: confirmDelete }]
+      : []),
   ];
 
   return (

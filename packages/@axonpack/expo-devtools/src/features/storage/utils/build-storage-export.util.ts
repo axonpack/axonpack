@@ -19,6 +19,8 @@ export type ExportedStorageEntry = {
   value: string | null;
   type: StorageValueType;
   bytes: number;
+  /** Present when `value` is what redaction left, not what the store holds. An import skips it. */
+  redacted?: true;
 };
 
 export type StorageExport = {
@@ -60,6 +62,7 @@ export function buildStorageExport(
       value: entry.text,
       type: entry.valueType,
       bytes: entry.size,
+      ...(entry.redacted && { redacted: true as const }),
     })),
   };
 }
@@ -153,6 +156,7 @@ export function parseStorageExport(raw: unknown): StorageExportParse {
       value: candidate.value,
       type: candidate.type as StorageValueType,
       bytes: typeof candidate.bytes === 'number' ? candidate.bytes : 0,
+      ...(candidate.redacted === true && { redacted: true as const }),
     });
   }
 
@@ -180,8 +184,11 @@ export function parseStorageExport(raw: unknown): StorageExportParse {
 
 export type StorageImportSkip = {
   key: string;
-  /** `hidden`: the blacklist. `unsupported`: a type this store doesn't hold. `empty`: no value. */
-  reason: 'hidden' | 'unsupported' | 'empty';
+  /**
+   * `hidden`: the blacklist. `unsupported`: a type this store doesn't hold. `empty`: no value.
+   * `redacted`: the file holds a redacted value, or the key is redacted here.
+   */
+  reason: 'hidden' | 'unsupported' | 'empty' | 'redacted';
   type?: StorageValueType;
 };
 
@@ -231,6 +238,13 @@ export function planStorageImport(
     }
 
     const existing = current.get(entry.key);
+    // Writing the placeholder would destroy the real value, and over a redacted key nobody can see
+    // what is being replaced.
+    if (entry.redacted || existing?.redacted) {
+      plan.skipped.push({ key: entry.key, reason: 'redacted' });
+      continue;
+    }
+
     if (existing === undefined) plan.create.push(entry);
     else if (existing.text === entry.value && existing.valueType === entry.type) {
       plan.unchanged.push(entry);
@@ -245,6 +259,7 @@ export const STORAGE_IMPORT_SKIP_REASONS: Record<StorageImportSkip['reason'], st
   hidden: 'hidden by the blacklist',
   unsupported: 'a type this store does not hold',
   empty: 'no value to write',
+  redacted: 'redacted',
 };
 
 export type StorageImportReading =

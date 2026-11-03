@@ -1,5 +1,5 @@
 import type { StorageAdapter, StorageValueType } from './define-adapter.service';
-import { buildStorageEntry, messageOf } from './read-storage.service';
+import { buildStorageEntry, messageOf, storeEntry } from './read-storage.service';
 import { storageStore, type StorageEntry } from '../stores/storage.store';
 
 /**
@@ -18,6 +18,8 @@ export async function setStorageValue(entry: StorageEntry, text: string): Promis
   // Its `valueType` is a placeholder until the read, and writing through it could turn a number
   // into a string.
   if (entry.kind === 'unread') return `"${entry.key}" has not been read yet.`;
+  // The text box would start from the placeholder, and saving it would overwrite the real value.
+  if (entry.redacted) return `"${entry.key}" is redacted.`;
 
   try {
     await setItem(entry.key, text, entry.valueType);
@@ -78,15 +80,13 @@ async function readBack(
   valueType: StorageValueType
 ): Promise<void> {
   try {
-    storageStore.patchEntry(
-      adapter.id,
-      buildStorageEntry(adapter.id, key, await adapter.getItem(key))
-    );
+    storeEntry(adapter.id, key, buildStorageEntry(adapter.id, key, await adapter.getItem(key)));
   } catch (error) {
-    storageStore.patchEntry(adapter.id, {
-      ...buildStorageEntry(adapter.id, key, { text, valueType }),
-      error: messageOf(error),
-    });
+    storeEntry(
+      adapter.id,
+      key,
+      buildStorageEntry(adapter.id, key, { text, valueType }, messageOf(error))
+    );
   }
 }
 
@@ -96,6 +96,7 @@ export async function removeStorageKey(entry: StorageEntry): Promise<string | nu
 
   const { removeItem } = adapter;
   if (!removeItem || !adapter.canDelete) return `${adapter.name} is read-only.`;
+  if (entry.redacted) return `"${entry.key}" is redacted.`;
 
   try {
     await removeItem(entry.key);

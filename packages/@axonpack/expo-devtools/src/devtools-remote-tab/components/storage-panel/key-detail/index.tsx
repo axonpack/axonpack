@@ -100,7 +100,9 @@ export function KeyDetail({
               entry={entry}
               align="right"
               onClose={() => setMenuOpen(false)}
-              onDelete={adapter.canDelete ? () => setConfirming(true) : undefined}
+              onDelete={
+                adapter.canDelete && !entry.redacted ? () => setConfirming(true) : undefined
+              }
             />
           )}
         </span>

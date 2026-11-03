@@ -1,4 +1,5 @@
 import type { StorageAdapter, StorageReadResult } from './define-adapter.service';
+import { redactStorageEntry } from './redact-storage.service';
 import { storageStore, type StorageEntry } from '../stores/storage.store';
 import { classifyStoredValue } from '../utils/classify-value.util';
 import { sortKeys } from '../utils/filter-entries.util';
@@ -29,13 +30,14 @@ export function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** Every value read goes through here, so none reaches the store before redaction. `null` is hidden. */
 export function buildStorageEntry(
   adapterId: string,
   key: string,
   result: StorageReadResult,
   error?: string
-): StorageEntry {
-  return {
+): StorageEntry | null {
+  return redactStorageEntry({
     adapterId,
     key,
     text: result.text,
@@ -43,7 +45,13 @@ export function buildStorageEntry(
     kind: classifyStoredValue(result.text, result.valueType),
     size: utf8ByteLength(result.text),
     error,
-  };
+  });
+}
+
+/** A key `storage.redact` hid leaves the list, as a deleted one does. */
+export function storeEntry(adapterId: string, key: string, entry: StorageEntry | null) {
+  if (entry) storageStore.patchEntry(adapterId, entry);
+  else storageStore.removeEntry(adapterId, key);
 }
 
 function unreadEntry(adapterId: string, key: string): StorageEntry {
@@ -83,7 +91,10 @@ export async function readAdapter(adapter: StorageAdapter): Promise<void> {
  * A failure on a single key is that key's, and the other keys still arrive: SecureStore throws per
  * key when a value can't be decrypted, and losing the whole batch to that would be the wrong trade.
  */
-async function readBatch(adapter: StorageAdapter, keys: string[]): Promise<StorageEntry[]> {
+async function readBatch(
+  adapter: StorageAdapter,
+  keys: string[]
+): Promise<(StorageEntry | null)[]> {
   const { getMany } = adapter;
 
   if (getMany) {
@@ -153,15 +164,19 @@ export async function readUnreadEntries(
     const done = previous
       .then(() => readBatch(adapter, batch))
       .then((read) => {
+        read.forEach((entry, at) => {
+          if (entry === null) storageStore.removeEntry(adapter.id, batch[at]);
+        });
+        const shown = read.filter((entry) => entry !== null);
         // Listed earlier, gone by the time its row was shown: drop it, as a live delete would.
         // A store that can't list its keys shows a fixed list, so there it stays, as unset.
         const gone = adapter.canEnumerate
-          ? read.filter((entry) => entry.text === null && entry.error === undefined)
+          ? shown.filter((entry) => entry.text === null && entry.error === undefined)
           : [];
         for (const entry of gone) storageStore.removeEntry(adapter.id, entry.key);
         storageStore.fillEntries(
           adapter.id,
-          read.filter((entry) => !gone.includes(entry))
+          shown.filter((entry) => !gone.includes(entry))
         );
       })
       .finally(() => {
@@ -213,12 +228,9 @@ export async function readStorageKey(adapter: StorageAdapter, key: string): Prom
     const result = await adapter.getItem(key);
     // A store that can't list its keys shows a fixed list, so a removed key stays on it as unset.
     if (result.text === null && adapter.canEnumerate) storageStore.removeEntry(adapter.id, key);
-    else storageStore.patchEntry(adapter.id, buildStorageEntry(adapter.id, key, result));
+    else storeEntry(adapter.id, key, buildStorageEntry(adapter.id, key, result));
   } catch (error) {
-    storageStore.patchEntry(
-      adapter.id,
-      buildStorageEntry(adapter.id, key, ABSENT, messageOf(error))
-    );
+    storeEntry(adapter.id, key, buildStorageEntry(adapter.id, key, ABSENT, messageOf(error)));
   }
 }
 
