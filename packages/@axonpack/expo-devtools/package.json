@@ -118,7 +118,7 @@
     }
   },
   "peerDependencies": {
-    "@axonpack/preview": ">=0.2.0",
+    "@axonpack/preview": "*",
     "expo": "*",
     "expo-clipboard": "*",
     "react": "*",
