@@ -1,6 +1,8 @@
 ---
 name: changeset
 description: Write a properly-formatted Changesets entry (a new .changeset/*.md file) for shipped work in any Changesets-based repo — correct package targeting, correct bump level, always as a humanized, client-facing simple list. Trigger on "changeset", "add a changeset", "write the changelog", "changelog entry", "release notes".
+metadata:
+  internal: true
 ---
 
 # Changeset / Changelog
