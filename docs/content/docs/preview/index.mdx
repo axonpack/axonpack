@@ -35,12 +35,12 @@ npx preview publish   # builds this branch for Android and iOS and uploads it
 
 ## For AI agents
 
-The `axonpack-preview` agent skill teaches your coding agent the config plugin, the list in the app,
-and the `preview` CLI that publishes, removes and prunes previews. [Agent skills](/docs/agent-skills)
-has the command for each package manager.
+The `axonpack` agent skill has your coding agent learn this package from these docs, including the
+`preview` CLI that publishes, removes and prunes previews. [Agent skill](/docs/agent-skills) has
+the command for each package manager.
 
 ```sh
-npx skills add axonpack/axonpack --skill axonpack axonpack-preview
+npx skills add axonpack/skills
 ```
 
 Agents working in separate git worktrees can each start a Metro with `npx preview start`, and one

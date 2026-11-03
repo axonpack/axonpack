@@ -91,8 +91,15 @@ const { withDevtools } = require('@axonpack/expo-devtools/metro');
 module.exports = withDevtools(getDefaultConfig(__dirname));
 ```
 
+With no `metro.config.js` yet, `npx expo customize metro.config.js` writes Expo's default for you to
+wrap. If the file already wraps its config in something else, put `withDevtools(...)` around the
+outermost call. `withDevtools` is the same wrap as `withReactNativeDevtoolsTab` from
+`@axonpack/react-native-devtools-tab`, so an app that has both packages uses one of them.
+
 Press `j` in Metro and the **Axonpack** tab is beside Console and Sources. [React Native
-DevTools](/docs/expo-devtools/react-native-devtools) has the rest.
+DevTools](/docs/expo-devtools/react-native-devtools) has the rest. On React Native below 0.86 the
+`devtools` command line tool needs this line too; see
+[Older React Native](/docs/expo-devtools/ai-agents#older-react-native).
 
 ## Things that trip people up
 

@@ -385,13 +385,34 @@ summary or a cursor: rerun with the `# next: --after <id>` line to get only new 
 means no app, or more than one: pick one with `--app <slug>` or `--device <name>`.
 ````
 
-The `axonpack-expo-devtools` agent skill teaches the whole tool: every topic, flag and exit code,
-and what to run for a failed or slow request or a crash. [Agent skills](/docs/agent-skills)
-has the command for each package manager.
+The `axonpack` agent skill sends your agent to these docs, so it learns the tool from this page and
+the [CLI reference](/docs/expo-devtools/reference/cli) for the current release.
+[Agent skill](/docs/agent-skills) has the command for each package manager.
 
 ```sh
-npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
+npx skills add axonpack/skills
 ```
+
+## What to run for a common problem
+
+| You want                                   | Run                                                                                          |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| What failed on screen                      | `devtools network --where state=error --since 5m`, then `devtools console --where 'level=error,warn' --since 5m`, then `devtools get network <id>` on the row that matters |
+| Requests that got no answer                | `devtools network --where 'error?' --fields id,method,url,error`                             |
+| Only HTTP 4xx and 5xx answers              | `devtools network --where 'code>=400'`                                                       |
+| Requests still waiting                     | `devtools network --where state=pending`                                                     |
+| The slowest requests                       | `devtools network --sort -ms --limit 10 --fields id,method,ms,url`                           |
+| A crash                                    | `devtools crash`, then `devtools get crash <id> --full`                                      |
+| To watch while someone reproduces it       | Run the list once, then rerun it with the `# next: --after <id>` line it printed. Repeat     |
+| A stored value                             | `devtools storage --grep <key>`, or `devtools get storage <store>/<key>`                     |
+| Queries that failed                        | `devtools query --where status=error`                                                        |
+| How the user reached this screen           | `devtools navigation --limit 10`                                                             |
+| What changed the Redux state               | `devtools redux --where 'type~cart/'`                                                        |
+| How a screen handles a failing endpoint    | `devtools network override <exact url> --status 500 --body '{"error":"down"}'`, open the screen, read `devtools console`, then `devtools network unoverride --all` |
+| Whether an endpoint answers from the app   | `devtools network send GET <url>`, then `devtools get network <id>` for the body             |
+
+Performance has rows only while its tab records, and it starts paused, so press record in the
+Performance tab first.
 
 ## When it doesn't answer
 

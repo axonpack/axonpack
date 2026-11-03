@@ -11,6 +11,9 @@ npm install @axonpack/react-pretty-print
 React 18 or newer is the only peer dependency. There is no native module, so there is no
 `pod install` and no prebuild, and it runs in Expo Go.
 
+The build is made for a bundler such as Metro, webpack or Vite. Plain Node can't import it, so a
+script that runs outside one can't use it either.
+
 ## On the web
 
 `domPrimitives` ships with the package, so there is nothing to write.
@@ -54,11 +57,11 @@ const Example = () => <JsonTree primitives={{ View, Text, Pressable }} value={re
 
 ## Give your AI agent the skill
 
-If you work with a coding agent, install this package's skill into the project:
+If you work with a coding agent, install the Axonpack skill into the project:
 
 ```sh
-npx skills add axonpack/axonpack --skill axonpack axonpack-react-pretty-print
+npx skills add axonpack/skills
 ```
 
-Then you can ask it to "Set up @axonpack/react-pretty-print in this app", and it follows the setup in
-the skill. [Agent skills](/docs/agent-skills) has the command for each package manager.
+Then you can ask it to "Set up @axonpack/react-pretty-print in this app", and it follows this page
+from the live docs. [Agent skill](/docs/agent-skills) has the command for each package manager.

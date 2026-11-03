@@ -74,16 +74,16 @@ The reply is recorded after redaction, so the tab shows what left the app and no
 agent worked on something while you were away, this is where you see what it looked at. The list is
 a topic as well, so `npx devtools ai-usage --where 'action?'` prints every action an agent took.
 
-## Agent skills
+## Agent skill
 
-The repository has an agent skill for each package, plus one for Axonpack as a whole. Your coding
-agent loads a skill when a task needs it. A package's skill starts with numbered setup steps: find
-the package manager from the lockfile, check the versions, install the package with its peers,
-change the config files, then verify. Each step ends with a check, and the agent doesn't go on until
-the check passes.
+Axonpack has one agent skill for every package. Your coding agent loads it when a task needs it,
+and it sends the agent to these docs, so it always matches the latest release. There the
+[agent guide](/docs/agent-guide) has the agent find the package manager from the lockfile, check
+the version, follow the installation page with the package's peers and config changes, then run
+each check the page gives.
 
-The `axonpack-expo-devtools` skill also covers the `devtools` tool, down to each topic, flag and
-exit code, with the commands to run when a request fails or the app crashes.
+For this package, the agent learns each topic, flag and exit code from the current `devtools` guide
+and its reference.
 
 ## How it works
 
@@ -227,7 +227,7 @@ name, so use `npx @axonpack/expo-devtools apps` there.
 To teach your agent the tool, install the skill:
 
 ```sh
-npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
+npx skills add axonpack/skills
 ```
 
 Or paste the short snippet from the guide into your `AGENTS.md` or `CLAUDE.md`.
@@ -235,4 +235,4 @@ Or paste the short snippet from the guide into your `AGENTS.md` or `CLAUDE.md`.
 - [Use with AI agents](/docs/expo-devtools/ai-agents) is the guide, with that snippet.
 - [The devtools CLI reference](/docs/expo-devtools/reference/cli) lists every command, flag, output
   line and exit code.
-- [Agent skills](/docs/agent-skills) has the install command for each package manager.
+- [Agent skill](/docs/agent-skills) has the install command for each package manager.
