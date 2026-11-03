@@ -53,9 +53,10 @@ strings and bodies. Two options strip what should not be kept before a request i
 - `network.redactHeaders` lists header names whose values are stored as `[redacted]`.
 - `network.redact(entry)` rewrites a request before it is stored, or returns `null` to drop it.
 
-Both are on [Network](/docs/expo-devtools/network). `navigation.redact` does the same for a screen's
-params, on [Navigation](/docs/expo-devtools/navigation), and `crash.redact` for a crash report, on
-[Crash reporting](/docs/expo-devtools/crash-reporting).
+Both are on [Network](/docs/expo-devtools/network). `storage.redactKeys` and `storage.redact` do the
+same for a stored value, on [Storage](/docs/expo-devtools/storage#redaction). `navigation.redact` does
+the same for a screen's params, on [Navigation](/docs/expo-devtools/navigation), and `crash.redact` for
+a crash report, on [Crash reporting](/docs/expo-devtools/crash-reporting).
 
 ## The Metro line
 

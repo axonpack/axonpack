@@ -42,7 +42,8 @@ There is no filesystem module in this package and no dev server to upload to, so
 the way it left: as text. The sheet takes a paste, or reads the clipboard for you.
 Before anything is written it reports what the file would do: how many keys are new, how many would be
 overwritten, how many already hold exactly that value, and how many are skipped. Each skip gives its
-reason: hidden by the blacklist, a type this store does not hold, or no value to write. A file exported from a different store
+reason: hidden by the blacklist, a type this store does not hold, no value to write, or redacted. A
+redacted value in the file is never written back, and neither is a key that is redacted in this store. A file exported from a different store
 is not refused, but it is called out.
 
 Only then does the Write button do anything. Keys are written one at a time so a failure names the key

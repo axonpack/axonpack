@@ -445,8 +445,9 @@ There is no filesystem module in this package and no dev server to upload to, so
 back the way it left: as text. The sheet takes a paste (or reads the clipboard for you), then says
 what the file would do before anything is written — how many keys are new, how many would be
 overwritten, how many already hold exactly that value, and how many are skipped, with the reason:
-hidden by the blacklist, a type this store does not hold, or no value to write. A file exported from
-a different store is not refused, but it is called out.
+hidden by the blacklist, a type this store does not hold, no value to write, or redacted. A redacted
+value is never written back, and neither is a key redacted in this store. A file exported from a
+different store is not refused, but it is called out.
 
 Only then does the Write button do anything. Keys are written one at a time so a failure names the
 key that caused it, and the store is re-read afterwards rather than patched key by key — an import
@@ -781,6 +782,8 @@ a key of `config.themes`.
 | `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.              |
 | `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.   |
 | `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.               |
+| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.  |
+| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.  |
 
 `crash` is documented on its own, under
 [Crash reporting](https://axonpack.dev/docs/expo-devtools/crash-reporting).

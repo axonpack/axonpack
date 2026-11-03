@@ -23,6 +23,7 @@ one key at a time.
 - [x] A fixed key list can be a function, resolved on each read
 - [x] Live updates from a store that publishes a change listener, as MMKV does
 - [x] Lists every key and reads a value only once its row is on screen
+- [x] Redact values by key or with a hook, before the tab keeps them, and never write the placeholder back
 - [ ] Show binary values as hex, and edit them there
 - [ ] History of writes, with revert
 
@@ -121,6 +122,17 @@ common libraries, and one escape hatch takes any object with get/set/remove.
   it left — as text, pasted — because there is no filesystem module here and no dev server to upload
   to. Keys are written one at a time so a failure names the key that caused it, and the store is
   re-read afterwards rather than patched key by key.
+- **Redaction runs in the read path, not the view.** `storage.redactKeys` and `storage.redact` run in
+  `buildStorageEntry`, which every read goes through (a row on screen, an opened key, a live change,
+  the read-back after a write), so no surface can show a value that skipped it. It reuses the network
+  tab's `[redacted]` marker. Only `text` is taken from the hook: the store finds an entry by its key,
+  so a hook that changed the key would orphan the row. A hook that throws hides the key, as network
+  and navigation do. A hidden key is still listed until its value is read, since the hook needs the
+  value to decide; the blacklist is what keeps a key off the list. Nothing is redacted by default.
+- **A redacted value is never written back.** The entry carries `redacted: true`, and the write
+  service refuses an edit or a delete on it, which covers the editor, the DevTools tab's drafts and
+  the inline cell. The export marks each redacted value, and the import plan skips it, and also skips
+  any key that is redacted in the store it goes into, since nobody can see what would be replaced.
 - **A store says which types it can hold**, and the Add sheet offers only those. AsyncStorage and
   SecureStore hand back a string whatever went in, so both declare `['string']` and never offer a
   number the store would flatten. Binary is offered by neither create nor edit — there is still no

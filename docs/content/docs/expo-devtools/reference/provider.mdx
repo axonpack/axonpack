@@ -127,8 +127,28 @@ network: {
 | `storage.adapters`   | `StorageAdapterDefinition[]` | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically. |
 | `storage.maxKeys`    | `number`                     | `undefined` | Deprecated and ignored. Every key is listed, and a value is read when its row is on screen. |
 | `storage.readOnly`   | `boolean`                    | `false`     | Blanket read-only default; an individual adapter can still set its own. |
+| `storage.redactKeys` | `readonly (string \| RegExp)[]` | `[]`     | Keys whose values are shown as `[redacted]`, in every store. A string matches a whole key without regard to case; a `RegExp` is tested as written. |
+| `storage.redact`     | `(entry: StorageEntry) => StorageEntry \| null` | `undefined` | Runs after `redactKeys`, each time a value is read, before the tab keeps it. Return the entry with its `text` changed, the entry as it is, or `null` to hide the key. If it throws, the key is hidden. Only `text` is taken from what it returns. |
 
 See [Storage adapters](/docs/expo-devtools/reference/storage-adapters) for how to build one.
+
+Redaction happens as a value is read, live changes included, so nothing downstream sees the real
+value: not the list, the detail sheet, copy, export or the DevTools tab. A redacted value can't be
+edited or deleted, and an import skips it, so the placeholder is never written back. A key `redact`
+hid stays on the list until its value is read; a `blacklist` keeps it off the list entirely. See
+[Redaction](/docs/expo-devtools/storage#redaction).
+
+```ts
+storage: {
+  adapters,
+  redactKeys: ['authToken', /^session\./],
+  // Every SecureStore value. Its id is its name, slugged.
+  redact: (entry) =>
+    entry.adapterId === 'securestore' && entry.text !== null
+      ? { ...entry, text: '[redacted]' }
+      : entry,
+}
+```
 
 ## Navigation
 
