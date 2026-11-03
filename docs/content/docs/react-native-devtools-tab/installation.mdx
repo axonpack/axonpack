@@ -44,4 +44,42 @@ dependencies. Both already arrive with `react-native` and are versioned in locks
 Metro helper resolves them at run time from whatever is serving your project. The copy it uses is
 the copy your dev server uses.
 
+## Give your AI agent the skill
+
+If you work with a coding agent, install this package's skill into the project:
+
+<Tabs items={["npm", "yarn", "pnpm", "bun"]}>
+<Tab value="npm">
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-react-native-devtools-tab
+```
+
+</Tab>
+<Tab value="yarn">
+
+```sh
+yarn dlx skills add axonpack/axonpack --skill axonpack axonpack-react-native-devtools-tab
+```
+
+</Tab>
+<Tab value="pnpm">
+
+```sh
+pnpm dlx skills add axonpack/axonpack --skill axonpack axonpack-react-native-devtools-tab
+```
+
+</Tab>
+<Tab value="bun">
+
+```sh
+bunx skills add axonpack/axonpack --skill axonpack axonpack-react-native-devtools-tab
+```
+
+</Tab>
+</Tabs>
+
+Then you can ask it to "Set up @axonpack/react-native-devtools-tab in this app", and it follows the
+setup in the skill. [Agent skills](/docs/agent-skills) has more ways to install it.
+
 Next: [Quick start](/docs/react-native-devtools-tab/quick-start).

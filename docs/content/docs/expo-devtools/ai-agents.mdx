@@ -10,14 +10,14 @@ actions and performance events. The agent runs a command and gets plain text bac
 to the rows it asked for. You can run the same commands yourself.
 
 ```sh
-npx devtools network --where 'code>=400' --since 10m
+npx devtools network --where state=error --since 10m
 ```
 
 ```
 # network · my-app · iPhone 16 Pro · 2 of 214 match
-id                        method  code  ms   url
-fetch-1762172310455-212   POST    401   184  https://api.example.com/v1/session/refresh
-fetch-1762172290871-198   GET     500   92   https://api.example.com/v1/orders
+id                        method  code  state  ms   url
+fetch-1762172310455-212   POST    401   error  184  https://api.example.com/v1/session/refresh
+fetch-1762172290871-198   GET     500   error  92   https://api.example.com/v1/orders
 # next: --after fetch-1762172310455-212
 ```
 
@@ -92,7 +92,7 @@ command exits with 2 when no app is running.
 $ devtools topics
 # topics · my-app · iPhone 16 Pro
 topic     rows  about
-network   214   HTTP, WebSocket and SSE since launch, newest first; get shows frames and events
+network   214   HTTP, WebSocket and SSE since launch, newest first. state=error is every failed request; get shows frames and events
 console   87    console lines since launch (last 500), newest first; repeats fold into one row
 query     off   TanStack Query cache: queries (id is the query hash) and mutations, last updated first
 ...
@@ -104,7 +104,7 @@ one line that says why, such as `# query is off: no QueryClient in config.query.
 ### A topic's rows
 
 ```sh
-devtools network --where 'code>=400' --since 10m
+devtools network --where state=error --since 10m
 devtools network --grep timeout --fields id,method,url,error
 devtools network --where 'method=post,put' --sort -ms --limit 10
 devtools network --group-by code
@@ -130,8 +130,8 @@ Every topic takes the same flags:
 | `--count`             | Only how many rows match.                                                                                                                                                                                    |
 | `--group-by <field>`  | How many rows have each value of a field, most first.                                                                                                                                                        |
 | `--full`              | Strings whole. Without it, a string over 2 KB is cut and says so.                                                                                                                                            |
-| `--json`              | JSON lines, one object per row, with no `#` lines.                                                                                                                                                           |
-| `--out <file>`        | Write the reply whole to a file instead of printing it.                                                                                                                                                      |
+| `--json`              | JSON lines, one object per row, with no `#` lines. With no rows it prints nothing.                                                                                                                           |
+| `--out <file>`        | Write the reply whole to a file, and print one line saying so. With `get`, the file holds the JSON alone.                                                                                                    |
 
 When more than one app is running, these pick one:
 
@@ -158,8 +158,9 @@ request comes with its headers, bodies and timing, a socket with its frames, a s
 events, a crash with its stack and breadcrumbs. A request's initiator lists each frame as a file
 with its line and column, and leaves out frames from libraries unless you pass `--full`.
 
-Strings over 2 KB are cut unless you pass `--full`, and `--out <file>` writes the row whole to a
-file. `--json` prints it on one line. A row that has aged out of the buffer answers with an error.
+Strings over 2 KB are cut unless you pass `--full`. `--out <file>` writes the row's JSON whole to a
+file, with nothing else in it, and prints `# network <id>: wrote <n> chars to <file>`. `--json`
+prints it on one line. A row that has aged out of the buffer answers with an error.
 
 ## Topics
 
@@ -168,7 +169,7 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 
 | Topic         | A row is                                                                                      | Columns by default                 | Every field                                                                         |
 | ------------- | --------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
-| `network`     | A request, socket or event stream since launch. The last 1,000                                | `id method code ms url`            | `id t kind method code state ms url error type size msgs source request response`  |
+| `network`     | A request, socket or event stream since launch. The last 1,000                                | `id method code state ms url`      | `id t kind method code close state ms url error type size msgs source request response` |
 | `console`     | A console line since launch. The last 500, with repeats folded into one row                   | `id level text`                    | `id t level text count source crash`                                                |
 | `performance` | A long task, slow interaction, mark or measure. Kept only while the Performance tab records, and it starts paused | `id kind name ms` | `id t kind name ms handler detail`                                                  |
 | `storage`     | A key in a registered store. `id` is `<store>/<key>`. Rows have no time, so `--since` finds none | `id type value`                 | `id t store key type size value error`                                              |
@@ -178,9 +179,14 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 | `crash`       | A captured crash                                                                              | `id kind name message`             | `id t kind name message route previous seen`                                        |
 | `ai-usage`    | A query an agent made, with the reply it got. The last 100                                    | `id command matched total ms`      | `id t command topic matched total ms size error cut reply`                          |
 
-- `storage` reads values the way the tab does. The first time you ask about a store, the app lists
-  its keys. A list then reads the values on the page it returns, and a `--grep` or a filter on
-  `value` reads every key once. Values stay read after that, as they do in the tab.
+- In `network`, `code` is the HTTP status only, and a socket's close code is `close` (`-` on an
+  HTTP row). `state` is `error` for a 4xx or 5xx answer, a request that got no answer and a socket
+  that failed, so `--where state=error` lists every failure. `--where 'code>=400'` lists only the
+  4xx and 5xx answers.
+- `storage` reads values the way the tab does. Each query lists every store's keys again, behind a
+  `# wait:` line, so keys the app wrote since show up. A list then reads the values on the page it
+  returns, and a `--grep` or a filter on `value` reads every key once. Values stay read after that,
+  as they do in the tab.
 - `redux` keeps the action and what it changed, never the whole state.
 - A tab the app has no setup for (no router, no `QueryClient`, no store with
   `devtoolsReduxEnhancer()`, no storage adapters) is an `off` topic.
@@ -194,7 +200,10 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 - **`# next: --after <id>`** is the cursor for the next poll. Run the same command with it to get
   only what is new.
 - **`# more: --before <id>`** pages to the older rows the limit cut off.
-- **`--json`** prints one JSON object per line and no `#` lines, so it has no cursors.
+- **`# paused: the Performance tab records only after record is pressed`** ends an empty
+  `performance` list while that tab is paused.
+- **`--json`** prints one JSON object per line and no `#` lines, so it has no cursors. With no
+  rows it prints nothing.
 - **An error** is one line that starts with `error:`.
 
 ### Polling and paging
@@ -305,7 +314,7 @@ This app uses @axonpack/expo-devtools. With the app open in a dev build or Expo 
 `expo start` running, read what it recorded from the terminal (Node 22+):
 
 - `npx @axonpack/expo-devtools topics` lists what you can query, with row counts.
-- `npx @axonpack/expo-devtools network --where 'code>=400' --since 10m` lists failed requests.
+- `npx @axonpack/expo-devtools network --where state=error --since 10m` lists failed requests.
 - `npx @axonpack/expo-devtools console --where 'level=error,warn' --limit 20` lists recent errors.
 - `npx @axonpack/expo-devtools get network <id>` shows one request whole: headers, bodies, timing.
 - `npx @axonpack/expo-devtools <topic> --help` lists every flag, with examples.
@@ -314,6 +323,14 @@ Pass the topic and each flag as separate arguments. Output is tab-separated, and
 summary or a cursor: rerun with the `# next: --after <id>` line to get only new rows. Exit code 2
 means no app, or more than one: pick one with `--app <slug>` or `--device <name>`.
 ````
+
+The `axonpack-expo-devtools` agent skill teaches the whole tool: every topic, flag and exit code,
+and what to run for a failed or slow request or a crash. [Agent skills](/docs/agent-skills)
+has the command for each package manager.
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
+```
 
 ## When it doesn't answer
 

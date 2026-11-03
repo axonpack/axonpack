@@ -24,9 +24,18 @@ error in the console, the stack of a crash.
 npx devtools network --where 'code>=400' --since 10m
 ```
 
-Your redaction settings hold, and auth headers and cookies are always masked. The AI Usage tab lists
-each query and the reply the agent got. [Use with AI agents](/docs/expo-devtools/ai-agents) has
-every command, and a snippet to paste into your `AGENTS.md` or `CLAUDE.md`.
+Your redaction settings hold, and auth headers and cookies are always masked. The
+[AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab) lists each query and the reply the agent
+got. [Use with AI agents](/docs/expo-devtools/ai-agents) has every command, and a snippet to paste
+into your `AGENTS.md` or `CLAUDE.md`. Every flag and error is in the
+[devtools CLI reference](/docs/expo-devtools/reference/cli).
+
+The `axonpack-expo-devtools` agent skill teaches your agent this tool and how to set the package up.
+[Agent skills](/docs/agent-skills) has the command for each package manager.
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
+```
 
 ## The tabs
 

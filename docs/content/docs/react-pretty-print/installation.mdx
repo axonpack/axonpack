@@ -51,3 +51,14 @@ const Example = () => <JsonTree primitives={{ View, Text, Pressable }} value={re
 | ----------------------------------------- | ---------------------------------------------------------- |
 | `@axonpack/react-pretty-print`            | The three renderers, `domPrimitives`, and every utility    |
 | `@axonpack/react-pretty-print/themes`     | The 130 palettes and the `PrettyPrintTheme` type           |
+
+## Give your AI agent the skill
+
+If you work with a coding agent, install this package's skill into the project:
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-react-pretty-print
+```
+
+Then you can ask it to "Set up @axonpack/react-pretty-print in this app", and it follows the setup in
+the skill. [Agent skills](/docs/agent-skills) has the command for each package manager.

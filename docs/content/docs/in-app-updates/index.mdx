@@ -40,6 +40,16 @@ Your app is probably on the latest version, so the prompt stays hidden. To see i
 anything, use a [mock](/docs/in-app-updates/testing), which is a fake release you set up in code.
 </Callout>
 
+## For AI agents
+
+The `axonpack-in-app-updates` agent skill teaches your coding agent this package: the update prompt,
+forced updates, providers, and faking a release to test it. [Agent skills](/docs/agent-skills) has
+the command for each package manager.
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-in-app-updates
+```
+
 ## Plain words
 
 | Word            | Meaning                                                                              |

@@ -20,6 +20,15 @@ npm install @axonpack/react-pretty-print
 | **[XmlTree](/docs/react-pretty-print/xml-tree)**               | A document as a tree, parsed in JS so it works off the DOM    |
 | **[CodeHighlight](/docs/react-pretty-print/code-highlight)**   | Highlighted source, one node per token, in 38 languages       |
 
+## For AI agents
+
+The `axonpack-react-pretty-print` agent skill teaches your coding agent the three renderers, on the
+web and in React Native. [Agent skills](/docs/agent-skills) has the command for each package manager.
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-react-pretty-print
+```
+
 ## What makes it different
 
 - **No dependencies, and no platform imports.** Nothing in it imports `react-native` or touches the
