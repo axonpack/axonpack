@@ -74,6 +74,22 @@ describe('enabled: false', () => {
     expect(crashStore.isEnabled()).toBe(false);
   });
 
+  it('leaves no agent global for the CLI to find', () => {
+    delete (globalThis as any).__AXONPACK_AGENT__;
+    startDevtools({ enabled: false });
+    expect((globalThis as any).__AXONPACK_AGENT__).toBeUndefined();
+
+    startDevtools({ network: NO_NETWORK_PATCHES });
+    expect((globalThis as any).__AXONPACK_AGENT__).toBeUndefined();
+
+    resetDevtoolsStart();
+    startDevtools({ network: NO_NETWORK_PATCHES });
+    expect((globalThis as any).__AXONPACK_AGENT__).toEqual({
+      hello: expect.any(Function),
+      run: expect.any(Function),
+    });
+  });
+
   it('still honours defaultTheme, since the crash sheet reads it', () => {
     startDevtools({ ...CRASH_ONLY, defaultTheme: 'dracula' });
     expect(themeStore.getPalette()).toBe(BUILT_IN_THEMES.dracula.palette);

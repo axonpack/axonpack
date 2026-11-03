@@ -1,3 +1,4 @@
+import { installAgent } from '../agent/services/install-agent.service';
 import type { BuiltInThemeId, ThemeConfig } from '../core/constants/theme.const';
 import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
 import { themeStore } from '../core/stores/theme.store';
@@ -695,6 +696,8 @@ export function startDevtools<TThemeName extends string = never>(
   reduxStore.setActionLists({ allow: reduxAllow, deny: reduxDeny });
   reduxStore.setEnabled(true);
   if (reduxStartsPaused) reduxStore.setPaused(true);
+
+  installAgent();
 
   // Last, so the launcher button appears only once there is a working panel behind it. Anything
   // above throwing leaves the overlay hidden, which is the honest outcome.
