@@ -1,0 +1,238 @@
+---
+title: '@axonpack/expo-devtools now has a command line tool for AI agents'
+description: The devtools command reads what the running app recorded, and can mock or send a request from inside it. Every call an agent makes is listed in the app's AI Usage tab.
+author: Md Asadujjaman
+date: 2026-11-03
+---
+
+An AI agent helping with a React Native app can read the code and run the tests, but it can't see
+the phone. When the profile screen says "could not load profile", the agent guesses from the code,
+or asks you what happened.
+
+So you go and look. You open the devtools, find the request that failed, and copy its headers and
+response into the chat. Then the agent wants the console, and you copy that too. It's slow, and it's
+easy to paste more than you meant to. Request headers carry the `Authorization` token, and once
+you paste it, it stays in the chat history.
+
+`@axonpack/expo-devtools` already records all of this on the device. It now also ships a command
+line tool, `devtools`, so the agent can ask the app for it from a terminal.
+
+## Reading the app from a terminal
+
+```sh
+npx devtools apps
+npx devtools topics
+npx devtools network --where state=error --since 10m
+npx devtools get network <id>
+```
+
+`apps` lists the apps running on Metro, with their device and whether they have the devtools in
+them. `topics` lists what the app can answer about, one topic per tab (`network`, `console`,
+`performance`, `storage`, `query`, `navigation`, `redux`, `crash` and `ai-usage`), with how many
+rows each one holds.
+
+Every topic takes the same flags. `--grep` searches every value, bodies included. `--where` filters
+on a field, like `--where 'code>=400'` or `--where 'level=error,warn'`. `--since` and `--until` set a
+time window. `--fields` picks the columns, `--count` and `--group-by` count rows, and `--after`
+returns only the rows that came in since the last call, which is how an agent polls. `get` prints
+one row whole: a request with its headers, bodies and timing, or a crash with its stack and
+breadcrumbs.
+
+The reply is tab-separated text with a summary line on top, or JSON lines with `--json`. Only the
+matching rows come back, so a reply stays short even after the app has made a few hundred requests.
+
+## Mocking and sending requests
+
+The `network` topic can also change things. It uses the same overrides and the same Sandbox the
+Network tab already has, so whatever an agent does shows up in the tab too.
+
+```sh
+npx devtools network override https://api.example.com/v1/me --status 500 --body '{"error":"down"}'
+npx devtools network block https://api.example.com/v1/feed
+npx devtools network send GET https://api.example.com/v1/me
+npx devtools network replay <id> --header 'X-Debug: 1'
+```
+
+After `override`, the app's requests to that exact URL get the mocked answer without reaching the
+network. After `block`, they fail as if the phone were offline. Both last until the app reloads or
+`unoverride` removes them. `send` makes a request from inside the app, through the app's own
+`fetch`, and `replay` sends a logged request again with the app's own headers. Either way the new
+request is a row in the log, and the reply is that row.
+
+A POST, PUT, PATCH or DELETE can change data on the server, so `send` and `replay` refuse any method
+but GET unless the command has `--yes`. The app checks this itself. A call that comes in through an
+open DevTools window (more on that below) never runs the tool's own code, so a check in the tool
+alone would miss it.
+
+## The AI Usage tab
+
+Every query and action an agent makes is listed in a new tab, AI Usage, on the device and in React
+Native DevTools. A row shows the command as you would type it, when it ran, how many rows it matched
+and how long the app took. Tap a row to see the reply exactly as the agent got it.
+
+The reply is recorded after redaction, so the tab shows what left the app and nothing more. If an
+agent worked on something while you were away, this is where you see what it looked at. The list is
+a topic as well, so `npx devtools ai-usage --where 'action?'` prints every action an agent took.
+
+## Agent skills
+
+The repository has an agent skill for each package, plus one for Axonpack as a whole. Your coding
+agent loads a skill when a task needs it. A package's skill starts with numbered setup steps: find
+the package manager from the lockfile, check the versions, install the package with its peers,
+change the config files, then verify. Each step ends with a check, and the agent doesn't go on until
+the check passes.
+
+The `axonpack-expo-devtools` skill also covers the `devtools` tool, down to each topic, flag and
+exit code, with the commands to run when a request fails or the app crashes.
+
+## How it works
+
+Metro already serves a debugger connection for each app. React Native DevTools uses it. The
+`devtools` tool opens a connection of its own and makes one call: it runs a function the package
+puts in the app in development, and hands it the query. The app filters, sorts and pages its own
+rows, writes the reply as text and sends back only that. The tool prints it.
+
+Because the filtering runs in the app, only the matching rows and the fields you asked for cross the
+connection. A query over a thousand logged requests doesn't copy a thousand requests to your
+computer. `--since 10m` means ten minutes by the phone's clock, so it doesn't matter if your
+computer's clock is off.
+
+The tool doesn't turn on any of the debugger's event streams, so LogBox isn't cleared and nothing
+else arrives on the connection. A fresh connection gets its answer in a few milliseconds. On React Native 0.86 and later, with Expo's dev
+server, an app takes more than one debugger at a time, and the tool connects beside an open DevTools
+window. Older versions take one, and a second connection would close the window. There, if
+`metro.config.js` has `withDevtools`, the tool sends its query through the open DevTools window
+instead. With no window open it connects directly, since there's nothing to close.
+
+It only works with a development bundle, in a dev build or Expo Go. A release build doesn't install
+anything the tool can talk to.
+
+## Redaction
+
+The tool reads from the same stores the tabs read, and those stores apply your redaction settings
+before they keep anything. Every redaction option in your config (`network.redactHeaders`,
+`storage.redactKeys` and the rest) holds for the tool too, with no setup of its own.
+
+On top of that, the tool always shows the `authorization`, `cookie` and `set-cookie` headers and a
+page's `document.cookie` as `[redacted]`. No flag turns this off. Filters run on the masked row, so
+an agent can't find a token by searching for its value.
+
+The Console, Query and Redux tabs have no redaction setting. An agent reads what the app logged,
+cached or dispatched, the same as the tabs show it.
+
+## Finding a failing request
+
+Say the profile screen sometimes shows "could not load profile" after the app has been open for a
+while, and you ask your agent to find out why. It starts by checking which app is running:
+
+```text
+$ npx devtools apps
+app     name    device          devtools  metro  note
+my-app  My App  iPhone 16 Pro   3.8.0     8081   -
+```
+
+Then it asks for the requests that failed in the last ten minutes:
+
+```text
+$ npx devtools network --where state=error --since 10m
+# network · my-app · iPhone 16 Pro · 2 of 214 match
+id                        method  code  state  ms   url
+fetch-1762172310455-212   POST    401   error  184  https://api.example.com/v1/session/refresh
+fetch-1762172290871-198   GET     500   error  92   https://api.example.com/v1/orders
+# next: --after fetch-1762172310455-212
+```
+
+The 401 on the token refresh fits the bug. `get` shows that request whole, trimmed here to the
+lines that matter:
+
+```text
+$ npx devtools get network fetch-1762172310455-212
+# network fetch-1762172310455-212
+{
+  "kind": "http",
+  "id": "fetch-1762172310455-212",
+  "method": "POST",
+  "url": "https://api.example.com/v1/session/refresh",
+  "status": "error",
+  "statusCode": 401,
+  "requestHeaders": {
+    "authorization": "[redacted]",
+    "content-type": "application/json"
+  },
+  "responseBody": "{\"error\":\"refresh_token_expired\"}",
+  ...
+}
+```
+
+The agent can see that the app sent an `Authorization` header without seeing the token. Sending the
+refresh again would show whether the server still refuses it, but `replay` won't send a POST unless
+told to:
+
+```text
+$ npx devtools network replay fetch-1762172310455-212
+error: POST can change data on the server, so it needs --yes. GET goes without
+```
+
+A second refresh could change the session on the server, so the agent leaves it alone and reads the
+console to see what the app did with the 401:
+
+```text
+$ npx devtools console --where 'level=error,warn' --since 10m
+# console · my-app · iPhone 16 Pro · 1 of 87 match
+id                          level  text
+console-1762172310642-311   error  could not load profile: 401
+# next: --after console-1762172310642-311
+```
+
+When the refresh token has expired, the app shows a generic error where it should send the user back
+to sign in. The agent changes the refresh handler. To test the change without waiting for a token to
+expire, it mocks the same answer:
+
+```text
+$ npx devtools network override https://api.example.com/v1/session/refresh --status 401 --body '{"error":"refresh_token_expired"}'
+# network · my-app · iPhone 16 Pro · override on https://api.example.com/v1/session/refresh: 401, application/json, 33 chars. The app's requests to that exact URL get it, without reaching the network
+```
+
+You open the profile screen, the app gets the mocked 401, and this time it goes to the sign-in
+screen. The agent removes the mock:
+
+```text
+$ npx devtools network unoverride --all
+# network · my-app · iPhone 16 Pro · removed 1 override
+```
+
+Every command after `apps` is now a row in the AI Usage tab, the refused replay included, each with
+the reply the agent got.
+
+## Trying it
+
+You need Node 22 or newer on the computer, the app open in a dev build or Expo Go, and `expo start`
+running. Install the package and its peers:
+
+```sh
+npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview expo-clipboard
+```
+
+Mount `<DevtoolsProvider config={{ enabled: __DEV__ }}>` once, at the root of the app, as the
+[quick start](/docs/expo-devtools/quick-start) shows. Then run this from the app's project folder:
+
+```sh
+npx devtools apps
+```
+
+With yarn, pnpm or bun, it's `yarn devtools`, `pnpm exec devtools` or `bunx devtools`. In a
+monorepo, `npx devtools` can miss the local install and fetch an unrelated npm package with the same
+name, so use `npx @axonpack/expo-devtools apps` there.
+
+To teach your agent the tool, install the skill:
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
+```
+
+Or paste the short snippet from the guide into your `AGENTS.md` or `CLAUDE.md`.
+
+- [Use with AI agents](/docs/expo-devtools/ai-agents) is the guide, with that snippet.
+- [The devtools CLI reference](/docs/expo-devtools/reference/cli) lists every command, flag, output
+  line and exit code.
+- [Agent skills](/docs/agent-skills) has the install command for each package manager.
