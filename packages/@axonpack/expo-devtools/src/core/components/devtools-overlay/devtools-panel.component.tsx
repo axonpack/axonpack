@@ -18,6 +18,7 @@ import { DebugView } from '../../../features/debug/components/debug-view.compone
 import { NavigationView } from '../../../features/navigation/components/navigation-view.component';
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
+import { PreviewView } from '../../../features/preview/components/preview-view.component';
 import { QueryView } from '../../../features/query/components/query-view.component';
 import { ReduxView } from '../../../features/redux/components/redux-view.component';
 import { StorageView } from '../../../features/storage/components/storage-view.component';
@@ -65,6 +66,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         return <NavigationView />;
       case 'redux':
         return <ReduxView />;
+      case 'preview':
+        return <PreviewView />;
       case 'crashes':
         return <CrashView />;
       case 'ai-usage':

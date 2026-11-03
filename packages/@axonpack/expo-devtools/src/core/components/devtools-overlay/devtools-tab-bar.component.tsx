@@ -5,6 +5,7 @@ import {
   navigationStore,
   useNavigationStore,
 } from '../../../features/navigation/stores/navigation.store';
+import { previewStore, usePreviewStore } from '../../../features/preview/stores/preview.store';
 import { queryStore, useQueryStore } from '../../../features/query/stores/query.store';
 import { reduxStore, useReduxStore } from '../../../features/redux/stores/redux.store';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
@@ -19,6 +20,7 @@ export type DevtoolsTab =
   | 'query'
   | 'navigation'
   | 'redux'
+  | 'preview'
   | 'crashes'
   | 'ai-usage'
   | 'debug';
@@ -31,10 +33,16 @@ const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'query', label: 'Query', icon: 'cached' },
   { key: 'navigation', label: 'Navigation', icon: 'alt-route' },
   { key: 'redux', label: 'Redux', icon: 'data-object' },
+  { key: 'preview', label: 'Preview', icon: 'preview' },
   { key: 'crashes', label: 'Crashes', icon: 'bug-report' },
   { key: 'ai-usage', label: 'AI Usage', icon: 'smart-toy' },
   { key: 'debug', label: 'Debug', icon: 'construction' },
 ];
+
+/** The tabs to offer. One given `false` is left out: the app has nothing it could ever show there. */
+export function shownTabs(available: Partial<Record<DevtoolsTab, boolean>>) {
+  return TABS.filter(({ key }) => available[key] !== false);
+}
 
 export function DevtoolsTabBar({
   tab,
@@ -49,16 +57,17 @@ export function DevtoolsTabBar({
   const styles = useStyles();
   const COLORS = useThemeColors();
   // Tabs that are not always there: an app with no router, one that handed over no TanStack
-  // Query client, or one with no store using the Redux enhancer has nothing they could ever show.
+  // Query client, one with no store using the Redux enhancer, or one with no preview config.
   const routerKind = useNavigationStore(navigationStore.getRouterKind);
   const hasQueryClient = useQueryStore(queryStore.hasClient);
   const reduxAttached = useReduxStore(reduxStore.isAttached);
-  const tabs = TABS.filter(
-    (entry) =>
-      (entry.key !== 'navigation' || routerKind !== null) &&
-      (entry.key !== 'query' || hasQueryClient) &&
-      (entry.key !== 'redux' || reduxAttached)
-  );
+  const previewSetUp = usePreviewStore(previewStore.isSetUp);
+  const tabs = shownTabs({
+    navigation: routerKind !== null,
+    query: hasQueryClient,
+    redux: reduxAttached,
+    preview: previewSetUp,
+  });
   return (
     <ScrollView
       horizontal
