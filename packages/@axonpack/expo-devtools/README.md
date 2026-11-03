@@ -74,6 +74,20 @@ Two things need a little more than that: an in-app browser takes the `useDevtool
 the Storage tab shows nothing until you register your stores in `config.storage.adapters`, because
 this package depends on no storage library and cannot discover one.
 
+## For AI agents
+
+An AI agent, or you, can read what the devtools recorded from a terminal: requests with their bodies,
+logs, crashes, stored values and every other tab, filtered down to the rows it needs.
+
+```sh
+npx @axonpack/expo-devtools network --where 'code>=400' --since 10m
+```
+
+It works with any package manager, needs Node 22 or newer and `expo start`, and keeps every redaction
+you configured. The AI Usage tab lists each query and the reply it got.
+[Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) has every command, and a
+snippet to paste into your `AGENTS.md` or `CLAUDE.md`.
+
 ## Documentation
 
 Everything else is on the docs site.
@@ -82,6 +96,7 @@ Everything else is on the docs site.
 | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | [Quick start](https://axonpack.dev/docs/expo-devtools/quick-start)                     | Setup for Expo Router or your own entry point, and the launcher button |
 | [Guides](https://axonpack.dev/docs/expo-devtools)                                      | One page per tab, each ending in what it cannot measure and why        |
+| [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents)                | Reading the devtools from a terminal, and a snippet for your agent     |
 | [In-app browsers](https://axonpack.dev/docs/expo-devtools/in-app-browsers)             | Capturing a `<WebView />`'s requests and logs                          |
 | [React Native DevTools](https://axonpack.dev/docs/expo-devtools/react-native-devtools) | The Network tab on your computer, with the sandbox and code snippets   |
 | [Leaving it in production](https://axonpack.dev/docs/expo-devtools/production)         | What `enabled: false` does, and the two things that still run          |

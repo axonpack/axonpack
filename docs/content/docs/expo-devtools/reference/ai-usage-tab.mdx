@@ -1,0 +1,72 @@
+---
+title: AI Usage tab
+description: Toolbar, the query row, the detail sheet and what the tab keeps.
+---
+
+Every query an AI agent, or you, made of the app with the `devtools` command line tool, newest first,
+with the reply it got. Holds the **100** most recent queries. How agents use the tool is on
+[Use with AI agents](/docs/expo-devtools/ai-agents).
+
+```
+[⏺] [⊘]
+network --where 'code>=400' --since 10m         14:02:31
+2/214                                             1.4 ms
+get network fetch-1762172310455-212             14:02:40
+1/214                                            0.6 ms
+```
+
+The reply is recorded after every redaction, so the tab shows exactly what left the app.
+
+## Empty state
+
+With no query yet, the tab says **No agent queries yet**, says what the tab is for, and shows a
+command to start with, `npx devtools topics`.
+
+## Toolbar
+
+| Control        | What it does                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
+| Record / Clear | As on [the panel](/docs/expo-devtools/reference/panel#toolbar-row). Paused, agents can still query the app, and their queries are not kept. |
+
+`aiUsage.disabledByDefault` opens the tab paused. See [the provider reference](/docs/expo-devtools/reference/provider#ai-usage).
+
+## A query row
+
+| Element  | Meaning                                                                                                      |
+| -------- | ------------------------------------------------------------------------------------------------------------ |
+| Command  | The query as you would type it after `devtools`, flags included, quoted only where a shell needs it.        |
+| Time     | Wall-clock time the app answered.                                                                            |
+| Matched  | Rows the query matched, of the rows the topic held, as `2/214`. `-` for an error or a topic that is off.     |
+| Error    | In place of Matched, in red, when the reply was an `error:` line.                                            |
+| Took     | How long the app took to answer.                                                                             |
+
+## Detail sheet
+
+Tap a row. The header carries the command and **Copy**, which copies the reply.
+
+| Field      | What it shows                                                                           |
+| ---------- | --------------------------------------------------------------------------------------- |
+| Time       | When the app answered.                                                                  |
+| Topic      | The topic asked about.                                                                  |
+| Matched    | As on the row.                                                                          |
+| Took       | How long the app took.                                                                  |
+| Reply size | The whole reply in characters, and `cut to the first 64 K` when only its start was kept. |
+| Error      | The error's message, when there was one.                                                |
+
+The **Reply** section holds the reply exactly as the agent got it: a JSON tree for `get` or `--json`
+output, monospace text otherwise.
+
+## What it keeps
+
+- Every query through the tool: a topic's rows and `get`. `apps` and `topics` are probes and are not
+  listed.
+- While a topic is still reading (storage listing keys or reading values), the tool asks again until
+  it has an answer. Only that answer is listed.
+- Up to 64 K characters of each reply. `--full` and `--out` can ask for more, and the row says so.
+- A query of `ai-usage` itself is listed without its reply, which would otherwise repeat every earlier
+  reply.
+
+The same list is the `ai-usage` topic, so the tool can read it back:
+`devtools ai-usage --where 'topic=network'`, or `devtools get ai-usage <id>` for one reply.
+
+The same tab is in React Native DevTools; see [its reference](/docs/expo-devtools/reference/devtools-tab#ai-usage).

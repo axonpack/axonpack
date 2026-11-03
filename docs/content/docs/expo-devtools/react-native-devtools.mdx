@@ -4,7 +4,7 @@ description: The panel on your computer, in its own Axonpack tab beside Console 
 ---
 
 The package puts an **Axonpack** tab in React Native DevTools, the debugger that opens when you press
-`j` in Metro. It holds the device's Network, Console, Performance, Storage, Crashes and Debug tabs,
+`j` in Metro. It holds the device's Network, Console, Performance, Storage, Crashes, AI Usage and Debug tabs,
 laid out like Chrome's own panels, and it reads the app's own stores: a request made on the phone is a
 row on the desktop the moment it starts, and a filter set on one side is set on the other.
 
@@ -115,6 +115,16 @@ Editing, adding, deleting and importing are there only for a store registered wi
   as a Markdown or JSON file.
 
 Opening a report marks it read on the device too.
+
+## AI Usage
+
+- Every query an AI agent made of the app with the `devtools` command line tool, with its time,
+  command, rows matched and how long the app took. Record and Clear sit in the toolbar.
+- Click a query for its pane: the topic, the reply's size and any error, then the reply exactly as
+  the agent got it. Copy the reply from the pane's bar.
+
+[Use with AI agents](/docs/expo-devtools/ai-agents) covers the tool. On React Native below 0.86 it
+asks through this window instead of opening a second connection, which would close it.
 
 ## Debug
 

@@ -11,7 +11,9 @@ This file ships inside the package. The same reference, split into pages and sea
 - [Console tab](#console-tab)
 - [Performance tab](#performance-tab)
 - [Storage tab](#storage-tab)
+- [AI Usage tab](#ai-usage-tab)
 - [React Native DevTools tab](#react-native-devtools-tab)
+- [The `devtools` command line tool](#the-devtools-command-line-tool)
 - [API](#api)
 - [What needs a development build](#what-needs-a-development-build)
 
@@ -29,12 +31,12 @@ full-screen modal; the button itself never appears inside the modal. With
 
 ### Header row
 
-| Item         | What it does                                                                                                                                               |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Crashes**, **Debug**. Scrolls horizontally on a narrow screen.                                   |
-| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports. |
-| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                       |
-| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                               |
+| Item         | What it does                                                                                                                                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Query**, **Navigation**, **Redux**, **Crashes**, **AI Usage**, **Debug**. Query, Navigation and Redux show only when the app has one to show. Scrolls horizontally on a narrow screen. |
+| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports.                                                                                       |
+| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                                                                                                             |
+| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                                                                                                                     |
 
 In a debug build whose bundle came from Metro, a strip under the header says **Metro server
 detected**. Its **Open DevTools** button opens React Native DevTools on the Axonpack tab, the same
@@ -51,7 +53,8 @@ of the panel, and its content scrolls in what is left.
 
 ### Toolbar row
 
-On the three tabs that record — Network, Console, Performance — it opens with the same two controls:
+On the tabs that record (Network, Console, Performance, Navigation and AI Usage) it opens with the
+same two controls:
 
 | Control    | What it does                                                                         |
 | ---------- | ------------------------------------------------------------------------------------ |
@@ -525,6 +528,38 @@ anywhere in the tab, and no way to add a key that isn't already there.
 - **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
   their length is reported.
 
+## AI Usage tab
+
+Every query an AI agent, or you, made of the app with
+[the `devtools` command line tool](#the-devtools-command-line-tool), newest first, with the reply it
+got. Holds the **100** most recent. The reply is recorded after every redaction, so the tab shows
+exactly what left the app. The same list is a panel in the React Native DevTools tab, and the
+`ai-usage` topic of the tool.
+
+Record (⏺) and Clear (⊘) open the toolbar, as on the other tabs that record. Paused, agents can still
+query the app, and their queries are not kept. `aiUsage.disabledByDefault` opens the tab paused.
+
+| Row element | Meaning                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------- |
+| Command     | The query as you would type it after `devtools`, flags included, quoted only where a shell needs it.     |
+| Time        | Wall-clock time the app answered.                                                                        |
+| Matched     | Rows the query matched, of the rows the topic held, as `2/214`. `-` for an error or a topic that is off. |
+| Error       | In place of Matched, in red, when the reply was an `error:` line.                                        |
+| Took        | How long the app took to answer.                                                                         |
+
+Tap a row for its detail sheet: the command and **Copy** (the reply) in the header, then Time, Topic,
+Matched, Took, Reply size and any Error, then the **Reply** section, a JSON tree for `get` or
+`--json` output and monospace text otherwise.
+
+- `apps` and `topics` are probes and are not listed.
+- Up to 64 K characters of each reply are kept. Reply size then says `cut to the first 64 K`.
+- A query of `ai-usage` itself is listed without its reply, which would otherwise repeat every
+  earlier reply.
+- With no query yet, the tab says **No agent queries yet** and shows `npx devtools topics` to start
+  with.
+
+---
+
 ## Debug tab
 
 Tools that break the app on purpose, so the numbers on the other tabs can be trusted. No toolbar:
@@ -739,6 +774,365 @@ out of the request without deleting it.
 
 The sent request is also a row in the log, on both surfaces.
 
+---
+
+## The `devtools` command line tool
+
+The `devtools` command line tool reads what the devtools recorded in a running app. This section
+lists everything it takes and prints, as does
+[the CLI reference](https://axonpack.dev/docs/expo-devtools/reference/cli) on the docs site.
+[Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) shows how to use it, with a
+snippet for your agent.
+
+### Running it
+
+| Package manager | Command                                 | Where                                                  |
+| --------------- | --------------------------------------- | ------------------------------------------------------ |
+| any (npm)       | `npx @axonpack/expo-devtools <command>` | Anywhere. Uses the installed copy in the app's folder. |
+| yarn            | `yarn devtools <command>`               | The app's project folder                               |
+| pnpm            | `pnpm exec devtools <command>`          | The app's project folder                               |
+| bun             | `bunx devtools <command>`               | The app's project folder                               |
+
+`bun devtools` runs a `devtools.ts` file first if the folder has one. Plain `npx devtools` outside a
+project with this package downloads the unrelated `devtools` package. Below, `devtools` stands for
+whichever form you use.
+
+| Needs                | Why                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| Node 22 or newer     | Its built-in `WebSocket` sends the Origin header Metro asks for. Older Node exits with code 1. |
+| A development bundle | The app in a dev build or Expo Go, with `<DevtoolsProvider>` mounted and `enabled` on.         |
+| `expo start` running | On this computer. The tool talks to Metro on `127.0.0.1`, ports 8081 to 8090 unless `--port`.  |
+
+### Commands
+
+| Command                     | What it prints                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `devtools apps`             | One row per app and device on Metro: `app`, `name`, `device`, `devtools`, `metro`, `note`.        |
+| `devtools topics`           | One row per topic in the picked app: `topic`, `rows` (`off` when the app turned it off), `about`. |
+| `devtools <topic> [flags]`  | The topic's rows, newest first, with the [query flags](#query-flags).                             |
+| `devtools get <topic> <id>` | One row as indented JSON.                                                                         |
+| `devtools <command> --help` | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. |
+
+`apps` and `topics` are probes: the [AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab)
+doesn't list them. In `apps`, the `devtools` column is the package version in the app, `-` when the
+app doesn't have it, and `?` when it can't be checked without `--force`.
+
+### Flags
+
+A flag is `--name value` or `--name=value`. A value can start with a dash, as in `--sort -ms`. `-h`
+is the only short flag.
+
+#### Query flags
+
+The same on every topic. `get` takes `--full`, `--json` and `--out`.
+
+| Flag         | Value                                  | Default             | What it does                                                                             | Example                             |
+| ------------ | -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------- |
+| `--grep`     | text, or `/regex/flags`                | none                | Rows holding it in any value, bodies included. Text ignores case. Keys are not searched. | `--grep timeout`                    |
+| `--where`    | a [clause](#where-clauses), repeatable | none                | Rows where the clause holds. Every `--where` must hold.                                  | `--where 'code>=400'`               |
+| `--since`    | a [time](#times)                       | none                | Rows at or after it.                                                                     | `--since 10m`                       |
+| `--until`    | a [time](#times)                       | none                | Rows at or before it.                                                                    | `--until 2026-11-03T10:00:00Z`      |
+| `--limit`    | whole number from 1                    | `50`                | Rows to print, or groups with `--group-by`.                                              | `--limit 20`                        |
+| `--after`    | a row id                               | none                | Only rows newer than it, oldest first.                                                   | `--after fetch-1762172310455-212`   |
+| `--before`   | a row id                               | none                | Only rows older than it.                                                                 | `--before console-1762172290871-80` |
+| `--sort`     | field, or `-field`                     | newest first        | Sorts by that field, `-` for descending. Rows without a value go last. No cursors.       | `--sort -ms`                        |
+| `--fields`   | comma list of fields                   | the topic's columns | The columns to print.                                                                    | `--fields id,code,url`              |
+| `--count`    | none                                   | off                 | Prints only how many rows match.                                                         | `--count`                           |
+| `--group-by` | field                                  | none                | Prints how many rows have each value, most first.                                        | `--group-by code`                   |
+| `--full`     | none                                   | off                 | Strings whole. Without it, a string over 2,048 characters is cut.                        | `--full`                            |
+| `--json`     | none                                   | off                 | JSON lines, one object per row, with no `#` lines. `get` prints one line.                | `--json`                            |
+| `--out`      | file path                              | none                | Writes the reply whole (as with `--full`) to the file, and prints one line saying so.    | `--out response.json`               |
+
+#### App flags
+
+Needed only when more than one app is running, or for an app on another port.
+
+| Flag           | Value        | Default      | What it does                                                                                                                          | Example          |
+| -------------- | ------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `--app`        | Expo slug    | none         | The app with this slug, whole, any case. Without an Expo manifest, the app id.                                                        | `--app my-app`   |
+| `--device`     | text         | none         | The app on a device whose name holds this text, any case.                                                                             | `--device pixel` |
+| `--port`       | whole number | 8081 to 8090 | Look on this Metro port only.                                                                                                         | `--port 8082`    |
+| `--force`      | none         | off          | Attach to an app that can't share its debugger and has no `withDevtools` to ask through. It closes a DevTools window open on the app. | `--force`        |
+| `--help`, `-h` | none         | off          | Print the help for the command instead of running it.                                                                                 | `network --help` |
+
+`apps` takes `--port`, `--force` and `--json`. `topics` takes the app flags and `--json`.
+
+#### Where clauses
+
+`<field><op><value>`, or `<field>?`.
+
+| Op                | Holds when the value                                                | Example          |
+| ----------------- | ------------------------------------------------------------------- | ---------------- |
+| `=`               | equals it, ignoring case                                            | `method=get`     |
+| `!=`              | does not equal it. A row with no value holds too                    | `level!=log`     |
+| `>` `>=` `<` `<=` | compares as a number. The value must be a number                    | `ms>1000`        |
+| `~`               | contains it, ignoring case, or matches a `/regex/flags`             | `url~/v1/`       |
+| `!~`              | does not contain it or match it. A row with no value holds too      | `url!~analytics` |
+| `?`               | has a value: not empty, not missing (`<field>?`, no value after it) | `error?`         |
+
+A plain value with commas is any of them: `method=get,post`. A `/regex/` is never split on commas.
+An object value is matched as its JSON.
+
+#### Times
+
+`--since` and `--until` take a number and a unit, `ms`, `s`, `m`, `h` or `d` (`30s`, `1.5h`), counted
+back from now on the device's clock, or any date the JavaScript `Date` reads, such as an ISO time. A
+row with no time, such as every `storage` row, is left out by either.
+
+### Topics
+
+`id` and `t` are on every topic: `id` is what `get`, `--after` and `--before` take, and `t` is the
+time `--since` reads, printed as an ISO time. Fields in **bold** are the columns shown by default.
+A `--fields` name that doesn't exist answers with the topic's fields.
+
+#### network
+
+HTTP requests, WebSockets and server-sent event streams since launch, the last 1,000. `get` adds a
+socket's frames as `messages` and a stream's events as `events`. A request's initiator lists each
+frame as a file with its line and column, and keeps frames from libraries only with `--full`.
+
+| Field        | Value                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| **`id`**     | The row's id                                                                                     |
+| `t`          | When it started                                                                                  |
+| `kind`       | `http`, `ws` or `sse`                                                                            |
+| **`method`** | The HTTP method                                                                                  |
+| **`code`**   | The HTTP status, or a socket's close code                                                        |
+| `state`      | `pending`, `success` or `error`; a socket's `connecting`, `open`, `closing`, `closed` or `error` |
+| **`ms`**     | How long it took                                                                                 |
+| **`url`**    | The URL                                                                                          |
+| `error`      | Why it failed                                                                                    |
+| `type`       | The response's MIME type (HTTP)                                                                  |
+| `size`       | The response body's size in bytes (HTTP)                                                         |
+| `msgs`       | How many frames or events a socket or stream has                                                 |
+| `source`     | The name of the WebView that made it. Empty for the app's own                                    |
+| `request`    | The request body (HTTP)                                                                          |
+| `response`   | The response body (HTTP)                                                                         |
+
+#### console
+
+Console lines since launch, the last 500. A line repeated in a row is one row with a count.
+
+| Field       | Value                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| **`id`**    | The row's id                                                                              |
+| `t`         | When it was logged                                                                        |
+| **`level`** | `log`, `info`, `warn`, `error`, `debug`, `input` and `result` (the `>` prompt) or `crash` |
+| **`text`**  | The whole line as text                                                                    |
+| `count`     | How many times it repeated                                                                |
+| `source`    | `native` for the app, or the name of the WebView that logged it                           |
+| `crash`     | The crash report's id, when the line is a crash                                           |
+
+#### performance
+
+Long tasks, slow interactions, marks and measures, newest first. Kept only while the Performance tab
+records, and it starts paused. Memory and frame-rate samples are not rows.
+
+| Field      | Value                                          |
+| ---------- | ---------------------------------------------- |
+| **`id`**   | The row's id                                   |
+| `t`        | When it happened                               |
+| **`kind`** | `longtask`, `interaction`, `mark` or `measure` |
+| **`name`** | Its name                                       |
+| **`ms`**   | How long it took                               |
+| `handler`  | How long an interaction's handlers ran         |
+| `detail`   | The `detail` a mark or measure was given       |
+
+#### storage
+
+Every key of every registered store, by store then key. Rows have no time. The first question about
+a store lists its keys; a list then reads the values on its page, and `--grep` or a `--where`,
+`--sort` or `--group-by` on `value`, `type`, `size` or `error` reads every key once.
+
+| Field       | Value                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`id`**    | `<store>/<key>`                                                                                                               |
+| `t`         | Always empty                                                                                                                  |
+| `store`     | The store's id                                                                                                                |
+| `key`       | The key                                                                                                                       |
+| **`type`**  | `json-object`, `json-array`, `string`, `number`, `boolean`, `buffer`, `empty`, `absent`, or `unread` before its value is read |
+| `size`      | The value's size in UTF-8 bytes                                                                                               |
+| **`value`** | The value as text, after redaction                                                                                            |
+| `error`     | Why reading it failed                                                                                                         |
+
+#### query
+
+The TanStack Query cache: queries and mutations, the one updated last first. `off` with no
+`QueryClient` in `config.query.client`.
+
+| Field           | Value                                                    |
+| --------------- | -------------------------------------------------------- |
+| **`id`**        | The query hash, or `mutation-<n>`                        |
+| `t`             | When it last updated, or when the mutation was submitted |
+| **`type`**      | `query` or `mutation`                                    |
+| `key`           | A mutation's key                                         |
+| **`status`**    | Its status                                               |
+| **`observers`** | How many observers a query has                           |
+| `variables`     | A mutation's variables                                   |
+| `data`          | Its data                                                 |
+| **`error`**     | Its error                                                |
+
+#### navigation
+
+The moves the navigator made, the last 200. `off` with no Expo Router or React Navigation found.
+
+| Field        | Value                                |
+| ------------ | ------------------------------------ |
+| **`id`**     | The row's id                         |
+| `t`          | When it moved                        |
+| **`action`** | The action's type                    |
+| **`from`**   | The route it left                    |
+| **`to`**     | The route it landed on               |
+| `path`       | The destination's URL path           |
+| `params`     | The destination's params             |
+| `container`  | The navigation container that moved  |
+| `noop`       | True when the action changed nothing |
+
+#### redux
+
+Dispatched actions, the last 200, each with what it changed. Never the whole state. `off` with no
+store using `devtoolsReduxEnhancer()`.
+
+| Field         | Value                                       |
+| ------------- | ------------------------------------------- |
+| **`id`**      | The row's id                                |
+| `t`           | When it was dispatched                      |
+| **`type`**    | The action's type                           |
+| `action`      | The whole action                            |
+| **`changed`** | The state paths it changed, comma-separated |
+| `changes`     | How many paths it changed                   |
+
+`get` adds each change: its path, whether it was added, removed or changed, and the value before and after.
+
+#### crash
+
+Captured crashes, newest first. `get` adds the stack, the breadcrumbs and the device. `off` when
+`crash.enabled` is false.
+
+| Field         | Value                                                                               |
+| ------------- | ----------------------------------------------------------------------------------- |
+| **`id`**      | The row's id                                                                        |
+| `t`           | When it happened                                                                    |
+| **`kind`**    | `js-fatal`, `js-error`, `unhandled-rejection`, `react-render` or `native-exception` |
+| **`name`**    | The error's name                                                                    |
+| **`message`** | The error's message                                                                 |
+| `route`       | The screen on top when it happened                                                  |
+| `previous`    | True for a crash read back from the previous launch                                 |
+| `seen`        | True once the report was shown                                                      |
+
+#### ai-usage
+
+The queries agents made, the last 100, each with the reply it got. A query of `ai-usage` keeps no
+reply.
+
+| Field         | Value                                                           |
+| ------------- | --------------------------------------------------------------- |
+| **`id`**      | `q<n>`                                                          |
+| `t`           | When the app answered                                           |
+| **`command`** | The query as you would type it after `devtools`                 |
+| `topic`       | The topic it asked about                                        |
+| **`matched`** | Rows it matched                                                 |
+| **`total`**   | Rows the topic held                                             |
+| **`ms`**      | How long the app took                                           |
+| `size`        | The whole reply's length in characters                          |
+| `error`       | The message of an `error:` reply                                |
+| `cut`         | True when only the first 64 K characters of the reply were kept |
+| `reply`       | The reply as the agent got it                                   |
+
+### Output
+
+Tab-separated, with a header row. In a cell, `-` is an empty value, a tab or line break is written as
+`\t`, `\n` or `\r`, `t` is an ISO time, and a string over 2,048 characters ends in
+`... [cut at 2048 of <n> chars, --full for all]`.
+
+| Line                                                                                  | When                                                                                               |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `# <topic> · <app> · <device> · <n> of <total> match`                                 | First line of a list. Ends in `· showing <n>` when `--limit` cut rows off.                         |
+| `# <topic> · <app> · <device> · <n> of <total> match · <k> values of <field>`         | First line of `--group-by`, above `<field>` and `count` columns.                                   |
+| `<n>`                                                                                 | The whole reply to `--count`.                                                                      |
+| `# next: --after <id>`                                                                | Last lines of an unsorted list: the cursor for the next poll. A row still in flight holds it back. |
+| `# more: --before <id>`                                                               | When the limit cut older rows off: the cursor for the next page.                                   |
+| `# <topic> is off: <reason>`                                                          | The whole reply for a topic the app turned off. Exit code 0.                                       |
+| `# <topic> <id>`                                                                      | First line of `get`, above the indented JSON.                                                      |
+| `# <topic>: wrote <n> chars to <file>`                                                | The whole reply with `--out`.                                                                      |
+| `# topics · <app> · <device>`                                                         | First line of `topics`.                                                                            |
+| `# ?: checking would close a DevTools window open on the app. --force checks anyway.` | Under `apps`, when a row shows `?`.                                                                |
+| `# wait: <what>`                                                                      | Never printed. The app says it is still reading; the tool asks again every 200 ms.                 |
+
+`--json` prints none of the `#` lines, so it has no cursors. Each row is one JSON object with the
+chosen fields; `--group-by` gives `{ "<field>": value, "count": n }`. Strings are still cut unless
+`--full`.
+
+### Errors
+
+The app's own errors are one `error: ...` line on stdout. The tool's own errors are one
+`error: ...` line on stderr. Both exit with the code shown.
+
+#### From the app
+
+| Message                                                                                       | Code |
+| --------------------------------------------------------------------------------------------- | ---- |
+| `unknown topic "<name>". Topics: <list>`                                                      | 1    |
+| `"<text>" isn't a topic. Pass the topic and each flag as separate arguments: devtools <text>` | 1    |
+| `unknown field "<name>" in <topic>. Fields: <list>`                                           | 1    |
+| `no <topic> row "<id>", it may have aged out of the buffer`                                   | 1    |
+| `bad --limit <n>: use a whole number from 1`                                                  | 1    |
+| `bad --where "<clause>": use <field><op><value> with = != > >= < <= ~ !~, or <field>?`        | 1    |
+| `bad --where "<clause>": unknown op "<op>". Ops: = != > >= < <= ~ !~`                         | 1    |
+| `bad --where "<clause>": <op> needs a number`                                                 | 1    |
+| `bad regex <pattern>: <why>`                                                                  | 1    |
+| `bad --since "<value>": use 30s, 10m, 2h, 1d or an ISO time` (and `--until`)                  | 1    |
+
+#### From the tool
+
+| Message                                                                                                                                                                                                                                               | Code |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `devtools needs Node 22 or newer, and this is Node <version>.`                                                                                                                                                                                        | 1    |
+| `unknown flag <flag>. See devtools --help`                                                                                                                                                                                                            | 1    |
+| `--<flag> needs a value`                                                                                                                                                                                                                              | 1    |
+| `bad --limit <value>: use a whole number from 1` (and `--port`)                                                                                                                                                                                       | 1    |
+| `usage: devtools get <topic> <id>. See devtools get --help`                                                                                                                                                                                           | 1    |
+| `usage: devtools <topic>. See devtools <topic> --help`                                                                                                                                                                                                | 1    |
+| `no reply from <app> on <device> in 5 s. Its JS may be paused at a breakpoint: resume it, then run the command again.`                                                                                                                                | 1    |
+| `still <what> after 5 s. The app keeps going, so run the same command again to pick up where it stopped.`                                                                                                                                             | 1    |
+| `could not reach Metro on port <port>`                                                                                                                                                                                                                | 1    |
+| `could not attach to <socket url>`                                                                                                                                                                                                                    | 1    |
+| `the debugger socket closed (<code>: <reason>)`                                                                                                                                                                                                       | 1    |
+| `the app threw: <message>`                                                                                                                                                                                                                            | 1    |
+| `no DevTools window is open on this page`, or another error from the [window relay](https://axonpack.dev/docs/react-native-devtools-tab/reference#calling-the-app-from-a-terminal)                                                                    | 1    |
+| ``no app found on Metro ports 8081 to 8090. Open the app in a dev build or Expo Go with `expo start` running, or pass --port.`` (`port <n>` with `--port`)                                                                                            | 2    |
+| `no app matches <flags>. Running:`, then a `--app <slug> --device '<device>'` line per app                                                                                                                                                            | 2    |
+| `<n> apps match. Pick one:`, then a `--app <slug> --device '<device>'` line per app                                                                                                                                                                   | 2    |
+| `<app> on <device> can't share its debugger (React Native below 0.86, or Expo started headless), and metro.config.js has no withDevtools to ask through its DevTools window, so attaching could close one open on it. Pass --force to attach anyway.` | 2    |
+| `<app> on <device> has no devtools agent. It needs @axonpack/expo-devtools with <DevtoolsProvider> mounted, in a dev build or Expo Go.`                                                                                                               | 2    |
+
+In `apps`, an app that couldn't be asked shows why in its `note` column instead, such as
+`no reply in 5 s: JS may be paused at a breakpoint`.
+
+### Exit codes
+
+| Code | Meaning                                                                                                             |
+| ---- | ------------------------------------------------------------------------------------------------------------------- |
+| `0`  | It answered, including a topic that is off and a query that matched nothing.                                        |
+| `1`  | An error: a bad command or flag, an app's `error:` reply, Node older than 22, a socket error, or no answer in time. |
+| `2`  | No app to ask: none running, none or several matching, no devtools in it, or it needs `--force`.                    |
+
+### Timing
+
+| Limit        | Value                                                                |
+| ------------ | -------------------------------------------------------------------- |
+| Each command | 5 seconds for the app to answer, waits included.                     |
+| Asking again | Every 200 ms while the app answers `# wait:`.                        |
+| Metro reads  | 2 seconds for each read of `/status`, `/json/list` and the manifest. |
+
+### What it reads
+
+Only what the stores keep, after every redaction in the config. The `authorization`, `cookie` and
+`set-cookie` headers and a page's `document.cookie` are always `[redacted]`, in every output, and
+filters run on the masked row. The tool can't change anything in the app. See
+[Redaction](https://axonpack.dev/docs/expo-devtools/ai-agents#redaction) and
+[Older React Native](https://axonpack.dev/docs/expo-devtools/ai-agents#older-react-native).
+
 ## API
 
 ### `<DevtoolsProvider>`
@@ -755,38 +1149,68 @@ is no `init` to call.
 | `color`              | `string`                               | accent   | Button fill.                                                                     |
 | `iconColor`          | `string`                               | white    | The built-in glyph only.                                                         |
 | `statusBar`          | `'app' \| 'auto' \| 'light' \| 'dark'` | `'auto'` | What the status bar content does while the panel is open.                        |
+| `children`           | `ReactNode`                            | none     | Your app.                                                                        |
 
 The provider is generic over your theme names, so `config.defaultTheme` only accepts a built-in id or
 a key of `config.themes`.
 
 ### `DevtoolsConfig`
 
-| Option                               | Type                          | Default     | What it does                                                                          |
-| ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------- |
-| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).          |
-| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                         |
-| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                      |
-| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                           |
-| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                     |
-| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                   |
-| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                          |
-| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.            |
-| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                          |
-| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                     |
-| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                  |
-| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.    |
-| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                        |
-| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                       |
-| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.          |
-| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something. |
-| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.              |
-| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.   |
-| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.               |
-| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.  |
-| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.  |
+| Option                               | Type                          | Default     | What it does                                                                                                                                 |
+| ------------------------------------ | ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).                                                                 |
+| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                                                                |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                                                                             |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                                                                                  |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                                                                            |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                                                                          |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                                                                                 |
+| `network.redactHeaders`              | `readonly string[]`           | `[]`        | Header names stored as `[redacted]`, any case. `cookie` also redacts `document.cookie`.                                                      |
+| `network.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactHeaders` each time a row changes, before it is stored. HTTP and WebSocket rows. `null` drops the row, and so does a throw. |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.                                                                   |
+| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                                                                                 |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                                                                            |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                                                                         |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.                                                           |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                                                                               |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                                                                              |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                                                                 |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something.                                                        |
+| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.                                                                     |
+| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.                                                          |
+| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.                                                                      |
+| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.                                                         |
+| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.                                                         |
+| `query.client`                       | `QueryClientLike`             | `undefined` | Your TanStack Query v5 `QueryClient`. Unset leaves the Query tab out of the panel.                                                           |
+| `navigation.disabledByDefault`       | `boolean`                     | `false`     | Open the Navigation tab paused. The route on screen is still shown.                                                                          |
+| `navigation.redact`                  | `(move) => move \| null`      | `undefined` | Runs on every move before it is stored. `null` drops the move, and so does a throw.                                                          |
+| `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                 |
+| `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                  |
+| `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                               |
+| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Open the AI Usage tab paused. Agents can still query the app.                                                                                |
 
-`crash` is documented on its own, under
+The Redux tab is there once a store was created with [`devtoolsReduxEnhancer()`](#devtoolsreduxenhancer).
+
+#### `crash`
+
+Crash capture is the only part of this package that runs with the devtools off. The guide is
 [Crash reporting](https://axonpack.dev/docs/expo-devtools/crash-reporting).
+
+| Option                               | Type                            | Default     | What it does                                                                                                                       |
+| ------------------------------------ | ------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `crash.enabled`                      | `boolean`                       | `true`      | Capture at all.                                                                                                                    |
+| `crash.enableWhileDevtoolsDisabled`  | `boolean`                       | `false`     | Install the handlers even with `enabled: false`, so a release build still reports crashes. Then only native exceptions are caught. |
+| `crash.handlers.jsErrors`            | `boolean`                       | `true`      | The `ErrorUtils` global handler, for fatal and non-fatal JS errors.                                                                |
+| `crash.handlers.unhandledRejections` | `boolean`                       | `true`      | Unhandled promise rejections.                                                                                                      |
+| `crash.handlers.nativeExceptions`    | `boolean`                       | `true`      | Uncaught Java/Kotlin and Objective-C exceptions, through the native module.                                                        |
+| `crash.popupDetail`                  | `'auto' \| 'full' \| 'compact'` | `'auto'`    | Which sheet a crash opens. `'auto'` is full with the devtools enabled, compact without.                                            |
+| `crash.disableDefaultLogBox`         | `boolean`                       | `false`     | Uninstall LogBox, warning toasts included, so a JS error is reported here only. Development only.                                  |
+| `crash.breadcrumbs`                  | `boolean`                       | `true`      | Attach the recent console, network and navigation entries to each record.                                                          |
+| `crash.maxBreadcrumbs`               | `number`                        | none        | Not used yet: a record carries every breadcrumb the tabs hold, whatever this says.                                                 |
+| `crash.maxRecords`                   | `number`                        | `25`        | Reports kept in memory.                                                                                                            |
+| `crash.persistNonFatal`              | `boolean`                       | `false`     | Also write non-fatal records to disk.                                                                                              |
+| `crash.redact`                       | `(record) => record \| null`    | `undefined` | Runs before the record reaches the store, the disk or `onCrash`. `null` drops it.                                                  |
+| `crash.onCrash`                      | `(record: CrashRecord) => void` | `undefined` | Your own handler, after `redact`.                                                                                                  |
 
 ### Storage adapters
 
@@ -830,7 +1254,7 @@ const config = {
 | `secureStoreAdapter({ driver, keys })` | `expo-secure-store`. Takes `keys` because the keychain cannot be listed, and an optional `options` passed through to every call.                  |
 | `defineStorageAdapter({ ... })`        | Anything else. Duck-types nothing; takes exactly what you hand it.                                                                                |
 
-All four accept `name` (defaulted from the library), `readOnly`, `supportedTypes` and `blacklist`. `defineStorageAdapter` needs either
+All four accept `name` (defaulted from the library), `readOnly` and `blacklist`; `defineStorageAdapter` also takes `supportedTypes`. It needs either
 `getAllKeys` or a fixed `keys` list — passing `keys` is what turns enumeration off, and it may be a
 function, resolved on every read, for an app that keeps its own list of what it stored — and any of
 `getItem` (required), `getMany`, `setItem`, `removeItem`, `subscribe`. **Whether the tab can edit or delete is
@@ -868,14 +1292,14 @@ A module-level object, imported from the package root. For the things the panel 
 import { devtools } from '@axonpack/expo-devtools';
 ```
 
-| Member                                                                                       | What it does                                                                                                                                                                           |
-| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mark(name, options?)`                                                                       | Records a user-timing mark. `options`: `{ detail?, startTime? }`.                                                                                                                      |
-| `measure(name, startOrOptions?, endMark?)`                                                   | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree. |
-| `clearMarks(name?)`                                                                          | Drops recorded marks, all of them or one name.                                                                                                                                         |
-| `clearMeasures(name?)`                                                                       | Drops recorded measures, all of them or one name.                                                                                                                                      |
-| `setCrashContext(context)`                                                                   | Keys attached to every crash record from here on. Replaces rather than merges; `null` clears.                                                                                          |
-| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore`, `crashStore` | The underlying stores, if you want to read or drive them yourself.                                                                                                                     |
+| Member                                                                                                                        | What it does                                                                                                                                                                           |
+| ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mark(name, options?)`                                                                                                        | Records a user-timing mark. `options`: `{ detail?, startTime? }`.                                                                                                                      |
+| `measure(name, startOrOptions?, endMark?)`                                                                                    | Records a measure. Second argument is a start-mark name or `{ start?, end?, duration?, detail? }`. Passing `start`, `end` **and** `duration` together throws, since they can disagree. |
+| `clearMarks(name?)`                                                                                                           | Drops recorded marks, all of them or one name.                                                                                                                                         |
+| `clearMeasures(name?)`                                                                                                        | Drops recorded measures, all of them or one name.                                                                                                                                      |
+| `setCrashContext(context)`                                                                                                    | Keys attached to every crash record from here on. Replaces rather than merges; `null` clears.                                                                                          |
+| `networkLogStore`, `networkConditionsStore`, `consoleLogStore`, `storageStore`, `navigationStore`, `reduxStore`, `crashStore` | The underlying stores, if you want to read or drive them yourself. `navigationStore.getSnapshot()` and `reduxStore.getSnapshot()` return the last 200 moves and actions, newest first. |
 
 Nothing on it does anything until a provider has started with `enabled: true`, so call sites need no
 guard of their own.
@@ -932,6 +1356,47 @@ no `onMessage` behind it `react-native-webview` does not install the page bridge
 with your own and you lose what it did, so compose rather than overwrite. That is what `onMessage`
 returning `true` is for.
 
+### `useDevtoolsNavigation(ref, name?)`
+
+Hands the Navigation tab a React Navigation container the provider can't see, one mounted inside the
+provider. Call it from the component that owns the container.
+
+```tsx
+const navigationRef = createNavigationContainerRef();
+useDevtoolsNavigation(navigationRef);
+```
+
+`ref` is what `createNavigationContainerRef()` or Expo Router's `useNavigationContainerRef()` returns.
+`name` (default `'root'`) files this container's moves under that name, which tells two containers
+apart. It does nothing until the devtools are running, so it is safe in a release build.
+
+### `devtoolsReduxEnhancer()`
+
+A Redux store enhancer that feeds the Redux tab. The package takes no redux dependency, so you add it
+to the store you already create, after `applyMiddleware`:
+
+```ts
+// Redux Toolkit
+configureStore({
+  reducer,
+  enhancers: (getDefault) => getDefault().concat(devtoolsReduxEnhancer()),
+});
+// Plain Redux
+createStore(reducer, compose(applyMiddleware(thunk), devtoolsReduxEnhancer()));
+```
+
+Until the provider has started with `enabled: true` it only passes actions on. It records an action
+only when it is an object with a string `type`.
+
+### Crash components and formatters
+
+| Export                      | What it is                                                                                                                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<CrashReportOverlay />`    | The crash sheet on its own, no props, for a build that ships crash reporting but not the panel. The provider mounts one too; mounting both is harmless.                                      |
+| `<DevtoolsErrorBoundary />` | Catches render errors, the only tier with a component stack. Props: `children` (required), `fallback(error, reset)` for your own screen, `onError(error, info)` after the crash is recorded. |
+| `formatCrashReport(record)` | A `CrashRecord` as Markdown: title, device table, stack and breadcrumbs. What the sheet's Share and Copy produce.                                                                            |
+| `formatCrashJson(record)`   | The whole record as pretty-printed JSON. Never throws.                                                                                                                                       |
+
 ### The launcher button
 
 The button is draggable, stays inside the screen, and keeps a 44dp touch area through `hitSlop` even at
@@ -981,9 +1446,10 @@ property if you override it.
 ### Exported types
 
 `DevtoolsConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
-`DevtoolsStorageConfig`, `DevtoolsCrashConfig`, `DevtoolsProviderProps`, `DevtoolsPanelControls`,
+`DevtoolsStorageConfig`, `DevtoolsQueryConfig`, `DevtoolsNavigationConfig`, `DevtoolsReduxConfig`,
+`DevtoolsCrashConfig`, `DevtoolsAiUsageConfig`, `DevtoolsProviderProps`, `DevtoolsPanelControls`,
 `DevtoolsWebViewProps`, `BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`,
-`NetworkLogEntry`, `NetworkLogStatus`, `ResolvedNetworkConditions`, `ThrottlePresetId`,
+`NetworkEntry`, `NetworkLogEntry`, `WebSocketLogEntry`, `NetworkLogStatus`, `ResolvedNetworkConditions`, `ThrottlePresetId`,
 `ThrottleProfile`, `UserAgentPresetId`, `ConsoleLogEntry`, `ConsoleLogLevel`, `LongTaskEntry`,
 `MemorySample`, `StartupTiming`, `UserTimingEntry`, `MarkOptions`, `MeasureOptions`,
 `StorageAdapter`, `StorageAdapterConfig`, `StorageAdapterDefinition`, `StorageAdapterKind`,
@@ -991,7 +1457,10 @@ property if you override it.
 `StorageAdapterState`, `StorageEntry`, `StorageReadResult`, `StorageValueType`, `StoredValueKind`,
 `AsyncStorageLikeDriver`, `MmkvLikeDriver`, `SecureStoreLikeDriver`, `CrashRecord`, `CrashKind`,
 `CrashBreadcrumb`, `CrashBreadcrumbCategory`, `CrashDeviceInfo`, `CrashNativeDetail`,
-`CrashPopupDetail`, `DevtoolsErrorBoundaryProps`, `StatusBarStyle`.
+`CrashPopupDetail`, `DevtoolsErrorBoundaryProps`, `StatusBarStyle`, `QueryClientLike`,
+`NavigationMove`, `NavigationRoute`, `NavigationRouterKind`, `NavigationState`,
+`NavigationContainerRefLike`, `NavigationContainerLike`, `ReduxAction`, `ReduxActionEntry`,
+`ActionTypeMatcher`.
 
 ---
 

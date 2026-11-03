@@ -99,6 +99,53 @@ withReactNativeDevtoolsTab(config, options?);
 See [Troubleshooting](/docs/react-native-devtools-tab/troubleshooting) for how to find that path and
 when you need it.
 
+## Calling the app from a terminal
+
+A script or an AI agent on the computer running Metro can call into the app through the DevTools
+window open on it. The window makes the call on its own debugger connection. On a React Native that
+allows one debugger per app (below 0.86, or Expo started headless), a second connection would close
+that window, so this is how a tool gets in without doing that. `@axonpack/expo-devtools`'s
+[`devtools` command line tool](/docs/expo-devtools/ai-agents) works this way on those versions.
+
+The app puts an object on `globalThis.__AXONPACK_AGENT__`, and the tool posts to Metro:
+
+```sh
+curl -s http://127.0.0.1:8081/axonpack-rn-devtools-tab/agent \
+  -d '{"page":"device=<id>&page=<id>","call":"run","arg":{"topic":"network"}}'
+```
+
+The window open on that page runs `__AXONPACK_AGENT__.run({ topic: "network" })` and answers with
+its return value. `page` is the query string of the page's `webSocketDebuggerUrl` in Metro's
+`/json/list`.
+
+### The routes
+
+Each path below is under `/axonpack-rn-devtools-tab` on Metro's port. The first two are for a tool;
+the last two are what the window's own script uses.
+
+| Method and path            | Body                                         | Reply                                                                                   |
+| -------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `GET /agent`               | none                                         | `200`, a JSON list of the `page` values a window is open on.                            |
+| `POST /agent`              | `{ "page": string, "call": string, "arg"?: object }` | `200` with `{ "value": ... }`, the return value as JSON, or `{ "error": "..." }` when the call threw. |
+| `GET /agent/window?page=`  | none                                         | An event stream the window holds open. Each event is a call for it to make.            |
+| `POST /agent/reply?id=`    | The window's answer to call `id`             | `204`. The answer goes to whoever is waiting on that call.                              |
+
+`call` names one of the object's own methods, and `arg` is one JSON object or nothing. The window
+builds the call from them, so nothing else is ever evaluated.
+
+| Status | Error                                                          | When                                                                                    |
+| ------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `400`  | `expected { page, call, arg }: a method name and a JSON object` | The body is not such a call.                                                            |
+| `403`  | `this computer only`                                           | The request came from another address, or from a web page whose Origin or Host isn't localhost. |
+| `404`  | `no DevTools window is open on this page`                      | No window from Metro's shortcut is open on that page. A tool then knows there is none of ours to close. |
+| `404`  | `no such route`                                                | Any other method or path.                                                               |
+| `413`  | `a call is at most 64 KB`                                      | The call is over 64 KB.                                                                 |
+| `502`  | `the reply was over 64 MB`                                     | The window's answer was too big to pass on.                                             |
+
+Only a window opened from Metro's shortcut registers, since that is the one this package serves. A
+call waits while JS is paused at a breakpoint and the route has no timeout of its own, so give the
+request one.
+
 ## How it works
 
 React Native DevTools is a Chrome DevTools frontend fork, served by `@react-native/dev-middleware`.
