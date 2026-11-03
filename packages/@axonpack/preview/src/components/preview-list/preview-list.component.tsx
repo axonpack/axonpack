@@ -1,4 +1,5 @@
 import {
+  Fragment,
   isValidElement,
   useContext,
   useEffect,
@@ -9,10 +10,10 @@ import {
 import {
   FlatList,
   RefreshControl,
+  ScrollView,
   View,
   useColorScheme,
   type FlatListProps,
-  type ListRenderItemInfo,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -100,6 +101,13 @@ export type PreviewListProps = Omit<FlatListProps<unknown>, OwnedListProps> & {
   contentContainerStyle?: StyleProp<ViewStyle>;
   /** The app's own header, above the list's (the error banner and the header card). */
   ListHeaderComponent?: FlatListProps<unknown>["ListHeaderComponent"];
+  /**
+   * Default true. False draws every row at once in a plain ScrollView, for a place a FlatList can't
+   * run, such as a React Native DevTools tab, where it draws its first rows and stops. There is no
+   * pull to refresh then (the header card's Refresh still asks again), and of the FlatList props
+   * only `style`, `contentContainerStyle` and `ListHeaderComponent` are used.
+   */
+  virtualized?: boolean;
 };
 
 const keyOf = (item: ListItem) => item.key;
@@ -115,6 +123,7 @@ export function PreviewList(props: PreviewListProps) {
     style,
     contentContainerStyle,
     ListHeaderComponent: AppHeader,
+    virtualized = true,
     ...listProps
   } = props;
   const preview = usePreview();
@@ -216,7 +225,7 @@ export function PreviewList(props: PreviewListProps) {
     />
   );
 
-  const renderItem = ({ item }: ListRenderItemInfo<ListItem>) => {
+  const renderRow = (item: ListItem) => {
     switch (item.type) {
       case "dev-servers-header":
         return (
@@ -362,6 +371,31 @@ export function PreviewList(props: PreviewListProps) {
     </View>
   );
 
+  const listStyle = [{ backgroundColor: theme.background }, style];
+  // The end of the list clears a floating tab bar (iOS 26's sits over the last 90 or so).
+  const contentStyle = [
+    { padding: 16, paddingBottom: 112 },
+    contentContainerStyle,
+  ];
+
+  if (!virtualized) {
+    return (
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        style={listStyle}
+        contentContainerStyle={contentStyle}
+      >
+        {header}
+        {items.map((item, index) => (
+          <Fragment key={item.key}>
+            {renderRow(item)}
+            {index < items.length - 1 ? <RowGap leadingItem={item} /> : null}
+          </Fragment>
+        ))}
+      </ScrollView>
+    );
+  }
+
   return (
     <FlatList<ListItem>
       // A tap on Add while the keyboard is up adds, instead of only closing the keyboard.
@@ -372,7 +406,7 @@ export function PreviewList(props: PreviewListProps) {
       {...listProps}
       data={items}
       keyExtractor={keyOf}
-      renderItem={renderItem}
+      renderItem={({ item }) => renderRow(item)}
       ItemSeparatorComponent={RowGap}
       ListHeaderComponent={header}
       refreshControl={
@@ -389,12 +423,8 @@ export function PreviewList(props: PreviewListProps) {
           progressBackgroundColor={theme.card}
         />
       }
-      style={[{ backgroundColor: theme.background }, style]}
-      contentContainerStyle={[
-        // The end of the list clears a floating tab bar (iOS 26's sits over the last 90 or so).
-        { padding: 16, paddingBottom: 112 },
-        contentContainerStyle,
-      ]}
+      style={listStyle}
+      contentContainerStyle={contentStyle}
     />
   );
 }
