@@ -107,6 +107,18 @@ describe('patchFetch with a rule in the way', () => {
     });
   });
 
+  // `new Response` refuses anything outside 200 to 599, and the editor saves from 100.
+  it.each([102, 599])('delivers a %i override as it is, clone included', async (status) => {
+    networkOverridesStore.set({ url: OVERRIDDEN, action: 'respond', status, body: 'mocked' });
+
+    const response = await globalThis.fetch(OVERRIDDEN);
+
+    expect(response).toMatchObject({ status, ok: false, statusText: 'Overridden by devtools' });
+    expect(response.clone().status).toBe(status);
+    expect(await response.text()).toBe('mocked');
+    expect(networkLogStore.getSnapshot()[0]?.statusCode).toBe(status);
+  });
+
   it('leaves a request with no rule against it alone', async () => {
     networkOverridesStore.set({ url: BLOCKED, action: 'block' });
 

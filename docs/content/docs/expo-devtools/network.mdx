@@ -127,8 +127,8 @@ The **⋮** menu on a row also carries two ways to answer a request yourself:
 - **Block this URL** fails it before it goes out, which is how you find out what your screen does
   when one call never lands. The same item turns into **Stop blocking this URL**.
 - **Override response…** opens an editor seeded with what the server actually said, so you change a
-  response rather than type one from scratch. Set the status, the content type and the body, and
-  every later request to that URL gets your answer instead.
+  response rather than type one from scratch. Set the status (any from 100 to 599), the content
+  type and the body, and every later request to that URL gets your answer instead.
 
 Rules are keyed by the whole URL, not a pattern, so one can never match more than you meant. A row a
 rule answered is badged **Blocked here** or **Overridden here** in the list, so it never reads as one
