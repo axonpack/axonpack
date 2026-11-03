@@ -1,16 +1,26 @@
+import { useMemo } from 'react';
+
 import {
   navigationStore,
   useNavigationStore,
 } from '../../features/navigation/stores/navigation.store';
+import { previewStore, usePreviewStore } from '../../features/preview/stores/preview.store';
 import { PANELS, type AxonpackPanel } from '../constants/panels.const';
 
-const WITHOUT_NAVIGATION = PANELS.filter((panel) => panel.id !== 'navigation');
+/** The panels to offer. One given `false` is left out: the app has nothing it could ever show there. */
+export function shownPanels(available: Record<string, boolean>): AxonpackPanel[] {
+  return PANELS.filter((panel) => available[panel.id] !== false);
+}
 
 /**
  * The panels to offer, as the app's tab bar offers them: Navigation only once the device found a
- * router, since an app with none has nothing it could ever show there.
+ * router, and Preview only once `config.preview` set preview up.
  */
 export function useShownPanels(): AxonpackPanel[] {
-  const routerKind = useNavigationStore(navigationStore.getRouterKind);
-  return routerKind === null ? WITHOUT_NAVIGATION : PANELS;
+  const routerFound = useNavigationStore(navigationStore.getRouterKind) !== null;
+  const previewSetUp = usePreviewStore(previewStore.isSetUp);
+  return useMemo(
+    () => shownPanels({ navigation: routerFound, preview: previewSetUp }),
+    [routerFound, previewSetUp]
+  );
 }
