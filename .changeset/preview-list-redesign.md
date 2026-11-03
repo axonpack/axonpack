@@ -18,6 +18,7 @@
 - **What runs is what loaded**: a chosen preview that could not start no longer shows as running. `usePreview()` has `runningId`
 - **Switching to a preview while a dev server is picked** now loads the preview
 - **A relative bucket URL** now says which setting to fix
+- **No deep import warning on React Native 0.88**: the dev server scan reads Metro's host without a deep import from `react-native`, so Metro no longer warns about it
 - **No bucket URL means not set up, not an error**: with `s3Config.url` undefined, empty or blank, the app reads nothing from a bucket and Published previews says previews aren't set up. `s3Config.url` is required in the type, so apps pass the env value with `as string`. `usePreview()` and `usePreviewStatus()` have `previewsConfigured`
 - **Bucket settings under `s3Config`**: `url`, `readAccessKeyId`, `readSecretAccessKey`, `region` and `headers` now go in `s3Config: { ... }`. The top-level fields of 0.1.0 still work but are deprecated. When both are set, `s3Config` wins and the app logs one warning
 - **An offline server stays in view**: when the server the app runs from stops, the header card and its row say Offline and what to do, with the title, branch and kind it had when it last answered, after a reload too. `usePreviewStatus()` has `online`

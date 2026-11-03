@@ -21,10 +21,6 @@ jest
     name === "SourceCode"
       ? { getConstants: () => ({ scriptURL: mockScriptUrl }) }
       : realGet(name)) as typeof TurboModuleRegistry.get);
-jest.mock(
-  "react-native/Libraries/NativeModules/specs/NativeSourceCode",
-  () => ({ default: { getConstants: () => ({ scriptURL: mockScriptUrl }) } }),
-);
 let mockNativeState: NativeState = {};
 const mockNative = {
   key: "version-1.0.0",

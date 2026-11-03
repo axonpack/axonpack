@@ -54,11 +54,6 @@ jest
     name === "SourceCode"
       ? { getConstants: () => ({ scriptURL: mockScriptUrl }) }
       : realGet(name)) as typeof TurboModuleRegistry.get);
-// What discover.service reads for the host its servers are on.
-jest.mock(
-  "react-native/Libraries/NativeModules/specs/NativeSourceCode",
-  () => ({ default: { getConstants: () => ({ scriptURL: mockScriptUrl }) } }),
-);
 let mockNativeState: {
   bundle?: string;
   localServer?: string;

@@ -18,6 +18,7 @@ import type {
   ScannedServer,
 } from "../../utils/dev-preview-servers/merge-servers.util";
 import { sameServer } from "../../utils/previews/running.util";
+import { scriptUrl } from "../native/native.service";
 
 // Generous on purpose. Android's HTTP client runs 5 requests per host at a time, so most of the
 // 19 probes wait in its queue, and the emulator's NAT takes about 400 ms even to refuse a closed
@@ -120,13 +121,9 @@ export async function findRegistries(
 
 /** The host the app's own Metro is on, which is where its other servers are too. */
 function devServerHost(): string {
-  try {
-    const getDevServer =
-      require("react-native/Libraries/Core/Devtools/getDevServer").default;
-    return new URL(getDevServer().url).hostname;
-  } catch {
-    return "localhost";
-  }
+  // A preview or the bundle built into the app loads from a file, which names no host.
+  const url = scriptUrl();
+  return url && /^https?:\/\//i.test(url) ? new URL(url).hostname : "localhost";
 }
 
 /**
