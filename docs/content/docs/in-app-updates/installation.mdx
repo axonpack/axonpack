@@ -12,6 +12,18 @@ npx expo install @axonpack/in-app-updates expo-application expo-localization
 
 That is all for an Expo app. It runs in Expo Go and needs no `pod install` of its own.
 
+## Requirements
+
+| Needs                 | When                                                                          |
+| --------------------- | ----------------------------------------------------------------------------- |
+| React 18 or later     | Always                                                                        |
+| React Native 0.72 or later | Always                                                                   |
+| Expo SDK 52 or later  | Only for the [Google Play in-app update](/docs/in-app-updates/play-in-app-updates), which also needs a development build |
+
+The example app is built on Expo SDK 58. iOS 27 needs Expo SDK 58 or later; after moving an app to
+it, regenerate the iOS project with `npx expo prebuild --clean -p ios`, since a stale `ios/` folder
+crashes at launch.
+
 ## What each package does
 
 | Package             | Needed? | What it is for                                                         |
@@ -55,13 +67,14 @@ the US page instead. You can change that with `fallbackCountry`.
 
 ## Give your AI agent the skill
 
-If you work with a coding agent, install this package's skill into the project:
+If you work with a coding agent, install the Axonpack skill into the project:
 
 ```sh
-npx skills add axonpack/axonpack --skill axonpack axonpack-in-app-updates
+npx skills add axonpack/skills
 ```
 
-Then you can ask it to "Set up @axonpack/in-app-updates in this app", and it follows the setup in the
-skill. [Agent skills](/docs/agent-skills) has the command for each package manager.
+Then you can ask it to "Set up @axonpack/in-app-updates in this app", and it follows this page and
+the quick start from the live docs. [Agent skill](/docs/agent-skills) has the command for each
+package manager.
 
 **Next:** [Quick start](/docs/in-app-updates/quick-start)

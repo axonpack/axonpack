@@ -28,6 +28,10 @@ Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/
 | `--compatibility <c>`      | the plugin option           | `appVersion` or `fingerprint`. Overrides the app config, with a warning        |
 | `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
 
+When it is done, it prints two lines per platform: `<platform>: published <id> for build <key>`,
+then the URL of that build's index in the bucket. `<key>` is the build's compatibility key, so it
+has to match the key in the installed build for the preview to show in its list.
+
 ## unpublish
 
 ```sh

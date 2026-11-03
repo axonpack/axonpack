@@ -87,9 +87,6 @@ export function LibraryGrid() {
                     )}
                     {pkg.license && <span className="text-fd-muted-foreground">{pkg.license}</span>}
                   </p>
-                  <p className="mt-2 text-sm text-fd-muted-foreground">
-                    Agent skill: <code className="font-mono text-[0.8125rem] text-fd-foreground">axonpack-{pkg.slug}</code>
-                  </p>
                 </div>
 
                 {story && (

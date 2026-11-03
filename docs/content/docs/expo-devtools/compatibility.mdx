@@ -10,14 +10,19 @@ description: The versions this is built against, what it requires you to have in
 | `@axonpack/expo-devtools` | Expo SDK | React Native | React |
 | ------------------------- | -------- | ------------ | ----- |
 | <VersionRange slug="expo-devtools" /> | 57 | 0.86 | 19.2 |
+| <VersionRange slug="expo-devtools" /> | 58 | 0.88 | 19.3 |
 
-That row is what the package is **built and tested against**: the versions in its own dev
-dependencies and in the example app that exercises every tab.
+Those rows are what the package is **built and tested against**: the versions in its own dev
+dependencies (SDK 57) and in the example app that exercises every tab (SDK 58).
 
 The [React Native DevTools tab](/docs/expo-devtools/react-native-devtools) comes from
 `@axonpack/react-native-devtools-tab`, which this package depends on. It needs React 19.2 or later,
 and a React Native with React Native DevTools, the debugger `j` opens. It is built and tested against
-the same row.
+the same rows. An older React only warns at install (npm prints `ERESOLVE overriding peer
+dependency`) and the install goes ahead, so check the version in `package.json` before installing.
+
+iOS 27 needs Expo SDK 58 or later. After moving an app to SDK 58, regenerate its iOS project with
+`npx expo prebuild --clean -p ios`, since a stale `ios/` folder crashes at launch.
 
 <Callout type="info" title="Nothing here pins you to one SDK">
   Every Expo package this needs is a peer dependency, so each resolves to the version your own SDK
