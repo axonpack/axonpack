@@ -1,6 +1,8 @@
+import { installAgent } from '../agent/services/install-agent.service';
 import type { BuiltInThemeId, ThemeConfig } from '../core/constants/theme.const';
 import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
 import { themeStore } from '../core/stores/theme.store';
+import { aiUsageStore } from '../features/ai-usage/stores/ai-usage.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
 import { patchConsole } from '../features/console/services/patch-console.service';
 import { setWebViewConsoleCapture } from '../features/console/services/webview-console-logger.service';
@@ -51,7 +53,8 @@ import {
   resolveStorageAdapters,
   type StorageAdapterDefinition,
 } from '../features/storage/services/define-adapter.service';
-import { storageStore } from '../features/storage/stores/storage.store';
+import { configureStorageRedaction } from '../features/storage/services/redact-storage.service';
+import { storageStore, type StorageEntry } from '../features/storage/stores/storage.store';
 
 /**
  * The switches name the **kind of traffic**, not the mechanism that carried it. A request is a request
@@ -284,16 +287,16 @@ export type DevtoolsCrashConfig = {
    */
   disableDefaultLogBox?: boolean;
   /**
-   * Attach the recent console and network entries to each record. Defaults to `true` — that
-   * trail carries request URLs and whatever the app logged, which is a different privacy
-   * proposition from a stack trace.
+   * Attach the recent console, network and navigation entries to each record. Defaults to `true`.
+   * That trail carries request URLs, screen changes and whatever the app logged, which is a
+   * different privacy proposition from a stack trace.
    */
   breadcrumbs?: boolean;
   /**
    * Intended cap on how many breadcrumbs travel with a record.
    *
-   * Not honoured yet: the trail is currently everything the Console and Network tabs were holding,
-   * so setting this changes nothing. Kept because the field is public API.
+   * Not honoured yet: the trail is currently everything the Console, Network and Navigation tabs
+   * were holding, so setting this changes nothing. Kept because the field is public API.
    */
   maxBreadcrumbs?: number;
   /** How many crash reports the Crash tab keeps, oldest dropped first. Defaults to `25`. */
@@ -325,7 +328,7 @@ export type DevtoolsCrashConfig = {
 
 /**
  * The Storage tab. Nothing is discovered automatically, so `adapters` is the whole of what the tab
- * can see; the rest bounds how much it reads and whether it may write.
+ * can see; the rest bounds how much it reads, whether it may write and what it redacts.
  */
 export type DevtoolsStorageConfig = {
   /**
@@ -351,6 +354,36 @@ export type DevtoolsStorageConfig = {
    * them. Defaults to `false`. An individual adapter's own `readOnly` wins over this.
    */
   readOnly?: boolean;
+  /**
+   * Keys whose values are replaced with `[redacted]` as they are read, in every registered store.
+   * A string matches a whole key without regard to case, and a RegExp is tested as written. Nothing
+   * downstream sees the real value: not the list, the detail sheet, copy, export or the DevTools tab.
+   *
+   * A redacted value can't be edited or deleted from the tab, and an import skips it, so the
+   * placeholder is never written back. Empty by default, so nothing is redacted until you list it.
+   *
+   * ```ts
+   * redactKeys: ['authToken', /^session\./]
+   * ```
+   */
+  redactKeys?: readonly (string | RegExp)[];
+  /**
+   * Your chance to strip anything else sensitive, such as one field of a JSON value. Runs after
+   * `redactKeys`, each time a value is read, before it is stored. Return the entry with its `text`
+   * changed, the entry as it is, or `null` to hide the key. If it throws, the key is hidden. Only
+   * `text` is taken from what it returns, and a changed `text` counts as redacted.
+   *
+   * A hidden key stays on the list until its value is read. To keep a key off the list entirely,
+   * give its adapter a `blacklist`.
+   *
+   * ```ts
+   * redact: (entry) =>
+   *   entry.key === 'user' && entry.text
+   *     ? { ...entry, text: entry.text.replace(/"token":"[^"]*"/, '"token":"[redacted]"') }
+   *     : entry
+   * ```
+   */
+  redact?: (entry: StorageEntry) => StorageEntry | null;
 };
 
 /**
@@ -430,6 +463,15 @@ export type DevtoolsReduxConfig = {
   deny?: ActionTypeMatcher[];
 };
 
+/** The AI Usage tab: whether it starts recording the queries agents make with `npx devtools`. */
+export type DevtoolsAiUsageConfig = {
+  /**
+   * Open the AI Usage tab with recording paused, so no query is kept until the record button in its
+   * toolbar is pressed. Defaults to `false`. Agents can still query the app while it is paused.
+   */
+  disabledByDefault?: boolean;
+};
+
 /**
  * Everything `<DevtoolsProvider config={...} />` accepts. Every field is optional and the defaults
  * suit most apps — a provider with no config at all captures requests, console output and crashes.
@@ -489,6 +531,8 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   redux?: DevtoolsReduxConfig;
   /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
   crash?: DevtoolsCrashConfig;
+  /** The AI Usage tab: whether it starts recording. */
+  aiUsage?: DevtoolsAiUsageConfig;
 };
 
 let started = false;
@@ -530,7 +574,12 @@ export function startDevtools<TThemeName extends string = never>(
     historySize = 120,
     disabledByDefault: performanceStartsPaused = true,
   } = config?.performance ?? {};
-  const { adapters: storageAdapters, readOnly: storageReadOnly } = config?.storage ?? {};
+  const {
+    adapters: storageAdapters,
+    readOnly: storageReadOnly,
+    redactKeys: storageRedactKeys,
+    redact: redactStorage,
+  } = config?.storage ?? {};
   const { disabledByDefault: navigationStartsPaused = false, redact: redactNavigation } =
     config?.navigation ?? {};
   const {
@@ -538,6 +587,7 @@ export function startDevtools<TThemeName extends string = never>(
     allow: reduxAllow,
     deny: reduxDeny,
   } = config?.redux ?? {};
+  const { disabledByDefault: aiUsageStartsPaused = false } = config?.aiUsage ?? {};
   const {
     enabled: crashEnabled = true,
     enableWhileDevtoolsDisabled: crashSurvivesDisabled = false,
@@ -660,6 +710,7 @@ export function startDevtools<TThemeName extends string = never>(
     interactionThresholdMs,
   });
 
+  configureStorageRedaction({ keys: storageRedactKeys, redact: redactStorage });
   if (storageAdapters?.length) {
     storageStore.setAdapters(
       resolveStorageAdapters(storageAdapters, { readOnly: storageReadOnly })
@@ -695,6 +746,9 @@ export function startDevtools<TThemeName extends string = never>(
   reduxStore.setActionLists({ allow: reduxAllow, deny: reduxDeny });
   reduxStore.setEnabled(true);
   if (reduxStartsPaused) reduxStore.setPaused(true);
+
+  if (aiUsageStartsPaused) aiUsageStore.setPaused(true);
+  installAgent();
 
   // Last, so the launcher button appears only once there is a working panel behind it. Anything
   // above throwing leaves the overlay hidden, which is the honest outcome.

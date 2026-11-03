@@ -19,6 +19,9 @@ npm install @axonpack/react-pretty-print
 React 18 or newer is a peer dependency. There is no native module, so no `pod install` and no
 prebuild — it runs in Expo Go.
 
+An [agent skill](https://axonpack.dev/docs/agent-skills) teaches your coding agent this package:
+`npx skills add axonpack/axonpack --skill axonpack axonpack-react-pretty-print`.
+
 ## Usage
 
 On the web, `domPrimitives` ships with the package:

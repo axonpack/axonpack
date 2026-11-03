@@ -139,7 +139,10 @@ export function EntryGrid({
               menuOpen={entry.key === menuKey}
               onMenu={setMenuKey}
               inlineEditable={
-                canEdit && isEditableValueType(entry.valueType) && entry.error === undefined
+                canEdit &&
+                isEditableValueType(entry.valueType) &&
+                entry.error === undefined &&
+                !entry.redacted
               }
               multiline={(drafts.edits[entry.key] ?? entry.text ?? '').includes('\n')}
               editing={entry.key === editingKey}

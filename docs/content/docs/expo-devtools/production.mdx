@@ -53,9 +53,10 @@ strings and bodies. Two options strip what should not be kept before a request i
 - `network.redactHeaders` lists header names whose values are stored as `[redacted]`.
 - `network.redact(entry)` rewrites a request before it is stored, or returns `null` to drop it.
 
-Both are on [Network](/docs/expo-devtools/network). `navigation.redact` does the same for a screen's
-params, on [Navigation](/docs/expo-devtools/navigation), and `crash.redact` for a crash report, on
-[Crash reporting](/docs/expo-devtools/crash-reporting).
+Both are on [Network](/docs/expo-devtools/network). `storage.redactKeys` and `storage.redact` do the
+same for a stored value, on [Storage](/docs/expo-devtools/storage#redaction). `navigation.redact` does
+the same for a screen's params, on [Navigation](/docs/expo-devtools/navigation), and `crash.redact` for
+a crash report, on [Crash reporting](/docs/expo-devtools/crash-reporting).
 
 ## The Metro line
 
@@ -66,6 +67,12 @@ without. The tab itself registers only when `__DEV__` is true, so a release bund
 Metro reads the config when it builds for release too, so keep `@axonpack/expo-devtools` in
 `dependencies`, not `devDependencies`, if your release install skips dev dependencies. A `__DEV__`
 check cannot guard the line: `metro.config.js` runs in Node, where `__DEV__` does not exist.
+
+## The command line tool
+
+The app answers the [`devtools` command line tool](/docs/expo-devtools/ai-agents) only in a
+development bundle with the devtools enabled. A release build installs nothing the tool can talk to,
+whatever `enabled` says.
 
 ## Next step
 

@@ -8,7 +8,7 @@
 
 Publish one JS bundle per branch to your own S3-compatible bucket. QA opens a list in the app,
 picks a preview, and the app restarts into it. No native rebuild, no new install, and the default
-bundle comes back with one tap. Like EAS Update or CodePush, but only for previews.
+bundle comes back with one tap. An over-the-air JS update made only for previews.
 
 **[Documentation](https://axonpack.dev/docs/preview)** · [Quick start](https://axonpack.dev/docs/preview/quick-start) · [CLI](https://axonpack.dev/docs/preview/cli) · [Changelog](https://axonpack.dev/docs/preview/changelog)
 
@@ -88,6 +88,9 @@ npx preview publish
 
 The write key is for publishing only. Never put it in the app: the app gets the bucket's public
 address, or a read-only key for a private bucket.
+
+An [agent skill](https://axonpack.dev/docs/agent-skills) teaches your coding agent this package:
+`npx skills add axonpack/axonpack --skill axonpack axonpack-preview`.
 
 ## Documentation
 

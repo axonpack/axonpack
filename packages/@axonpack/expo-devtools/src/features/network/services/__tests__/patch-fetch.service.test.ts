@@ -4,13 +4,12 @@ import { patchFetch } from '../patch-fetch.service';
 
 type FetchModule = { fetch: typeof globalThis.fetch };
 
-// Virtual, because this package does not depend on Expo's internals — the patch is guarded precisely
-// so that a missing module is a no-op rather than a crash.
-jest.mock(
-  'expo/src/winter/fetch/fetch',
-  () => ({ fetch: async () => new Response('from expo fetch') }),
-  { virtual: true }
-);
+// Not virtual. Jest caches the id a file resolves a module to per worker, and that cache ignores
+// virtual mocks. Once another suite in the worker has called `patchFetch` against the real module,
+// a virtual mock here never reaches the service, so the suite failed or passed by test order.
+jest.mock('expo/src/winter/fetch/fetch', () => ({
+  fetch: async () => new Response('from expo fetch'),
+}));
 
 const expoFetchModule = jest.requireMock<FetchModule>('expo/src/winter/fetch/fetch');
 const rawExpoFetch = expoFetchModule.fetch;
@@ -105,6 +104,18 @@ describe('patchFetch with a rule in the way', () => {
       responseBody: 'nope',
       mimeType: 'text/plain',
     });
+  });
+
+  // `new Response` refuses anything outside 200 to 599, and the editor saves from 100.
+  it.each([102, 599])('delivers a %i override as it is, clone included', async (status) => {
+    networkOverridesStore.set({ url: OVERRIDDEN, action: 'respond', status, body: 'mocked' });
+
+    const response = await globalThis.fetch(OVERRIDDEN);
+
+    expect(response).toMatchObject({ status, ok: false, statusText: 'Overridden by devtools' });
+    expect(response.clone().status).toBe(status);
+    expect(await response.text()).toBe('mocked');
+    expect(networkLogStore.getSnapshot()[0]?.statusCode).toBe(status);
   });
 
   it('leaves a request with no rule against it alone', async () => {

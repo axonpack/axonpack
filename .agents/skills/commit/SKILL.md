@@ -1,6 +1,8 @@
 ---
 name: commit
 description: Create a git commit with a simple, humanized message and no Co-Authored-By trailer. Trigger on "commit", "commit this", "commit changes".
+metadata:
+  internal: true
 ---
 
 # Commit

@@ -1,5 +1,31 @@
 # @axonpack/expo-devtools
 
+## 3.8.0
+
+### Minor Changes
+
+- 6827868: - **Read the devtools from a terminal**: you or an AI agent can run `npx devtools` (or `npx @axonpack/expo-devtools` in a monorepo) to list the running apps and read every tab: requests, console, performance, storage, query, navigation, Redux and crashes
+  - **Find the rows you need**: search, filter by any field, pick a time window, sort, count and group with the same flags on every tab, and open one row whole
+  - **Poll for what's new**: each list ends with a cursor that gets only the rows after it
+  - **Your redaction holds**: every redaction setting applies, and auth headers and cookies are always hidden
+  - **Mock or send a request**: you or an agent can give an exact URL a mock response or block it, and send or replay a request from inside the app (anything but GET, HEAD and OPTIONS needs `--yes`)
+  - **Older React Native**: below 0.86 it asks through the open React Native DevTools window, so that window stays open
+  - **AI Usage tab**: every query and action an agent made and the reply it got, in the app and in React Native DevTools. `aiUsage.disabledByDefault` opens it paused
+
+### Patch Changes
+
+- 1cf0fc0: - **Overrides with a 1xx status**: a fetch override set to a status from 100 to 199 now answers the app with that status
+- Updated dependencies [93cd08c]
+  - @axonpack/react-native-devtools-tab@0.2.0
+
+## 3.7.0
+
+### Minor Changes
+
+- 7251fd0: - **`storage.redactKeys`**: list keys, as strings or regexes, and the Storage tab shows their values as `[redacted]`. The list, the detail sheet, copy, export and the DevTools tab never hold the real value
+  - **`storage.redact(entry)`**: change a value before the tab shows it, or return `null` to hide the key. A hook that throws hides the key
+  - **Redacted values stay as they are in your store**: you can't edit or delete them from the tab, and an import skips them
+
 ## 3.6.0
 
 ### Minor Changes

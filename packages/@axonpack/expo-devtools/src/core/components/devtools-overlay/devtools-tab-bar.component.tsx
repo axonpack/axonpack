@@ -20,6 +20,7 @@ export type DevtoolsTab =
   | 'navigation'
   | 'redux'
   | 'crashes'
+  | 'ai-usage'
   | 'debug';
 
 const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
@@ -31,6 +32,7 @@ const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'navigation', label: 'Navigation', icon: 'alt-route' },
   { key: 'redux', label: 'Redux', icon: 'data-object' },
   { key: 'crashes', label: 'Crashes', icon: 'bug-report' },
+  { key: 'ai-usage', label: 'AI Usage', icon: 'smart-toy' },
   { key: 'debug', label: 'Debug', icon: 'construction' },
 ];
 

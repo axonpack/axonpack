@@ -37,6 +37,28 @@ with `expo run:ios`, `expo run:android` or EAS lights the rest up. The full list
   it.
 </Callout>
 
+## Give your AI agent the skill
+
+The package also installs the `devtools` command, which reads the running app from a terminal so an
+AI agent can see what it recorded. It needs Node 22 or newer. After the
+[quick start](/docs/expo-devtools/quick-start), with the app open and `expo start` running, this
+lists it:
+
+```sh
+npx devtools apps
+```
+
+[Use with AI agents](/docs/expo-devtools/ai-agents) covers every command. If you work with a coding
+agent, install this package's skill into the project too. It teaches the agent the tool and the
+setup:
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-expo-devtools
+```
+
+Then you can ask it to "Set up @axonpack/expo-devtools in this app", and it follows the setup in the
+skill. [Agent skills](/docs/agent-skills) has the command for each package manager.
+
 ## Next step
 
 <Cards>

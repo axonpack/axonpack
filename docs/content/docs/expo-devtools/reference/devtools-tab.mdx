@@ -1,6 +1,6 @@
 ---
 title: React Native DevTools tab
-description: "Every control in the Axonpack tab on your computer: the bar, and the Network, Console, Performance, Storage, Crashes and Debug panels."
+description: "Every control in the Axonpack tab on your computer: the bar, and the Network, Console, Performance, Storage, Crashes, AI Usage and Debug panels."
 ---
 
 The tab reads the same stores as the panel on the device, so a filter, a sort, a setting or a rule
@@ -367,6 +367,26 @@ The stack is symbolicated through the dev server when the report opens.
 | Copy report (JSON)     | The whole record.                               |
 | Save report (Markdown) | Downloads it as a `.md` file.                   |
 | Save report (JSON)     | Downloads it as a `.json` file.                 |
+
+## AI Usage
+
+The queries and actions agents made with the `devtools` command line tool, newest first, from the same store as
+the [AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab) on the device.
+
+| Control | What it does                                                     |
+| ------- | ---------------------------------------------------------------- |
+| Record  | Pauses and resumes keeping queries. Red while recording.         |
+| Clear   | Throws away the list.                                            |
+| Count   | How many queries the list holds, at the right end of the toolbar. |
+
+The table has **Time**, **Command**, **Matched** and **Took** columns. Matched reads `action` for an
+[action](/docs/expo-devtools/reference/cli#actions), and a row that ended in an error is drawn in red. Click a row for its pane, beside the list, with a handle to drag between them.
+
+| Part      | What it holds                                                                                        |
+| --------- | ---------------------------------------------------------------------------------------------------- |
+| Bar       | Close, the command, and **Copy the reply**, to your computer's clipboard.                           |
+| **Query** | Time, topic, matched (or the action's name), took, reply size and any error.                        |
+| **Reply** | The reply exactly as the agent got it: a JSON tree for `get` or `--json` output, text otherwise. |
 
 ## Debug
 

@@ -64,8 +64,9 @@ export function SiteNav(props: React.ComponentProps<'header'>) {
       columns: [
         {
           title: 'Writing',
-          entries: [],
-          footer: { label: 'Blog', href: '/blog/' },
+          // A link to the index, not one per post: posts are MDX read on the server, and this is a
+          // client component.
+          entries: [{ label: 'All posts', href: '/blog/', note: 'About the libraries and how they are built' }],
         },
         {
           title: 'Changelog',

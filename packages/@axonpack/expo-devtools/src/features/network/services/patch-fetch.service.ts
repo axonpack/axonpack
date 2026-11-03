@@ -72,6 +72,23 @@ function isAbortError(error: unknown): boolean {
 }
 
 /**
+ * The editor saves any status from 100 to 599, but `new Response` throws outside 200 to 599, and
+ * a spec runtime also refuses a body with 204 or 304. So it is built as a 200 and the real status
+ * is set on the instance, the way the polyfill's own `Response.error()` sets 0. `clone` is
+ * replaced too, because the polyfill's copies the status into a new `Response` and would throw.
+ */
+function overriddenResponse(body: string, status: number, contentType: string): Response {
+  const response = new Response(body, { headers: { 'content-type': contentType } });
+  Object.defineProperties(response, {
+    status: { value: status },
+    ok: { value: status >= 200 && status < 300 },
+    statusText: { value: 'Overridden by devtools' },
+    clone: { value: () => overriddenResponse(body, status, contentType) },
+  });
+  return response;
+}
+
+/**
  * Counts the body through as it arrives, so a slow download reports progress rather than appearing
  * finished all at once. Reads its own clone and never the response the app gets back, and is
  * deliberately not awaited — awaiting it here would hold the request until the body was complete,
@@ -295,11 +312,7 @@ function instrument(rawFetch: typeof globalThis.fetch, source: string): typeof g
         ttfb: 0,
         duration: Date.now() - startedAt,
       });
-      return new Response(body, {
-        status,
-        statusText: 'Overridden by devtools',
-        headers: { 'content-type': contentType },
-      });
+      return overriddenResponse(body, status, contentType);
     }
 
     if (conditions.offline) {

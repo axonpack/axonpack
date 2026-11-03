@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 
 import type { MaterialIcon } from './material-icons.const';
+import { AiUsagePanel } from '../components/ai-usage-panel';
 import { ConsolePanel } from '../components/console-panel';
 import { CrashesPanel } from '../components/crashes-panel';
 import { DebugPanel } from '../components/debug-panel';
@@ -59,6 +60,12 @@ const BUILT_IN: AxonpackPanel[] = [
     icon: 'bug-report',
     component: CrashesPanel,
     Badge: CrashesBadge,
+  },
+  {
+    id: 'ai-usage',
+    title: 'AI Usage',
+    icon: 'smart-toy',
+    component: AiUsagePanel,
   },
   {
     id: 'debug',

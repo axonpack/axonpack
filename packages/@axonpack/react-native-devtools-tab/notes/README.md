@@ -8,6 +8,7 @@ only disagree with these.
 | ---------------------------------------------- | ------------------------------------------------- |
 | [refactor-tasks.md](./refactor-tasks.md)       | Naming and coverage work, all of it done          |
 | [virtual-list-plan.md](./virtual-list-plan.md) | Long lists in a tab: browser scrolls, app renders |
+| [agent-relay.md](./agent-relay.md)             | Calling the app through the open DevTools window  |
 
 The package's own [README](../README.md) is the reference for what a tab is, what crosses between
 the app and the panel, and what does not. Area notes get written as areas earn them.

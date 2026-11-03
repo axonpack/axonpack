@@ -1,6 +1,8 @@
 ---
 name: github-contributor
 description: How to write anything posted to GitHub (PR titles and bodies, issues, comments, reviews, release notes) so it reads like a person wrote it, in short plain bullets with no AI footer. Trigger on any gh write action, including "open a PR", "create a PR", "file an issue", "create the issue", "comment on", "reply to the review", "edit the PR", "gh pr create", "gh issue create", "gh pr comment", "gh release". Not for commits, which have their own skill.
+metadata:
+  internal: true
 ---
 
 # GitHub contributor

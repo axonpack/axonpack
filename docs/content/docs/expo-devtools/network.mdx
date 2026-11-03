@@ -117,7 +117,8 @@ parameters, headers, cookies, auth, or the body, then Send and watch the real re
 Handy for "does this break if the token is missing?" without touching your code.
 
 Sandbox requests go out through the same patched `fetch`, so they appear in the log like any other
-request.
+request. An AI agent can do the same from a terminal with `devtools network send` and
+`devtools network replay`; see [Use with AI agents](/docs/expo-devtools/ai-agents#mocking-and-sending-requests).
 
 ## Blocking a URL, or faking the answer
 
@@ -126,14 +127,16 @@ The **⋮** menu on a row also carries two ways to answer a request yourself:
 - **Block this URL** fails it before it goes out, which is how you find out what your screen does
   when one call never lands. The same item turns into **Stop blocking this URL**.
 - **Override response…** opens an editor seeded with what the server actually said, so you change a
-  response rather than type one from scratch. Set the status, the content type and the body, and
-  every later request to that URL gets your answer instead.
+  response rather than type one from scratch. Set the status (any from 100 to 599), the content
+  type and the body, and every later request to that URL gets your answer instead.
 
 Rules are keyed by the whole URL, not a pattern, so one can never match more than you meant. A row a
 rule answered is badged **Blocked here** or **Overridden here** in the list, so it never reads as one
 of the server's own replies, and the filter panel's **Only overridden or blocked** narrows to them.
 
-Rules live in memory for the session, and are gone on the next launch.
+Rules live in memory for the session, and are gone on the next launch. An AI agent can set, list and
+remove the same rules from a terminal with `devtools network override`, `block`, `overrides` and
+`unoverride`; see [Use with AI agents](/docs/expo-devtools/ai-agents#mocking-and-sending-requests).
 
 ## Taking it with you
 

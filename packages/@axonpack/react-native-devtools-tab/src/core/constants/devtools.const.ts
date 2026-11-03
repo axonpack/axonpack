@@ -34,6 +34,13 @@ export const DEVTOOLS_TABS = `__${DEVTOOLS_ID}_tabs__`;
 export const DEVTOOLS_FOCUS = `__${DEVTOOLS_ID}_focus__`;
 
 /**
+ * The global an app can put an object on, for a tool on this computer to call through Metro's
+ * `${DEVTOOLS_ROUTE}/agent` route. The DevTools window open on the app makes the call over its own
+ * connection, so a React Native that allows one debugger per app keeps that window open.
+ */
+export const DEVTOOLS_AGENT = "__AXONPACK_AGENT__";
+
+/**
  * The one attribute the panel acts on itself: a click on an element that has it copies its value to
  * the clipboard of the computer DevTools runs on.
  *

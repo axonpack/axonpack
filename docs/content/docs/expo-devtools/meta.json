@@ -1,6 +1,6 @@
 {
   "title": "Expo Devtools",
-  "description": "On-device network, console, performance, storage, navigation and crash devtools",
+  "description": "On-device network, console, performance, storage, navigation and crash devtools, readable by AI agents from a terminal",
   "root": true,
   "icon": "Bug",
   "pages": [
@@ -10,6 +10,7 @@
     "compatibility",
     "quick-start",
     "---Guides---",
+    "ai-agents",
     "network",
     "console",
     "performance",

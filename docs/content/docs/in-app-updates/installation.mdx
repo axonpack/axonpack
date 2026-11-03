@@ -53,4 +53,15 @@ The App Store keeps a separate page for your app in each country. The package as
 matches the user's country, taken from `expo-localization`. If your app is not on that page, it asks
 the US page instead. You can change that with `fallbackCountry`.
 
+## Give your AI agent the skill
+
+If you work with a coding agent, install this package's skill into the project:
+
+```sh
+npx skills add axonpack/axonpack --skill axonpack axonpack-in-app-updates
+```
+
+Then you can ask it to "Set up @axonpack/in-app-updates in this app", and it follows the setup in the
+skill. [Agent skills](/docs/agent-skills) has the command for each package manager.
+
 **Next:** [Quick start](/docs/in-app-updates/quick-start)

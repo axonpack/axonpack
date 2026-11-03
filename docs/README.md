@@ -87,8 +87,8 @@ entry anywhere.
 
 Release notes work the same way. `scripts/sync-changelog.mjs` reads each library's `CHANGELOG.md`
 from its published npm tarball, parses it into entries, and dates them from npm's publish times.
-Those become both the blog and each package's `changelog.mdx`. Both are gitignored and rebuilt by
-every `build` and `dev`, so never edit them by hand. A changeset that ships turns into a release entry with nothing to copy across.
+Those become each package's `changelog.mdx`, which is gitignored and rebuilt by
+every `build` and `dev`, so never edit it by hand. A changeset that ships turns into a release entry with nothing to copy across.
 
 GitHub is not used for any of this. Every source is a public npm endpoint, so the build needs no
 credentials.
@@ -99,7 +99,12 @@ The landing page's prose lives in `src/content.json`. Change it there, not in th
 about the libraries themselves comes from npm and is not editable here.
 
 Documentation lives in `content/docs/<package-slug>/`, one folder per package, with a `meta.json`
-setting the sidebar order. The blog is generated from the changelogs, so you never write a post.
+setting the sidebar order.
+
+A blog post is one MDX file in `content/blog/`, served at `/blog/<file name>/`. Its frontmatter has
+`title`, `description`, `author`, `date` (`YYYY-MM-DD`) and an optional `image` for the share card;
+without one, the card is generated. A post joins the blog index, the nav, the sitemap and
+`llms.txt` with nothing else to edit.
 
 ## How it deploys
 
@@ -113,8 +118,9 @@ setting the workflow runs but publishes nothing.
 
 ```
 content/docs/          the documentation itself, one folder per package
+content/blog/          blog posts, one MDX file each
 src/
-  app/                 routes: / , /docs/[[...slug]], /blog, llms.txt, og images
+  app/                 routes: / , /docs/[[...slug]], /blog/[[...slug]], llms.txt, og images
   components/          one component per file
   lib/
     constants/         tokens and path data
@@ -124,7 +130,7 @@ src/
   generated/           written by the fetch script, never committed
 scripts/
   fetch-packages.mjs   asks npm what exists
-  sync-changelog.mjs   turns published CHANGELOGs into changelog.mdx and the blog
+  sync-changelog.mjs   turns published CHANGELOGs into each package's changelog.mdx
 legacy/                the previous no-build page, kept for reference
 ```
 

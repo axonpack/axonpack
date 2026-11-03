@@ -1,44 +1,49 @@
 /* The panel's own motion, kept beside it rather than in the page's stylesheet, so rewriting the
    hero cannot take the carousel with it. */
 
-/* Five panes over 20s, dwelling on each then sliding to the next. The track carries a sixth pane
+/* Six panes over 24s, dwelling on each then sliding to the next. The track carries a seventh pane
    that repeats the first, so the wrap at 100% lands on an identical frame instead of snapping back.
-   Change the pane count and every stop below has to be recut: each pane owns 20% of the cycle, of
-   which it dwells for 16 and slides for 4. */
+   Change the pane count and every stop below has to be recut, along with the 24s here and the
+   4s-per-pane delay in devtools-panel.tsx: each pane owns a sixth of the cycle (16.667%), of which it
+   dwells for 13.333 and slides for 3.333. */
 @keyframes carousel {
   0%,
-  16% {
+  13.333% {
     transform: translateX(0);
   }
-  20%,
-  36% {
+  16.667%,
+  30% {
     transform: translateX(-100%);
   }
-  40%,
-  56% {
+  33.333%,
+  46.667% {
     transform: translateX(-200%);
   }
-  60%,
-  76% {
+  50%,
+  63.333% {
     transform: translateX(-300%);
   }
-  80%,
-  96% {
+  66.667%,
+  80% {
     transform: translateX(-400%);
   }
-  100% {
+  83.333%,
+  96.667% {
     transform: translateX(-500%);
+  }
+  100% {
+    transform: translateX(-600%);
   }
 }
 
 /* Same clock as the track, one delay per tab. */
 @keyframes tabOn {
   0%,
-  16% {
+  13.333% {
     opacity: 1;
   }
-  20%,
-  96% {
+  16.667%,
+  96.667% {
     opacity: 0.35;
   }
   100% {
@@ -63,11 +68,11 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .track {
-    animation: carousel 20s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+    animation: carousel 24s cubic-bezier(0.65, 0, 0.35, 1) infinite;
   }
 
   .tab {
-    animation: tabOn 20s steps(1, end) infinite;
+    animation: tabOn 24s steps(1, end) infinite;
   }
 
   .flow {
