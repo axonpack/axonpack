@@ -22,9 +22,12 @@
    now sit above the page instead of being the bluer thing on a whiter one.
    `:not(.dark)` is load-bearing. Plain `:root` ties with ocean's own `.dark` on specificity, and
    this file is imported after it, so a bare `:root` here wins in dark mode too and paints the dark
-   page light. */
+   page light.
+   Ocean's muted grey reads at 4.4:1 on this ground and lower on the accent fill, under the 4.5 that
+   body text needs. This step clears it on every light surface, the accent included. */
 :root:not(.dark) {
   --color-fd-background: hsl(220, 50%, 97%);
+  --color-fd-muted-foreground: hsl(220 9% 40%);
 }
 
 .dark {
@@ -132,12 +135,6 @@ html > body[data-scroll-locked] {
 
 .dark .hero-shade {
   --hero-shade: color-mix(in oklab, var(--color-fd-background), black 45%);
-}
-
-/* Light mode's muted grey reads at 4.4:1 on the page ground, under the 4.5 that body text needs.
-   The landing page sets most of its prose in it, so it takes a darker step here. */
-:root:not(.dark) .landing {
-  --color-fd-muted-foreground: hsl(220 9% 40%);
 }
 
 /* The landing page's links and buttons carry no focus style of their own, and the browser default
