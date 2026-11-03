@@ -52,7 +52,8 @@ import {
   resolveStorageAdapters,
   type StorageAdapterDefinition,
 } from '../features/storage/services/define-adapter.service';
-import { storageStore } from '../features/storage/stores/storage.store';
+import { configureStorageRedaction } from '../features/storage/services/redact-storage.service';
+import { storageStore, type StorageEntry } from '../features/storage/stores/storage.store';
 
 /**
  * The switches name the **kind of traffic**, not the mechanism that carried it. A request is a request
@@ -326,7 +327,7 @@ export type DevtoolsCrashConfig = {
 
 /**
  * The Storage tab. Nothing is discovered automatically, so `adapters` is the whole of what the tab
- * can see; the rest bounds how much it reads and whether it may write.
+ * can see; the rest bounds how much it reads, whether it may write and what it redacts.
  */
 export type DevtoolsStorageConfig = {
   /**
@@ -352,6 +353,36 @@ export type DevtoolsStorageConfig = {
    * them. Defaults to `false`. An individual adapter's own `readOnly` wins over this.
    */
   readOnly?: boolean;
+  /**
+   * Keys whose values are replaced with `[redacted]` as they are read, in every registered store.
+   * A string matches a whole key without regard to case, and a RegExp is tested as written. Nothing
+   * downstream sees the real value: not the list, the detail sheet, copy, export or the DevTools tab.
+   *
+   * A redacted value can't be edited or deleted from the tab, and an import skips it, so the
+   * placeholder is never written back. Empty by default, so nothing is redacted until you list it.
+   *
+   * ```ts
+   * redactKeys: ['authToken', /^session\./]
+   * ```
+   */
+  redactKeys?: readonly (string | RegExp)[];
+  /**
+   * Your chance to strip anything else sensitive, such as one field of a JSON value. Runs after
+   * `redactKeys`, each time a value is read, before it is stored. Return the entry with its `text`
+   * changed, the entry as it is, or `null` to hide the key. If it throws, the key is hidden. Only
+   * `text` is taken from what it returns, and a changed `text` counts as redacted.
+   *
+   * A hidden key stays on the list until its value is read. To keep a key off the list entirely,
+   * give its adapter a `blacklist`.
+   *
+   * ```ts
+   * redact: (entry) =>
+   *   entry.key === 'user' && entry.text
+   *     ? { ...entry, text: entry.text.replace(/"token":"[^"]*"/, '"token":"[redacted]"') }
+   *     : entry
+   * ```
+   */
+  redact?: (entry: StorageEntry) => StorageEntry | null;
 };
 
 /**
@@ -531,7 +562,12 @@ export function startDevtools<TThemeName extends string = never>(
     historySize = 120,
     disabledByDefault: performanceStartsPaused = true,
   } = config?.performance ?? {};
-  const { adapters: storageAdapters, readOnly: storageReadOnly } = config?.storage ?? {};
+  const {
+    adapters: storageAdapters,
+    readOnly: storageReadOnly,
+    redactKeys: storageRedactKeys,
+    redact: redactStorage,
+  } = config?.storage ?? {};
   const { disabledByDefault: navigationStartsPaused = false, redact: redactNavigation } =
     config?.navigation ?? {};
   const {
@@ -661,6 +697,7 @@ export function startDevtools<TThemeName extends string = never>(
     interactionThresholdMs,
   });
 
+  configureStorageRedaction({ keys: storageRedactKeys, redact: redactStorage });
   if (storageAdapters?.length) {
     storageStore.setAdapters(
       resolveStorageAdapters(storageAdapters, { readOnly: storageReadOnly })

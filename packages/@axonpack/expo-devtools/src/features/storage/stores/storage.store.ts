@@ -27,6 +27,12 @@ export type StorageEntry = {
   size: number;
   /** Set when this one key failed to read; SecureStore throws on a value it can't decrypt. */
   error?: string;
+  /**
+   * `true` when `storage.redactKeys` or `storage.redact` changed the value, so `text` is not what the
+   * store holds. The tab then won't edit or delete the key, and an import skips it, so the
+   * placeholder is never written back.
+   */
+  redacted?: boolean;
 };
 
 /**

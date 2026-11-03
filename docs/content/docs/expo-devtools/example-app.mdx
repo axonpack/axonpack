@@ -58,7 +58,9 @@ Navigation tab finds the container with no hook. It also sets the launcher's `si
 opens on, a `console.context` you can reach from the prompt, crash capture that survives
 `enabled: false` with breadcrumbs and a `redact` hook, a `navigation.redact` that hides a `token`
 param, and all four storage adapters registered against real AsyncStorage, MMKV, SecureStore and an
-in-memory `Map`.
+in-memory `Map`. Storage redaction shows `auth:token` and SecureStore's `session` as `[redacted]`,
+and a `storage.redact` hook in the in-memory store hides `auth:refresh` and one field of
+`cache/user/1`.
 
 <Callout type="info" title="MMKV and nitro-fetch are not in Expo Go">
   AsyncStorage and SecureStore ship inside Expo Go, so `bun run start` exercises them as-is. MMKV does

@@ -131,6 +131,16 @@ export const devtoolsConfig = {
         },
       }),
     ],
+    // Shown as `[redacted]`: `auth:token` in every store that holds it, and SecureStore's `session`.
+    redactKeys: ['auth:token', 'session'],
+    // One field of a JSON value, and one key hidden outright, both in the in-memory store only.
+    redact: (entry) => {
+      if (entry.adapterId !== 'in-memory') return entry;
+      if (entry.key === 'auth:refresh') return null;
+      return entry.key === 'cache/user/1' && entry.text
+        ? { ...entry, text: entry.text.replace(/"name":"[^"]*"/, '"name":"[redacted]"') }
+        : entry;
+    },
   },
   query: { client: queryClient },
   // `satisfies` rather than a plain object: it is what checks `defaultTheme` against the themes
