@@ -21,7 +21,8 @@ Use this page to look up a name. If you are new, start with the
 
 ## PreviewList props
 
-`PreviewList` is a FlatList, and takes FlatList's props as well as its own.
+`PreviewList` is a FlatList, and takes FlatList's props as well as its own, unless `virtualized` is
+`false`.
 
 | Prop                    | What it is                                                                   |
 | ----------------------- | ---------------------------------------------------------------------------- |
@@ -31,6 +32,7 @@ Use this page to look up a name. If you are new, start with the
 | `contentContainerStyle` | Over the list's padding: 16 all round and 112 at the end, which clears a floating tab bar. Set `paddingBottom` to fit your own |
 | `ListHeaderComponent`   | Your own element above the list's header (the error banner and the header card) |
 | `ListFooterComponent`   | Your own element after the last row                                          |
+| `virtualized`           | Default `true`. `false` draws every row at once in a plain ScrollView, for a place a FlatList can't run, such as a React Native DevTools tab. There is no pull to refresh then, and of the FlatList props only `style`, `contentContainerStyle` and `ListHeaderComponent` are used |
 | Any other FlatList prop | Passed through, such as `onScroll`, `testID` or `showsVerticalScrollIndicator` |
 
 For **Add a host**'s field, the list sets `keyboardShouldPersistTaps="handled"` and, for iOS,
