@@ -7,7 +7,8 @@ import type { CrashBreadcrumb } from '../stores/crash.store';
 /**
  * The last thing the app did before it broke, assembled from ring buffers that already exist — which
  * is the whole reason this is cheap enough to run inside an error handler. Nothing is recorded *for*
- * crash reporting; a crash just reads what the Console and Network tabs were holding anyway.
+ * crash reporting; a crash just reads what the Console, Network and Navigation tabs were holding
+ * anyway.
  *
  * On by default, even in production. A breadcrumb trail carries request URLs and whatever the app
  * logged, which is a different privacy proposition from a stack trace, so `crash.breadcrumbs: false`

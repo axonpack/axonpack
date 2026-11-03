@@ -287,16 +287,16 @@ export type DevtoolsCrashConfig = {
    */
   disableDefaultLogBox?: boolean;
   /**
-   * Attach the recent console and network entries to each record. Defaults to `true` — that
-   * trail carries request URLs and whatever the app logged, which is a different privacy
-   * proposition from a stack trace.
+   * Attach the recent console, network and navigation entries to each record. Defaults to `true`.
+   * That trail carries request URLs, screen changes and whatever the app logged, which is a
+   * different privacy proposition from a stack trace.
    */
   breadcrumbs?: boolean;
   /**
    * Intended cap on how many breadcrumbs travel with a record.
    *
-   * Not honoured yet: the trail is currently everything the Console and Network tabs were holding,
-   * so setting this changes nothing. Kept because the field is public API.
+   * Not honoured yet: the trail is currently everything the Console, Network and Navigation tabs
+   * were holding, so setting this changes nothing. Kept because the field is public API.
    */
   maxBreadcrumbs?: number;
   /** How many crash reports the Crash tab keeps, oldest dropped first. Defaults to `25`. */

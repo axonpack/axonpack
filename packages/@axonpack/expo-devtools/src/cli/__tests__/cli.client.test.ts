@@ -461,10 +461,12 @@ describe('--help', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('leads with the npx form that can never run the unrelated `devtools` package', () => {
-    expect(HELP.main.split('\n')[2]).toContain('npx @axonpack/expo-devtools <command>');
+  it('leads with npx devtools, then the long form that always runs this package', () => {
+    expect(HELP.main.split('\n')[2]).toContain('npx devtools <command>');
+    const long = HELP.main.indexOf('npx @axonpack/expo-devtools <command>');
+    expect(long).toBeGreaterThan(HELP.main.indexOf('npx devtools <command>'));
     for (const runner of ['bunx devtools', 'yarn devtools', 'pnpm exec devtools']) {
-      expect(HELP.main).toContain(runner);
+      expect(HELP.main.indexOf(runner)).toBeGreaterThan(long);
     }
   });
 });

@@ -36,9 +36,10 @@ Exit codes
 
 const MAIN = `devtools: read what @axonpack/expo-devtools recorded in a running app
 
-Run it as \`npx @axonpack/expo-devtools <command>\`, which works with any package manager. In the
-app's project folder, \`bunx devtools\`, \`yarn devtools\` and \`pnpm exec devtools\` work too.
-Outside a project that has the package, plain \`npx devtools\` downloads an unrelated package.
+Run it as \`npx devtools <command>\` in the app's project folder. In a monorepo, or outside the
+app's folder, \`npx devtools\` can miss the local install and fetch an unrelated npm package named
+\`devtools\`; \`npx @axonpack/expo-devtools <command>\` always runs this one. With bun, yarn or
+pnpm: \`bunx devtools\`, \`yarn devtools\`, \`pnpm exec devtools\`.
 Needs Node 22 or newer, the app open in a dev build or Expo Go, and \`expo start\` running.
 
 Usage
