@@ -208,9 +208,34 @@ redux: {
 },
 ```
 
+## Preview
+
+The Preview tab is there once `preview` is set and `@axonpack/preview` loaded. See
+[Preview](/docs/expo-devtools/preview).
+
+| Option    | Type            | Default     | What it does |
+| --------- | --------------- | ----------- | ------------ |
+| `preview` | `PreviewConfig` | `undefined` | `@axonpack/preview`'s own config, the object its `PreviewProvider` takes. Set, the devtools mount preview's provider around the app, with `enabled: false` too, and add the Preview tab. Its fields are on [preview's Reference](/docs/preview/reference#previewconfig). |
+
+With `preview` set, the devtools enabled and `@axonpack/preview` not installed, the start throws
+this. With `enabled: false` it throws nothing.
+
+```
+The devtools config has `preview`, but @axonpack/preview isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add `@axonpack/preview` to the plugins in app.json, and rebuild the app.
+```
+
+```ts
+preview: {
+  enabled: true,
+  s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
+  devPreviewServers: true,
+},
+```
+
 ## Crash
 
-Crash capture is the only part of this package that runs with the devtools off.
+Crash capture is the only part of this package that runs with the devtools off, apart from
+preview's provider.
 
 | Option                              | Type                                       | Default  | What it does                                                                                     |
 | ----------------------------------- | ------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------- |

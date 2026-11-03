@@ -1,6 +1,6 @@
 ---
 title: React Native DevTools tab
-description: "Every control in the Axonpack tab on your computer: the bar, and the Network, Console, Performance, Storage, Crashes, AI Usage and Debug panels."
+description: "Every control in the Axonpack tab on your computer: the bar, and the Network, Console, Performance, Storage, Preview, Crashes, AI Usage and Debug panels."
 ---
 
 The tab reads the same stores as the panel on the device, so a filter, a sort, a setting or a rule
@@ -316,6 +316,22 @@ key**.
 
 **Import** takes a snapshot pasted into its field, the same file Export writes. Before anything is
 written it counts what would be new, overwritten, already the same, and skipped. **Write** applies it, and carries the count of keys it will write.
+
+## Preview
+
+There once `config.preview` set up `@axonpack/preview`. It is preview's own list, the same as the
+[Preview tab](/docs/expo-devtools/preview) on the device, in the panel's theme.
+
+| Part              | What it does                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| Header card       | What runs now. **Back to default**, Refresh, and **Show details** for the build's facts.     |
+| Dev preview servers | This app's Metro servers, in a debug build with `devPreviewServers` on. Click a row to restart the app on it. **Hosts** and **Add a host** end the card. |
+| Published previews | Each preview for this build, with Download, Switch, Update and Delete.                      |
+| Incompatible      | Downloads made for another native build, with **Delete all**.                                |
+
+Every row is drawn at once, and there is no pull to refresh: Refresh on the header card asks again.
+The panel reads the list again each time it opens. Each part is described on preview's
+[App setup](/docs/preview/app-setup#the-ready-made-list).
 
 ## Crashes
 

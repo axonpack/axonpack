@@ -44,7 +44,10 @@ All three are peer dependencies, so they come from your app rather than from thi
 npx expo install @axonpack/expo-devtools react-native-safe-area-context react-native-webview expo-clipboard
 ```
 
-Every peer range is `*`. That is deliberate: the point of a peer is that your SDK decides the
+`@axonpack/preview` is a fourth, optional peer. Install it, 0.2.0 or later, only to set preview up
+through [`config.preview`](/docs/expo-devtools/preview).
+
+Every peer range is `*`, the optional one too. That is deliberate: the point of a peer is that your SDK decides the
 version, and a narrower range here would fight it. It does mean npm will not warn you when you are
 outside what has been tested, so treat the table above, not the peer range, as the answer.
 

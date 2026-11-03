@@ -11,6 +11,7 @@ This file ships inside the package. The same reference, split into pages and sea
 - [Console tab](#console-tab)
 - [Performance tab](#performance-tab)
 - [Storage tab](#storage-tab)
+- [Preview tab](#preview-tab)
 - [AI Usage tab](#ai-usage-tab)
 - [React Native DevTools tab](#react-native-devtools-tab)
 - [The `devtools` command line tool](#the-devtools-command-line-tool)
@@ -31,12 +32,12 @@ full-screen modal; the button itself never appears inside the modal. With
 
 ### Header row
 
-| Item         | What it does                                                                                                                                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Query**, **Navigation**, **Redux**, **Crashes**, **AI Usage**, **Debug**. Query, Navigation and Redux show only when the app has one to show. Scrolls horizontally on a narrow screen. |
-| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports.                                                                                       |
-| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                                                                                                             |
-| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                                                                                                                     |
+| Item         | What it does                                                                                                                                                                                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Query**, **Navigation**, **Redux**, **Preview**, **Crashes**, **AI Usage**, **Debug**. Query, Navigation, Redux and Preview show only when the app has one to show. Scrolls horizontally on a narrow screen. |
+| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports.                                                                                                             |
+| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                                                                                                                                   |
+| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                                                                                                                                           |
 
 In a debug build whose bundle came from Metro, a strip under the header says **Metro server
 detected**. Its **Open DevTools** button opens React Native DevTools on the Axonpack tab, the same
@@ -527,6 +528,24 @@ anywhere in the tab, and no way to add a key that isn't already there.
   job, and squeezing `expo-sqlite` into a key-value adapter would serve neither.
 - **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
   their length is reported.
+
+## Preview tab
+
+`@axonpack/preview`'s own list, in the panel's theme, there once [`config.preview`](#devtoolsconfig)
+set preview up. The guide is [Preview](https://axonpack.dev/docs/expo-devtools/preview), and each part
+of the list is on preview's [App setup](https://axonpack.dev/docs/preview/app-setup#the-ready-made-list).
+
+| Part                | What it holds                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| Error snackbar      | Only when something went wrong: what, and what to try, with Retry and Dismiss.                      |
+| Header card         | What runs now, **Back to default**, Refresh, and **Show details** for the build's facts.            |
+| Dev preview servers | This app's Metro servers, in a debug build with `devPreviewServers` on. Tap a row to restart on it. |
+| Published previews  | Each preview for this build, with Download, Switch, Update and Delete.                              |
+| Incompatible        | Downloads made for another native build, with **Delete all**.                                       |
+
+The Axonpack tab in React Native DevTools has the same list as its Preview panel, after Navigation.
+There every row is drawn at once, there is no pull to refresh, and the list is read again each time
+the panel opens.
 
 ## AI Usage tab
 
@@ -1295,12 +1314,20 @@ a key of `config.themes`.
 | `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                  |
 | `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                               |
 | `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Open the AI Usage tab paused. Agents can still query the app.                                                                                |
+| `preview`                            | `PreviewConfig`               | `undefined` | `@axonpack/preview`'s own config. Set, its provider wraps the app (with `enabled: false` too) and the Preview tab joins the panel.           |
 
 The Redux tab is there once a store was created with [`devtoolsReduxEnhancer()`](#devtoolsreduxenhancer).
 
+`preview` needs `@axonpack/preview` 0.2.0 or later, an optional peer dependency. With `preview` set,
+the devtools enabled and the package missing, the start throws: "The devtools config has `preview`,
+but @axonpack/preview isn't installed. Install it with `npx expo install @axonpack/preview
+expo-file-system`, add `@axonpack/preview` to the plugins in app.json, and rebuild the app." With
+`enabled: false` nothing is thrown. The guide is [Preview](https://axonpack.dev/docs/expo-devtools/preview).
+
 #### `crash`
 
-Crash capture is the only part of this package that runs with the devtools off. The guide is
+Crash capture is the only part of this package that runs with the devtools off, apart from preview's
+provider. The guide is
 [Crash reporting](https://axonpack.dev/docs/expo-devtools/crash-reporting).
 
 | Option                               | Type                            | Default     | What it does                                                                                                                       |

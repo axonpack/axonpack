@@ -16,6 +16,7 @@ only disagree with these.
 | [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose                  |
 | [navigation.md](./navigation.md)                                       | The screens the app moved through, and moving it from here |
 | [redux.md](./redux.md)                                                 | The actions a Redux store reduced, and dispatching one     |
+| [preview.md](./preview.md)                                             | `@axonpack/preview` from the config, and its Preview tab   |
 | [ai-usage.md](./ai-usage.md)                                           | The queries agents made, and the replies they got          |
 | [agent-cli.md](./agent-cli.md)                                         | Reading the devtools from a terminal, for agents and you   |
 | [react-native-devtools.md](./react-native-devtools.md)                 | The panel again, inside React Native DevTools              |

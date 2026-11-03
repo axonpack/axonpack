@@ -36,7 +36,7 @@ That also settles the [Debug tab](/docs/expo-devtools/debug), whose buttons call
 module and are **not** restricted to development builds. They live behind the panel, and the panel is
 unreachable with the devtools off.
 
-## The two things that do run in production
+## What still runs in production
 
 - **Crash reporting**, if you asked for it. `crash: { enableWhileDevtoolsDisabled: true }` installs the
   handlers even with `enabled: false`. It is the one subsystem meant to survive into a release build.
@@ -44,6 +44,9 @@ unreachable with the devtools off.
 - **The `>` prompt**, in any build where the devtools are on. `console.repl` defaults to `true` and is
   not gated on `__DEV__`, so a build with `enabled: true` gets a prompt that runs whatever is typed
   into it. Set `console: { repl: false }` for any build where that is not what you want.
+- **Preview's provider**, when the config has `preview` and `@axonpack/preview` is installed. It
+  mounts with `enabled: false` too, because preview confirms each start from it. Preview's own
+  `enabled` decides whether previews are on. See [Preview](/docs/expo-devtools/preview).
 
 ## Keeping secrets out of a build that records
 
