@@ -1,8 +1,9 @@
 import { loader } from 'fumadocs-core/source';
 import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
 import { docsContentRoute, docsImageRoute, docsRoute } from './shared';
-import { defineDocs } from 'fumadocs-mdx/macro';
+import { defineCollections, defineDocs } from 'fumadocs-mdx/macro';
 import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
+import { z } from 'zod';
 import { title } from './services/packages.service';
 
 const docs = defineDocs({
@@ -24,6 +25,27 @@ export const source = loader({
   source: docs.toFumadocsSource(),
   plugins: [lucideIconsPlugin()],
 });
+
+const posts = defineCollections({
+  type: 'doc',
+  dir: 'content/blog',
+  schema: pageSchema.extend({
+    description: z.string(),
+    author: z.string(),
+    // YAML reads `2026-11-03` as a string, and a plain day avoids a time zone shifting it.
+    date: z.iso.date(),
+    // Shown above the post and used as its share card. Without one, the card is generated.
+    image: z.string().optional(),
+  }),
+});
+
+/** Blog posts, one MDX file each in `content/blog/`, served at /blog/<file name>/. */
+export const blog = loader({ baseUrl: '/blog', source: posts.toFumadocsSource() });
+
+export type Post = (typeof blog)['$inferPage'];
+
+// ISO days compare correctly as strings.
+export const getPosts = () => blog.getPages().sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 export function getPageImageUrl(page: (typeof source)['$inferPage']) {
   const segments = [...page.slugs, 'image.png'];
