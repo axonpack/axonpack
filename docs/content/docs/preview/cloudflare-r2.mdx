@@ -58,8 +58,9 @@ EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY=<read token's secret>
 EXPO_PUBLIC_PREVIEW_S3_REGION=auto
 ```
 
-If you publish into a folder (`.../<bucket>/my-app`), the public address needs the same folder:
-`https://pub-<id>.r2.dev/my-app`.
+Each app's files are in a folder named after its slug, and the app adds that folder itself. If the
+publish URL still ends in a folder of your own (`.../<bucket>/<folder>`), the public address needs
+the same folder: `https://pub-<id>.r2.dev/<folder>`.
 
 Then run a [test publish](/docs/preview/s3-compatible#setup-checklist).
 

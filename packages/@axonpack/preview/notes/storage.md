@@ -3,6 +3,7 @@
 Where previews are kept: in the bucket they are published to, and on the device once downloaded.
 
 - [x] Reads previews from any S3-compatible bucket (S3, R2, MinIO and others), public or private (with a read-only key)
+- [x] Reads only the app's own folder, named after its slug, so one bucket holds several apps
 - [x] Downloads a preview into the app's documents folder and checks every file
 - [x] Keeps a download until QA deletes it; nothing expires on a timer
 - [x] Shows downloads made for another native build apart, with one button to delete them all
@@ -44,12 +45,12 @@ Put the write key in `.env.local` or `.env.production.local`, which Expo's proje
 gitignores (`.env*.local`), or in CI secrets. Never put it in a committed `.env`: anyone with the
 repo could then write to the bucket.
 
-| Variable                       | Needed | What it is                                                                                                                                                                               |
-| ------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PREVIEW_S3_URL`               | yes    | `<endpoint>/<bucket>`, plus a folder inside the bucket if there are more segments: `http://localhost:9000/previews-public`, `https://<account>.r2.cloudflarestorage.com/previews/my-app` |
-| `PREVIEW_S3_ACCESS_KEY_ID`     | yes    | Write key id. Never ship it in the app                                                                                                                                                   |
-| `PREVIEW_S3_SECRET_ACCESS_KEY` | yes    | Write key secret                                                                                                                                                                         |
-| `PREVIEW_S3_REGION`            | no     | Signing region. Default `us-east-1`, which MinIO and R2 accept                                                                                                                           |
+| Variable                       | Needed | What it is                                                                                                                                                                                                                                                     |
+| ------------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PREVIEW_S3_URL`               | yes    | `<endpoint>/<bucket>`: `http://localhost:9000/previews-public`, `https://<account>.r2.cloudflarestorage.com/previews`. Each app's previews go in a folder named after its slug. More segments still work as a folder in front of the slug, but none are needed |
+| `PREVIEW_S3_ACCESS_KEY_ID`     | yes    | Write key id. Never ship it in the app                                                                                                                                                                                                                         |
+| `PREVIEW_S3_SECRET_ACCESS_KEY` | yes    | Write key secret                                                                                                                                                                                                                                               |
+| `PREVIEW_S3_REGION`            | no     | Signing region. Default `us-east-1`, which MinIO and R2 accept                                                                                                                                                                                                 |
 
 The names are the package's own, not `AWS_*`, so they work the same for any S3-compatible host and
 never pick up AWS keys already exported in a shell.
@@ -98,7 +99,7 @@ copies, pinned by digest.
 | Write key      | `preview-admin` / `preview-admin-secret` (MinIO's root user)              |
 | Read key       | `preview-reader` / `preview-reader-secret` (read `previews-private` only) |
 
-A file is at `<endpoint>/<bucket>/<path>`.
+A file is at `<endpoint>/<bucket>/<slug>/<path>`.
 
 ### The example app
 
@@ -112,7 +113,7 @@ The example reads its bucket from `example/.env` (copy `example/.env.example`):
 | `EXPO_PUBLIC_PREVIEW_S3_REGION`                 | no     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2                                                                                                           |
 
 With a read key the app splits the URL into endpoint, bucket and folder and signs its reads. Without
-one it reads `<url>/<key>` unsigned, so the URL needs no bucket in it.
+one it reads `<url>/<slug>/<key>` unsigned, so the URL needs no bucket in it.
 
 Headers for a tunnel or proxy are not env values: pass `s3Config.headers` in the app's config.
 

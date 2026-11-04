@@ -94,12 +94,14 @@ is not detected. See [Compatibility](/docs/preview/compatibility).
 
 ## The lists in the bucket
 
-| File                                  | Who reads it                                        |
-| ------------------------------------- | --------------------------------------------------- |
-| `index/<platform>/<key>.json`         | The app. Only the previews this native build can run |
-| `index.json`                          | People. Every native build and its previews         |
-| `previews/<platform>/<key>/<id>.json` | The app, when it downloads that preview             |
-| `files/<sha256>`                      | The app, when it downloads that preview             |
+Everything goes in a folder named after the app's slug, so several apps can share a bucket.
+
+| File                                         | Who reads it                                         |
+| -------------------------------------------- | ---------------------------------------------------- |
+| `<slug>/index/<platform>/<key>.json`         | The app. Only the previews this native build can run |
+| `<slug>/index.json`                          | People. Every native build and its previews          |
+| `<slug>/previews/<platform>/<key>/<id>.json` | The app, when it downloads that preview              |
+| `<slug>/files/<sha256>`                      | The app, when it downloads that preview              |
 
 Two publishes at the same time both end up listed. The lists are written only if nobody wrote in
 between, and a clash reads again and retries.

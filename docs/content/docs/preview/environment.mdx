@@ -17,7 +17,7 @@ The CLI never reads the app's settings, and the app never sees `PREVIEW_S3_*`.
 
 | Variable                       | Needed | What it is                                                         |
 | ------------------------------ | ------ | ------------------------------------------------------------------ |
-| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>`, plus a folder if you add more segments      |
+| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>`. The app's slug is the folder inside it      |
 | `PREVIEW_S3_ACCESS_KEY_ID`     | Yes    | The write key's id                                                 |
 | `PREVIEW_S3_SECRET_ACCESS_KEY` | Yes    | The write key's secret                                             |
 | `PREVIEW_S3_REGION`            | No     | Signing region. Default `us-east-1`, which MinIO and R2 accept     |
@@ -56,7 +56,7 @@ The package reads no environment variables in the app. You pass everything to th
 decide where each value comes from. The usual way is Expo's `EXPO_PUBLIC_*` variables:
 
 ```sh title=".env"
-EXPO_PUBLIC_PREVIEW_S3_URL=https://pub-<id>.r2.dev/my-bucket
+EXPO_PUBLIC_PREVIEW_S3_URL=https://pub-<id>.r2.dev
 # Private bucket only:
 # EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID=...
 # EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY=...

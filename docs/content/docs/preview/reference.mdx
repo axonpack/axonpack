@@ -52,12 +52,13 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `s3Config`          | No     | The bucket and how to read it (`PreviewS3Config`, below). Without it, the list shows previews as not set up |
 | `devPreviewServers` | No     | Lists this app's Metro servers in a debug build. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
 | `buildKey`          | No     | This build's key, only when the config plugin is not used to bake it in             |
+| `slug`              | No     | The app's Expo slug, only when the config plugin is not used to bake it in. Previews are read from the bucket folder named after it |
 
 `s3Config` (`PreviewS3Config`):
 
 | Field                 | Needed | What it is                                                                          |
 | --------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `url`                 | Yes    | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN. Left out or empty at runtime, the list shows previews as not set up |
+| `url`                 | Yes    | With a read key: `<endpoint>/<bucket>`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN. The app reads from the folder named after its slug under it. Left out or empty at runtime, the list shows previews as not set up |
 | `readAccessKeyId`     | No     | A read-only key, for a private bucket. Never the write key                          |
 | `readSecretAccessKey` | No     | Its secret                                                                          |
 | `region`              | No     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
@@ -193,7 +194,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `markLaunched()`              | Tells the native side this start worked. The provider calls it               |
 | `buildKey()`                  | The key the plugin baked into this build, or null                            |
 | `buildCompatibility()`        | `appVersion` or `fingerprint`, as baked in, or null                          |
-| `buildSlug()`                 | The app's slug, as baked in, or null                                         |
+| `buildSlug()`                 | The app's slug, as baked in, or null. It names the app's folder in the bucket |
 | `previewTitle(id)`            | The readable title for an id: `task-1-login-fix` becomes "Task 1 login fix"  |
 | `previewItems(state)`         | `{ items, incompatible }` from the store state                               |
 | `runningNow(input)`           | The pure form of `useRunning()`                                              |
