@@ -5,6 +5,7 @@ import { SupportTab } from '../../core/components/devtools-overlay/support-tab.c
 import { DevtoolsProvider } from '../../core/components/devtools-provider.component';
 import { supportsStore, type DevtoolsSupport } from '../../core/stores/supports.store';
 import { SupportPanel } from '../../devtools-remote-tab/components/support-panel.component';
+import { getReplContext } from '../../features/console/services/evaluate-expression.service';
 
 jest.mock('../../features/crash/services/native-crash.service', () => ({
   persistCrashRecord: () => {},
@@ -77,6 +78,15 @@ describe('config.supports', () => {
     expect(supportsStore.getSupports()).toEqual([WORKING]);
     expect(error).toHaveBeenCalledWith(supportTwice('Extra v1'));
     error.mockRestore();
+  });
+
+  it("adds a support's names to the > prompt, where the app's own win a clash", () => {
+    startDevtools({
+      network: NO_NETWORK_PATCHES,
+      console: { context: { shared: 'app' } },
+      supports: [{ ...WORKING, context: { extra: 1, shared: 'support' } }],
+    });
+    expect(getReplContext()).toMatchObject({ extra: 1, shared: 'app' });
   });
 
   it('shows the error in the tab and the DevTools panel instead of their content', () => {

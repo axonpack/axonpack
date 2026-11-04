@@ -1,7 +1,12 @@
 import type { PreviewConfig } from '@axonpack/preview';
 import type { ReactNode } from 'react';
 
+import { PreviewStoreFeed } from './components/preview-store-feed.component';
 import { PreviewTab } from './components/preview-tab.component';
+import { previewAgent } from './constants/preview-agent.const';
+import { previewSupportStore } from './stores/preview-support.store';
+import type { AgentTopic } from '../../../agent/constants/agent-topics.const';
+import { runAction } from '../../../agent/utils/run-action.util';
 import type { DevtoolsSupport } from '../../../core/stores/supports.store';
 
 /** This entry is for `@axonpack/preview` 0.x. A new major of preview gets its own entry. */
@@ -37,9 +42,32 @@ try {
 }
 
 /**
+ * The `>` prompt's `preview`: the support's data, and the topic's actions without `--yes`, since
+ * typing the call is the confirmation. An action answers the line the CLI would print.
+ */
+function previewContext(topic: AgentTopic) {
+  const act = (action: string, args: string[] = []) =>
+    runAction([topic], { topic: topic.name, action, args, options: { yes: true } });
+  return {
+    get status() {
+      return previewSupportStore.getState().status;
+    },
+    get previews() {
+      return previewSupportStore.getState().previews;
+    },
+    get servers() {
+      return previewSupportStore.getState().servers;
+    },
+    switch: (id: string) => act('switch', [id]),
+    default: () => act('default'),
+  };
+}
+
+/**
  * Sets preview up through the devtools: its provider goes around the app, with the devtools on or
- * off, and a Preview tab joins the panel and React Native DevTools. Pass the result in the
- * devtools config's `supports`.
+ * off, a Preview tab joins the panel and React Native DevTools, a `preview` topic joins the
+ * `devtools` command line tool, and `preview` joins the Console tab's `>` prompt. Pass the result
+ * in the devtools config's `supports`.
  *
  * With `@axonpack/preview` missing, or on a major this entry isn't for, it never throws. The
  * devtools log the error with `console.error` at start, and the Preview tab shows it.
@@ -51,13 +79,20 @@ export function configure(config: PreviewConfig): DevtoolsSupport {
   }
   // Metro can also hand back a module whose own load failed as undefined or empty.
   if (!preview?.PreviewProvider) return { ...tab, error: PREVIEW_NOT_INSTALLED };
-  const { PreviewProvider, PreviewList } = preview;
+  const loaded = preview;
+  const { PreviewProvider, PreviewList } = loaded;
+  const topic = previewAgent(config, loaded);
   return {
     ...tab,
     Provider: ({ children }: { children?: ReactNode }) => (
-      <PreviewProvider config={config}>{children}</PreviewProvider>
+      <PreviewProvider config={config}>
+        <PreviewStoreFeed preview={loaded} />
+        {children}
+      </PreviewProvider>
     ),
     Tab: () => <PreviewTab List={PreviewList} />,
     Panel: () => <PreviewTab List={PreviewList} virtualized={false} />,
+    topic,
+    context: { preview: previewContext(topic) },
   };
 }

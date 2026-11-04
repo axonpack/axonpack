@@ -1,8 +1,9 @@
 import { Platform } from 'react-native';
 
+import { supportsStore, type DevtoolsSupport } from '../../core/stores/supports.store';
 import { aiUsageStore } from '../../features/ai-usage/stores/ai-usage.store';
 import { maskHeaderLine } from '../../features/network/services/redact-network.service';
-import { TOPICS } from '../constants/agent-topics.const';
+import { TOPICS, type AgentTopic } from '../constants/agent-topics.const';
 import { runAction, type AgentActionCall } from '../utils/run-action.util';
 import { runQuery, type AgentQuery } from '../utils/run-query.util';
 
@@ -22,6 +23,25 @@ try {
 
 const VERSION: string = require('../../../package.json').version;
 
+/** A support that can't run still has its topic, off, so a query says why. */
+const offTopic = ({ id, title, error }: DevtoolsSupport): AgentTopic => ({
+  name: id,
+  about: `the ${title} support`,
+  rows: () => [],
+  enabled: () => false,
+  off: error,
+  fields: { id: () => '', t: () => undefined },
+  show: [],
+});
+
+/** The features' topics, then one per support in the devtools config's `supports`. */
+const topics = (): AgentTopic[] => [
+  ...TOPICS,
+  ...supportsStore
+    .getSupports()
+    .flatMap((support) => (support.error ? [offTopic(support)] : (support.topic ?? []))),
+];
+
 /** What `devtools apps` and `devtools topics` show for this app. */
 function hello() {
   const config = expoConstants?.expoConfig;
@@ -30,7 +50,7 @@ function hello() {
     slug: config?.slug,
     name: config?.name,
     platform: Platform.OS,
-    topics: TOPICS.map((topic) => ({
+    topics: topics().map((topic) => ({
       name: topic.name,
       about: topic.about,
       // null for a feature the app turned off, so `topics` can say so.
@@ -48,7 +68,7 @@ export type AgentHello = ReturnType<typeof hello>;
  */
 function run(query: AgentQuery): string {
   const start = performance.now();
-  const reply = runQuery(TOPICS, query);
+  const reply = runQuery(topics(), query);
   // The CLI asks again every 200 ms while it waits, and the answer it ends on is the one it shows.
   if (!reply.text.startsWith('# wait: ')) {
     aiUsageStore.record(query, reply, performance.now() - start);
@@ -86,7 +106,7 @@ function act(call: AgentActionCall): string {
     aiUsageStore.recordAction(shown, text, performance.now() - start);
     return text;
   };
-  const answer = runAction(TOPICS, call);
+  const answer = runAction(topics(), call);
   if (typeof answer === 'string') return done(answer);
   const slot: { waitingFor: string; text?: string } = { waitingFor: answer.waitingFor };
   waiting.set(key, slot);

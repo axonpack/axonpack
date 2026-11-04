@@ -16,15 +16,15 @@ import type { DevtoolsConfig, Palette } from '@axonpack/expo-devtools';
 
 ## Supports
 
-Each [support](/docs/expo-devtools/supports) exports its package's config types and
-`DevtoolsSupport` from its own entry point, not the package root:
+Each [support](/docs/expo-devtools/supports) exports its package's config types, the type of its
+`useSupport()` data and `DevtoolsSupport` from its own entry point, not the package root:
 
 ```ts
 import type { PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
 ```
 
 Preview's: `PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions` (re-exported from
-`@axonpack/preview`) and `DevtoolsSupport`. See
+`@axonpack/preview`), `PreviewSupportData` (what `useSupport()` returns) and `DevtoolsSupport`. See
 [Preview support](/docs/expo-devtools/reference/provider#preview-support).
 
 ## Theming

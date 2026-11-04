@@ -76,9 +76,10 @@ the Storage tab shows nothing until you register your stores in `config.storage.
 this package depends on no storage library and cannot discover one.
 
 Supports connect the devtools to other packages. Each has its own entry point,
-`@axonpack/expo-devtools/support/<name>/v<major>`, never the main entry, and adds a tab once you pass
-it in `supports`. `<major>` is the major version of the package it supports. The first is preview,
-for [`@axonpack/preview`](https://axonpack.dev/docs/preview) 0.x:
+`@axonpack/expo-devtools/support/<name>/v<major>`, never the main entry. Once you pass one in
+`supports`, it adds a tab, a topic in the `devtools` command line tool, and a `useSupport()` hook
+that returns the package's state. `<major>` is the major version of the package it supports. The
+first is preview, for [`@axonpack/preview`](https://axonpack.dev/docs/preview) 0.x:
 
 ```tsx
 import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
@@ -93,7 +94,8 @@ tab, and never crashes the app. See [Supports](https://axonpack.dev/docs/expo-de
 
 An AI agent, or you, can read what the devtools recorded from a terminal: requests with their bodies,
 logs, crashes, stored values and every other tab, filtered down to the rows it needs. It can also mock
-or block a URL, and send a request from inside the app.
+or block a URL, send a request from inside the app, and, with the preview support, switch the app to a
+preview or a dev server.
 
 ```sh
 npx devtools network --where state=error --since 10m

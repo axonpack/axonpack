@@ -144,7 +144,8 @@ export type DevtoolsConsoleConfig = {
    * console: { context: { store, resetOnboarding } }
    * ```
    *
-   * Empty by default.
+   * Empty by default. A support in `supports` can add names of its own, such as `preview`; a name
+   * here wins over a support's.
    */
   context?: Record<string, unknown>;
   /**
@@ -536,7 +537,8 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   aiUsage?: DevtoolsAiUsageConfig;
   /**
    * Tabs for other packages, one per entry, each from a support module's `configure()`. A support
-   * can put a provider around the app, add a tab to the panel and a panel to React Native DevTools.
+   * can put a provider around the app, add a tab to the panel and a panel to React Native DevTools,
+   * a topic to the `devtools` command line tool, and names to the Console tab's `>` prompt.
    * One support per package: with two versions of one, the first is used and the other is logged
    * with `console.error`.
    *
@@ -720,7 +722,9 @@ export function startDevtools<TThemeName extends string = never>(
   // After the console is recording, not with the handlers: a crash from the last run writes a
   // console row as well as a report now, and draining before this point threw that row away.
   drainOnce();
-  configureRepl(enableRepl, replContext);
+  // The app's own names win a clash with a support's.
+  const supportContext = Object.assign({}, ...supportsStore.getSupports().map((s) => s.context));
+  configureRepl(enableRepl, { ...supportContext, ...replContext });
 
   performanceStore.setHistorySize(historySize);
   performanceStore.setEnabled(true);

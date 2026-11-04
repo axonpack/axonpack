@@ -72,7 +72,10 @@ The support module re-exports this package's config types, so `preview-config.ts
 The provider mounts on every start this way too, including with the devtools off. The tab is there
 only while the devtools are on, and a preview is a release bundle, so `enabled: __DEV__` leaves no
 tab inside a preview. Keep the devtools on in the bundles QA switches between, or also put the list
-on a screen of your own. Everything else on this page works the same under `DevtoolsProvider`. See
+on a screen of your own. Everything else on this page works the same under `DevtoolsProvider`.
+
+The devtools also add a `preview` topic to their `devtools` command line tool, so an AI agent or you
+can list the previews and dev servers and switch between them from a terminal. See
 [Preview support](/docs/expo-devtools/supports/preview) in the expo-devtools docs.
 
 ## enabled

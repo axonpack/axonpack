@@ -181,6 +181,7 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 | `redux`       | A dispatched action and what it changed in the state. The last 200                            | `id type changed`                  | `id t type action changed changes`                                                  |
 | `crash`       | A captured crash                                                                              | `id kind name message`             | `id t kind name message route previous seen`                                        |
 | `ai-usage`    | A query or action an agent made, with the reply it got. The last 100                          | `id command matched total ms`      | `id t command topic action matched total ms size error cut reply`                   |
+| `preview`     | From the [preview support](/docs/expo-devtools/supports/preview#from-the-command-line), only while it is in `supports`: what runs now (`id` is `now`), a dev server or a preview | `id kind title status branch active` | `id t kind title status branch active environment`                 |
 
 - In `network`, `code` is the HTTP status only, and a socket's close code is `close` (`-` on an
   HTTP row). `state` is `error` for a 4xx or 5xx answer, a request that got no answer and a socket
@@ -193,6 +194,10 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 - `redux` keeps the action and what it changed, never the whole state.
 - A tab the app has no setup for (no router, no `QueryClient`, no store with
   `devtoolsReduxEnhancer()`, no storage adapters) is an `off` topic.
+- A [support](/docs/expo-devtools/supports) adds a topic of its own, such as `preview`, and
+  `devtools topics` lists it only while the support is in the devtools config's `supports`. It
+  takes the same flags as the other topics. When the support's package isn't installed, the topic is
+  `off` and says what to install. Each support's page lists its rows and actions.
 
 ## Output
 
@@ -229,8 +234,8 @@ list is not a run of time.
 Each command gives up after 5 seconds. If the app never answered, the message says its JavaScript
 may be paused at a breakpoint: resume it and run the command again.
 
-A topic that has to read first, such as `storage` listing a store's keys or reading its values,
-answers with a `# wait:` line while it reads. The tool asks again every 200 ms within the same 5
+A topic that has to read first, such as `storage` listing a store's keys or reading its values, or
+`preview` asking the bucket and looking for dev servers, answers with a `# wait:` line while it reads. The tool asks again every 200 ms within the same 5
 seconds, and prints only the answer it ends on. If the read takes longer, the error says what the
 app is still doing, and running the same command again picks up where it stopped.
 
@@ -285,6 +290,8 @@ flags are in the [CLI reference](/docs/expo-devtools/reference/cli#actions).
 - **Replies are masked like every other reply.** The new row goes through the same redaction, so an
   `Authorization` header you sent shows as `[redacted]`. A replay sends the app's own headers to the
   same URL, but the agent only ever sees them masked.
+- **An action that restarts the app needs `--yes`.** The `preview` topic's `switch` and `default`
+  refuse without it.
 - **Every action is recorded**, refused ones too, in the [AI Usage tab](#the-ai-usage-tab).
 - **Development only**, like the rest of the tool.
 
@@ -410,6 +417,7 @@ npx skills add axonpack/skills
 | What changed the Redux state               | `devtools redux --where 'type~cart/'`                                                        |
 | How a screen handles a failing endpoint    | `devtools network override <exact url> --status 500 --body '{"error":"down"}'`, open the screen, read `devtools console`, then `devtools network unoverride --all` |
 | Whether an endpoint answers from the app   | `devtools network send GET <url>`, then `devtools get network <id>` for the body             |
+| To run a preview or another dev server     | `devtools preview`, then `devtools preview switch <id> --yes`. Needs the [preview support](/docs/expo-devtools/supports/preview) |
 
 Performance has rows only while its tab records, and it starts paused, so press record in the
 Performance tab first.

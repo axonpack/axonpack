@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { supportsStore } from '../../../core/stores/supports.store';
 import { AI_USAGE_AGENT } from '../../../features/ai-usage/constants/ai-usage-agent.const';
 import { aiUsageStore } from '../../../features/ai-usage/stores/ai-usage.store';
 import { TOPICS, type AgentTopic } from '../../constants/agent-topics.const';
@@ -241,6 +242,46 @@ describe('installAgent', () => {
       expect(agent().act({ topic: 'off', action: 'add', args: ['x'] })).toBe(
         'error: off is off: the app turned it off in its devtools config'
       );
+    });
+  });
+
+  describe('support topics', () => {
+    const SUPPORT = { id: 'extra', title: 'Extra', icon: 'rule' } as const;
+    const PING: AgentTopic['actions'] = {
+      ping: { usage: '', args: [0, 0], run: () => '# extra · pong' },
+    };
+
+    afterEach(() => supportsStore.setSupports([]));
+
+    it('lists one only while its support is configured, and records its actions', () => {
+      installAgent();
+      const names = () =>
+        agent()
+          .hello()
+          .topics.map((topic: { name: string }) => topic.name);
+      expect(names()).toEqual(['log']);
+
+      supportsStore.setSupports([{ ...SUPPORT, topic: { ...LOG, name: 'extra', actions: PING } }]);
+      expect(names()).toEqual(['log', 'extra']);
+      expect(agent().run({ topic: 'extra', count: true })).toBe('1');
+      aiUsageStore.clear();
+      expect(agent().act({ topic: 'extra', action: 'ping' })).toBe('# extra · pong');
+      expect(aiUsageStore.getSnapshot()[0]).toMatchObject({
+        command: 'extra ping',
+        action: 'ping',
+      });
+    });
+
+    it("lists a support that can't run as an off topic, saying why", () => {
+      supportsStore.setSupports([{ ...SUPPORT, error: 'Not installed.' }]);
+      installAgent();
+      expect(agent().hello().topics[1]).toEqual({
+        name: 'extra',
+        about: 'the Extra support',
+        rows: null,
+        actions: [],
+      });
+      expect(agent().run({ topic: 'extra' })).toBe('# extra is off: Not installed.');
     });
   });
 

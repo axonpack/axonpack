@@ -284,7 +284,8 @@ Present when the REPL is enabled through `console.repl`, which defaults to `__DE
 - `$modules('auth')` lists loaded Metro modules matching a string; `$m('src/stores/auth')` returns
   one. Both read Metro's module registry, which only a development bundle has, so in a release build
   they return nothing.
-- Anything passed in `console.context` is in scope by name.
+- Anything passed in `console.context` is in scope by name, and so is what a
+  [support](#supports) adds, such as `preview`. `console.context` wins a clash.
 
 Your app's own imports are **not** reachable by name: a bundled module is a private closure, so there
 is nothing for an expression to resolve. `context` is how you hand over the objects you want to poke
@@ -1074,25 +1075,50 @@ The queries and actions agents made, the last 100, each with the reply it got. A
 | `cut`         | True when only the first 64 K characters of the reply were kept                                                                                      |
 | `reply`       | The reply as the agent got it                                                                                                                        |
 
+#### Topics from supports
+
+A [support](#supports) in the devtools config's `supports` adds a topic of its own. `devtools topics`
+lists it only while the support is configured, and it takes the same flags as every other topic.
+When the support's package isn't installed, or is on another major, the topic is `off`, and its
+reason is the error the start logs.
+
+##### preview
+
+From the [preview support](https://axonpack.dev/docs/expo-devtools/supports/preview#from-the-command-line):
+what runs now, then the dev servers, then the previews for this build. Each query first asks the
+bucket again and looks for dev servers, behind a `# wait:` line. `get` prints preview's own object
+for the row. `off` when the preview config has `enabled: false`.
+
+| Field         | Value                                                                                                                                                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`id`**      | `now` for what runs now, a dev server's `host:port`, or a preview's id                                                                                                                                                                     |
+| `t`           | A preview's publish time. Empty for the other rows                                                                                                                                                                                         |
+| **`kind`**    | `now`, `server` or `preview`                                                                                                                                                                                                               |
+| **`title`**   | What runs now, a `preview start` server's title, or a preview's title. Empty for a plain `expo start` server                                                                                                                               |
+| **`status`**  | `now`: `built-in`, `expo-dev-server`, `dev-preview-server`, `preview` or `server`. A server: `compatible`, `incompatible` or `unknown`. A preview: `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken` |
+| **`branch`**  | The branch it was built from                                                                                                                                                                                                               |
+| **`active`**  | True for the row that runs now, and always for `now`                                                                                                                                                                                       |
+| `environment` | A preview's EAS environment                                                                                                                                                                                                                |
+
 ### Actions
 
-`devtools <topic> <action> [args] [flags]` changes something in the app. Only `network` has actions;
-`devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
+`devtools <topic> <action> [args] [flags]` changes something in the app. `network` has actions, and
+so does `preview` from the preview support; `devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
 don't go with an action, and action flags don't go with a query: either is an error before the tool
 looks for an app. Every action, refused ones too, is listed in the
 [AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab), marked as an action.
 
 #### Action flags
 
-| Flag             | Value                       | Taken by                     | What it does                                                                                                         |
-| ---------------- | --------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `--status`       | whole number, 100 to 599    | `override`                   | The mocked status. Default `200`.                                                                                    |
-| `--body`         | text                        | `override`, `send`, `replay` | The body. Default empty for `override`. Not for a GET or HEAD request.                                               |
-| `--body-file`    | file path                   | `override`, `send`, `replay` | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                                      |
-| `--content-type` | MIME type                   | `override`                   | The mocked `content-type`. Default `application/json`.                                                               |
-| `--header`       | `'Name: value'`, repeatable | `send`, `replay`             | A request header. In `replay` it replaces a header of the same name, any case.                                       |
-| `--yes`          | none                        | `send`, `replay`             | Needed for any method but GET, HEAD and OPTIONS. The app checks it, so a call through the window relay needs it too. |
-| `--all`          | none                        | `unoverride`                 | Remove every override instead of one.                                                                                |
+| Flag             | Value                       | Taken by                              | What it does                                                                                                                                                                    |
+| ---------------- | --------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--status`       | whole number, 100 to 599    | `override`                            | The mocked status. Default `200`.                                                                                                                                               |
+| `--body`         | text                        | `override`, `send`, `replay`          | The body. Default empty for `override`. Not for a GET or HEAD request.                                                                                                          |
+| `--body-file`    | file path                   | `override`, `send`, `replay`          | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                                                                                                 |
+| `--content-type` | MIME type                   | `override`                            | The mocked `content-type`. Default `application/json`.                                                                                                                          |
+| `--header`       | `'Name: value'`, repeatable | `send`, `replay`                      | A request header. In `replay` it replaces a header of the same name, any case.                                                                                                  |
+| `--yes`          | none                        | `send`, `replay`, `switch`, `default` | Needed for any method but GET, HEAD and OPTIONS, and always for `preview`'s actions, which restart the app. The app checks it, so a call through the window relay needs it too. |
+| `--all`          | none                        | `unoverride`                          | Remove every override instead of one.                                                                                                                                           |
 
 #### network actions
 
@@ -1137,6 +1163,22 @@ While the request is in flight the app answers `# wait: sending <METHOD> <url> a
 tool asks again every 200 ms within the [5 seconds](#timing). A request that takes longer carries on
 in the app. Running the command again would send it again, so the error points at `ai-usage`
 instead, where the action is listed once it ends.
+
+#### preview actions
+
+From the [preview support](https://axonpack.dev/docs/expo-devtools/supports/preview#switch-from-the-command-line).
+Each one restarts the app, so each needs `--yes`. The app answers first and restarts a moment later,
+or once a preview it has to download is on the device. The restart clears the log of actions, which
+is kept in memory.
+
+| Action    | Args   | Flags   | Reply                                                                                                          |
+| --------- | ------ | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `switch`  | `<id>` | `--yes` | `# preview · restarting the app on <id>`, ending ` once it has downloaded` for a preview not on the device yet |
+| `default` | none   | `--yes` | `# preview · restarting the app on the default bundle`                                                         |
+
+`switch` takes an `id` from the list: a dev server's `host:port` or a preview's id. A preview that
+isn't on the device yet downloads first. `default` goes back to the default bundle, as **Back to
+default** does.
 
 ### Output
 
@@ -1204,6 +1246,11 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `no network row "<id>", it may have aged out of the buffer`                                            | 1    |
 | `<id> is a WebSocket. replay sends HTTP requests only`                                                 | 1    |
 | `<METHOD> <url> failed: <why>`, only when the request is also not in the log                           | 1    |
+| `switch restarts the app, so it needs --yes` (and `default`)                                           | 1    |
+| `no dev server or preview "<id>". devtools preview lists them`                                         | 1    |
+| `<id> runs now`                                                                                        | 1    |
+| `<id> is downloading. Switch to it once its status is downloaded`                                      | 1    |
+| `the default bundle runs now`                                                                          | 1    |
 
 #### From the tool
 
@@ -1284,39 +1331,39 @@ a key of `config.themes`.
 
 ### `DevtoolsConfig`
 
-| Option                               | Type                          | Default     | What it does                                                                                                                                 |
-| ------------------------------------ | ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).                                                                 |
-| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                                                                |
-| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                                                                             |
-| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                                                                                  |
-| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                                                                            |
-| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                                                                          |
-| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                                                                                 |
-| `network.redactHeaders`              | `readonly string[]`           | `[]`        | Header names stored as `[redacted]`, any case. `cookie` also redacts `document.cookie`.                                                      |
-| `network.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactHeaders` each time a row changes, before it is stored. HTTP and WebSocket rows. `null` drops the row, and so does a throw. |
-| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.                                                                   |
-| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                                                                                 |
-| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                                                                            |
-| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                                                                         |
-| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.                                                           |
-| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                                                                               |
-| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                                                                              |
-| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                                                                 |
-| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something.                                                        |
-| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.                                                                     |
-| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.                                                          |
-| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.                                                                      |
-| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.                                                         |
-| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.                                                         |
-| `query.client`                       | `QueryClientLike`             | `undefined` | Your TanStack Query v5 `QueryClient`. Unset leaves the Query tab out of the panel.                                                           |
-| `navigation.disabledByDefault`       | `boolean`                     | `false`     | Open the Navigation tab paused. The route on screen is still shown.                                                                          |
-| `navigation.redact`                  | `(move) => move \| null`      | `undefined` | Runs on every move before it is stored. `null` drops the move, and so does a throw.                                                          |
-| `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                 |
-| `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                  |
-| `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                               |
-| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Open the AI Usage tab paused. Agents can still query the app.                                                                                |
-| `supports`                           | `DevtoolsSupport[]`           | `undefined` | Tabs for other packages, each from a support's `configure()`. Its provider wraps the app, with `enabled: false` too.                         |
+| Option                               | Type                          | Default     | What it does                                                                                                                                                   |
+| ------------------------------------ | ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).                                                                                   |
+| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                                                                                  |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                                                                                               |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                                                                                                    |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                                                                                              |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                                                                                            |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                                                                                                   |
+| `network.redactHeaders`              | `readonly string[]`           | `[]`        | Header names stored as `[redacted]`, any case. `cookie` also redacts `document.cookie`.                                                                        |
+| `network.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactHeaders` each time a row changes, before it is stored. HTTP and WebSocket rows. `null` drops the row, and so does a throw.                   |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.                                                                                     |
+| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                                                                                                   |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                                                                                              |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                                                                                           |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.                                                                             |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                                                                                                 |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                                                                                                |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                                                                                   |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something.                                                                          |
+| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.                                                                                       |
+| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.                                                                            |
+| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.                                                                                        |
+| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.                                                                           |
+| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.                                                                           |
+| `query.client`                       | `QueryClientLike`             | `undefined` | Your TanStack Query v5 `QueryClient`. Unset leaves the Query tab out of the panel.                                                                             |
+| `navigation.disabledByDefault`       | `boolean`                     | `false`     | Open the Navigation tab paused. The route on screen is still shown.                                                                                            |
+| `navigation.redact`                  | `(move) => move \| null`      | `undefined` | Runs on every move before it is stored. `null` drops the move, and so does a throw.                                                                            |
+| `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                                   |
+| `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                                    |
+| `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                                                 |
+| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Open the AI Usage tab paused. Agents can still query the app.                                                                                                  |
+| `supports`                           | `DevtoolsSupport[]`           | `undefined` | Tabs, command line topics and `>` prompt names for other packages, each from a support's `configure()`. Its provider wraps the app, with `enabled: false` too. |
 
 The Redux tab is there once a store was created with [`devtoolsReduxEnhancer()`](#devtoolsreduxenhancer).
 
@@ -1342,9 +1389,17 @@ Every support module exports the same shape:
 | Export              | Kind     | What it is                                                                                   |
 | ------------------- | -------- | -------------------------------------------------------------------------------------------- |
 | `configure(config)` | function | Takes the package's own config and returns a `DevtoolsSupport` for `supports`. Never throws. |
+| `useSupport()`      | hook     | The support's data, from the store its provider fills. The same name in every support.       |
 | default export      | object   | The same functions, so a default import and a namespace import read the same.                |
 | config types        | types    | The package's config types, re-exported. Named exports only; `any` without the package.      |
+| data type           | type     | What `useSupport()` returns.                                                                 |
 | `DevtoolsSupport`   | type     | What `configure` returns. Also exported from the main entry.                                 |
+
+Each support keeps its package's data in a store of its own, filled inside its provider from the
+package's own state. Besides its tab, its DevTools panel and `useSupport()`, it adds a topic to the
+`devtools` command line tool, named after it and listed only while it is in `supports` (see
+[Topics from supports](#topics-from-supports)), and it may add names to the [`>` prompt](#the--prompt),
+where `console.context` wins a clash.
 
 With the devtools on, a support whose package isn't installed, or is on another major, has the
 reason logged with `console.error` at start and shown in bold in its tab. Nothing throws, and with
@@ -1352,12 +1407,17 @@ reason logged with `console.error` at start and shown in bold in its tab. Nothin
 of one support, the first is used and the start logs the other with `console.error`. Installed but
 not in `supports`, the package is never loaded. Each package is an optional peer dependency.
 
-| Support | Version | Entry point                                  | For                                     | Types                                                                             |
-| ------- | ------- | -------------------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------- |
-| Preview | `v0`    | `@axonpack/expo-devtools/support/preview/v0` | `@axonpack/preview` 0.x, 0.2.0 or later | `PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions`, `DevtoolsSupport` |
+| Support | Version | Entry point                                  | For                                     | Types                                                                                                   |
+| ------- | ------- | -------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Preview | `v0`    | `@axonpack/expo-devtools/support/preview/v0` | `@axonpack/preview` 0.x, 0.2.0 or later | `PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions`, `PreviewSupportData`, `DevtoolsSupport` |
 
-The preview support mounts preview's provider and adds the [Preview tab](#preview-tab). Without
-`@axonpack/preview` it logs and shows: "The devtools config sets up preview, but @axonpack/preview
+The preview support mounts preview's provider and adds the [Preview tab](#preview-tab), the
+[`preview` topic](#preview) with its [actions](#preview-actions), and `preview` in the `>` prompt.
+Its `useSupport()` returns `{ status, previews, servers }`: what `usePreviewStatus()` returns (`null`
+until preview's provider has rendered), `usePreview().items`, and the dev servers the last look
+found. In the prompt, `preview` has `status`, `previews` and `servers`, and `switch(id)` and
+`default()`, the topic's actions with no `--yes`, each returning the line the `devtools` tool would
+print. Without `@axonpack/preview` the topic is off, and the start logs and the tab shows: "The devtools config sets up preview, but @axonpack/preview
 isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add
 `@axonpack/preview` to the plugins in app.json, and rebuild the app." With another major installed,
 1.0.0 for example, it logs and shows: "The devtools config uses
@@ -1637,7 +1697,8 @@ property if you override it.
 `NavigationMove`, `NavigationRoute`, `NavigationRouterKind`, `NavigationState`,
 `NavigationContainerRefLike`, `NavigationContainerLike`, `ReduxAction`, `ReduxActionEntry`,
 `ActionTypeMatcher`, `DevtoolsSupport`. From `@axonpack/expo-devtools/support/preview/v0`:
-`PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions` and `DevtoolsSupport`.
+`PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions`, `PreviewSupportData` and
+`DevtoolsSupport`.
 
 ---
 

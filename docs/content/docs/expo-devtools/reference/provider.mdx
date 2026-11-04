@@ -102,7 +102,7 @@ network: {
 | --------------------------- | ------------------------- | ----------- | --------------------------------------------------------------------------- |
 | `console.capture`           | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from WebViews wired with `useDevtoolsWebView`. |
 | `console.repl`              | `boolean`                 | `true`      | Show the `>` prompt.                                                      |
-| `console.context`           | `Record<string, unknown>` | `undefined` | Extra names an expression can use, for example `{ store, queryClient }`.  |
+| `console.context`           | `Record<string, unknown>` | `undefined` | Extra names an expression can use, for example `{ store, queryClient }`. A support can add names of its own, such as `preview`; yours win a clash. |
 | `console.disabledByDefault` | `boolean`                 | `false`     | Open the Console tab paused. The prompt still works.                      |
 
 <Callout type="warn" title="console.repl is not gated on __DEV__">
@@ -217,16 +217,25 @@ package it supports, and the main entry has none of them. The guide is
 
 | Option     | Type                | Default     | What it does |
 | ---------- | ------------------- | ----------- | ------------ |
-| `supports` | `DevtoolsSupport[]` | `undefined` | The supports to turn on, each from its module's `configure()`. Read once like the rest of the config. A support can put a provider around the app, with `enabled: false` too, and add a tab before Crashes in the panel and in React Native DevTools. With the devtools on, a support whose package isn't installed, or is on another major, has the reason logged with `console.error` at start and shown in its tab. Nothing throws. With two supports of one id, such as two versions of one support, the first is used and the start logs the other with `console.error` |
+| `supports` | `DevtoolsSupport[]` | `undefined` | The supports to turn on, each from its module's `configure()`. Read once like the rest of the config. A support can put a provider around the app, with `enabled: false` too, add a tab before Crashes in the panel and in React Native DevTools, add a topic to the `devtools` command line tool, and add names to the `>` prompt. With the devtools on, a support whose package isn't installed, or is on another major, has the reason logged with `console.error` at start and shown in its tab. Nothing throws. With two supports of one id, such as two versions of one support, the first is used and the start logs the other with `console.error` |
 
 Every support module exports the same shape:
 
 | Export              | Kind     | What it is |
 | ------------------- | -------- | ---------- |
 | `configure(config)` | function | Takes the package's own config and returns a `DevtoolsSupport` for `supports`. Never throws |
+| `useSupport()`      | hook     | The support's data, from the store its provider fills. The same name in every support |
 | default export      | object   | The same functions, so a default import and a namespace import read alike (`X.configure`) |
 | config types        | types    | The package's config types, re-exported, so the setup needs no import from the package. Named exports only; `any` in an app without the package |
+| data type           | type     | What `useSupport()` returns |
 | `DevtoolsSupport`   | type     | What `configure` returns. Also exported from the main entry |
+
+What a support adds besides its tab, its panel and `useSupport()`:
+
+| Part                  | What it is |
+| --------------------- | ---------- |
+| A command line topic  | A topic of the `devtools` tool named after the support, listed by `devtools topics` only while the support is in `supports`. An `off` topic, with the error as its reason, when the package isn't installed or is on another major. See [Topics from supports](/docs/expo-devtools/reference/cli#topics-from-supports) |
+| Names in the `>` prompt | Optional. Reachable next to `console.context`, which wins a clash |
 
 ```ts
 import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
@@ -242,19 +251,28 @@ supports: [PreviewV0Support.configure(previewConfig)],
 
 `@axonpack/expo-devtools/support/preview/v0`, for [`@axonpack/preview`](/docs/preview) 0.x, 0.2.0
 or later.
-It mounts preview's provider and adds the Preview tab. See
+It mounts preview's provider and adds the Preview tab, the `preview` topic of the `devtools` tool
+(see [preview](/docs/expo-devtools/reference/cli#preview) and its
+[actions](/docs/expo-devtools/reference/cli#preview-actions)), and `preview` in the `>` prompt. See
 [Preview support](/docs/expo-devtools/supports/preview).
 
 | Export                     | Kind     | What it is |
 | -------------------------- | -------- | ---------- |
 | `configure(config)`        | function | Takes a `PreviewConfig` and returns a `DevtoolsSupport` |
-| default export             | object   | `{ configure }` |
+| `useSupport()`             | hook     | `{ status, previews, servers }`: what `usePreviewStatus()` returns (`null` until preview's provider has rendered), `usePreview().items`, and the dev servers the last look found |
+| default export             | object   | `{ configure, useSupport }` |
 | `PreviewConfig`            | type     | Preview's config, the object its `PreviewProvider` takes. Its fields are on [preview's Reference](/docs/preview/reference#previewconfig) |
 | `PreviewS3Config`          | type     | `PreviewConfig['s3Config']`: the bucket and how to read it |
 | `DevPreviewServersOptions` | type     | `devPreviewServers` as an object: `enabled`, `allowCustomHosts` and `hosts` |
+| `PreviewSupportData`       | type     | What `useSupport()` returns |
 | `DevtoolsSupport`          | type     | What `configure` returns |
 
-With `@axonpack/preview` missing, the start logs this and the Preview tab shows it:
+In the `>` prompt, `preview` has `status`, `previews` and `servers`, the same as `useSupport()`, and
+`switch(id)` and `default()`, the topic's actions with no `--yes`. Each returns the line the
+`devtools` tool would print.
+
+With `@axonpack/preview` missing, the start logs this, the Preview tab shows it, and the `preview`
+topic is off with it as the reason:
 
 ```
 The devtools config sets up preview, but @axonpack/preview isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add `@axonpack/preview` to the plugins in app.json, and rebuild the app.

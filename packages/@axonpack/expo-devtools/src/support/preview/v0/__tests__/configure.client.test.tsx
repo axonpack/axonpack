@@ -6,7 +6,20 @@ const CONFIG: PreviewConfig = {
   s3Config: { url: 'https://bucket.example.com/previews' },
 };
 
-const FAKE_PREVIEW = { PreviewProvider: () => null, PreviewList: () => null };
+const STATUS = { title: 'Default', bundleKind: 'built-in', canGoBack: false };
+const ITEMS = [{ id: 'pr-7', status: 'downloaded', active: false, entry: { title: 'Dark mode' } }];
+const SERVERS = [{ hostPort: 'localhost:8082', compatible: true }];
+
+const FAKE_PREVIEW = {
+  PreviewProvider: () => null,
+  PreviewList: () => null,
+  usePreviewStatus: () => STATUS,
+  usePreview: () => ({ items: ITEMS }),
+  useDevPreviewServersState: () => ({ servers: SERVERS }),
+  sameServer: () => false,
+  previewsStore: { switchTo: jest.fn() },
+  devPreviewServersStore: { switchTo: jest.fn() },
+};
 
 /** A fresh module registry where `@axonpack/preview` is the fake above at `version`, or missing. */
 function load(preview: 'installed' | 'missing', version = '0.2.0') {
@@ -37,6 +50,9 @@ function load(preview: 'installed' | 'missing', version = '0.2.0') {
   return {
     support: require('..') as typeof import('..'),
     ...(require('../configure.client') as typeof import('../configure.client')),
+    ...(require('../stores/preview-support.store') as typeof import('../stores/preview-support.store')),
+    ...(require('../components/preview-store-feed.component') as typeof import('../components/preview-store-feed.component')),
+    ...(require('../../../../devtools-remote-tab/components/support-panel.component') as typeof import('../../../../devtools-remote-tab/components/support-panel.component')),
     ...(require('../../../../client/start-devtools.client') as typeof import('../../../../client/start-devtools.client')),
     ...(require('../../../../core/components/devtools-provider.component') as typeof import('../../../../core/components/devtools-provider.component')),
     ...(require('../../../../core/components/devtools-overlay/devtools-tab-bar.component') as typeof import('../../../../core/components/devtools-overlay/devtools-tab-bar.component')),
@@ -51,7 +67,8 @@ describe('the module', () => {
   it('gives the same members as a default import and as a namespace', () => {
     const { support } = load('installed');
     expect(support.default.configure).toBe(support.configure);
-    expect(Object.keys(support.default)).toEqual(['configure']);
+    expect(support.default.useSupport).toBe(support.useSupport);
+    expect(Object.keys(support.default)).toEqual(['configure', 'useSupport']);
   });
 
   it('is published as ./support/preview/v0 only', () => {
@@ -91,6 +108,63 @@ describe('configured, preview installed', () => {
     expect(inner.type).toBe(FAKE_PREVIEW.PreviewProvider);
     expect((inner.props as { config: PreviewConfig }).config).toBe(CONFIG);
   });
+
+  it('adds the preview topic and the prompt entry', () => {
+    const support = load('installed').configure(CONFIG);
+    expect(support.topic?.name).toBe('preview');
+    expect(Object.keys(support.context ?? {})).toEqual(['preview']);
+  });
+});
+
+describe('the store', () => {
+  it('is what useSupport reads, fed from preview inside its provider', () => {
+    const { configure, useSupport, previewSupportStore, PreviewStoreFeed } = load('installed');
+    expect(useSupport).toBe(previewSupportStore.useStore);
+    expect(previewSupportStore.getState()).toEqual({ status: null, previews: [], servers: [] });
+
+    const support = configure(CONFIG);
+    const inner = (support.Provider as (props: object) => ReactElement)({ children: 'app' });
+    const [feed] = (inner.props as { children: ReactElement[] }).children;
+    expect(feed.type).toBe(PreviewStoreFeed);
+    // No renderer here: run the feed's effect as it is declared.
+    const effect = jest
+      .spyOn(require('react'), 'useEffect')
+      .mockImplementation((run) => (run as () => void)());
+    PreviewStoreFeed(feed.props as { preview: never });
+    effect.mockRestore();
+    expect(previewSupportStore.getState()).toEqual({
+      status: STATUS,
+      previews: ITEMS,
+      servers: SERVERS,
+    });
+  });
+
+  it("is fed in the DevTools panel too, which gets its own provider around the tab's list", () => {
+    const { configure, SupportPanel, PreviewStoreFeed } = load('installed');
+    const support = configure(CONFIG);
+    const panel = SupportPanel({ support }) as ReactElement<{ children: ReactElement }>;
+    expect(panel.type).toBe(support.Provider);
+    expect(panel.props.children.type).toBe(support.Panel);
+    const inner = (support.Provider as (props: object) => ReactElement)(panel.props);
+    expect((inner.props as { children: ReactElement[] }).children[0].type).toBe(PreviewStoreFeed);
+  });
+});
+
+describe('the prompt entry', () => {
+  it("reads the store, and runs the topic's actions without --yes", () => {
+    jest.useFakeTimers();
+    const { configure, previewSupportStore } = load('installed');
+    const { preview } = configure(CONFIG).context as {
+      preview: { status: unknown; switch: (id: string) => string; default: () => string };
+    };
+    previewSupportStore.setState({ status: STATUS as never, previews: ITEMS as never });
+    expect(preview.status).toBe(STATUS);
+    expect(preview.switch('pr-7')).toBe('# preview · restarting the app on pr-7');
+    expect(preview.default()).toBe('error: the default bundle runs now');
+    jest.runAllTimers();
+    expect(FAKE_PREVIEW.previewsStore.switchTo).toHaveBeenCalledWith(CONFIG, 'pr-7');
+    jest.useRealTimers();
+  });
 });
 
 describe('configured, preview missing', () => {
@@ -100,6 +174,9 @@ describe('configured, preview missing', () => {
     const support = configure(CONFIG);
     expect(support).toMatchObject({ id: 'preview', error: PREVIEW_NOT_INSTALLED });
     expect(support.Provider).toBeUndefined();
+    // The CLI lists the topic as off with this error, and the prompt gets nothing.
+    expect(support.topic).toBeUndefined();
+    expect(support.context).toBeUndefined();
 
     expect(() => startDevtools({ network: NO_NETWORK_PATCHES, supports: [support] })).not.toThrow();
     expect(error).toHaveBeenCalledWith(PREVIEW_NOT_INSTALLED);
