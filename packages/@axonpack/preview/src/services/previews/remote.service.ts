@@ -41,10 +41,13 @@ export async function fetchPreviews(
   const indexKey = platformIndexKey(platform, key);
   const found = await getJson<PlatformIndex>(s3, indexKey);
   // 0.1.0 published outside the slug folder. Its previews show until the first publish under the
-  // slug gives this build a list there.
+  // slug gives this build a list there. A read key limited to the slug folder gets a 403 there,
+  // which only means there is nothing old to show.
   const old = found
     ? null
-    : await getJson<PlatformIndex>({ ...s3, slug: undefined }, indexKey);
+    : await getJson<PlatformIndex>({ ...s3, slug: undefined }, indexKey).catch(
+        () => null,
+      );
   if (old) {
     return {
       ...old.data,

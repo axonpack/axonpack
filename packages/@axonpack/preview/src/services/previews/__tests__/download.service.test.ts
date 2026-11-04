@@ -193,6 +193,25 @@ test("once the slug folder has a list, the old one outside it is not read", asyn
   expect(requests).toHaveLength(1);
 });
 
+test("a read key limited to the slug folder still gets an empty list, not an error", async () => {
+  global.fetch = jest.fn(
+    async (url: string | URL) =>
+      new Response("", {
+        status: String(url).includes("/my-app/") ? 404 : 403,
+      }),
+  ) as typeof fetch;
+  const index = await fetchPreviews({
+    ...config,
+    url: undefined,
+    s3Config: {
+      url: config.url,
+      readAccessKeyId: "reader",
+      readSecretAccessKey: "secret",
+    },
+  });
+  expect(index.previews).toEqual([]);
+});
+
 test("reads nothing without the app's slug, since it can't tell its own folder", async () => {
   const requests = serve({});
   await expect(fetchPreviews({ ...config, slug: undefined })).rejects.toThrow(
