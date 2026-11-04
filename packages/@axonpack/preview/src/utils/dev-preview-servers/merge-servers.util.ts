@@ -27,8 +27,6 @@ export type DevPreviewServer = {
   compatible: boolean | null;
   /** Announced by `preview start` (with branch and worktree), or only found by the scan. */
   announced: boolean;
-  /** The name of the computer it runs on, when Bonjour found it on the network. */
-  machine?: string;
   /**
    * Only on the server the app runs from or the one picked in the list, when no look ever found it
    * answering and nothing was saved about it: whether it is an Expo or a preview server, and its
@@ -44,13 +42,8 @@ export type ScannedServer = {
   expo: AppConfig & { slug?: string; name?: string };
 };
 
-/** What another computer's registry lists, by the host it was asked on, or what Bonjour found there. */
-export type RemoteRegistry = {
-  host: string;
-  servers: RegisteredServer[];
-  /** The computer's name, from Bonjour. */
-  machine?: string;
-};
+/** What another computer's registry lists, by the host it was asked on. */
+export type RemoteRegistry = { host: string; servers: RegisteredServer[] };
 
 /**
  * Turns what the registry announced and what the scan found into this app's list: other apps'
@@ -105,7 +98,6 @@ export function mergeServers(input: {
       key,
       compatible: key && input.buildKey ? key === input.buildKey : null,
       announced: Boolean(announced),
-      ...(match?.g.machine ? { machine: match.g.machine } : {}),
     });
   }
   return servers.sort((a, b) => a.port - b.port);

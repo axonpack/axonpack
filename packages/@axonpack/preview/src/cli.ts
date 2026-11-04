@@ -11,8 +11,10 @@ import {
   DEFAULT_REGISTRY_PORT,
 } from "./constants/dev-preview-servers/dev-preview-servers.const";
 import { readConfig } from "./services/cli/config.service";
-import { createRegistry } from "./services/registry/registry.service";
-import { advertise, thisMachine } from "./services/registry/bonjour.service";
+import {
+  createRegistry,
+  thisMachine,
+} from "./services/registry/registry.service";
 import { start } from "./services/start/start.service";
 import { askTitle } from "./services/cli/title.service";
 import { previewTitle } from "./utils/previews/preview-title.util";
@@ -47,8 +49,7 @@ const HELP = `preview <command> [options]
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
   start [-- <expo start args>]
-                     run Metro on a free port and announce it to the app's Dev preview servers,
-                     on this computer and to phones on the same network (Bonjour)
+                     run Metro on a free port and announce it to the app's Dev preview servers
     --title <title>    name the app's list shows; asked like publish, prefilled with a
                        readable form of the branch
     --ports <from>-<to> ports to pick from (default 8081-8099)
@@ -175,27 +176,11 @@ async function main() {
     });
   } else if (command === "registry") {
     // Started by `preview start` when none is running, or an older one is; exits once no server is
-    // left. It also announces the servers over Bonjour, so phones on the network find them with no
-    // address typed.
+    // left.
     const port = Number(values.port ?? DEFAULT_REGISTRY_PORT);
-    const machine = thisMachine();
-    const bonjour = advertise(machine, port);
-    // Without the goodbyes, phones keep showing the servers for the records' 120 s TTL.
-    const stop = async () => {
-      await Promise.race([
-        bonjour.stop(),
-        new Promise((r) => setTimeout(r, 1000)),
-      ]);
-      server.close();
-      process.exit(0);
-    };
-    for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"] as const)
-      process.on(signal, stop);
     const { server } = createRegistry({
-      machine,
-      onChange: bonjour.sync,
-      announceError: bonjour.error,
-      onIdle: stop,
+      machine: thisMachine(),
+      onIdle: () => process.exit(0),
     });
     server.listen(port);
   } else {

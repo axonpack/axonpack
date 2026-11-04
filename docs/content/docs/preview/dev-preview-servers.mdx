@@ -51,8 +51,34 @@ agent's shell, which takes the branch title.
 A Metro already on 8081 that no `preview start` announced, such as your own `expo start` or one left
 by a run that crashed, is never stopped. `start` takes the next free port and says so in one line.
 
+Once Metro answers, `start` prints its port, then one line for each private IPv4 address of the
+computer. That address is what a phone on the same Wi-Fi types in [**Add a host**](#hosts) when the
+[network sweep](#the-network-sweep) doesn't find the computer. A computer with no such address gets
+no line.
+
+```
+preview: Login fix on port 8082, announced on http://127.0.0.1:19150
+preview: On a phone on this Wi-Fi: Add a host → 192.168.1.38
+```
+
 A plain `npx expo start --port 8085` is found too, with less detail: no branch. It shows when the
 list opens, when you refresh it, or within 30 seconds.
+
+### An older registry
+
+`preview start` uses the registry already on port 19150 when it is from the same version of the
+package or a newer one. One from an older version, which may not give the computer's id and LAN
+addresses, is replaced, and so is one that holds the port but doesn't answer. `start` checks that
+the process on the port runs this package's `preview registry`, stops it, starts its own, and hands
+it the old one's servers whose Metro still answers. It prints one line:
+
+```
+preview: Replaced an older preview registry (pid 59356).
+```
+
+A `preview start` from an older version keeps working with the new registry. The process is found
+with `lsof`, so on Windows nothing is stopped. Neither is a process that isn't a preview registry:
+`start` says what holds the port and how to stop it.
 
 ## Switch servers in the app
 
@@ -114,88 +140,15 @@ shows, and a plain `npx expo start` on their computer never does. Each row's add
 computer it is on, so two computers running Metro on 8081 are two rows.
 
 On the same network you don't need to add the computer at all: see
-[Found on the network](#found-on-the-network) and [The network sweep](#the-network-sweep). Add a
-host for a computer neither of them reaches, such as one on another subnet or behind a VPN. It shows
+[The network sweep](#the-network-sweep). Add a host for a computer the sweep doesn't reach, such as
+one outside the phone's own /24 or behind a VPN, at the address `preview start` prints. It shows
 within 2 seconds of its registry answering.
-
-## Found on the network
-
-`preview start` also announces its server over Bonjour, as `_axon-preview._tcp`. While the list is
-on screen, the app listens for these announcements, so a teammate's `npx preview start` on the same
-Wi-Fi shows with no address typed in. It shows within 2 seconds of the app hearing it.
-
-- **Preview servers only.** Only `preview start` announces, so a plain `npx expo start` on another
-  computer still never shows.
-- **Each row says which computer.** A server found this way shows its IP address and port, such as
-  `192.168.1.30:8081`, like every other row, and its computer's name in a chip, such as `qa-mac`.
-  Two computers running Metro on 8081 are two rows.
-- **One row per server.** Your own computer's servers are also announced. The registry tells the app
-  its computer's id and LAN addresses, so a server found both on `localhost` and over Bonjour is one
-  row. A computer you also added as a host shows once, through its registry. When your computer's
-  server doesn't answer on `localhost`, such as after the USB cable is pulled, it shows at the LAN
-  address Bonjour gave instead.
-- **Only this app's servers**, by the slug in the announcement.
-
-The app stops looking while it is in the background, and when the list closes.
-
-### iOS asks first
-
-iOS needs two keys in the app's `Info.plist` before it lets the app look. Add them to the app config:
-
-```json
-"ios": {
-  "infoPlist": {
-    "NSLocalNetworkUsageDescription": "Finds preview servers on your network.",
-    "NSBonjourServices": ["_axon-preview._tcp"]
-  }
-}
-```
-
-Then rebuild the app. The first time the list opens, iOS asks the user to allow the app to find
-devices on the local network, using that text. If they say no, the app finds nothing over Bonjour
-until they allow it in **Settings > Privacy & Security > Local Network**. Without
-`_axon-preview._tcp` in `NSBonjourServices`, iOS finds nothing and shows no prompt. The simulator
-never asks. Android needs nothing in the app config.
-
-### On the computer
-
-The registry announces on every network the computer is on, and answers the questions other
-devices send, on UDP port 5353 next to the system's own Bonjour. No setting is needed. On macOS 15
-and later, the terminal app you run `preview start` from needs Local Network access (**System
-Settings > Privacy & Security > Local Network**). Without it, macOS drops the announcements, and
-Bonjour finds nothing. Phones on the same /24 still find the computer through
-[the network sweep](#the-network-sweep), a few seconds after the list opens. `preview start` says
-when the announcements fail, with the error the registry got:
-
-```
-preview: Bonjour can't announce this computer (send EHOSTUNREACH 224.0.0.251:5353). Phones on the same Wi-Fi still find it by scanning the network. To turn Bonjour on, allow your terminal app under System Settings > Privacy & Security > Local Network.
-```
-
-To check from the Mac, run `dns-sd -B _axon-preview._tcp` while `preview start` runs. When the
-registry stops, on Ctrl+C, a `kill`, or once no server is left, it sends a goodbye for each server,
-so phones drop them straight away instead of two minutes later.
-
-### An older registry
-
-`preview start` uses the registry already on port 19150 when it is from the same version of the
-package or a newer one. One from an older version, which may not announce over Bonjour, is replaced,
-and so is one that holds the port but doesn't answer. `start` checks that the process on the port
-runs this package's `preview registry`, stops it, starts its own, and hands it the old one's servers
-whose Metro still answers. It prints one line:
-
-```
-preview: Replaced an older preview registry (pid 59356), so this computer can be found on the network.
-```
-
-A `preview start` from an older version keeps working with the new registry. The process is found
-with `lsof`, so on Windows nothing is stopped. Neither is a process that isn't a preview registry:
-`start` says what holds the port and how to stop it.
 
 ## The network sweep
 
-macOS blocks the registry's Bonjour announcements when the app you ran `preview start` from has no
-Local Network access, but it never blocks a connection coming in. So the app also asks the
-addresses on its own network for a registry, the same way it asks a host you added.
+While the list is on screen, the app asks the addresses on its own network for a registry, the
+same way it asks a host you added. So a teammate's `npx preview start` on the same Wi-Fi shows with
+no address typed in, and a plain `npx expo start` on their computer still never does.
 
 - **What it asks.** `GET http://<address>:19150/servers` on every other address in the device's own
   /24, or in its smaller network when the device is on one. It asks 32 addresses at a time and gives
@@ -207,19 +160,39 @@ addresses on its own network for a registry, the same way it asks a host you add
 - **What shows.** A computer whose registry answers is listed like a host you added: only its
   `preview start` servers, at its IP address, and asked every 2 seconds from then on. It is not added
   to the **Hosts** list.
-- **One row per server.** A computer the app also reaches another way, such as a host you added,
-  Bonjour, or your own computer at its LAN address, still has one row per server. The registry's
-  computer id decides, and a host you added wins over the sweep.
-- **Same access as Bonjour.** iOS asks for local network access before the first sweep reaches
-  anything, with the same prompt. On Android 17 it needs the same local network permission as
-  reaching Metro. See [Reaching the servers](#reaching-the-servers).
+- **One row per server.** A computer the app also reaches another way, such as a host you added, or
+  your own computer at its LAN address, still has one row per server. The registry's computer id
+  and LAN addresses decide, and a host you added wins over the sweep.
+- **Local network access.** A real iPhone asks for it first (see [iOS asks first](#ios-asks-first)).
+  On Android 17 the sweep needs the same local network permission as reaching Metro (see
+  [Reaching the servers](#reaching-the-servers)).
 
 Where it can't work:
 
 - **Wi-Fi with client isolation**, common on guest and hotel networks, stops devices reaching each
   other. Nothing finds the computer there, a host you add included. Use USB, or another network.
 - **A network bigger than a /24**, such as a /16 office network. Only the device's own /24 is swept,
-  so add a computer outside it as a host.
+  so add a computer outside it as a host. The device remembers it.
+
+### iOS asks first
+
+On a real iPhone, iOS asks once for Local Network access, the first time the app looks beyond the
+phone itself, such as when the list sweeps the network or asks a host you added. If the user says
+no, the app reaches no other computer until they allow it in **Settings > Privacy & Security >
+Local Network**. The simulator never asks.
+
+The config plugin adds nothing for this. To word the prompt yourself, add
+`NSLocalNetworkUsageDescription` to the app config and make a new native build:
+
+```json
+"ios": {
+  "infoPlist": {
+    "NSLocalNetworkUsageDescription": "Finds test servers on your network."
+  }
+}
+```
+
+Android needs nothing in the app config.
 
 ## Which servers are listed
 
@@ -233,7 +206,7 @@ fingerprint.
 
 ## How the app finds them
 
-Five sources, merged by computer and port:
+Four sources, merged by computer and port:
 
 - **The registry.** `preview start` runs `expo start` on a free port and announces it to a small
   registry on your computer, on port 19150, with the branch, the worktree and the native key
@@ -248,14 +221,11 @@ Five sources, merged by computer and port:
   Expo manifest of each one it finds for the slug, name, version and bundle URL.
 - **Other computers' registries.** Each host from the config or added on the device is asked for its
   registry on 19150, or the port given with it. Only the ports it lists are asked on that computer.
-- **Bonjour.** Each registry announces its servers on the network, with the title, branch, slug and
-  native key. The app asks Metro at the announced address and port, like a registry's servers.
 - **The network sweep.** The app asks every other address in its own /24 for a registry, and asks
   each one that answers like a host you added. See [The network sweep](#the-network-sweep).
 
-A server found both ways uses the registry's details. A server Bonjour found on a computer the app
-already reaches through a registry is left to that registry, and so is a computer the sweep finds
-that the app already reaches.
+A server found both ways uses the registry's details. A computer the sweep finds that the app
+already reaches another way is left to that way.
 
 ## How often it looks
 
@@ -280,9 +250,7 @@ A look never starts while the last one runs, and a refresh during a scan waits f
 
 A registry that does not answer, here or on another computer, is left out of the 2 second looks.
 It is asked again on the next full scan, and once it answers it is back on every 2 seconds. So the
-first `preview start` after the list opened shows on refresh, or within 30 seconds. When Bonjour
-hears a new server first, the next 2 second look asks this computer's registry too, and the server
-shows straight away.
+first `preview start` after the list opened shows on refresh, or within 30 seconds.
 
 Each closed port is a refused connection, and iOS writes every one to the Xcode console as
 `Could not connect to the server`. JS can't turn that off, so the full scan runs only this often:
@@ -309,8 +277,8 @@ Metro. Allow it in the app's settings, or on the emulator run
 
 - **Debug builds only.** A release build has no Metro to switch to. There, QA switches between
   [published previews](/docs/preview/publishing).
-- **Bonjour and the sweep stay on one network.** Bonjour does not cross routers, most VPNs block it,
-  and the sweep covers only the device's own /24. Add a computer on another network as a host.
+- **The sweep stays on one network.** It covers only the device's own /24. Add a computer outside it
+  as a host.
 - **This app only.** Servers for another slug are never listed.
 - **Plain HTTP on the local network.** An Expo app's iOS build allows plain HTTP to local addresses
   only, so another host must be on the same network as the device, not a server on the internet.

@@ -5,7 +5,7 @@ import {
   REGISTRY_VERSION,
   type RegisteredServer,
 } from "../../../constants/dev-preview-servers/dev-preview-servers.const";
-import { ServerList, createRegistry } from "../registry.service";
+import { ServerList, createRegistry, thisMachine } from "../registry.service";
 
 const server = (id: string, port: number): RegisteredServer => ({
   id,
@@ -73,11 +73,9 @@ test("registers, lists and removes over HTTP", async () => {
   }
 });
 
-test("says which computer it is, and passes every change on", async () => {
-  const changes: string[][] = [];
+test("says which computer it is", async () => {
   const { server: http } = createRegistry({
-    machine: { id: "m1", name: "qa-mac", addresses: ["192.168.1.24"] },
-    onChange: (servers) => changes.push(servers.map((s) => s.id)),
+    machine: { id: "m1", addresses: ["192.168.1.24"] },
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
@@ -87,17 +85,13 @@ test("says which computer it is, and passes every change on", async () => {
       machineId: "m1",
       addresses: ["192.168.1.24"],
     });
-    await call(base, "DELETE", "/servers/run-1");
-    expect(changes.slice(0, 2)).toEqual([["run-1"], []]);
   } finally {
     await new Promise((resolve) => http.close(resolve));
   }
 });
 
-test("answers a heartbeat with its version and why announcing fails", async () => {
-  const { server: http } = createRegistry({
-    announceError: () => "send EHOSTUNREACH 224.0.0.251:5353",
-  });
+test("answers a heartbeat with its version", async () => {
+  const { server: http } = createRegistry();
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
   try {
@@ -107,10 +101,7 @@ test("answers a heartbeat with its version and why announcing fails", async () =
       "/servers",
       JSON.stringify(server("run-1", 8083)),
     );
-    expect(heartbeat.json()).toMatchObject({
-      version: REGISTRY_VERSION,
-      announceError: "send EHOSTUNREACH 224.0.0.251:5353",
-    });
+    expect(heartbeat.json()).toMatchObject({ version: REGISTRY_VERSION });
     expect((await call(base, "GET", "/servers")).json().version).toBe(
       REGISTRY_VERSION,
     );
@@ -140,4 +131,9 @@ test("an older preview start's register, heartbeat and goodbye still work", asyn
   } finally {
     await new Promise((resolve) => http.close(resolve));
   }
+});
+
+test("this computer's id is the same on every call", () => {
+  expect(thisMachine().id).toMatch(/^[0-9a-f]{12}$/);
+  expect(thisMachine().id).toBe(thisMachine().id);
 });

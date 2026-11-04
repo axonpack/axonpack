@@ -22,6 +22,7 @@ import {
   compatibilityOf,
 } from "../../utils/config/expo-config.util";
 import { fingerprint } from "../cli/project.service";
+import { thisMachine } from "../registry/registry.service";
 
 const log = (message: string) => process.stdout.write(`preview: ${message}\n`);
 
@@ -260,8 +261,8 @@ const metroAnswers = (port: number) =>
 /**
  * Starts the registry in the background when none answers, and waits for it. One that is older
  * than this version, or holds the port but doesn't answer, is replaced first. The older one's
- * servers whose Metro still answers are handed over, so none drops out of the list or the Bonjour
- * announcements. A newer or equal one is used as it is.
+ * servers whose Metro still answers are handed over, so none drops out of the list. A newer or
+ * equal one is used as it is.
  */
 export async function ensureRegistry(
   registryPort: number,
@@ -315,7 +316,7 @@ export async function ensureRegistry(
     );
     log(
       running
-        ? `Replaced an older preview registry (pid ${replaced}), so this computer can be found on the network.`
+        ? `Replaced an older preview registry (pid ${replaced}).`
         : `Replaced a preview registry that had stopped answering (pid ${replaced}).`,
     );
     return registry;
@@ -324,23 +325,13 @@ export async function ensureRegistry(
 }
 
 /**
- * Says once that Bonjour can't announce this computer. Phones on the same Wi-Fi still find it
- * through the network sweep, so the line says that too, plus the Local Network fix on macOS.
+ * What to type in the app's Add a host on a phone on the same Wi-Fi: one line per private IPv4
+ * address of this computer (10/8, 172.16/12, 192.168/16), none when it has none.
  */
-export function announceErrorNotice() {
-  let shown: string | undefined;
-  return (error: string | undefined) => {
-    if (error && error !== shown)
-      log(
-        `Bonjour can't announce this computer (${error}). Phones on the same Wi-Fi still find it by scanning the network.` +
-          // What macOS answers a send with when the terminal app has no local network access.
-          (process.platform === "darwin" && /EHOSTUNREACH|EPERM/.test(error)
-            ? " To turn Bonjour on, allow your terminal app under System Settings > Privacy & Security > Local Network."
-            : ""),
-      );
-    shown = error;
-  };
-}
+export const addHostLines = (addresses: string[]) =>
+  addresses
+    .filter((a) => /^(10|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(a))
+    .map((a) => `On a phone on this Wi-Fi: Add a host → ${a}`);
 
 /** Forwards the ports to every attached Android device, when adb is there; quiet otherwise. */
 function adbReverse(ports: number[]) {
@@ -419,17 +410,13 @@ export async function start(options: StartOptions) {
       method: "POST",
       body: JSON.stringify(server),
     });
-  const notice = announceErrorNotice();
   // The registry exits once it has been empty for a while, which a slow start (adb, fingerprint)
   // can outlast, and it may be killed: start it again and register in that case.
   const register = () =>
     post()
       .catch(() => ensureRegistry(options.registryPort, options.bin).then(post))
-      .then((res) => res.json() as Promise<RegistryAnswer>)
-      .then((answer) => notice(answer.announceError))
       .catch(() => {
-        // Still down, and the next heartbeat tries again. Or an older registry, which answers
-        // with no body.
+        // Still down; the next heartbeat tries again.
       });
   const unregister = () =>
     fetch(`${registry}/servers/${encodeURIComponent(server.id)}`, {
@@ -451,10 +438,12 @@ export async function start(options: StartOptions) {
     }
     const first = !announced;
     announced = true;
-    if (first)
+    if (first) {
       log(
         `${server.title || server.name} on port ${real}, announced on ${registry}`,
       );
+      addHostLines(thisMachine().addresses).forEach(log);
+    }
     await register();
   };
   let ticks = 0;

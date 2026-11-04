@@ -1,7 +1,6 @@
 import { requireOptionalNativeModule } from "expo";
 import { TurboModuleRegistry } from "react-native";
 
-import type { BonjourService } from "../../utils/dev-preview-servers/bonjour.util";
 import type { LocalNetwork } from "../../utils/dev-preview-servers/subnet.util";
 
 /** What native started the running JS from, recorded when it picked it. */
@@ -28,20 +27,10 @@ type NativeModule = {
   selectLocalServer(url: string | null, hostPort: string | null): void;
   state(): NativeState;
   /**
-   * Browses for `preview start` servers on the network until stopped, and sends the full list in
-   * `onBonjourServices` each time it changes. Missing on a native side built before it.
-   */
-  startBonjourBrowse?(): void;
-  stopBonjourBrowse?(): void;
-  /**
    * This device's private IPv4 addresses on Wi-Fi or Ethernet, for the network sweep. Missing on a
    * native side built before it.
    */
   localNetworks?(): LocalNetwork[];
-  addListener(
-    event: "onBonjourServices",
-    listener: (event: { services: BonjourService[] }) => void,
-  ): { remove(): void };
 };
 
 /** Undefined where the module isn't linked (Expo Go, web), and the package then does nothing. */

@@ -5,10 +5,6 @@ import { devPreviewServersStore } from "../dev-preview-servers.store";
 import type { NativeState } from "../../../services/native/native.service";
 import { rootDirectory } from "../../../services/previews/local-previews.service";
 import { devServersSetup } from "../../../utils/config/config.util";
-import {
-  type BonjourService,
-  txtOf,
-} from "../../../utils/dev-preview-servers/bonjour.util";
 import type { LocalNetwork } from "../../../utils/dev-preview-servers/subnet.util";
 
 jest.mock("expo-file-system", () =>
@@ -23,10 +19,6 @@ jest
       ? { getConstants: () => ({ scriptURL: mockScriptUrl }) }
       : realGet(name)) as typeof TurboModuleRegistry.get);
 let mockNativeState: NativeState = {};
-/** Native's Bonjour listener while it browses, or null. */
-let mockBonjour: ((event: { services: BonjourService[] }) => void) | null =
-  null;
-const mockBrowse = { start: jest.fn(), stop: jest.fn() };
 /** What native reports as this device's networks, for the sweep. */
 let mockNetworks: LocalNetwork[] = [];
 jest.mock("expo", () => ({
@@ -35,16 +27,7 @@ jest.mock("expo", () => ({
     compatibility: "appVersion",
     slug: "shop",
     state: () => mockNativeState,
-    startBonjourBrowse: mockBrowse.start,
-    stopBonjourBrowse: mockBrowse.stop,
     localNetworks: () => mockNetworks,
-    addListener: (
-      _event: string,
-      listener: (event: { services: BonjourService[] }) => void,
-    ) => {
-      mockBonjour = listener;
-      return { remove: () => (mockBonjour = null) };
-    },
   }),
 }));
 
@@ -562,154 +545,6 @@ describe("hosts added on the device", () => {
   });
 });
 
-describe("Bonjour", () => {
-  /** A `preview start` server on `machineId`, at `host`, as native reports it. */
-  const service = (
-    host: string,
-    machineId: string,
-    port = 8081,
-    slug = "shop",
-  ): BonjourService => ({
-    name: `preview-${machineId}-${port}`,
-    host,
-    port,
-    txt: txtOf(
-      {
-        id: "x",
-        port,
-        title: "Signup",
-        branch: "task-2",
-        worktree: "/w",
-        slug,
-        name: "Shop",
-        compatibility: "appVersion",
-        keys: { ios: "version-1.0.0" },
-        startedAt: "",
-      },
-      { id: machineId, name: `${machineId}-mac` },
-      19150,
-    ),
-  });
-  const found = async (services: BonjourService[]) => {
-    mockBonjour?.({ services });
-    await wait(2000);
-  };
-
-  let log: jest.SpyInstance;
-  beforeEach(() => {
-    mockBrowse.start.mockClear();
-    mockBrowse.stop.mockClear();
-    log = jest.spyOn(console, "log").mockImplementation(() => {});
-  });
-  afterEach(() => log.mockRestore());
-
-  test("another computer's preview start server shows with no host typed in, named by its computer", async () => {
-    machines = { "192.168.1.30": { registry: null, up: [8081] } };
-    await watch();
-    await found([service("192.168.1.30", "qa")]);
-    expect(listedAt()).toEqual(["localhost:8081", "192.168.1.30:8081"]);
-    expect(devPreviewServersStore.getState().servers[1]).toMatchObject({
-      title: "Signup",
-      branch: "task-2",
-      machine: "qa-mac",
-      announced: true,
-    });
-    // Bonjour said everything; its registry is never asked.
-    expect(asked).not.toContain("http://192.168.1.30:19150/servers");
-  });
-
-  test("another app's server is neither listed nor asked", async () => {
-    machines = { "192.168.1.30": { registry: null, up: [8081] } };
-    await watch();
-    asked = [];
-    await found([service("192.168.1.30", "qa", 8081, "other")]);
-    expect(listedAt()).toEqual(["localhost:8081"]);
-    expect(asked.some((url) => url.includes("192.168.1.30"))).toBe(false);
-  });
-
-  test("this computer's server, found by Bonjour too, is one row", async () => {
-    registry = [8081];
-    await watch();
-    await found([service("192.168.1.10", "this-mac")]);
-    expect(listedAt()).toEqual(["localhost:8081"]);
-  });
-
-  test("a new Bonjour server makes a registry that was down answer at once", async () => {
-    await watch();
-    // `preview start` runs now: its registry is up, and announces 8081.
-    registry = [8081];
-    await found([service("192.168.1.10", "this-mac")]);
-    expect(listedAt()).toEqual(["localhost:8081"]);
-    expect(devPreviewServersStore.getState().servers[0].announced).toBe(true);
-  });
-
-  test("this computer's server that adb reverse does not forward shows at its LAN address", async () => {
-    // A phone on USB reaches Metro's 8081 and the registry through localhost, but not 8083.
-    reverse = [8081, 19150];
-    registry = [8081, 8083];
-    up = new Set([8081, 8083]);
-    await watch();
-    expect(listedAt()).toEqual(["localhost:8081"]);
-    await found([
-      service("192.168.1.10", "this-mac", 8081),
-      service("192.168.1.10", "this-mac", 8083),
-    ]);
-    // 8081 is one row, from localhost. 8083 is reached over Wi-Fi.
-    expect(listedAt()).toEqual(["localhost:8081", "192.168.1.10:8083"]);
-    expect(devPreviewServersStore.getState().servers[1]).toMatchObject({
-      title: "Signup",
-      announced: true,
-      url: "http://192.168.1.10:8083/index.bundle?platform=ios",
-    });
-    await wait(2000);
-    expect(listedAt()).toEqual(["localhost:8081", "192.168.1.10:8083"]);
-  });
-
-  test("this computer's server stays listed, at its LAN address, once the USB cable is pulled", async () => {
-    reverse = [8081, 19150];
-    registry = [8081];
-    await watch();
-    await found([service("192.168.1.10", "this-mac")]);
-    expect(listedAt()).toEqual(["localhost:8081"]);
-    // Its registry is still remembered, but localhost reaches nothing now.
-    reverse = [];
-    await wait(2000);
-    expect(listedAt()).toEqual(["192.168.1.10:8081"]);
-    expect(devPreviewServersStore.getState().servers[0]).toMatchObject({
-      title: "Signup",
-      announced: true,
-    });
-  });
-
-  test("debug builds log once why a Bonjour server is not listed", async () => {
-    machines = { "192.168.1.31": { registry: null, up: [] } };
-    await watch();
-    await found([
-      service("192.168.1.31", "ci", 8081, "other"),
-      service("192.168.1.31", "ci", 8082),
-    ]);
-    await wait(2000);
-    expect(log.mock.calls.map(([text]) => text)).toEqual([
-      '@axonpack/preview: Bonjour found "preview-ci-8081" at 192.168.1.31:8081, but it is not listed: it is for the app "other", and this app is "shop".',
-      '@axonpack/preview: Bonjour found "preview-ci-8082" at 192.168.1.31:8082, but it is not listed: Metro did not answer there (is it running, and can this device reach that address?).',
-    ]);
-  });
-
-  test("browses only while watched and in the foreground", async () => {
-    await watch();
-    expect(mockBrowse.start).toHaveBeenCalledTimes(1);
-    onAppState()("background");
-    expect(mockBrowse.stop).toHaveBeenCalledTimes(1);
-    expect(mockBonjour).toBeNull();
-    onAppState()("active");
-    expect(mockBrowse.start).toHaveBeenCalledTimes(2);
-    stop();
-    // Or afterEach stops it again, and the next watch finds it still watched.
-    stop = () => undefined;
-    expect(mockBrowse.stop).toHaveBeenCalledTimes(2);
-  });
-});
-
 describe("the network sweep", () => {
   const PHONE = { address: "10.9.8.5", prefixLength: 24 };
   // Distinct, since the first look of a watch also asks what the last sweep found.
@@ -721,7 +556,7 @@ describe("the network sweep", () => {
     ),
   ];
 
-  test("a computer on this device's network shows with no host typed in and no Bonjour", async () => {
+  test("a computer on this device's network shows with no host typed in", async () => {
     mockNetworks = [PHONE];
     machines["10.9.8.30"] = { registry: [8082], up: [8082] };
     await watch();

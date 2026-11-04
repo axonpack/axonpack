@@ -212,9 +212,8 @@ Types: `PreviewConfig`, `PreviewS3Config`, `PreviewsState`, `PreviewItem`, `Prev
 
 `previewsStore` and `devPreviewServersStore` are the stores behind the hooks, with `getState()` and
 `subscribe()`, for use outside React. `devPreviewServersStore.addHost({ host, port })` and
-`removeHost({ host, port })` add and remove a host on the device, as the list does. A
-`DevPreviewServer` that Bonjour found on the network has `machine`, the name of the computer it runs
-on. The server the app runs from, or the one picked in the list, has `unknown: true` when no look
+`removeHost({ host, port })` add and remove a host on the device, as the list does. The server the
+app runs from, or the one picked in the list, has `unknown: true` when no look
 has found it answering and nothing was saved about it, so its kind and name are not known.
 `previewsStore.clearError()` hides the error, as the snackbar's **Dismiss** does.
 

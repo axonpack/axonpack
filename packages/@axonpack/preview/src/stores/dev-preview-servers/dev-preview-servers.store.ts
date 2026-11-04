@@ -32,7 +32,6 @@ import {
   saveRunningServer,
 } from "../../services/dev-preview-servers/running-server.service";
 import { hostPortOf, sameServer } from "../../utils/previews/running.util";
-import type { BonjourService } from "../../utils/dev-preview-servers/bonjour.util";
 
 export type DevPreviewServersState = {
   /**
@@ -93,30 +92,9 @@ let setup: Pick<DevServersSetup, "hosts" | "allowCustomHosts"> = {
 let userHosts: HostAddress[] = [];
 let userHostsRead: Promise<void> | null = null;
 
-/** What Bonjour found on the network, while it browses. The next look picks it up. */
-let bonjour: BonjourService[] = [];
-let browsing: { remove(): void } | null = null;
-
-/** Bonjour runs while the list watches and the app is in the foreground. */
-function browse(on: boolean) {
-  const native = nativeModule();
-  if (!native?.startBonjourBrowse) return;
-  if (on && !browsing) {
-    browsing = native.addListener("onBonjourServices", (event) => {
-      bonjour = event.services;
-    });
-    native.startBonjourBrowse();
-  } else if (!on && browsing) {
-    browsing.remove();
-    browsing = null;
-    bonjour = [];
-    native.stopBonjourBrowse?.();
-  }
-}
-
 /**
  * Registries the last sweep of this device's own network found. They are asked like hosts added on
- * the device, which is what finds a computer whose Bonjour announcements macOS blocks.
+ * the device, so a computer on the same network shows with no address typed in.
  */
 let swept: HostAddress[] = [];
 let sweeping: AbortController | null = null;
@@ -252,8 +230,6 @@ async function poll(sweep: boolean) {
             ),
           ],
       remote,
-      bonjour,
-      appSlug,
     );
     // Another computer's ports are asked through its registry, never scanned here.
     known = found.alive
@@ -346,9 +322,9 @@ export const devPreviewServersStore = {
 
   /**
    * While something watches (the list is on screen): sweeps the port range at once and every 30 s,
-   * asks the servers already known every 2 s, and browses Bonjour for `preview start` servers on
-   * the network. Nothing while the app is in the background. Debug builds only; returns a function
-   * that stops watching.
+   * asks the servers already known every 2 s, and sweeps this device's network for registries.
+   * Nothing while the app is in the background. Debug builds only; returns a function that stops
+   * watching.
    */
   watch(): () => void {
     if (!__DEV__) return () => undefined;
@@ -358,16 +334,13 @@ export const devPreviewServersStore = {
       set({ alive: null });
       userHostsRead = null;
       look(true);
-      browse(true);
       timer = setInterval(tick, POLL_MS);
       sweepNetwork();
       appState = AppState.addEventListener("change", (next) => {
         if (next === "active") {
-          browse(true);
           look(false);
           sweepNetwork();
         } else if (next === "background") {
-          browse(false);
           stopSweep();
         }
       });
@@ -379,7 +352,6 @@ export const devPreviewServersStore = {
         timer = null;
         appState?.remove();
         appState = null;
-        browse(false);
         stopSweep();
       }
     };

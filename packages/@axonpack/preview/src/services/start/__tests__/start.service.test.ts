@@ -9,7 +9,7 @@ import {
   type RegistryAnswer,
 } from "../../../constants/dev-preview-servers/dev-preview-servers.const";
 import {
-  announceErrorNotice,
+  addHostLines,
   ensureRegistry,
   freePort,
   metroPort,
@@ -235,7 +235,7 @@ describe("ensureRegistry: replacing an older or hung registry", () => {
     expect(spawn).toHaveBeenCalled();
     expect(posted.map((s) => s.id)).toEqual(["8082-old"]);
     expect(lines.join("")).toContain(
-      "Replaced an older preview registry (pid 4242), so this computer can be found on the network.",
+      "Replaced an older preview registry (pid 4242).",
     );
   });
 
@@ -285,24 +285,20 @@ describe("ensureRegistry: replacing an older or hung registry", () => {
   });
 });
 
-test("says once why announcing fails, with the macOS fix for a refused send", () => {
-  const lines: string[] = [];
-  jest.spyOn(process.stdout, "write").mockImplementation((line) => {
-    lines.push(String(line));
-    return true;
-  });
-  const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
-  Object.defineProperty(process, "platform", { value: "darwin" });
-  try {
-    const notice = announceErrorNotice();
-    notice("send EHOSTUNREACH 224.0.0.251:5353");
-    notice("send EHOSTUNREACH 224.0.0.251:5353");
-    notice(undefined);
-    expect(lines).toEqual([
-      "preview: Bonjour can't announce this computer (send EHOSTUNREACH 224.0.0.251:5353). Phones on the same Wi-Fi still find it by scanning the network. To turn Bonjour on, allow your terminal app under System Settings > Privacy & Security > Local Network.\n",
-    ]);
-  } finally {
-    Object.defineProperty(process, "platform", platform);
-    jest.restoreAllMocks();
-  }
+test("prints what a phone on the same Wi-Fi types in Add a host, for each private address", () => {
+  expect(
+    addHostLines([
+      "192.168.1.38",
+      "10.0.0.5",
+      "172.20.1.2",
+      "172.32.0.1",
+      "100.64.0.1",
+      "8.8.8.8",
+    ]),
+  ).toEqual([
+    "On a phone on this Wi-Fi: Add a host → 192.168.1.38",
+    "On a phone on this Wi-Fi: Add a host → 10.0.0.5",
+    "On a phone on this Wi-Fi: Add a host → 172.20.1.2",
+  ]);
+  expect(addHostLines(["100.64.0.1"])).toEqual([]);
 });

@@ -65,8 +65,6 @@ export function DevServerRow(props: {
     kind === "server"
       ? { text: kindLabel(kind, labels), tone: KIND_TONE[kind] }
       : { text: kindLabel(kind, labels), kind: true },
-    // The computer a server Bonjour found runs on, which a LAN address doesn't tell.
-    server.machine ? { text: server.machine } : null,
     // Whether it runs or not, so the default is always easy to find.
     props.isDefault ? { text: labels.defaultServerChip } : null,
     // Still switchable: the warning says why it may not start.

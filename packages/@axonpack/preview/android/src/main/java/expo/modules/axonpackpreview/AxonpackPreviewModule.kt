@@ -9,12 +9,8 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 
 class AxonpackPreviewModule : Module() {
-  private var bonjour: BonjourBrowser? = null
-
   override fun definition() = ModuleDefinition {
     Name("AxonpackPreview")
-
-    Events("onBonjourServices")
 
     Constants(
       "compatibility" to metaData("COMPATIBILITY"),
@@ -49,22 +45,8 @@ class AxonpackPreviewModule : Module() {
 
     Function("reload") { reload() }
 
-    // While the dev preview servers list is on screen, and never in the background.
-    Function("startBonjourBrowse") {
-      appContext.reactContext?.let { context ->
-        val browser = bonjour ?: BonjourBrowser(context.applicationContext) { services ->
-          sendEvent("onBonjourServices", mapOf("services" to services))
-        }.also { bonjour = it }
-        browser.start()
-      }
-    }
-
-    Function("stopBonjourBrowse") { bonjour?.stop() }
-
-    // For the network sweep, which finds a registry whose Bonjour announcements never arrive.
+    // For the network sweep.
     Function("localNetworks") { localNetworks() }
-
-    OnDestroy { bonjour?.stop() }
   }
 
   private fun reload() {

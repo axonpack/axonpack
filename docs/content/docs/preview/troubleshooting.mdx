@@ -130,46 +130,25 @@ phone, run `adb reverse` for each port, or start the servers with `preview start
 PATH. See
 [Dev preview servers](/docs/preview/dev-preview-servers#reaching-the-servers).
 
-## Bonjour finds nothing
+## A computer on the same Wi-Fi doesn't show
 
 A `preview start` on the same Wi-Fi, a teammate's or your own, doesn't show in the dev servers list.
 
-**Cause.** The announcement doesn't reach the device, or the device can't use it. A row also needs
-Metro to answer at the announced address and port, so an announcement for a port where nothing runs
-never shows.
-**Fix.** On most home and office Wi-Fi, [the network sweep](/docs/preview/dev-preview-servers#the-network-sweep)
-finds the computer anyway, a few seconds after the list opens or after a refresh. When it doesn't
-either, open `http://<computer's IP>:19150/servers` in the phone's browser:
+**Cause.** [The network sweep](/docs/preview/dev-preview-servers#the-network-sweep) doesn't reach
+the computer, or the device can't reach it at all. A row also needs Metro to answer at the
+computer's address and port.
+**Fix.** Pull to refresh, which sweeps again. If it still doesn't show, open
+`http://<computer's IP>:19150/servers` in the phone's browser. `preview start` prints that IP as
+`On a phone on this Wi-Fi: Add a host → <IP>`.
 
 - **The page doesn't load.** The phone can't reach the computer at all, often because the Wi-Fi
   keeps devices apart (client isolation, common on guest Wi-Fi). Nothing finds it there, a host you
   add included. Use USB, or another network.
 - **The page loads, and the computer's address is outside the phone's own /24.** The sweep doesn't
   go that far. Add the computer as a host.
-- **The page loads otherwise.** Check the app's local network access (iOS, and Android 17), then
-  the steps below.
-
-To get Bonjour working, check from the computer outward:
-
-- **The computer announces it.** On a Mac on the same network, run `dns-sd -B _axon-preview._tcp`
-  while `preview start` runs. Each server should be listed as `preview-<id>-<port>`. If the list
-  stays empty on the computer that runs `preview start`, allow the terminal app you started it from
-  in **System Settings > Privacy & Security > Local Network** (macOS 15 and later), then start it
-  again.
-- **Read what `preview start` printed.** When announcing fails, it prints
-  `Bonjour can't announce this computer`, with the error and, on macOS, the Local Network fix.
-- **No old registry.** `preview start` replaces an older registry on port 19150, or one that doesn't
-  answer, and prints `Replaced an older preview registry`. It leaves the process running when it
-  can't tell it is a preview registry, or on Windows, and prints what holds the port.
-  `lsof -nP -iTCP:19150` shows it too. Stop it and run `preview start` again.
-- **On iOS**, the app needs local network access: **Settings > the app > Local Network**. Without
-  `NSBonjourServices` listing `_axon-preview._tcp`, iOS finds nothing and never asks. See
-  [iOS asks first](/docs/preview/dev-preview-servers#ios-asks-first).
-- **Read the logs.** On Android, `adb logcat -s AxonpackPreview` shows each server found, with its
-  address, and why one was skipped: browsing that did not start, a failed resolve, or no IPv4
-  address. On iOS the same `Bonjour:` lines are in the Xcode console, or in Console.app under the
-  `dev.axonpack.preview` subsystem. In a debug build, the app's JS console says why a server found
-  this way has no row, such as another app's slug or a port where Metro does not answer.
+- **The page loads otherwise.** Check the app's local network access: on iOS in **Settings > the
+  app > Local Network** (see [iOS asks first](/docs/preview/dev-preview-servers#ios-asks-first)),
+  and the local network permission on Android 17. Or add the computer as a host.
 
 ## npx preview fails with a 404 in a bun project
 

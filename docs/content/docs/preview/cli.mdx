@@ -56,8 +56,17 @@ preview start [--title <title>] [--ports <from>-<to>] [-- <expo start args>]
 ```
 
 Runs Metro on a free port and announces it to the app's Dev preview servers, once Metro answers and
-on the port it really took. Phones on the same network find it with no address typed in, over
-Bonjour or by sweeping their own network. See [Dev preview servers](/docs/preview/dev-preview-servers).
+on the port it really took. Phones on the same network find it with no address typed in, by
+sweeping their own network. See [Dev preview servers](/docs/preview/dev-preview-servers).
+
+Once Metro answers, it prints the port, then one line for each private IPv4 address of the
+computer, which is what a phone types in **Add a host** when the sweep doesn't reach the computer.
+A computer with no such address gets no line:
+
+```
+preview: Login fix on port 8082, announced on http://127.0.0.1:19150
+preview: On a phone on this Wi-Fi: Add a host → 192.168.1.38
+```
 
 | Option                 | Default                         | What it does                                                   |
 | ---------------------- | ------------------------------- | -------------------------------------------------------------- |

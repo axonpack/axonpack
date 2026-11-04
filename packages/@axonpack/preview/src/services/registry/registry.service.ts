@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
+import { hostname, networkInterfaces } from "node:os";
 
 import {
   type Machine,
@@ -35,6 +37,25 @@ export class ServerList {
   }
 }
 
+/**
+ * This computer. The id comes from its name and network cards, so it is the same on every run with
+ * no file to keep it in.
+ */
+export function thisMachine(): Machine {
+  const lan = Object.values(networkInterfaces())
+    .flatMap((list) => list ?? [])
+    .filter((i) => i.family === "IPv4" && !i.internal);
+  return {
+    id: createHash("sha256")
+      .update(
+        [hostname().split(".")[0], ...lan.map((i) => i.mac).sort()].join(","),
+      )
+      .digest("hex")
+      .slice(0, 12),
+    addresses: lan.map((i) => i.address),
+  };
+}
+
 const readBody = (req: IncomingMessage) =>
   new Promise<string>((resolve, reject) => {
     let body = "";
@@ -44,21 +65,17 @@ const readBody = (req: IncomingMessage) =>
   });
 
 /**
- * `GET /servers` lists the live servers, with this registry's version, this computer's id and LAN
- * addresses, and why Bonjour announcing fails, if it does; `POST /servers` registers one or renews
- * its heartbeat, and answers the same; `DELETE /servers/<id>` removes one. Plain HTTP, so the app
- * reads it with `fetch` and `curl` shows it too. Once it has been empty for `idleExitMs`, `onIdle`
- * is called. `onChange` gets the live list after every change and once a second, which is when a
- * server whose heartbeat stopped is dropped.
+ * `GET /servers` lists the live servers, with this registry's version and this computer's id and
+ * LAN addresses; `POST /servers` registers one or renews its heartbeat, and answers the same;
+ * `DELETE /servers/<id>` removes one. Plain HTTP, so the app reads it with `fetch` and `curl` shows
+ * it too. Once it has been empty for `idleExitMs`, `onIdle` is called.
  */
 export function createRegistry(
   options: {
     ttlMs?: number;
     idleExitMs?: number;
     onIdle?: () => void;
-    onChange?: (servers: RegisteredServer[]) => void;
     machine?: Machine;
-    announceError?: () => string | undefined;
     now?: () => number;
   } = {},
 ): { server: Server; list: ServerList } {
@@ -79,7 +96,6 @@ export function createRegistry(
       version: REGISTRY_VERSION,
       machineId: options.machine?.id,
       addresses: options.machine?.addresses,
-      announceError: options.announceError?.(),
     });
     try {
       if (req.method === "GET" && req.url === "/servers") {
@@ -91,14 +107,10 @@ export function createRegistry(
           return;
         }
         list.upsert(entry, now());
-        // The heartbeat's answer is how `preview start` hears that announcing fails. One from an
-        // older version ignores the body.
         send(200, answer());
-        options.onChange?.(list.alive(now()));
       } else if (req.method === "DELETE" && req.url?.startsWith("/servers/")) {
         list.remove(decodeURIComponent(req.url.slice("/servers/".length)));
         send(204);
-        options.onChange?.(list.alive(now()));
       } else {
         send(404, { error: "not found" });
       }
@@ -109,11 +121,9 @@ export function createRegistry(
     }
   });
 
-  if (options.onIdle || options.onChange) {
+  if (options.onIdle) {
     const timer = setInterval(() => {
-      const alive = list.alive(now());
-      options.onChange?.(alive);
-      if (alive.length > 0) emptySince = now();
+      if (list.alive(now()).length > 0) emptySince = now();
       else if (now() - emptySince > (options.idleExitMs ?? 30000))
         options.onIdle?.();
     }, 1000);

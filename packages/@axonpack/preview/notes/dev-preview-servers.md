@@ -20,10 +20,10 @@ between them live.
 - [x] Takes the team's own computers from the app's config, and can hide adding one on the device
 - [x] Off unless the app turns it on and `enabled` is on, and debug builds only
 - [x] Only this app's servers, by the slug the config plugin bakes in; a build without it says so
-- [x] Finds `preview start` servers on other computers on the network with no address typed in
-- [x] Says which computer a server found on the network runs on, and lists a server found two ways once
-- [x] Replaces an older registry, or one that hung, on its own, and says when Bonjour can't announce the computer
-- [x] Finds `preview start` servers on the device's own /24 when Bonjour doesn't get through, by asking each address for a registry
+- [x] Finds `preview start` servers on the device's own /24 with no address typed in, by asking each address for a registry
+- [x] Lists a server found two ways once
+- [x] Replaces an older registry, or one that hung, on its own
+- [x] `preview start` prints the address a phone on the same Wi-Fi types in Add a host
 
 ## Turning it on
 
@@ -76,31 +76,9 @@ asks its registry (`http://<host>:19150/servers`, or the port given with it) and
 servers it names, so a plain `expo start` on another computer never shows. Hosts added on the
 device are saved in `Documents/preview/hosts.json`. A registry that does not answer, here or there,
 is left out of the 2 s looks until the next full sweep, since every refused connection is one more
-line in the Xcode console.
-
-**On the network.** The registry announces its servers over Bonjour as `_axon-preview._tcp` (a
-service name takes 15 characters at most, so not `_axonpack-preview`). It lives in the registry, not
-in each `preview start`, so one computer has one responder, and a server whose heartbeat stops gets
-a goodbye too. No dependency: Node's `dgram` binds UDP 5353 with `reuseAddr` beside the system's own
-responder, and a small writer in `src/utils/registry/mdns.util.ts` makes the PTR, SRV, TXT and A
-records. It sends one packet per server on each LAN interface, with that interface's address in the
-A record, announces twice a second apart, and answers any query for the type, an instance or its
-host name after 20 to 120 ms, at most once a second. The instance name is `preview-<machine id>-<port>`
-and the host name `axonpack-<machine id>.local`, both unique to the computer, so it skips the
-probing step. TTLs are 120 s, so a killed registry ages out in two minutes. The machine id is a hash
-of the host name and the LAN cards' MAC addresses: the same on every run, with no file. The TXT
-record carries the title, branch, slug, app name, compatibility, native keys, registry port, machine
-id and computer name. Expo's `_expo._tcp` is not browsed, so a plain `expo start` elsewhere never
-shows. To check the packets with no network, write `announcement()`'s output into a pcap file
-(raw IP) and read it with `tcpdump -nn -vvv -r`.
-
-**Stopping and errors.** On SIGTERM, SIGINT, SIGHUP and the idle exit the registry sends a goodbye
-for each server, waits at most 1 s for it, and closes. The registry runs detached with no terminal,
-so a failed bind, or a round of sends where none got through, is kept as `announceError` in the
-`/servers` answer (and the heartbeat's, which is why a POST answers 200 with the same body). One
-interface failing alone, such as a VPN, is not reported. `preview start` prints it once, says the
-sweep still finds the computer, and adds the Local Network fix on macOS for EHOSTUNREACH or EPERM,
-which is what a send without that access gets.
+line in the Xcode console. Once Metro answers, `preview start` prints one line per private IPv4
+address of the computer (`addHostLines` in `start.service.ts`, from the registry's `thisMachine`):
+what to type in Add a host on a phone the sweep doesn't reach.
 
 **An older registry.** `/servers` sends `version` (`REGISTRY_VERSION`); none counts as older. A
 `start` that meets an older one, or one that holds 19150 but doesn't answer, finds its pid with
@@ -115,33 +93,7 @@ failed heartbeat brings its own registry back in the gap and wins the port, the 
 more. A Metro on the first port of the range that no registry lists is never stopped, since it may
 be the user's own `expo start`; `start` takes the next free port and says so.
 
-**Browsing.** Native browses only while the list watches and the app is in the foreground, and sends
-JS the full list on every change. iOS uses `NWBrowser` and resolves a result by opening a
-`NWConnection` to it, whose remote end is the address; Android uses `NsdManager`, one resolve at a
-time, since before Android 14 a second one fails. Both report IPv4 only, as only an A record is
-announced. A service macOS announces itself (`dns-sd -R`) also has an AAAA record: the iOS
-connection is held to IPv4, or it would prefer IPv6, and Android 14 and up list the IPv4 addresses
-first (`NsdService.getInetAddresses`). Each side logs what it skips under the `AxonpackPreview` tag
-(logcat) or the `dev.axonpack.preview` subsystem, prefixed `Bonjour:`. JS keeps a Bonjour server
-only when the build's slug matches and no registry already covers its computer: this computer (the
-local registry's machine id, or one of the LAN addresses it reports, which is how the emulator's
-`10.0.2.2` and the Mac's LAN address are one machine), a host typed in whose registry answered, or a
-host the scan covers. A covered server that did not answer there in this look is asked at its
-Bonjour address after the rest: a port `adb reverse` does not forward, or this computer after the
-USB cable is pulled, when its registry is only remembered. The rest are merged like another
-computer's registry, and the row shows the IP address and port like any other, with the computer's
-name in a plain chip. A debug build logs once, with the `@axonpack/preview:` prefix, why a Bonjour
-server has no row. The last answer of this
-computer's registry is kept, since a quick look may skip it. A Bonjour name not seen before makes
-the next look ask that registry even when it was quiet, so the first `preview start` shows as this
-computer within 2 s. iOS needs `NSLocalNetworkUsageDescription` and `NSBonjourServices` listing
-the type, added by hand to the app config for now (the example has them); the config plugin does
-not add them yet.
-
-**The network sweep.** macOS drops the registry's Bonjour sends from an app without Local Network
-access (`send EHOSTUNREACH 224.0.0.251:5353`, VS Code's terminal here), but never an incoming TCP
-connection, which is why a typed host always worked. So while the list watches, the app also asks
-its own network: native `localNetworks()` gives the device's private IPv4 addresses on `en*` (iOS,
+**The network sweep.** While the list watches, the app asks its own network: native `localNetworks()` gives the device's private IPv4 addresses on `en*` (iOS,
 `getifaddrs`) or `wlan*`/`eth*` (Android, `NetworkInterface`), each with its prefix length, so
 cellular is never swept and no permission is needed to read them. `sweepRange`
 (`src/utils/dev-preview-servers/subnet.util.ts`) turns each into the other addresses of its /24, or
@@ -156,9 +108,14 @@ sweep keeps the last full one's result. `discover` lists a computer reached twic
 swept host whose registry gives this computer's machine id, or is one of the LAN addresses this
 computer's registry reports (the Mac's LAN address typed in on the simulator), or gives a machine id
 an earlier host already gave (a Mac on Wi-Fi and Ethernet, or a typed host the sweep found too).
-This computer counts only while its registry answers in that look, not as last remembered, so after
+This computer counts only while its registry answers in that look, so after
 the USB cable is pulled its LAN address lists its servers. Typed hosts come first, so they win. Each refused address is one more `Could not connect to the server` line in
 the Xcode console, so a sweep adds a burst there.
+
+**Local network access.** A real iPhone asks once, the first time the app reaches past itself (the
+sweep, a typed host). The plugin adds no `Info.plist` key for it; an app may set
+`NSLocalNetworkUsageDescription` in `ios.infoPlist` for its own prompt text. Android 17 asks for
+`ACCESS_LOCAL_NETWORK` like it does for Metro; up to API 36 `INTERNET` covers it.
 
 **Offline.** The server the app runs from stays in the list when a look misses it, marked Offline,
 with the title, branch and kind it had when it last answered. That is saved in
