@@ -54,9 +54,9 @@ returns:
 ```
 
 At prebuild the plugin bakes three values into the build: the compatibility setting, the build's
-key, and the app's slug. The app uses the key to ask the bucket only for previews made for it. The
-slug tells this app's [dev preview servers](/docs/preview/dev-preview-servers) apart from other
-apps'. Which setting to pick is on [Compatibility](/docs/preview/compatibility).
+key, and the app's slug. The app uses the key to ask the bucket only for previews made for it, and
+the slug to find its own folder in the bucket. The slug also tells this app's
+[dev preview servers](/docs/preview/dev-preview-servers) apart from other apps'. Which setting to pick is on [Compatibility](/docs/preview/compatibility).
 
 `npx expo config --type public` prints the config when the plugin is found, and fails when it
 isn't. Then make a native build:
@@ -70,7 +70,7 @@ With EAS Build, the plugin runs during the build as usual.
 
 <Callout type="info" title="Without the plugin">
 A build without the plugin has no key, and the list says so instead of showing anything. If you
-can't use the plugin, pass the key yourself with the `buildKey` option. See
+can't use the plugin, pass the key and the slug yourself with the `buildKey` and `slug` options. See
 [Reference](/docs/preview/reference#previewconfig).
 </Callout>
 

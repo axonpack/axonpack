@@ -1,4 +1,6 @@
 // The bucket layout and file formats, shared by the CLI that writes them and the app that reads them.
+// The keys below are inside the app's own folder, `<slug>/`, which `withPrefix` in s3.service adds
+// to every request, so several apps can share one bucket.
 //
 //   index.json                            every native build and its previews, for people
 //   index/<platform>/<key>.json           what one native build can run; the app reads this
@@ -93,6 +95,11 @@ export type IndexEntry = PreviewInfo & {
   size: number;
   changelog: string;
   manifest: string;
+  /**
+   * Set by the app, never written: the entry came from where 0.1.0 published, outside the slug
+   * folder, so its manifest and files are read from there too.
+   */
+  withoutSlug?: boolean;
 };
 
 export type PlatformIndex = {

@@ -11,6 +11,7 @@ const config = {
   enabled: true,
   url: "http://localhost:9000/previews-public",
   buildKey: "fp",
+  slug: "my-app",
 };
 const bundle = new TextEncoder().encode("bundle bytes");
 const image = new TextEncoder().encode("image bytes");
@@ -83,12 +84,12 @@ beforeEach(() => disk.clear());
 
 test("downloads every file into <id>/<platform> and records it", async () => {
   serve({
-    [entry.manifest]: manifest([
+    [`my-app/${entry.manifest}`]: manifest([
       { path: "main.jsbundle", data: bundle },
       { path: "assets/assets/icon.png", data: image },
     ]),
-    [`files/${sha256Hex(bundle)}`]: bundle,
-    [`files/${sha256Hex(image)}`]: image,
+    [`my-app/files/${sha256Hex(bundle)}`]: bundle,
+    [`my-app/files/${sha256Hex(image)}`]: image,
   });
   const progress: number[] = [];
   const local = await downloadPreview(config, entry, (p) =>
@@ -114,10 +115,10 @@ test("a file that fails its checksum leaves nothing half-done and keeps the old 
   disk.set("file:/docs/preview/task-1/ios", "dir");
   disk.set("file:/docs/preview/task-1/ios/main.jsbundle", bundle);
   serve({
-    [entry.manifest]: manifest([
+    [`my-app/${entry.manifest}`]: manifest([
       { path: "main.jsbundle", data: bundle, sha: "0".repeat(64) },
     ]),
-    [`files/${"0".repeat(64)}`]: new TextEncoder().encode("tampered"),
+    [`my-app/files/${"0".repeat(64)}`]: new TextEncoder().encode("tampered"),
   });
   await expect(downloadPreview(config, entry)).rejects.toThrow(
     "did not match its checksum",
@@ -136,7 +137,7 @@ test("asks for this build's list and treats a missing one as empty", async () =>
 });
 
 test("signs requests for a private bucket with the read key", async () => {
-  const requests = serve({ "index/ios/fp.json": { previews: [entry] } });
+  const requests = serve({ "my-app/index/ios/fp.json": { previews: [entry] } });
   const index = await fetchPreviews({
     ...config,
     url: undefined,
@@ -148,7 +149,7 @@ test("signs requests for a private bucket with the read key", async () => {
   });
   expect(index.previews).toHaveLength(1);
   expect(requests[0].url).toBe(
-    "http://localhost:9000/previews-public/index/ios/fp.json",
+    "http://localhost:9000/previews-public/my-app/index/ios/fp.json",
   );
   expect(requests[0].headers.Authorization).toMatch(
     /^AWS4-HMAC-SHA256 Credential=reader\//,
@@ -159,4 +160,62 @@ test("says how to fix a build with no compatibility key", async () => {
   await expect(
     fetchPreviews({ ...config, buildKey: undefined }),
   ).rejects.toThrow("config plugins");
+});
+
+test("with no list in the slug folder yet, the previews 0.1.0 published outside it show and download from there", async () => {
+  const requests = serve({
+    "index/ios/fp.json": { previews: [entry] },
+    [entry.manifest]: manifest([{ path: "main.jsbundle", data: bundle }]),
+    [`files/${sha256Hex(bundle)}`]: bundle,
+  });
+  const index = await fetchPreviews(config);
+  expect(index.previews).toEqual([{ ...entry, withoutSlug: true }]);
+  await downloadPreview(config, index.previews[0]);
+  expect(disk.get("file:/docs/preview/task-1/ios/main.jsbundle")).toEqual(
+    bundle,
+  );
+  expect(
+    requests.map((r) => r.url.replace(/^.*previews-public\//, "")),
+  ).toEqual([
+    "my-app/index/ios/fp.json",
+    "index/ios/fp.json",
+    entry.manifest,
+    `files/${sha256Hex(bundle)}`,
+  ]);
+});
+
+test("once the slug folder has a list, the old one outside it is not read", async () => {
+  const requests = serve({
+    "my-app/index/ios/fp.json": { previews: [] },
+    "index/ios/fp.json": { previews: [entry] },
+  });
+  expect((await fetchPreviews(config)).previews).toEqual([]);
+  expect(requests).toHaveLength(1);
+});
+
+test("a read key limited to the slug folder still gets an empty list, not an error", async () => {
+  global.fetch = jest.fn(
+    async (url: string | URL) =>
+      new Response("", {
+        status: String(url).includes("/my-app/") ? 404 : 403,
+      }),
+  ) as typeof fetch;
+  const index = await fetchPreviews({
+    ...config,
+    url: undefined,
+    s3Config: {
+      url: config.url,
+      readAccessKeyId: "reader",
+      readSecretAccessKey: "secret",
+    },
+  });
+  expect(index.previews).toEqual([]);
+});
+
+test("reads nothing without the app's slug, since it can't tell its own folder", async () => {
+  const requests = serve({});
+  await expect(fetchPreviews({ ...config, slug: undefined })).rejects.toThrow(
+    "no app slug",
+  );
+  expect(requests).toEqual([]);
 });

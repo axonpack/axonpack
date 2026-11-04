@@ -81,7 +81,7 @@ Expo loads for a release build; the environment wins over them. Keep the write k
 
 | Variable                       | Needed | What it is                                                                 |
 | ------------------------------ | ------ | -------------------------------------------------------------------------- |
-| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>[/<folder>]`, for example `http://localhost:9000/previews-public` |
+| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>`, for example `http://localhost:9000/previews-public`. Each app's previews go in a folder named after its slug |
 | `PREVIEW_S3_ACCESS_KEY_ID`     | Yes    | The write key                                                              |
 | `PREVIEW_S3_SECRET_ACCESS_KEY` | Yes    | Its secret                                                                 |
 | `PREVIEW_S3_REGION`            | No     | Default `us-east-1`                                                        |

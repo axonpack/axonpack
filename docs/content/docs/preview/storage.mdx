@@ -18,16 +18,22 @@ write key, and the app reads from it.
 
 ## The URL
 
-Both sides take one URL: `<endpoint>/<bucket>`, plus a folder inside the bucket if you add more
-path segments. Requests are path-style.
+Both sides take one URL: `<endpoint>/<bucket>`. Requests are path-style.
 
-| Example                                                        | Endpoint                                   | Bucket     | Folder   |
-| -------------------------------------------------------------- | ------------------------------------------ | ---------- | -------- |
-| `http://localhost:9000/previews-public`                        | `http://localhost:9000`                    | `previews-public` | none |
-| `https://s3.eu-west-1.amazonaws.com/acme-previews`             | `https://s3.eu-west-1.amazonaws.com`       | `acme-previews` | none |
-| `https://<account>.r2.cloudflarestorage.com/previews/my-app`   | `https://<account>.r2.cloudflarestorage.com` | `previews` | `my-app` |
+| Example                                                 | Endpoint                                     | Bucket            |
+| ------------------------------------------------------- | -------------------------------------------- | ----------------- |
+| `http://localhost:9000/previews-public`                 | `http://localhost:9000`                      | `previews-public` |
+| `https://s3.eu-west-1.amazonaws.com/acme-previews`      | `https://s3.eu-west-1.amazonaws.com`         | `acme-previews`   |
+| `https://<account>.r2.cloudflarestorage.com/previews`   | `https://<account>.r2.cloudflarestorage.com` | `previews`        |
 
-A folder lets several apps share one bucket. Everything for that app goes under it.
+Several apps can share one bucket. Each app's files go in a folder named after its Expo slug: the
+CLI reads the slug from the app config, and the app gets it from the config plugin, which bakes it
+into the build. One app never lists, downloads or deletes another app's previews, and the URL needs
+no folder for that.
+
+A URL that ends in a folder (`<endpoint>/<bucket>/<folder>`) still works. The slug folder goes
+inside it, as `<folder>/<slug>/`. You no longer need that folder. To drop it, change the URL on both
+sides (the app's change needs a new build) and publish the previews you still need again.
 
 ## Public or private
 
@@ -57,6 +63,14 @@ a read key it must be the real `<endpoint>/<bucket>` URL, because the app signs 
 As an S3 policy, the write key needs `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` and
 `s3:ListBucket` on the bucket. The read key needs `s3:GetObject` and `s3:ListBucket`.
 
+With several apps in one bucket, each app can have keys of its own. Where a policy can name a path,
+as on AWS S3 and MinIO, limit a key's object actions to that app's folder,
+`arn:aws:s3:::<bucket>/<slug>/*`. See AWS's
+[bucket policy examples](https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-bucket-policies.html)
+and MinIO's [policy management](https://docs.min.io/aistor/administration/iam/access/) for how to
+write one. A read key limited this way can't read previews published by 0.1.0, which sit outside
+the folder (below).
+
 `s3:ListBucket` matters on the read key too. Without it, S3 answers a missing file with 403 instead
 of 404. A build with nothing published yet would then show an error instead of an empty list.
 
@@ -69,22 +83,34 @@ gitignored `.env.local`, and the CLI reads it under a name with no `EXPO_PUBLIC_
 ## What is in the bucket
 
 ```
-index.json                            every native build and its previews, for people
-index/<platform>/<key>.json           what one native build can run; the app reads this
-previews/<platform>/<key>/<id>.json   one preview's manifest: files, changelog, versions
-files/<sha256>                        bundle and image blobs, shared between previews
+<slug>/index.json                            every native build and its previews, for people
+<slug>/index/<platform>/<key>.json           what one native build can run; the app reads this
+<slug>/previews/<platform>/<key>/<id>.json   one preview's manifest: files, changelog, versions
+<slug>/files/<sha256>                        bundle and image blobs, shared between previews
 ```
 
-`<key>` is `version-1.0.0` or `fingerprint-<hash>`, as on [Compatibility](/docs/preview/compatibility).
-The app downloads one small file, `index/<platform>/<key>.json`, and gets only what it can run.
-A native change starts a new, empty list on its own, so there is nothing to clean up on the server.
+`<slug>` is the app's Expo slug. `<key>` is `version-1.0.0` or `fingerprint-<hash>`, as on
+[Compatibility](/docs/preview/compatibility). The app downloads one small file,
+`<slug>/index/<platform>/<key>.json`, and gets only what it can run. A native change starts a new,
+empty list on its own, so there is nothing to clean up on the server.
 
-Files are stored once under their sha256. A rebuild that only changed JS uploads one new bundle and
-reuses every image.
+Files are stored once per app under their sha256. A rebuild that only changed JS uploads one new
+bundle and reuses every image.
+
+`unpublish` and `prune` only touch the app's own folder.
 
 Both lists are updated only if nobody wrote in between: the CLI sends `If-Match` with the ETag, or
 `If-None-Match: *` for a new file. On a clash it reads again and retries, so two publishes at the same
 time both end up listed. The host has to honour those headers on a PUT.
+
+### Previews published by 0.1.0
+
+0.1.0 wrote the same files without the slug folder. When the app finds no list for its build in the
+slug folder, it reads the old list and downloads those previews from where they are, so they keep
+showing. The first publish for that build under the slug makes a new list, and from then on the app
+reads only that one. So publish again every old preview QA still needs. The CLI never writes outside
+the slug folder, and `prune` never deletes there, so delete the old files by hand once nothing uses
+them.
 
 ## HTTPS
 

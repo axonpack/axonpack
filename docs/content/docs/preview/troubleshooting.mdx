@@ -33,13 +33,21 @@ The snackbar says "Something went wrong." with this message under it, and has no
 **Fix.** With the default `compatibility: "appVersion"` the key is the app version, so publish again
 after a version bump. With `"fingerprint"`, a prebuild or any native or app config change gives a
 new key, so publish again from the code the installed build was made from. `publish` prints the URL
-of the list it wrote; compare its key with the build's.
+of the list it wrote; compare its key with the build's, and its folder with the app's slug. The app
+reads only the folder named after its own slug.
 
 ## "This build has no compatibility key"
 
 **Cause.** The build was made without the config plugin.
 **Fix.** Add `"@axonpack/preview"` to `plugins` in the app config and make a new native build. Or pass
 `buildKey` in the config. See [Compatibility](/docs/preview/compatibility#without-the-plugin).
+
+## "This build has no app slug"
+
+**Cause.** The build was made without the config plugin, and the config passes `buildKey` but no
+`slug`. Without the slug the app can't tell which folder in the bucket is its own, so it reads nothing.
+**Fix.** Add `"@axonpack/preview"` to `plugins` and make a new native build, or pass `slug` with
+`buildKey`. See [Compatibility](/docs/preview/compatibility#without-the-plugin).
 
 ## "Expected JSON from ... but got text/html"
 

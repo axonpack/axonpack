@@ -27,6 +27,9 @@ page only says what this package needs. What the bucket and the keys must allow 
   turned off far enough for that bucket policy to apply.
 - **A private bucket:** a second IAM user with only `s3:GetObject` and `s3:ListBucket` on the bucket.
   This key ends up inside the app.
+- **Several apps in one bucket:** each app's files are under `<slug>/`, so a policy can limit a
+  key's object actions to `arn:aws:s3:::<bucket>/<slug>/*`. See
+  [Storage](/docs/preview/storage#the-two-keys).
 - **Conditional PUT:** supported. AWS's page says to "add the HTTP `If-None-Match` or `If-Match`
   header" to a write, and that a mismatch fails with `412 Precondition Failed`.
 

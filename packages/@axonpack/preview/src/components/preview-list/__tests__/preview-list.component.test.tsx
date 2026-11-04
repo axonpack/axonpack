@@ -1237,7 +1237,7 @@ test("a bucket URL that arrives in a new config starts the reads, and the not se
     ),
   );
   expect(asked()).toEqual([
-    "http://localhost:9000/b/index/ios/version-1.0.0.json",
+    "http://localhost:9000/b/shop/index/ios/version-1.0.0.json",
   ]);
   expect(byId(tree, "previews-not-configured")).toEqual([]);
   expect(texts(tree)).toContain("Login fix");
