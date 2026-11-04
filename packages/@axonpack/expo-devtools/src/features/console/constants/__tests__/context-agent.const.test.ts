@@ -2,7 +2,12 @@ import { installAgent } from '../../../../agent/services/install-agent.service';
 import { runAction } from '../../../../agent/utils/run-action.util';
 import { runQuery, type AgentQuery } from '../../../../agent/utils/run-query.util';
 import { aiUsageStore } from '../../../ai-usage/stores/ai-usage.store';
-import { configureRepl, getReplContext } from '../../services/evaluate-expression.service';
+import {
+  configureRepl,
+  evaluateExpression,
+  getReplContext,
+} from '../../services/evaluate-expression.service';
+import { configureContextRedaction } from '../../services/redact-context.service';
 import { CONTEXT_AGENT } from '../context-agent.const';
 
 jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: null } }), {
@@ -35,6 +40,7 @@ const call = (args: string[], yes?: true) =>
 
 beforeEach(() => {
   store.count = 0;
+  configureContextRedaction({});
   configureRepl(true, { store, version: '1.2.0', shared: 'app' }, [
     { id: 'preview', context: { preview, shared: 'support' } },
   ]);
@@ -192,5 +198,166 @@ describe('call', () => {
       reply,
     });
     delete (globalThis as any).__AXONPACK_AGENT__;
+  });
+});
+
+describe('redaction', () => {
+  const session = {
+    token: 'abc',
+    user: { name: 'Ada', apiSecret: 's3' },
+    list: [{ token: 'in-array' }],
+    byKey: new Map<string, unknown>([
+      ['token', 'in-map'],
+      ['name', 'Ada'],
+    ]),
+    login: () => ({ token: 'fresh', ok: true }),
+    loginLater: async () => ({ token: 'later' }),
+  };
+  const redacting = (
+    keys: (string | RegExp)[],
+    redact?: (name: string, value: unknown) => unknown
+  ) => {
+    configureRepl(true, { session, version: '1.2.0' });
+    configureContextRedaction({ keys, redact });
+  };
+
+  it('hides a whole value whose exposed name matches, in the list and in get', () => {
+    redacting(['SESSION']);
+    expect(ask({ fields: 'name,type,preview', json: true }).split('\n')).toEqual([
+      '{"name":"session","type":"object","preview":"[redacted]"}',
+      '{"name":"version","type":"value","preview":"1.2.0"}',
+    ]);
+    expect(ask({ get: 'session' })).toBe('# context session\n"[redacted]"');
+    expect(ask({ grep: 'abc' })).toContain('0 of 2 match');
+  });
+
+  it('hides a matching key at any depth, in objects, arrays and Maps', () => {
+    redacting(['token']);
+    expect(JSON.parse(ask({ get: 'session', json: true }))).toEqual({
+      token: '[redacted]',
+      user: { name: 'Ada', apiSecret: 's3' },
+      list: [{ token: '[redacted]' }],
+      byKey: { token: '[redacted]', name: 'Ada' },
+      login: 'ƒ login()',
+      loginLater: 'ƒ loginLater()',
+    });
+    expect(ask()).not.toContain('abc');
+  });
+
+  it('hides a dot path through a redacted segment', () => {
+    redacting(['session']);
+    expect(ask({ get: 'session.token', json: true })).toBe('"[redacted]"');
+    expect(ask({ get: 'session.user.name', json: true })).toBe('"[redacted]"');
+    redacting(['token']);
+    expect(ask({ get: 'session.token', json: true })).toBe('"[redacted]"');
+    expect(ask({ get: 'session.user.name', json: true })).toBe('"Ada"');
+  });
+
+  it('tests a RegExp as written', () => {
+    redacting([/secret$/i]);
+    expect(ask({ get: 'session.user', json: true })).toBe(
+      '{"name":"Ada","apiSecret":"[redacted]"}'
+    );
+    expect(ask({ get: 'session.user.apiSecret', json: true })).toBe('"[redacted]"');
+  });
+
+  it('runs redact after redactKeys, with the name or path, and shows what it returns', () => {
+    const redact = jest.fn((name: string, value: unknown) =>
+      name === 'session.user' ? { ...(value as object), name: 'A.' } : value
+    );
+    redacting([/secret/i], redact);
+    expect(ask({ get: 'session.user', json: true })).toBe('{"name":"A.","apiSecret":"[redacted]"}');
+    expect(redact).toHaveBeenLastCalledWith('session.user', {
+      name: 'Ada',
+      apiSecret: '[redacted]',
+    });
+    // Returned as it came, the value is shown as redactKeys left it.
+    expect(ask({ get: 'version', json: true })).toBe('"1.2.0"');
+    redacting([], () => {
+      throw new Error('bug in the hook');
+    });
+    expect(ask({ get: 'version', json: true })).toBe('"[redacted]"');
+  });
+
+  it('redacts what call returns, and a promise once it resolves', async () => {
+    redacting(['token']);
+    expect(call(['session.login'], true)).toBe(
+      [
+        '# context · session.login returned',
+        '{',
+        '  "token": "[redacted]",',
+        '  "ok": true',
+        '}',
+      ].join('\n')
+    );
+    const later = call(['session.loginLater'], true) as { answer: Promise<string> };
+    expect(await later.answer).toBe(
+      '# context · session.loginLater returned\n{\n  "token": "[redacted]"\n}'
+    );
+    redacting(['session']);
+    expect(call(['session.login'], true)).toBe('# context · session.login returned\n"[redacted]"');
+  });
+
+  it('passes what a call threw or rejected with through redact, and hides it if redact throws', async () => {
+    const redact = jest.fn((_name: string, value: unknown) =>
+      typeof value === 'string' ? value.replace('abc', '[hidden]') : value
+    );
+    configureRepl(true, {
+      auth: {
+        fail: () => {
+          throw new Error('token abc expired');
+        },
+        failLater: () => Promise.reject(new Error('token abc expired')),
+      },
+    });
+    // redactKeys has no key to match in a message, so `token` stays.
+    configureContextRedaction({ keys: ['token'], redact });
+    expect(call(['auth.fail'], true)).toBe('error: token [hidden] expired');
+    expect(redact).toHaveBeenLastCalledWith('auth.fail', 'token abc expired');
+    const later = call(['auth.failLater'], true) as { answer: Promise<string> };
+    expect(await later.answer).toBe('error: token [hidden] expired');
+    aiUsageStore.clear();
+    installAgent();
+    (globalThis as any).__AXONPACK_AGENT__.act({
+      topic: 'context',
+      action: 'call',
+      args: ['auth.fail'],
+      options: { yes: true },
+    });
+    expect(aiUsageStore.getSnapshot()[0].reply).toBe('error: token [hidden] expired');
+    delete (globalThis as any).__AXONPACK_AGENT__;
+    configureContextRedaction({
+      redact: () => {
+        throw new Error('bug in the hook');
+      },
+    });
+    expect(call(['auth.fail'], true)).toBe('error: [redacted]');
+  });
+
+  it('logs only the redacted reply in the CLI tab', () => {
+    redacting(['token']);
+    aiUsageStore.clear();
+    installAgent();
+    const agent = (globalThis as any).__AXONPACK_AGENT__;
+    agent.run({ topic: 'context', get: 'session' });
+    agent.act({
+      topic: 'context',
+      action: 'call',
+      args: ['session.login'],
+      options: { yes: true },
+    });
+    const logged = aiUsageStore.getSnapshot();
+    expect(logged).toHaveLength(2);
+    for (const { reply } of logged) {
+      expect(reply).toContain('[redacted]');
+      expect(reply).not.toMatch(/abc|fresh|in-array|in-map/);
+    }
+    delete (globalThis as any).__AXONPACK_AGENT__;
+  });
+
+  it('leaves the > prompt alone', () => {
+    redacting(['session', 'token'], () => '[hook]');
+    expect(evaluateExpression('session.token')).toBe('abc');
+    expect(evaluateExpression('session.login()')).toEqual({ token: 'fresh', ok: true });
   });
 });

@@ -67,6 +67,9 @@ Present when the REPL is enabled through `console.repl`, which
 - The [`devtools` CLI](/docs/expo-devtools/reference/cli#context) lists the same names in its
   `context` topic, reads one with `devtools get context <name>`, and calls a function with
   `devtools context call <name> --yes`. With `console.repl` off, that topic is off too.
+- What the CLI takes out through `context` follows `console.redactKeys` and `console.redact` (see
+  [Redaction](/docs/expo-devtools/console#redaction)). The prompt itself isn't redacted: it runs
+  whatever is typed on the device.
 
 Your app's own imports are **not** reachable by name: a bundled module is a private closure, so there is
 nothing for an expression to resolve. `context` is how you hand over the objects you want to poke at,

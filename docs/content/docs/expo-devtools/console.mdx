@@ -68,6 +68,35 @@ npx devtools context
 npx devtools context call store.dispatch '{"type":"logout"}' --yes
 ```
 
+### Redaction
+
+What the CLI reads through `context` can include a session or a token. `console.redactKeys` shows a
+value as `[redacted]` when its name, a segment of its dot path or a key at any depth inside it
+matches, and `console.redact` runs after it for anything else:
+
+```tsx
+<DevtoolsProvider
+  config={{
+    console: {
+      context: { session, store },
+      redactKeys: ['token', /secret/i],
+      redact: (name, value) =>
+        name === 'session.user' ? { ...(value as object), email: '[redacted]' } : value,
+    },
+  }}
+>
+```
+
+It covers the `context` list, `devtools get context` and what `devtools context call` returns, and
+runs before the CLI prints, cuts or logs a value, so the CLI tab keeps only the redacted reply. When
+a called function throws, `redact` also gets its message, as `redact(name, message)`. A function
+whose name is redacted can still be called; only what it returns is hidden. Both options are empty
+by default, so nothing is redacted until you list it.
+
+The `>` prompt itself isn't redacted. It runs any code typed on the device, and code can always
+reach a value some other way, so redacting its answers would only ever be partial. Its rows show
+values as they are, in the Console tab and in `devtools console`.
+
 <Callout type="warn" title="The prompt is on by default, in every build">
   `console.repl` defaults to `true`, and it is not gated on `__DEV__`. Wherever the devtools are on, the
   prompt is there. That includes a release build, where it will run whatever is typed into it. Ship

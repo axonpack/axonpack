@@ -6,6 +6,7 @@ import { themeStore } from '../core/stores/theme.store';
 import { aiUsageStore } from '../features/ai-usage/stores/ai-usage.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
 import { patchConsole } from '../features/console/services/patch-console.service';
+import { configureContextRedaction } from '../features/console/services/redact-context.service';
 import { setWebViewConsoleCapture } from '../features/console/services/webview-console-logger.service';
 import { consoleLogStore } from '../features/console/stores/console-log.store';
 import {
@@ -148,6 +149,31 @@ export type DevtoolsConsoleConfig = {
    * here wins over a support's.
    */
   context?: Record<string, unknown>;
+  /**
+   * Names and keys whose values the `devtools` CLI's `context` topic shows as `[redacted]`: an
+   * exposed name, any segment of a dot path such as `session.token`, and a key at any depth inside
+   * a value it prints, in objects, arrays and Maps. A string matches a whole key without regard to
+   * case, and a RegExp is tested as written. It covers the topic's list, `devtools get context`,
+   * what `devtools context call` returns, and so what the CLI tab logs of them. The `>` prompt is
+   * not redacted, since it runs whatever is typed on the device. Empty by default, so nothing is
+   * redacted until you list it.
+   *
+   * ```ts
+   * redactKeys: ['session', 'token', /secret/i]
+   * ```
+   */
+  redactKeys?: readonly (string | RegExp)[];
+  /**
+   * Your chance to strip anything else from a `context` value before it leaves through the CLI.
+   * Runs after `redactKeys`, with the name or dot path and the value as the CLI would print it
+   * (functions as text, matched keys already `[redacted]`), and the CLI shows what it returns. If
+   * it throws, the value shows as `[redacted]`.
+   *
+   * ```ts
+   * redact: (name, value) => (name === 'user' ? { ...(value as object), email: '[redacted]' } : value)
+   * ```
+   */
+  redact?: (name: string, value: unknown) => unknown;
   /**
    * Open the Console tab with recording paused, so nothing is logged until the record button in its
    * toolbar is pressed. Defaults to `false`. The `>` prompt still answers while paused.
@@ -598,6 +624,8 @@ export function startDevtools<TThemeName extends string = never>(
     capture: captureConsole = true,
     repl: enableRepl = true,
     context: replContext,
+    redactKeys: consoleRedactKeys,
+    redact: redactConsole,
     disabledByDefault: consoleStartsPaused = false,
   } = config?.console ?? {};
   const {
@@ -732,6 +760,7 @@ export function startDevtools<TThemeName extends string = never>(
   // console row as well as a report now, and draining before this point threw that row away.
   drainOnce();
   configureRepl(enableRepl, replContext, supportsStore.getSupports());
+  configureContextRedaction({ keys: consoleRedactKeys, redact: redactConsole });
 
   performanceStore.setHistorySize(historySize);
   performanceStore.setEnabled(true);

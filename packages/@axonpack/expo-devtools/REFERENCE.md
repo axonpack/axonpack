@@ -289,6 +289,9 @@ Present when the REPL is enabled through `console.repl`, which defaults to `__DE
 - The `devtools` command line tool lists the same names in its [`context` topic](#context), reads
   one with `devtools get context <name>`, and calls a function with
   `devtools context call <name> --yes`. With `console.repl` off, that topic is off too.
+- What the tool takes out through `context` follows `console.redactKeys` and `console.redact` (see
+  [`DevtoolsConfig`](#devtoolsconfig)). The prompt itself isn't redacted: it runs whatever is typed
+  on the device, and code can always reach a value some other way.
 
 Your app's own imports are **not** reachable by name: a bundled module is a private closure, so there
 is nothing for an expression to resolve. `context` is how you hand over the objects you want to poke
@@ -985,6 +988,12 @@ Strings over 2,048 characters are cut unless `--full`. The name can be a dot pat
 such as `preview.status` or `store.getState`. A path through `constructor`, `prototype` or
 `__proto__` is refused.
 
+Values follow `console.redactKeys` and `console.redact`. A name, a dot path segment or a key at any
+depth that matches `redactKeys` shows as `[redacted]`, then `redact` gets the name or path and the
+value, and its return value is shown. Both run before the value is printed, cut or matched by
+`--grep` and `--where`, and the same goes for the `preview` column and for what `call` returns.
+Nothing is redacted by default.
+
 To run a function, use the [`call` action](#context-actions).
 
 #### performance
@@ -1227,7 +1236,12 @@ returns a promise is waited for: the app answers `# wait: running <name>` and th
 as for [`send`](#network-actions). After 5 seconds the tool stops with
 `still running <name> after 5 s` and the call carries on in the app; the CLI tab and
 `devtools cli --where 'action?'` show how it ended. A function that throws, or a promise that
-rejects, answers `error: <its message>`.
+rejects, answers `error: <its message>`. The value returned is redacted as `get context` redacts,
+with `<name>` as its name, and the message of a throw goes through `console.redact` as
+`redact(<name>, message)`, or shows as `[redacted]` if `redact` throws (`redactKeys` doesn't look
+inside a message). Both happen before the reply is printed or logged; the args you pass aren't
+redacted. A function whose name or path matches `redactKeys` can still be called: only what it
+returns is hidden.
 
 #### preview actions
 
@@ -1389,7 +1403,9 @@ In `apps`, an app that couldn't be asked shows why in its `note` column instead,
 
 ### What it reads
 
-Only what the stores keep, after every redaction in the config. The `authorization`, `cookie` and
+Only what the stores keep, after every redaction in the config, and the names the app exposed to the
+`>` prompt, which the `context` topic reads after `console.redactKeys` and `console.redact`. The
+`authorization`, `cookie` and
 `set-cookie` headers and a page's `document.cookie` are always `[redacted]`, in every output, and
 filters run on the masked row. An action's reply goes through the same masking. The only changes the
 tool can make are the [actions](#actions). See
@@ -1419,40 +1435,42 @@ a key of `config.themes`.
 
 ### `DevtoolsConfig`
 
-| Option                               | Type                          | Default     | What it does                                                                                                                                                   |
-| ------------------------------------ | ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).                                                                                   |
-| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                                                                                  |
-| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                                                                                               |
-| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                                                                                                    |
-| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                                                                                              |
-| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                                                                                            |
-| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                                                                                                   |
-| `network.redactHeaders`              | `readonly string[]`           | `[]`        | Header names stored as `[redacted]`, any case. `cookie` also redacts `document.cookie`.                                                                        |
-| `network.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactHeaders` each time a row changes, before it is stored. HTTP and WebSocket rows. `null` drops the row, and so does a throw.                   |
-| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.                                                                                     |
-| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                                                                                                   |
-| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                                                                                              |
-| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                                                                                           |
-| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.                                                                             |
-| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                                                                                                 |
-| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                                                                                                |
-| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                                                                                   |
-| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something.                                                                          |
-| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.                                                                                       |
-| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.                                                                            |
-| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.                                                                                        |
-| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.                                                                           |
-| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.                                                                           |
-| `query.client`                       | `QueryClientLike`             | `undefined` | Your TanStack Query v5 `QueryClient`. Unset leaves the Query tab out of the panel.                                                                             |
-| `navigation.disabledByDefault`       | `boolean`                     | `false`     | Open the Navigation tab paused. The route on screen is still shown.                                                                                            |
-| `navigation.redact`                  | `(move) => move \| null`      | `undefined` | Runs on every move before it is stored. `null` drops the move, and so does a throw.                                                                            |
-| `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                                   |
-| `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                                    |
-| `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                                                 |
-| `cli.disabledByDefault`              | `boolean`                     | `false`     | Open the CLI tab paused. Agents can still query the app.                                                                                                       |
-| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Deprecated. The old name of `cli.disabledByDefault`, which wins when both are set.                                                                             |
-| `supports`                           | `DevtoolsSupport[]`           | `undefined` | Tabs, command line topics and `>` prompt names for other packages, each from a support's `configure()`. Its provider wraps the app, with `enabled: false` too. |
+| Option                               | Type                          | Default     | What it does                                                                                                                                                                                     |
+| ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).                                                                                                                     |
+| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                                                                                                                    |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                                                                                                                                 |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                                                                                                                                      |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                                                                                                                                |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                                                                                                                              |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                                                                                                                                     |
+| `network.redactHeaders`              | `readonly string[]`           | `[]`        | Header names stored as `[redacted]`, any case. `cookie` also redacts `document.cookie`.                                                                                                          |
+| `network.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactHeaders` each time a row changes, before it is stored. HTTP and WebSocket rows. `null` drops the row, and so does a throw.                                                     |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.                                                                                                                       |
+| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                                                                                                                                     |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                                                                                                                                |
+| `console.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Names, dot path segments and keys at any depth that the `context` topic shows as `[redacted]`. A string matches a whole key, any case. Not the `>` prompt.                                       |
+| `console.redact`                     | `(name, value) => unknown`    | `undefined` | Runs after `redactKeys` on each `context` value the tool shows: in the list, `get context` and what `context call` returns, and on the message when a `call` throws. A throw shows `[redacted]`. |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                                                                                                                             |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.                                                                                                               |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                                                                                                                                   |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                                                                                                                                  |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                                                                                                                     |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something.                                                                                                            |
+| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.                                                                                                                         |
+| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.                                                                                                              |
+| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.                                                                                                                          |
+| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.                                                                                                             |
+| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.                                                                                                             |
+| `query.client`                       | `QueryClientLike`             | `undefined` | Your TanStack Query v5 `QueryClient`. Unset leaves the Query tab out of the panel.                                                                                                               |
+| `navigation.disabledByDefault`       | `boolean`                     | `false`     | Open the Navigation tab paused. The route on screen is still shown.                                                                                                                              |
+| `navigation.redact`                  | `(move) => move \| null`      | `undefined` | Runs on every move before it is stored. `null` drops the move, and so does a throw.                                                                                                              |
+| `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                                                                     |
+| `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                                                                      |
+| `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                                                                                   |
+| `cli.disabledByDefault`              | `boolean`                     | `false`     | Open the CLI tab paused. Agents can still query the app.                                                                                                                                         |
+| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Deprecated. The old name of `cli.disabledByDefault`, which wins when both are set.                                                                                                               |
+| `supports`                           | `DevtoolsSupport[]`           | `undefined` | Tabs, command line topics and `>` prompt names for other packages, each from a support's `configure()`. Its provider wraps the app, with `enabled: false` too.                                   |
 
 The Redux tab is there once a store was created with [`devtoolsReduxEnhancer()`](#devtoolsreduxenhancer).
 

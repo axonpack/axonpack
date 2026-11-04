@@ -1,28 +1,18 @@
+import { keyMatcher } from '../../../core/utils/key-matcher.util';
 import { REDACTED } from '../../network/services/redact-network.service';
 import type { StorageEntry } from '../stores/storage.store';
 import { classifyStoredValue } from '../utils/classify-value.util';
 import { utf8ByteLength } from '../utils/formatters.util';
 
-let redactedKeys: readonly (string | RegExp)[] = [];
+let isRedactedKey = keyMatcher();
 let redactHook: ((entry: StorageEntry) => StorageEntry | null) | undefined;
 
 export function configureStorageRedaction(options: {
   keys?: readonly (string | RegExp)[];
   redact?: (entry: StorageEntry) => StorageEntry | null;
 }) {
-  redactedKeys = (options.keys ?? []).map((key) =>
-    typeof key === 'string' ? key.toLowerCase() : key
-  );
+  isRedactedKey = keyMatcher(options.keys);
   redactHook = options.redact;
-}
-
-function isRedactedKey(key: string): boolean {
-  return redactedKeys.some((pattern) => {
-    if (typeof pattern === 'string') return pattern === key.toLowerCase();
-    // A `/g` or `/y` regex carries `lastIndex` between calls, as the blacklist found out.
-    pattern.lastIndex = 0;
-    return pattern.test(key);
-  });
 }
 
 function withText(entry: StorageEntry, text: string | null): StorageEntry {

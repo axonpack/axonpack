@@ -1,4 +1,5 @@
 import type { JsonValue } from '../../../core/utils/json-tree.util';
+import { REDACTED } from '../../network/services/redact-network.service';
 
 const MAX_DEPTH = 6;
 
@@ -13,15 +14,23 @@ function describeFunction(value: { name?: unknown }): string {
   return typeof value.name === 'string' && value.name.length > 0 ? `ƒ ${value.name}()` : 'ƒ ()';
 }
 
+/** A key it says yes to keeps its place, with `[redacted]` and its value never read. */
+type HideKey = (key: string) => boolean;
+
 function snapshotObject(
   value: object,
   depth: number,
-  seen: Set<object>
+  seen: Set<object>,
+  hide?: HideKey
 ): { [key: string]: JsonValue } {
   const result: { [key: string]: JsonValue } = {};
   for (const key of Object.keys(value)) {
+    if (hide?.(key)) {
+      result[key] = REDACTED;
+      continue;
+    }
     try {
-      result[key] = snapshot((value as Record<string, unknown>)[key], depth + 1, seen);
+      result[key] = snapshot((value as Record<string, unknown>)[key], depth + 1, seen, hide);
     } catch {
       result[key] = '[Threw]';
     }
@@ -29,7 +38,7 @@ function snapshotObject(
   return result;
 }
 
-function snapshot(value: unknown, depth: number, seen: Set<object>): JsonValue {
+function snapshot(value: unknown, depth: number, seen: Set<object>, hide?: HideKey): JsonValue {
   if (value === null) return null;
 
   switch (typeof value) {
@@ -56,24 +65,30 @@ function snapshot(value: unknown, depth: number, seen: Set<object>): JsonValue {
 
   seen.add(object);
   try {
-    if (Array.isArray(value)) return value.map((item) => snapshot(item, depth + 1, seen));
+    if (Array.isArray(value)) return value.map((item) => snapshot(item, depth + 1, seen, hide));
     if (value instanceof Set) {
-      return Array.from(value, (item) => snapshot(item, depth + 1, seen));
+      return Array.from(value, (item) => snapshot(item, depth + 1, seen, hide));
     }
     if (value instanceof Map) {
       const result: { [key: string]: JsonValue } = {};
-      for (const [key, item] of value) result[String(key)] = snapshot(item, depth + 1, seen);
+      for (const [key, item] of value) {
+        const name = String(key);
+        result[name] = hide?.(name) ? REDACTED : snapshot(item, depth + 1, seen, hide);
+      }
       return result;
     }
-    return snapshotObject(object, depth, seen);
+    return snapshotObject(object, depth, seen, hide);
   } finally {
     seen.delete(object);
   }
 }
 
-/** A value as a console row holds it: functions, cycles and errors become text, so JSON can carry it. */
-export function snapshotValue(value: unknown): JsonValue {
-  return snapshot(value, 0, new Set());
+/**
+ * A value as a console row holds it: functions, cycles and errors become text, so JSON can carry it.
+ * `hide` redacts an object's or a Map's key at any depth.
+ */
+export function snapshotValue(value: unknown, hide?: HideKey): JsonValue {
+  return snapshot(value, 0, new Set(), hide);
 }
 
 function toConsoleArg(value: unknown): ConsoleArg {

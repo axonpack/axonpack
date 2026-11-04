@@ -42,7 +42,8 @@ A name you put in `console.context` wins over a support's name if the two are th
 A support's names in the `>` prompt are reachable from a terminal as well. `devtools context` lists
 them with the support's id as their `source`, `devtools get context <name>` reads one, and
 `devtools context call <name> --yes` calls one of its functions, as in
-`devtools context call preview.switch '"pr-7"' --yes`. See
+`devtools context call preview.switch '"pr-7"' --yes`. `console.redactKeys` and `console.redact`
+apply to them as to your own names (see [Redaction](/docs/expo-devtools/console#redaction)). See
 [Calling what the app exposes](/docs/expo-devtools/ai-agents#calling-what-the-app-exposes).
 
 ## Versions

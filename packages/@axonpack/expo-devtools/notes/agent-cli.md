@@ -83,6 +83,15 @@ once. `network` and `context` have actions, and so does a support's topic, such 
   console row would (`snapshotValue`), so `--grep` never walks a cycle and a getter is read once per
   query. `get` takes a dot path through the topic's `find`, which the query runner calls in place of
   looking the id up in the rows.
+- **`context` redacts as it snapshots.** The topic has no store to redact on write, so every row,
+  `get` and `call` result goes through `redactContextValue` (`redact-context.service.ts`) on the
+  way out, before printing, cutting, filters or the CLI tab. `console.redactKeys` is tested against
+  each dot path segment and, inside `snapshotValue`, against every object and Map key, so a redacted
+  key's value is never read. `console.redact` then gets the name or path and that JSON, and a throw
+  shows `[redacted]`. A `call` that throws or rejects has its message passed through `redact` too
+  (`redactContextError`), since `redactKeys` has no key to match in free text. The matcher is
+  `keyMatcher` in `core/utils/key-matcher.util.ts`, shared with `storage.redactKeys`. The `>` prompt
+  runs code, so redacting it would only ever be partial, and it isn't.
 - **`context call` is no eval.** It resolves a name the app exposed, walks a dot path, and calls the
   function it ends on with the object before it as `this`. A path through `constructor`, `prototype`
   or `__proto__` is refused, since each leads to `Function`. The args are one word of JSON (an array

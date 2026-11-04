@@ -103,7 +103,22 @@ network: {
 | `console.capture`           | `boolean`                 | `true`      | Mirror `console.*` into the Console tab, including from WebViews wired with `useDevtoolsWebView`. |
 | `console.repl`              | `boolean`                 | `true`      | Show the `>` prompt.                                                      |
 | `console.context`           | `Record<string, unknown>` | `undefined` | Extra names an expression can use, for example `{ store, queryClient }`. A support can add names of its own, such as `preview`; yours win a clash. |
+| `console.redactKeys`        | `readonly (string \| RegExp)[]` | `[]` | Names and keys whose values the CLI's [`context` topic](/docs/expo-devtools/reference/cli#context) shows as `[redacted]`: an exposed name, any segment of a dot path such as `session.token`, and a key at any depth in an object, array or Map it prints. A string matches a whole key without regard to case; a `RegExp` is tested as written. |
+| `console.redact`            | `(name: string, value: unknown) => unknown` | `undefined` | Runs after `redactKeys` on each `context` value the CLI is about to show, with the name or dot path and the value as the CLI prints it. The CLI shows what it returns. It also gets the message when a `call` throws. If it throws, the value shows as `[redacted]`. |
 | `console.disabledByDefault` | `boolean`                 | `false`     | Open the Console tab paused. The prompt still works.                      |
+
+`console.redactKeys` and `console.redact` cover what leaves through the CLI: the `context` list,
+`devtools get context` and what `devtools context call` returns, and so the CLI tab's log of them.
+They run before a value is printed, cut or logged. The `>` prompt isn't redacted, since it runs
+whatever is typed on the device, and neither are the arguments a caller passes to `call`.
+
+```ts
+console: {
+  context: { session, store },
+  redactKeys: ['token', /secret/i],
+  redact: (name, value) => (name === 'session.user' ? { ...(value as object), email: '[redacted]' } : value),
+}
+```
 
 <Callout type="warn" title="console.repl is not gated on __DEV__">
   It defaults to `true` in every build. Wherever the devtools are on the prompt is there, including in

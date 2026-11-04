@@ -394,8 +394,22 @@ storage: {
 },
 ```
 
-The Console, Query and Redux tabs have no redaction setting, so an agent reads what the app logged,
-cached or dispatched, as the tabs show it.
+The `context` topic follows
+[`console.redactKeys` and `console.redact`](/docs/expo-devtools/console#redaction). A name, a dot
+path segment or a key at any depth that matches shows as `[redacted]`, in the list, in
+`get context` and in what `context call` returns, before the reply is printed or the CLI tab logs
+it:
+
+```ts title="devtools.ts"
+console: {
+  context: { session, store },
+  redactKeys: ['token', /secret/i],
+},
+```
+
+The `>` prompt itself isn't redacted, since it runs whatever is typed on the device. The Console
+tab's rows and the Query and Redux tabs have no redaction setting, so an agent reads what the app
+logged (the prompt's answers included), cached or dispatched, as the tabs show it.
 
 ## Older React Native
 

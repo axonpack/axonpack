@@ -2,7 +2,7 @@ import type { AgentTopic } from '../../../agent/constants/agent-topics.const';
 import { printValue } from '../../../agent/utils/run-query.util';
 import type { JsonValue } from '../../../core/utils/json-tree.util';
 import { getExposedContext, isReplEnabled } from '../services/evaluate-expression.service';
-import { snapshotValue } from '../utils/format-console-args.util';
+import { redactContextError, redactContextValue } from '../services/redact-context.service';
 
 type ContextRow = {
   /** The name, or the dot path `get` asked for. */
@@ -10,7 +10,10 @@ type ContextRow = {
   type: 'function' | 'object' | 'value';
   /** `app` for `console.context`, or the id of the support that added it. */
   source: string;
-  /** As a console row holds it, so `--grep` and `get` never walk a cycle or call a getter twice. */
+  /**
+   * As a console row holds it, after `console.redactKeys` and `console.redact`, so `--grep` and
+   * `get` never walk a cycle, call a getter twice or see what the app redacted.
+   */
   value: JsonValue;
 };
 
@@ -29,7 +32,7 @@ const toRow = (name: string, value: unknown, source: string): ContextRow => ({
   name,
   type: typeOf(value),
   source,
-  value: snapshotValue(value),
+  value: redactContextValue(name, value),
 });
 
 /**
@@ -68,7 +71,7 @@ function parseArgs(json: string | undefined): unknown[] {
 }
 
 const returned = (name: string, value: unknown) =>
-  `# context · ${name} returned\n${value === undefined ? 'undefined' : printValue(snapshotValue(value), false)}`;
+  `# context · ${name} returned\n${value === undefined ? 'undefined' : printValue(redactContextValue(name, value), false)}`;
 
 export const CONTEXT_AGENT: AgentTopic<ContextRow> = {
   name: 'context',
@@ -110,13 +113,23 @@ export const CONTEXT_AGENT: AgentTopic<ContextRow> = {
         const args = parseArgs(json);
         if (options.yes !== true)
           throw new Error('call runs a function in the app, so it needs --yes');
-        const result = value.apply(owner, args);
+        let result: unknown;
+        try {
+          result = value.apply(owner, args);
+        } catch (error) {
+          throw redactContextError(name, error);
+        }
         if (typeof (result as { then?: unknown } | null)?.then !== 'function') {
           return returned(name, result);
         }
         return {
           waitingFor: `running ${name}`,
-          answer: Promise.resolve(result).then((settled) => returned(name, settled)),
+          answer: Promise.resolve(result).then(
+            (settled) => returned(name, settled),
+            (error) => {
+              throw redactContextError(name, error);
+            }
+          ),
         };
       },
     },
