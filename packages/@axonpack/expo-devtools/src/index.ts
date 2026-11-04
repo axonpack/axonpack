@@ -21,6 +21,7 @@ export type {
   DevtoolsReduxConfig,
   DevtoolsAiUsageConfig,
 } from './client/start-devtools.client';
+export type { DevtoolsSupport } from './core/stores/supports.store';
 export type { QueryClientLike } from './features/query/stores/query.store';
 export { DevtoolsProvider } from './core/components/devtools-provider.component';
 export type { DevtoolsProviderProps } from './core/components/devtools-provider.component';

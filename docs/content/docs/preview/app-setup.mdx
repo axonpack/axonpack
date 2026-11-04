@@ -43,27 +43,37 @@ behind a login or a lazy screen.
 ### With expo-devtools
 
 If the app uses [`@axonpack/expo-devtools`](/docs/expo-devtools), skip the provider. Pass the same
-config as `preview` in the devtools config, and the devtools mount the provider around the app and
-add a Preview tab with the list:
+config through the devtools' preview support, and the devtools mount the provider around the app and
+add a Preview tab with the list. For this package's 0.x versions the support is
+`@axonpack/expo-devtools/support/preview/v0`:
 
 ```tsx
 import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
 import { previewConfig } from './preview-config';
 
 export default function Root() {
   return (
-    <DevtoolsProvider config={{ enabled: process.env.EXPO_PUBLIC_DEVTOOLS === 'on', preview: previewConfig }}>
+    <DevtoolsProvider
+      config={{
+        enabled: process.env.EXPO_PUBLIC_DEVTOOLS === 'on',
+        supports: [PreviewV0Support.configure(previewConfig)],
+      }}
+    >
       <App />
     </DevtoolsProvider>
   );
 }
 ```
 
+The support module re-exports this package's config types, so `preview-config.ts` can import
+`PreviewConfig` from `@axonpack/expo-devtools/support/preview/v0` or from here.
+
 The provider mounts on every start this way too, including with the devtools off. The tab is there
 only while the devtools are on, and a preview is a release bundle, so `enabled: __DEV__` leaves no
 tab inside a preview. Keep the devtools on in the bundles QA switches between, or also put the list
 on a screen of your own. Everything else on this page works the same under `DevtoolsProvider`. See
-[Preview](/docs/expo-devtools/preview) in the expo-devtools docs.
+[Preview support](/docs/expo-devtools/supports/preview) in the expo-devtools docs.
 
 ## enabled
 

@@ -1,0 +1,135 @@
+---
+title: Preview
+description: Set up @axonpack/preview through the devtools config, and switch previews and dev servers from a Preview tab.
+---
+
+The preview support sets up [`@axonpack/preview`](/docs/preview) from the devtools config. Its
+entry point is `@axonpack/expo-devtools/support/preview/v0`, for preview 0.x. It puts preview's
+provider around the app, so the app mounts no `PreviewProvider` of its own, and adds a **Preview**
+tab to the panel and to the Axonpack tab in React Native DevTools. How supports work in general,
+and how their versions work, is on the [Overview](/docs/expo-devtools/supports).
+
+## Install preview
+
+Install `@axonpack/preview` 0.x, 0.2.0 or later, and add its config plugin to `app.json`. It has native
+code, so make a new build after. Every step, with its checks, is on preview's
+[Installation](/docs/preview/installation).
+
+```sh
+npx expo install @axonpack/preview expo-file-system
+```
+
+```json
+{
+  "expo": {
+    "plugins": [["@axonpack/preview", { "compatibility": "appVersion" }]]
+  }
+}
+```
+
+The devtools don't add the config plugin for you. It changes native code, so it goes in `app.json`
+with the app's other plugins.
+
+## Turn it on
+
+```tsx
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import PreviewV0Support, { type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+const previewConfig: PreviewConfig = {
+  enabled: true,
+  s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
+  devPreviewServers: true,
+};
+
+export default function Root() {
+  return (
+    <DevtoolsProvider
+      config={{
+        enabled: process.env.EXPO_PUBLIC_DEVTOOLS === 'on',
+        supports: [PreviewV0Support.configure(previewConfig)],
+      }}
+    >
+      <App />
+    </DevtoolsProvider>
+  );
+}
+```
+
+`configure` takes the same object as preview's own `PreviewProvider`. Every field is on preview's
+[Reference](/docs/preview/reference#previewconfig), and where each value comes from is on
+[Settings and env files](/docs/preview/environment#the-apps-settings). If the app already mounts
+`<PreviewProvider>`, remove it.
+
+Preview's hooks, such as `usePreview()` and `usePreviewStatus()`, and a `PreviewList` of your own
+work anywhere inside `DevtoolsProvider`, since its provider is above them.
+
+## Exports
+
+| Export                     | Kind     | What it is                                                                 |
+| -------------------------- | -------- | -------------------------------------------------------------------------- |
+| `configure(config)`        | function | Takes a `PreviewConfig` and returns a `DevtoolsSupport` for `supports`      |
+| default export             | object   | `{ configure }`                                                            |
+| `PreviewConfig`            | type     | Preview's config, the object its `PreviewProvider` takes                   |
+| `PreviewS3Config`          | type     | `s3Config`: the bucket and how to read it                                  |
+| `DevPreviewServersOptions` | type     | `devPreviewServers` as an object: `enabled`, `allowCustomHosts` and `hosts` |
+| `DevtoolsSupport`          | type     | What `configure` returns                                                   |
+
+## Keep the devtools on inside a preview
+
+A preview is a release bundle, so `__DEV__` is `false` while one runs. With `enabled: __DEV__`, the
+devtools are off inside every preview, and with them the panel and the Preview tab: QA can switch to
+a preview but has no way back from inside it. Give `enabled` a value that is also on in the bundles
+QA switches between, such as an env value set for internal builds and for `preview publish`, as in
+the example above.
+
+Or keep `enabled: __DEV__` and put preview's list on a screen of your own as well. See
+[Show the list anywhere](/docs/preview/app-setup#show-the-list-anywhere).
+
+## With the devtools off
+
+Preview's provider goes around the app with `enabled: false` too, because preview has to confirm
+each start: a preview whose start is never confirmed is marked broken, and the next start loads the
+default bundle. Preview's own `enabled` still decides whether previews are on.
+
+## The Preview tab
+
+The tab shows preview's own list, in the panel's theme, after Redux in the tab bar. From the top:
+
+- An error snackbar, only when something went wrong.
+- The header card: what runs now, **Back to default**, Refresh, and **Show details**.
+- Dev preview servers, in a debug build with `devPreviewServers` on.
+- Published previews for this build, with Download, Switch, Update and Delete.
+- Incompatible downloads, with **Delete all**.
+
+Each part is described on preview's [App setup](/docs/preview/app-setup#the-ready-made-list).
+Switching to a preview or a server restarts the app, as it does from preview's own list.
+
+## In React Native DevTools
+
+The Axonpack tab on your computer has a Preview panel with the same list, after Navigation. Set it
+up on [React Native DevTools](/docs/expo-devtools/react-native-devtools). Two things differ:
+
+- Every row is drawn at once and there is no pull to refresh, since a FlatList there draws only its
+  first rows. The header card's Refresh asks again.
+- The panel reads the list again each time you open it.
+
+## When preview isn't installed
+
+With the support in `supports` and `@axonpack/preview` missing, the app still builds and runs, and
+nothing throws. With the devtools on, the start logs this with `console.error`, and the Preview tab
+shows it in bold in place of the list:
+
+```
+The devtools config sets up preview, but @axonpack/preview isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add `@axonpack/preview` to the plugins in app.json, and rebuild the app.
+```
+
+## When another major of preview is installed
+
+`support/preview/v0` is for preview 0.x. With another major installed, it works like a missing
+preview: the start logs this with `console.error` (here for 1.0.0), and the tab shows it in place of
+the list.
+
+```
+The devtools config uses @axonpack/expo-devtools/support/preview/v0, which is for @axonpack/preview 0.x, but @axonpack/preview 1.0.0 is installed. Import the support from `@axonpack/expo-devtools/support/preview/v1` instead, and update @axonpack/expo-devtools if it doesn't have that entry yet.
+```

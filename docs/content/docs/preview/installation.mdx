@@ -78,8 +78,9 @@ can't use the plugin, pass the key and the slug yourself with the `buildKey` and
 
 An app that uses [`@axonpack/expo-devtools`](/docs/expo-devtools) installs this package and adds the
 config plugin the same way, and makes a new native build. The devtools don't add the plugin. Then,
-on [App setup](/docs/preview/app-setup#with-expo-devtools), the config goes in the devtools config
-instead of a `PreviewProvider` of your own, and the list shows as a Preview tab in the devtools.
+on [App setup](/docs/preview/app-setup#with-expo-devtools), the config goes to the devtools through
+`@axonpack/expo-devtools/support/preview/v0` (the support for this package's 0.x versions) instead
+of a `PreviewProvider` of your own, and the list shows as a Preview tab in the devtools.
 
 ## Give your AI agent the skill
 

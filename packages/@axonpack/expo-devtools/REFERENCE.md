@@ -531,9 +531,11 @@ anywhere in the tab, and no way to add a key that isn't already there.
 
 ## Preview tab
 
-`@axonpack/preview`'s own list, in the panel's theme, there once [`config.preview`](#devtoolsconfig)
-set preview up. The guide is [Preview](https://axonpack.dev/docs/expo-devtools/preview), and each part
-of the list is on preview's [App setup](https://axonpack.dev/docs/preview/app-setup#the-ready-made-list).
+`@axonpack/preview`'s own list, in the panel's theme, there once the
+[preview support](#supports) is in `supports`. When `@axonpack/preview` isn't installed, the
+tab shows that error instead. The guide is [Preview](https://axonpack.dev/docs/expo-devtools/supports/preview),
+and each part of the list is on preview's
+[App setup](https://axonpack.dev/docs/preview/app-setup#the-ready-made-list).
 
 | Part                | What it holds                                                                                       |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
@@ -1314,20 +1316,60 @@ a key of `config.themes`.
 | `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                  |
 | `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                               |
 | `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Open the AI Usage tab paused. Agents can still query the app.                                                                                |
-| `preview`                            | `PreviewConfig`               | `undefined` | `@axonpack/preview`'s own config. Set, its provider wraps the app (with `enabled: false` too) and the Preview tab joins the panel.           |
+| `supports`                           | `DevtoolsSupport[]`           | `undefined` | Tabs for other packages, each from a support's `configure()`. Its provider wraps the app, with `enabled: false` too.                         |
 
 The Redux tab is there once a store was created with [`devtoolsReduxEnhancer()`](#devtoolsreduxenhancer).
 
-`preview` needs `@axonpack/preview` 0.2.0 or later, an optional peer dependency. With `preview` set,
-the devtools enabled and the package missing, the start throws: "The devtools config has `preview`,
-but @axonpack/preview isn't installed. Install it with `npx expo install @axonpack/preview
-expo-file-system`, add `@axonpack/preview` to the plugins in app.json, and rebuild the app." With
-`enabled: false` nothing is thrown. The guide is [Preview](https://axonpack.dev/docs/expo-devtools/preview).
+#### Supports
+
+A support connects the devtools to another package. Each has its own entry point,
+`@axonpack/expo-devtools/support/<name>/v<major>`, and the main entry has none of them, so an app that
+doesn't import one never loads its package. `<major>` is the major version of the package it
+supports: import the one that matches the installed version. A new major of that package gets a new
+entry, and the old one stays until a major release of expo-devtools removes it. The guide is
+[Supports](https://axonpack.dev/docs/expo-devtools/supports).
+
+```ts
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+// or: import * as PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+// or: import { configure, type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+supports: [PreviewV0Support.configure(previewConfig)],
+```
+
+Every support module exports the same shape:
+
+| Export              | Kind     | What it is                                                                                   |
+| ------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `configure(config)` | function | Takes the package's own config and returns a `DevtoolsSupport` for `supports`. Never throws. |
+| default export      | object   | The same functions, so a default import and a namespace import read the same.                |
+| config types        | types    | The package's config types, re-exported. Named exports only; `any` without the package.      |
+| `DevtoolsSupport`   | type     | What `configure` returns. Also exported from the main entry.                                 |
+
+With the devtools on, a support whose package isn't installed, or is on another major, has the
+reason logged with `console.error` at start and shown in bold in its tab. Nothing throws, and with
+`enabled: false` nothing is logged. With two supports of one id in `supports`, such as two versions
+of one support, the first is used and the start logs the other with `console.error`. Installed but
+not in `supports`, the package is never loaded. Each package is an optional peer dependency.
+
+| Support | Version | Entry point                                  | For                                     | Types                                                                             |
+| ------- | ------- | -------------------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------- |
+| Preview | `v0`    | `@axonpack/expo-devtools/support/preview/v0` | `@axonpack/preview` 0.x, 0.2.0 or later | `PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions`, `DevtoolsSupport` |
+
+The preview support mounts preview's provider and adds the [Preview tab](#preview-tab). Without
+`@axonpack/preview` it logs and shows: "The devtools config sets up preview, but @axonpack/preview
+isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add
+`@axonpack/preview` to the plugins in app.json, and rebuild the app." With another major installed,
+1.0.0 for example, it logs and shows: "The devtools config uses
+@axonpack/expo-devtools/support/preview/v0, which is for @axonpack/preview 0.x, but @axonpack/preview
+1.0.0 is installed. Import the support from `@axonpack/expo-devtools/support/preview/v1` instead, and
+update @axonpack/expo-devtools if it doesn't have that entry yet." The guide is
+[Preview](https://axonpack.dev/docs/expo-devtools/supports/preview).
 
 #### `crash`
 
-Crash capture is the only part of this package that runs with the devtools off, apart from preview's
-provider. The guide is
+Crash capture is the only part of this package that runs with the devtools off, apart from the
+supports' providers. The guide is
 [Crash reporting](https://axonpack.dev/docs/expo-devtools/crash-reporting).
 
 | Option                               | Type                            | Default     | What it does                                                                                                                       |
@@ -1594,7 +1636,8 @@ property if you override it.
 `CrashPopupDetail`, `DevtoolsErrorBoundaryProps`, `StatusBarStyle`, `QueryClientLike`,
 `NavigationMove`, `NavigationRoute`, `NavigationRouterKind`, `NavigationState`,
 `NavigationContainerRefLike`, `NavigationContainerLike`, `ReduxAction`, `ReduxActionEntry`,
-`ActionTypeMatcher`.
+`ActionTypeMatcher`, `DevtoolsSupport`. From `@axonpack/expo-devtools/support/preview/v0`:
+`PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions` and `DevtoolsSupport`.
 
 ---
 

@@ -9,7 +9,6 @@ import { NavigationPanel } from '../components/navigation-panel';
 import { NetworkPanel } from '../components/network-panel';
 import { ConsoleBadge, CrashesBadge } from '../components/panel-badges.component';
 import { PerformancePanel } from '../components/performance-panel';
-import { PreviewPanel } from '../components/preview-panel';
 import { StoragePanel } from '../components/storage-panel';
 
 export type AxonpackPanel = {
@@ -54,12 +53,6 @@ const BUILT_IN: AxonpackPanel[] = [
     title: 'Navigation',
     icon: 'alt-route',
     component: NavigationPanel,
-  },
-  {
-    id: 'preview',
-    title: 'Preview',
-    icon: 'preview',
-    component: PreviewPanel,
   },
   {
     id: 'crashes',

@@ -75,10 +75,19 @@ Two things need a little more than that: an in-app browser takes the `useDevtool
 the Storage tab shows nothing until you register your stores in `config.storage.adapters`, because
 this package depends on no storage library and cannot discover one.
 
-With [`@axonpack/preview`](https://axonpack.dev/docs/preview) installed, pass its config as
-`config.preview` and the devtools set it up: preview's provider goes around your app and a Preview tab
-joins the panel, so the app mounts no `PreviewProvider` of its own. Preview still needs its own config
-plugin in `app.json`. See [Preview](https://axonpack.dev/docs/expo-devtools/preview).
+Supports connect the devtools to other packages. Each has its own entry point,
+`@axonpack/expo-devtools/support/<name>/v<major>`, never the main entry, and adds a tab once you pass
+it in `supports`. `<major>` is the major version of the package it supports. The first is preview,
+for [`@axonpack/preview`](https://axonpack.dev/docs/preview) 0.x:
+
+```tsx
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+
+<DevtoolsProvider config={{ enabled: __DEV__, supports: [PreviewV0Support.configure(previewConfig)] }}>
+```
+
+A support whose package isn't installed, or is on another major, logs what to do and shows it in its
+tab, and never crashes the app. See [Supports](https://axonpack.dev/docs/expo-devtools/supports).
 
 ## For AI agents
 
@@ -120,7 +129,7 @@ The same reference ships inside this package as [`REFERENCE.md`](./REFERENCE.md)
 `example/` is a runnable Expo app with one screen per tab, each a wall of buttons that produces real
 traffic, logs, stalls and crashes to look at. It doubles as a worked configuration: a custom theme, a
 REPL context, all four storage adapters against real AsyncStorage, MMKV, SecureStore and an
-in-memory `Map`, and `@axonpack/preview` set up through `config.preview`.
+in-memory `Map`, and `@axonpack/preview` set up through its support.
 
 ```sh
 cd example

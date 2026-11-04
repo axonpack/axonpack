@@ -49,6 +49,14 @@
       "expo-source": "./src/index.ts",
       "default": "./build/index.js"
     },
+    "./support/preview/v0": {
+      "types": {
+        "expo-source": "./src/support/preview/v0/index.ts",
+        "default": "./build/support/preview/v0/index.d.ts"
+      },
+      "expo-source": "./src/support/preview/v0/index.ts",
+      "default": "./build/support/preview/v0/index.js"
+    },
     "./metro": {
       "types": "./metro.d.ts",
       "default": "./metro.js"

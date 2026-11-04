@@ -6,6 +6,7 @@ import {
   secureStoreAdapter,
   type DevtoolsConfig,
 } from '@axonpack/expo-devtools';
+import PreviewV0Support, { type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
 import { QueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
 import { createMMKV } from 'react-native-mmkv';
@@ -31,6 +32,16 @@ export const SECURE_KEYS = ['session', 'pin'];
 
 /** The one client the Query demo provides to its screen and the Query tab reads. */
 export const queryClient = new QueryClient();
+
+const previewConfig: PreviewConfig = {
+  enabled: true,
+  s3Config: {
+    url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string,
+    readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
+    readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
+  },
+  devPreviewServers: true,
+};
 
 export const devtoolsConfig = {
   defaultTheme: 'empathika',
@@ -146,15 +157,7 @@ export const devtoolsConfig = {
   // Preview through the devtools: no PreviewProvider of the app's own, and a Preview tab in the
   // panel. Without EXPO_PUBLIC_PREVIEW_S3_URL in .env (see the preview example's .env.example) the
   // tab says previews aren't set up, and the dev preview servers still show.
-  preview: {
-    enabled: true,
-    s3Config: {
-      url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string,
-      readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
-      readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
-    },
-    devPreviewServers: true,
-  },
+  supports: [PreviewV0Support.configure(previewConfig)],
   // `satisfies` rather than a plain object: it is what checks `defaultTheme` against the themes
   // declared above, which is the job the old factory call used to do.
 } satisfies DevtoolsConfig<'midnight' | 'empathika'>;

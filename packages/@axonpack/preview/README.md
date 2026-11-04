@@ -78,8 +78,9 @@ bottom sheet, anywhere under the provider. See
 [Show the list anywhere](https://axonpack.dev/docs/preview/app-setup#show-the-list-anywhere).
 
 With [`@axonpack/expo-devtools`](https://axonpack.dev/docs/expo-devtools), skip the provider: pass the
-same config as `preview` in the devtools config, and the devtools mount the provider and show the
-list in a Preview tab. The config plugin is still yours to add. See
+same config through `@axonpack/expo-devtools/support/preview/v0` (the support for 0.x), and the
+devtools mount the provider and show the list in a Preview tab. The config plugin is still yours to
+add. See
 [With expo-devtools](https://axonpack.dev/docs/preview/app-setup#with-expo-devtools).
 
 Publish the current branch from the app's root. The bucket and the write key come from the

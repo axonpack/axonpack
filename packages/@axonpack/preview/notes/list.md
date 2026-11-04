@@ -14,7 +14,8 @@ The ready-made list QA uses in the app, and the hook that says what runs.
 - [x] Styled and extended like any list: its style, its padding, and the app's own header and footer
 - [x] A hook that returns what the header card shows, for a banner or badge of the app's own
 - [x] Draws without a FlatList, for a React Native DevTools tab, and Add a host types in one too
-- [x] Shown as a Preview tab in expo-devtools, when the app passes this package's config there
+- [x] Shown as a Preview tab in expo-devtools, when the app passes this package's config through its
+      preview support
 
 The whole list is one FlatList with a header, so it can sit in a screen, a tab or a modal without a
 scroll view around it. The rows are built by a pure function, which is what the tests cover.

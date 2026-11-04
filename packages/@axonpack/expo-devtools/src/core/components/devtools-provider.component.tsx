@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 import {
   DevtoolsOverlay,
@@ -7,7 +7,7 @@ import {
 import { startDevtools, type DevtoolsConfig } from '../../client/start-devtools.client';
 import { CrashReportOverlay } from '../../features/crash/components/crash-report-overlay.component';
 import { NavigationContextBridge } from '../../features/navigation/components/navigation-context-bridge.component';
-import { PreviewHost } from '../../features/preview/components/preview-host.component';
+import { supportsStore } from '../stores/supports.store';
 
 /**
  * Props for `<DevtoolsProvider />`. All optional: the loose ones style the launcher button (see
@@ -43,9 +43,9 @@ export type DevtoolsProviderProps<TThemeName extends string = never> = DevtoolsO
  * }
  * ```
  *
- * With `enabled: false` it renders its children and the crash sheet, inside preview's provider when
- * `config.preview` set one up, and nothing else: no patches, no button, no panel. That makes the
- * mount safe to leave in a release build unguarded.
+ * With `enabled: false` it renders its children and the crash sheet, inside the providers of
+ * `config.supports`, and nothing else: no patches, no button, no panel. That makes the mount safe
+ * to leave in a release build unguarded.
  *
  * Mounted inside a React Navigation container, it finds that container on its own; above one, the
  * app hands the container over with `useDevtoolsNavigation`.
@@ -68,10 +68,8 @@ export function DevtoolsProvider<TThemeName extends string = never>({
 
   const enabled = config?.enabled ?? true;
 
-  // Preview's provider goes around the panel too, so the Preview tab reads the same config. It
-  // mounts with the devtools off as well, since a preview's own start needs it.
-  return (
-    <PreviewHost>
+  const app = (
+    <>
       {children}
       {/* The crash sheet is the one thing that works with the devtools off, so it is mounted either
           way. `DevtoolsOverlay` mounts its own, and they de-duplicate. */}
@@ -83,6 +81,14 @@ export function DevtoolsProvider<TThemeName extends string = never>({
       ) : (
         <CrashReportOverlay />
       )}
-    </PreviewHost>
+    </>
   );
+  // Around the panel too, so a support's tab reads its own provider. Read without a hook: the start
+  // above set them, and they never change after.
+  return supportsStore
+    .getSupports()
+    .reduceRight<ReactElement>(
+      (tree, { Provider }) => (Provider ? <Provider>{tree}</Provider> : tree),
+      app
+    );
 }

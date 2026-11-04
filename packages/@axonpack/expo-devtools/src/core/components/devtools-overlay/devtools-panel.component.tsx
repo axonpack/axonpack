@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DevtoolsTabBar, type DevtoolsTab } from './devtools-tab-bar.component';
+import { DevtoolsTabBar } from './devtools-tab-bar.component';
 import { MetroStrip } from './metro-strip.component';
+import { SupportTab } from './support-tab.component';
 import { ThemePicker } from './theme-picker.component';
 import { AiUsageView } from '../../../features/ai-usage/components/ai-usage-view.component';
 import { ConsoleView } from '../../../features/console/components/console-view.component';
@@ -18,12 +19,12 @@ import { DebugView } from '../../../features/debug/components/debug-view.compone
 import { NavigationView } from '../../../features/navigation/components/navigation-view.component';
 import { NetworkView } from '../../../features/network/components/network-view.component';
 import { PerformanceView } from '../../../features/performance/components/performance-view.component';
-import { PreviewView } from '../../../features/preview/components/preview-view.component';
 import { QueryView } from '../../../features/query/components/query-view.component';
 import { ReduxView } from '../../../features/redux/components/redux-view.component';
 import { StorageView } from '../../../features/storage/components/storage-view.component';
 import { HIT_SLOP } from '../../constants/metrics.const';
 import { devtoolsTabStore } from '../../stores/devtools-tab.store';
+import { supportsStore, useSupportsStore } from '../../stores/supports.store';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import { IconButton } from '../ui/icon-button.ui';
 
@@ -37,7 +38,8 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
    */
   const insets = useSafeAreaInsets();
 
-  const [tab, setTab] = useState<DevtoolsTab>(devtoolsTabStore.get);
+  const [tab, setTab] = useState(devtoolsTabStore.get);
+  const supports = useSupportsStore(supportsStore.getSupports);
   // Crashes as well as errors: a crash is its own level now, and counting only `error` quietly
   // stopped the badge reporting the very rows most worth walking over to. Counted by the store so
   // this subscribes to the number, not to the log — every tab stays mounted, so re-rendering here
@@ -66,18 +68,18 @@ export function DevtoolsPanel({ onClose }: { onClose: () => void }) {
         return <NavigationView />;
       case 'redux':
         return <ReduxView />;
-      case 'preview':
-        return <PreviewView />;
       case 'crashes':
         return <CrashView />;
       case 'ai-usage':
         return <AiUsageView />;
       case 'debug':
         return <DebugView />;
-      default:
-        return null;
+      default: {
+        const support = supports.find(({ id }) => id === tab);
+        return support ? <SupportTab support={support} /> : null;
+      }
     }
-  }, [tab]);
+  }, [tab, supports]);
 
   return (
     <View style={styles.panel}>

@@ -1,0 +1,100 @@
+---
+title: Overview
+description: What a support is, how to turn one on, and what happens when its package is missing.
+icon: House
+---
+
+A support connects the devtools to another package. Each one has its own entry point,
+`@axonpack/expo-devtools/support/<name>/v<major>`, and nothing of it is in the main entry, so an app
+that doesn't import a support never loads its package. A support can put that package's provider
+around your app and add a tab to the panel and to the Axonpack tab in
+[React Native DevTools](/docs/expo-devtools/react-native-devtools).
+
+## Available supports
+
+| Support                                         | Version | Entry point                                  | For                                                      |
+| ----------------------------------------------- | ------- | -------------------------------------------- | -------------------------------------------------------- |
+| [Preview](/docs/expo-devtools/supports/preview) | `v0`    | `@axonpack/expo-devtools/support/preview/v0` | [`@axonpack/preview`](/docs/preview) 0.x, 0.2.0 or later |
+
+## Versions
+
+The version in a support's entry point is the major version of the package it supports:
+`support/preview/v0` is for `@axonpack/preview` 0.x. Import the one that matches the version you
+have installed. When the package moves to a new major, the support gets a new entry, such as
+`support/preview/v1`, and the old entry stays until a major release of expo-devtools removes it.
+
+With the wrong one, for example `support/preview/v0` while `@axonpack/preview` 1.x is installed, the
+devtools treat it like a missing package: they log which entry to use with `console.error`, and the
+tab shows the same text. Put one version of each support in `supports`. If there are two, the first
+is used and the start logs the other with `console.error`.
+
+## Turn one on
+
+1. Install the package the support is for, as its own docs say. Each support's page links them.
+
+2. Import the support for the major you installed (see [Versions](#versions)) and pass
+   `configure(config)` in `supports`. `configure` takes the package's own config:
+
+   ```tsx
+   import { DevtoolsProvider } from '@axonpack/expo-devtools';
+   import PreviewV0Support, { type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+   const previewConfig: PreviewConfig = { enabled: true };
+
+   export default function Root() {
+     return (
+       <DevtoolsProvider
+         config={{ enabled: __DEV__, supports: [PreviewV0Support.configure(previewConfig)] }}
+       >
+         <App />
+       </DevtoolsProvider>
+     );
+   }
+   ```
+
+   Each entry in `supports` turns one support on. The list is read once, on the first render, like
+   the rest of the config.
+
+Open the panel. Each support's tab is there, before Crashes.
+
+### Import forms
+
+Every support can be imported three ways:
+
+```ts
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+import * as PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+import { configure, type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+```
+
+The default export holds the same functions as the named exports, so `X.configure` works with a
+default import and with a namespace import.
+
+## Types
+
+Each support re-exports its package's config types, so the setup needs no import from that package
+itself. It also exports `DevtoolsSupport`, the type `configure` returns. Types are named exports
+only, since the default export is a plain object. In an app without the package, they are `any`.
+Each support's page lists its types, and all of them are on
+[Provider and config](/docs/expo-devtools/reference/provider#supports).
+
+## When the package isn't installed
+
+The support is in `supports` but its package isn't installed. The app still builds and runs, and
+nothing throws. At start the devtools log what to install with `console.error`, so it shows in the
+terminal running Metro and in LogBox, and the support's tab shows the same text in bold in place of
+its content. Each support's page has its exact text.
+
+With `enabled: false` nothing is logged, and there is no tab.
+
+## When it's installed but not turned on
+
+Installing a package doesn't turn its support on. Without the support in `supports`, the devtools
+never load the package: no tab, no provider, and the package works on its own as its docs describe.
+Every package a support is for is an optional peer dependency, so an app that uses no support
+installs none of them.
+
+## With the devtools off
+
+A support's provider goes around the app with `enabled: false` too, since its package may need it on
+every start. The tab is there only while the devtools run.

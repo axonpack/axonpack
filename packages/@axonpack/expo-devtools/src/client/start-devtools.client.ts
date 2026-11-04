@@ -1,8 +1,7 @@
-import type { PreviewConfig } from '@axonpack/preview';
-
 import { installAgent } from '../agent/services/install-agent.service';
 import type { BuiltInThemeId, ThemeConfig } from '../core/constants/theme.const';
 import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
+import { supportsStore, type DevtoolsSupport } from '../core/stores/supports.store';
 import { themeStore } from '../core/stores/theme.store';
 import { aiUsageStore } from '../features/ai-usage/stores/ai-usage.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
@@ -48,7 +47,6 @@ import {
   type MeasureOptions,
 } from '../features/performance/services/user-timing.service';
 import { performanceStore } from '../features/performance/stores/performance.store';
-import { setUpPreview } from '../features/preview/services/set-up-preview.service';
 import { queryStore, type QueryClientLike } from '../features/query/stores/query.store';
 import { reduxStore } from '../features/redux/stores/redux.store';
 import type { ActionTypeMatcher } from '../features/redux/utils/action-type-lists.util';
@@ -537,30 +535,23 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   /** The AI Usage tab: whether it starts recording. */
   aiUsage?: DevtoolsAiUsageConfig;
   /**
-   * `@axonpack/preview`'s own config, the one its `PreviewProvider` takes. Set it and the devtools
-   * set preview up for you: its provider goes around your app and a Preview tab joins the panel, so
-   * the app mounts no preview provider of its own.
+   * Tabs for other packages, one per entry, each from a support module's `configure()`. A support
+   * can put a provider around the app, add a tab to the panel and a panel to React Native DevTools.
+   * One support per package: with two versions of one, the first is used and the other is logged
+   * with `console.error`.
    *
-   * ```ts
-   * preview: {
-   *   enabled: true,
-   *   s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
-   *   devPreviewServers: true,
-   * }
-   * ```
-   *
-   * `@axonpack/preview` is a separate install with native code and a config plugin. With this set
-   * and the package missing, the devtools throw at start and say how to install it.
-   *
-   * Unlike the rest of this config, it applies with `enabled: false` too. A preview is a release
-   * bundle, where `__DEV__` is false, and preview's provider has to mount on every start or a
-   * preview is marked broken. Preview's own `enabled` decides whether previews are on. Unset by
-   * default, which leaves preview alone and the Preview tab out of the panel.
+   * Read once, like the rest of this config. Unlike the rest, a support's provider goes around the
+   * app with `enabled: false` too, since the package it supports may need it on every start. Its tab
+   * shows only while the devtools run. Unset by default: no extra tabs.
    */
-  preview?: PreviewConfig;
+  supports?: DevtoolsSupport[];
 };
 
 let started = false;
+
+export const supportTwice = (title: string) =>
+  `The devtools config has two ${title} supports in \`supports\`. The first one is used and the ` +
+  'other is ignored. Keep only the one for the installed version of its package.';
 
 /**
  * Configures and starts everything: installs the network and console patches, attaches the crash
@@ -575,9 +566,14 @@ export function startDevtools<TThemeName extends string = never>(
   config?: DevtoolsConfig<TThemeName>
 ) {
   if (started) return;
-  // Before `started`, so a missing package is reported on every render until it is installed.
-  if (config?.preview) setUpPreview(config.preview, config.enabled ?? true);
   started = true;
+  // Before the `enabled` gate: the providers go around the app with the devtools off too. An id
+  // twice, such as two versions of one support, keeps the first, since two providers of one package
+  // would fight over it.
+  const supports = config?.supports ?? [];
+  const isFirstOfId = (support: DevtoolsSupport, i: number) =>
+    supports.findIndex(({ id }) => id === support.id) === i;
+  supportsStore.setSupports(supports.filter(isFirstOfId));
 
   const enabled = config?.enabled ?? true;
   const {
@@ -776,6 +772,13 @@ export function startDevtools<TThemeName extends string = never>(
 
   if (aiUsageStartsPaused) aiUsageStore.setPaused(true);
   installAgent();
+
+  // Loud on purpose, after the console patch: the Metro terminal, LogBox and the Console tab all show
+  // it, as well as the support's own tab.
+  supports.forEach((support, i) => {
+    if (!isFirstOfId(support, i)) console.error(supportTwice(support.title));
+    else if (support.error) console.error(support.error);
+  });
 
   // Last, so the launcher button appears only once there is a working panel behind it. Anything
   // above throwing leaves the overlay hidden, which is the honest outcome.
