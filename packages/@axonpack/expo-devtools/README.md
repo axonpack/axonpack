@@ -9,7 +9,7 @@
 Tap a floating button for eleven tabs on the device itself: **Network** (every request, resendable,
 with throttling), **Console** (every log, plus a prompt that answers), **Performance** (frame rate,
 memory, the moments the app froze), **Storage** (every key you've saved), **Query**, **Navigation**,
-**Redux**, **Preview**, **Crashes**, **AI Usage** and **Debug**. No desktop debugger, no cable, and nothing
+**Redux**, **Preview**, **Crashes**, **CLI** and **Debug**. No desktop debugger, no cable, and nothing
 captured unless you switch it on.
 
 **[Documentation](https://axonpack.dev/docs/expo-devtools)** · [Quick start](https://axonpack.dev/docs/expo-devtools/quick-start) · [Reference](https://axonpack.dev/docs/expo-devtools/reference) · [Upgrading](https://axonpack.dev/docs/expo-devtools/upgrading) · [Changelog](https://axonpack.dev/docs/expo-devtools/changelog)
@@ -102,7 +102,7 @@ npx devtools network --where state=error --since 10m
 ```
 
 It works with any package manager, needs Node 22 or newer and `expo start`, and keeps every redaction
-you configured. The AI Usage tab lists each query and action, and the reply it got.
+you configured. The CLI tab lists each query and action, and the reply it got.
 [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) has every command, and a
 snippet to paste into your `AGENTS.md` or `CLAUDE.md`. The `axonpack`
 [agent skill](https://axonpack.dev/docs/agent-skills) has your agent learn the whole tool from the docs:

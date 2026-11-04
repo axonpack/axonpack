@@ -115,7 +115,7 @@ const needsYes = (action: string, yes?: boolean) => {
 
 /**
  * The `preview` topic for the `devtools` command line tool, read from the support's store. Its
- * actions switch the way the list's buttons do, so the AI Usage tab logs them like any other action.
+ * actions switch the way the list's buttons do, so the CLI tab logs them like any other action.
  */
 export function previewAgent(
   config: PreviewConfig,

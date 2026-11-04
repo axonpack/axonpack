@@ -63,7 +63,7 @@ function hello() {
 export type AgentHello = ReturnType<typeof hello>;
 
 /**
- * Every query passes through here and `hello` does not, so the AI Usage tab records each query and
+ * Every query passes through here and `hello` does not, so the CLI tab records each query and
  * never a probe.
  */
 function run(query: AgentQuery): string {
@@ -97,7 +97,7 @@ function act(call: AgentActionCall): string {
   }
   const start = performance.now();
   // Recorded when it ends, whether or not the CLI is still asking. A header the agent sent is
-  // masked as a logged one is, since the AI Usage tab shows the command.
+  // masked as a logged one is, since the CLI tab shows the command.
   const done = (text: string) => {
     const header = call?.options?.header;
     const shown = Array.isArray(header)

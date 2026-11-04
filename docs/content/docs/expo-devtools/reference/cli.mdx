@@ -38,7 +38,7 @@ for whichever form you use.
 | `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                              |
 | `devtools <command> --help` | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. |
 
-`apps` and `topics` are probes: the [AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab)
+`apps` and `topics` are probes: the [CLI tab](/docs/expo-devtools/reference/cli-tab)
 doesn't list them. In `apps`, the `devtools` column is the package version in the app, `-` when the
 app doesn't have it, and `?` when it can't be checked without `--force`.
 
@@ -253,10 +253,14 @@ Captured crashes, newest first. `get` adds the stack, the breadcrumbs and the de
 | `previous`    | True for a crash read back from the previous launch                                      |
 | `seen`        | True once the report was shown                                                           |
 
-### ai-usage
+### cli
 
-The queries and actions agents made, the last 100, each with the reply it got. A query of
-`ai-usage` keeps no reply. `--where 'action?'` lists the actions alone.
+The queries and actions made with this tool, the last 100, each with the reply it got. Its `#` lines
+call it CLI, as the tab does: `# CLI · <app> · <device> · 2 of 2 match`. A query of `cli` keeps no
+reply. `--where 'action?'` lists the actions alone.
+
+`ai-usage` is the topic's old name, from when the tab was called AI Usage. It still works and
+answers the same rows, but it is deprecated and `topics` doesn't list it.
 
 | Field         | Value                                                         |
 | ------------- | ------------------------------------------------------------- |
@@ -304,7 +308,7 @@ and looks for dev servers, behind a `# wait:` line. `get` prints preview's own o
 so does `preview` from the preview support; `devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
 don't go with an action, and action flags don't go with a query: either is an error before the tool
 looks for an app. Every action, refused ones too, is listed in the
-[AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab), marked as an action.
+[CLI tab](/docs/expo-devtools/reference/cli-tab), marked as an action.
 
 ### Action flags
 
@@ -359,15 +363,15 @@ and its body is not shown.
 
 While the request is in flight the app answers `# wait: sending <METHOD> <url> as <id>`, and the
 tool asks again every 200 ms within the [5 seconds](#timing). A request that takes longer carries on
-in the app. Running the command again would send it again, so the error points at `ai-usage`
-instead, where the action is listed once it ends.
+in the app. Running the command again would send it again, so the error points at the CLI tab and
+`devtools cli` instead, where the action is listed once it ends.
 
 ### preview actions
 
 From the [preview support](/docs/expo-devtools/supports/preview#switch-from-the-command-line). Each
 one restarts the app, so each needs `--yes`. The app answers first and restarts a moment later, or
-once a preview it has to download is on the device. The restart clears the log of actions, which is
-kept in memory.
+once a preview it has to download is on the device. The restart clears the CLI tab, which keeps its
+list in memory.
 
 | Action    | Args   | Flags   | Reply                                                                                                         |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
@@ -466,7 +470,7 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `can't read --body-file <path>: <why>`                                                                      | 1    |
 | `no reply from <app> on <device> in 5 s. Its JS may be paused at a breakpoint: resume it, then run the command again.` | 1 |
 | `still <what> after 5 s. The app keeps going, so run the same command again to pick up where it stopped.`  | 1    |
-| `still <what> after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.` (an action) | 1 |
+| `still <what> after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.` (an action) | 1 |
 | `could not reach Metro on port <port>`                                                                      | 1    |
 | `could not attach to <socket url>`                                                                          | 1    |
 | `the debugger socket closed (<code>: <reason>)`                                                             | 1    |

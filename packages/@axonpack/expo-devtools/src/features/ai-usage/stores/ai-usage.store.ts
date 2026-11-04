@@ -29,8 +29,8 @@ export type AiUsageEntry = {
   /** The message of an `error:` reply. */
   error?: string;
   /**
-   * The reply exactly as the agent got it, so after every redaction. Unset for a query of
-   * `ai-usage` itself, which would otherwise nest every earlier reply inside it.
+   * The reply exactly as the agent got it, so after every redaction. Unset for a query of `cli`
+   * (or its old name `ai-usage`) itself, which would otherwise nest every earlier reply inside it.
    */
   reply?: string;
   /** The reply was longer than `MAX_REPLY` and only its start is kept. */
@@ -72,7 +72,7 @@ export const aiUsageStore = {
     add(
       { command: formatCommand(query), topic: String(query.topic), ...reply },
       duration,
-      query.topic !== 'ai-usage'
+      query.topic !== 'cli' && query.topic !== 'ai-usage'
     );
   },
   recordAction(call: AgentActionCall, text: string, duration: number) {

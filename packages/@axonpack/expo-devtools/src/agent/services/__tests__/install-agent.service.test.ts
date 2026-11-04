@@ -47,7 +47,7 @@ it('lists one topic per feature', () => {
     'navigation',
     'redux',
     'crash',
-    'ai-usage',
+    'cli',
   ]);
 });
 
@@ -83,7 +83,7 @@ describe('installAgent', () => {
     expect(agent().run({ topic: 'nope' })).toBe('error: unknown topic "nope". Topics: log');
   });
 
-  it('records each query with its reply for the AI Usage tab, and never hello', () => {
+  it('records each query with its reply for the CLI tab, and never hello', () => {
     aiUsageStore.clear();
     installAgent();
     agent().hello();
@@ -113,16 +113,17 @@ describe('installAgent', () => {
     expect(aiUsageStore.getSnapshot()).toHaveLength(1);
   });
 
-  it('records a query of ai-usage without its reply', () => {
+  // `ai-usage` is the topic's old name, which still works.
+  it.each(['cli', 'ai-usage'])('records a query of %s without its reply', (topic) => {
     aiUsageStore.clear();
     TOPICS.push(AI_USAGE_AGENT);
     installAgent();
     agent().run({ topic: 'log' });
-    const reply = agent().run({ topic: 'ai-usage' });
+    const reply = agent().run({ topic });
 
     expect(reply).toContain('log');
     const [entry] = aiUsageStore.getSnapshot();
-    expect(entry).toMatchObject({ topic: 'ai-usage', matched: 1, total: 1, size: reply.length });
+    expect(entry).toMatchObject({ topic, matched: 1, total: 1, size: reply.length });
     expect(entry.reply).toBeUndefined();
   });
 
@@ -162,7 +163,7 @@ describe('installAgent', () => {
       expect(agent().hello().topics[0].actions).toEqual(['add', 'slow']);
     });
 
-    it('runs an action and records it in AI Usage, marked as one', () => {
+    it('runs an action and records it in the CLI tab, marked as one', () => {
       const reply = agent().act({ topic: 'log', action: 'add', args: ['hi there'] });
 
       expect(reply).toBe('# log · added hi there');

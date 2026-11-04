@@ -51,6 +51,8 @@ Usage
                                  one from the app. See devtools network --help
   devtools <command> --help      more on one command
 
+\`ai-usage\` is the old name of the \`cli\` topic. It still works, but it is deprecated.
+
 ${QUERY_FLAGS}
 
 ${APP_FLAGS}
@@ -168,8 +170,8 @@ Network tab's Overrides view, and last until the app reloads or you remove them.
                       header the app's redactHeaders config removed goes as [redacted]
 
 send and replay answer with the new row (id, method, code, state, ms, url, error), so
-\`devtools get network <id>\` shows the response. Each action shows in \`devtools ai-usage\` and
-the AI Usage tab, marked as an action. A header's value is masked there as in the log.
+\`devtools get network <id>\` shows the response. Each action shows in \`devtools cli\` and
+the CLI tab, marked as an action. A header's value is masked there as in the log.
 
 Exit codes: 0 done, 1 an "error:" reply (bad argument, no such row, --yes missing), 2 no app.
 

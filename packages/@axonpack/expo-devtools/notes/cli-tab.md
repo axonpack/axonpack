@@ -1,6 +1,7 @@
-# AI Usage
+# CLI tab
 
-Every query and action an AI agent made in the app from the terminal, and the reply it got.
+Every query and action made in the app with the `devtools` command line tool, by an AI agent or by
+a person, and the reply it got.
 
 ## Features
 
@@ -34,7 +35,7 @@ matched of the total, how long the app took, the reply's size, the error, and th
 - **A query of this tab keeps no reply.** It would otherwise repeat every earlier reply inside it.
   Its size and counts are kept.
 - **Paused keeps nothing but answers everything.** Pausing stops the list, never the agent, the way
-  the record button on the other tabs stops capture and nothing else. `aiUsage.disabledByDefault`
+  the record button on the other tabs stops capture and nothing else. `cli.disabledByDefault`
   starts it paused.
 - **The command is written so it can be pasted back.** Quoted only where a shell would read it as
   something else. An action's command is the exception: a header the log would mask shows as
@@ -42,3 +43,10 @@ matched of the total, how long the app took, the reply's size, the error, and th
 - **An action is recorded when it ends.** One that waits on a request (`send`, `replay`) is
   recorded when the request settles, whether or not the tool is still asking, so a request that
   outlasts the tool's 5 seconds still shows how it ended.
+- **Renamed from AI Usage after 3.8.** People run the tool too, and their queries show up here
+  like an agent's. The old names still work and are marked deprecated: the `ai-usage` topic is an
+  `alias` on the topic, and `aiUsage` in the config is read when `cli` doesn't set the same field.
+  The code keeps the old name (`features/ai-usage/`, `aiUsageStore`, the tab key and the DevTools
+  panel id), since a `features/cli/` folder would sit confusingly next to `src/cli/`.
+- **Read as CLI, typed as `cli`.** Labels, messages and the reply's `#` lines say CLI (the topic's
+  `title`). The topic, the config key and the docs URL stay lowercase like every other topic.

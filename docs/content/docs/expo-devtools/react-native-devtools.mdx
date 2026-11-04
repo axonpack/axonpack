@@ -4,7 +4,7 @@ description: The panel on your computer, in its own Axonpack tab beside Console 
 ---
 
 The package puts an **Axonpack** tab in React Native DevTools, the debugger that opens when you press
-`j` in Metro. It holds the device's Network, Console, Performance, Storage, Preview, Crashes, AI Usage and Debug tabs,
+`j` in Metro. It holds the device's Network, Console, Performance, Storage, Preview, Crashes, CLI and Debug tabs,
 laid out like Chrome's own panels, and it reads the app's own stores: a request made on the phone is a
 row on the desktop the moment it starts, and a filter set on one side is set on the other.
 
@@ -123,11 +123,11 @@ is no pull to refresh, so use Refresh on the header card. Switching restarts the
 
 Opening a report marks it read on the device too.
 
-## AI Usage
+## CLI
 
-- Every query and action an AI agent made in the app with the `devtools` command line tool, with
-  its time, command, rows matched (`action` for an action) and how long the app took. Record and
-  Clear sit in the toolbar.
+- Every query and action an AI agent, or you, made in the app with the `devtools` command line
+  tool, with its time, command, rows matched (`action` for an action) and how long the app took.
+  Record and Clear sit in the toolbar. Up to version 3.8 this tab was called AI Usage.
 - Click a query for its pane: the topic, the reply's size and any error, then the reply exactly as
   the agent got it. Copy the reply from the pane's bar.
 

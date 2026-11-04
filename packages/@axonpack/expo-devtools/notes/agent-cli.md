@@ -36,7 +36,7 @@ so a new tab gets all of them by adding that description and one line in the lis
 
 An action is the same evaluate of a second method, `__AXONPACK_AGENT__.act(call)`. A topic lists
 its actions by name, each with how many words it takes, the flags it reads and a handler. The
-checks (unknown action, word count, a flag it doesn't take) and the AI Usage record are written
+checks (unknown action, word count, a flag it doesn't take) and the CLI tab record are written
 once. Only `network` has actions.
 
 ## Decisions worth knowing
@@ -91,7 +91,7 @@ once. Only `network` has actions.
   an action that waits answers `# wait:` and the tool asks again with the same call (it carries a
   random `ref`) every 200 ms, as a storage read does. The app keeps the answer until it is asked
   for, at most 20 at once. Running the command again would send the request again, so a timeout
-  points at `ai-usage` instead.
+  points at the CLI tab and `devtools cli` instead.
 - **`--yes` is checked in the app.** A call through the relay never passes through the CLI, so a
   method other than GET, HEAD and OPTIONS is refused in the handler unless the call says `yes`.
   Those three only read, so they go without.

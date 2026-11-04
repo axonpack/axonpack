@@ -58,7 +58,7 @@ export function QueryDetail({ entry, onClose }: { entry: AiUsageEntry; onClose: 
           <summary>Reply</summary>
           {entry.reply === undefined ? (
             <p className="axonpack-net-none">
-              Not kept for a query of ai-usage, since it would repeat every earlier reply.
+              Not kept for a query of CLI, since it would repeat every earlier reply.
             </p>
           ) : parsed !== undefined ? (
             <JsonTree value={parsed} />

@@ -1,3 +1,4 @@
+import { PANELS } from '../../../../devtools-remote-tab/constants/panels.const';
 import { shownTabs } from '../devtools-tab-bar.component';
 
 // The icon font pulls in expo-asset, which jest can't resolve, and no icon is drawn here.
@@ -23,4 +24,9 @@ describe('shownTabs', () => {
       'debug',
     ]);
   });
+});
+
+it('calls the tab CLI in the app and in React Native DevTools', () => {
+  expect(shownTabs({}).find((tab) => tab.key === 'ai-usage')?.label).toBe('CLI');
+  expect(PANELS.find((panel) => panel.id === 'ai-usage')?.title).toBe('CLI');
 });

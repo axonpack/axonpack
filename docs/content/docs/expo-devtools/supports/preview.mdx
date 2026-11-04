@@ -220,7 +220,7 @@ Each one needs `--yes`, since it restarts the app. Without it the reply is
 
 The app answers, then restarts a moment later, or once a preview it has to download is on the device.
 If the download fails, the app stays on what it runs, and `devtools get preview now` shows the error
-in `error`. The AI Usage tab logs each action, refused ones too, but its log is kept in memory, so the
+in `error`. The CLI tab logs each action, refused ones too, but its log is kept in memory, so the
 restart clears it. Run `npx devtools preview` again once the app is back to see what runs.
 
 With `enabled: false` in the preview config the topic is off, and every query answers

@@ -272,7 +272,7 @@ const stillWaiting = (what: string) =>
 
 // Asking again would send it again, so this one points at where its outcome lands instead.
 const stillActing = (what: string) =>
-  `still ${what} after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.`;
+  `still ${what} after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.`;
 
 const noAgent = (app: App) =>
   `${label(app)} has no devtools agent. It needs @axonpack/expo-devtools with <DevtoolsProvider> mounted, in a dev build or Expo Go.`;

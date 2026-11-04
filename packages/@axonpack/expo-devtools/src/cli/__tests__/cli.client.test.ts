@@ -425,7 +425,7 @@ describe('an action', () => {
 
     expect(await code).toBe(1);
     expect(stderr).toBe(
-      "error: still sending GET https://x as n7 after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.\n"
+      "error: still sending GET https://x as n7 after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.\n"
     );
   });
 

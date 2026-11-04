@@ -12,7 +12,7 @@ This file ships inside the package. The same reference, split into pages and sea
 - [Performance tab](#performance-tab)
 - [Storage tab](#storage-tab)
 - [Preview tab](#preview-tab)
-- [AI Usage tab](#ai-usage-tab)
+- [CLI tab](#cli-tab)
 - [React Native DevTools tab](#react-native-devtools-tab)
 - [The `devtools` command line tool](#the-devtools-command-line-tool)
 - [API](#api)
@@ -32,12 +32,12 @@ full-screen modal; the button itself never appears inside the modal. With
 
 ### Header row
 
-| Item         | What it does                                                                                                                                                                                                                                                           |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Query**, **Navigation**, **Redux**, **Preview**, **Crashes**, **AI Usage**, **Debug**. Query, Navigation, Redux and Preview show only when the app has one to show. Scrolls horizontally on a narrow screen. |
-| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports.                                                                                                             |
-| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                                                                                                                                   |
-| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                                                                                                                                           |
+| Item         | What it does                                                                                                                                                                                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Query**, **Navigation**, **Redux**, **Preview**, **Crashes**, **CLI**, **Debug**. Query, Navigation, Redux and Preview show only when the app has one to show. Scrolls horizontally on a narrow screen. |
+| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports.                                                                                                        |
+| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                                                                                                                              |
+| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                                                                                                                                      |
 
 In a debug build whose bundle came from Metro, a strip under the header says **Metro server
 detected**. Its **Open DevTools** button opens React Native DevTools on the Axonpack tab, the same
@@ -54,7 +54,7 @@ of the panel, and its content scrolls in what is left.
 
 ### Toolbar row
 
-On the tabs that record (Network, Console, Performance, Navigation and AI Usage) it opens with the
+On the tabs that record (Network, Console, Performance, Navigation and CLI) it opens with the
 same two controls:
 
 | Control    | What it does                                                                         |
@@ -550,16 +550,17 @@ The Axonpack tab in React Native DevTools has the same list as its Preview panel
 There every row is drawn at once, there is no pull to refresh, and the list is read again each time
 the panel opens.
 
-## AI Usage tab
+## CLI tab
 
 Every query and [action](#actions) an AI agent, or you, made in the app with
 [the `devtools` command line tool](#the-devtools-command-line-tool), newest first, with the reply it
 got. Holds the **100** most recent. The reply is recorded after every redaction, so the tab shows
 exactly what left the app. The same list is a panel in the React Native DevTools tab, and the
-`ai-usage` topic of the tool.
+`cli` topic of the tool. Up to version 3.8 the tab was called **AI Usage**. The old `ai-usage` topic
+and the old `aiUsage` config key still work, but are deprecated.
 
 Record (⏺) and Clear (⊘) open the toolbar, as on the other tabs that record. Paused, agents can still
-query and act, and nothing they do is kept. `aiUsage.disabledByDefault` opens the tab paused.
+query and act, and nothing they do is kept. `cli.disabledByDefault` opens the tab paused.
 
 | Row element | Meaning                                                                                                                            |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -575,12 +576,12 @@ Matched (Action and its name, for an action), Took, Reply size and any Error, th
 
 - `apps` and `topics` are probes and are not listed.
 - Up to 64 K characters of each reply are kept. Reply size then says `cut to the first 64 K`.
-- A query of `ai-usage` itself is listed without its reply, which would otherwise repeat every
-  earlier reply.
+- A query of `cli` itself is listed without its reply, which would otherwise repeat every earlier
+  reply.
 - Every action is listed, refused ones too. One that waits on the app (`network send`, `replay`) is
   listed when it ends. In its command a masked header shows as `[redacted]`, and a body over 200
   characters as its start and length.
-- With no query yet, the tab says **No agent queries yet**, says an agent can read the devtools, mock
+- With no query yet, the tab says **No queries yet**, says an agent can read the devtools, mock
   a request or send one, and shows `npx devtools topics` to start with.
 
 ---
@@ -840,7 +841,7 @@ for whichever form you use.
 | `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                                                                                                                                                         |
 | `devtools <command> --help`                | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. |
 
-`apps` and `topics` are probes: the [AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab)
+`apps` and `topics` are probes: the [CLI tab](https://axonpack.dev/docs/expo-devtools/reference/cli-tab)
 doesn't list them. In `apps`, the `devtools` column is the package version in the app, `-` when the
 app doesn't have it, and `?` when it can't be checked without `--force`.
 
@@ -1055,10 +1056,14 @@ Captured crashes, newest first. `get` adds the stack, the breadcrumbs and the de
 | `previous`    | True for a crash read back from the previous launch                                 |
 | `seen`        | True once the report was shown                                                      |
 
-#### ai-usage
+#### cli
 
-The queries and actions agents made, the last 100, each with the reply it got. A query of
-`ai-usage` keeps no reply. `--where 'action?'` lists the actions alone.
+The queries and actions made with this tool, the last 100, each with the reply it got. Its `#` lines
+call it CLI, as the tab does: `# CLI · <app> · <device> · 2 of 2 match`. A query of `cli` keeps no
+reply. `--where 'action?'` lists the actions alone.
+
+`ai-usage` is the topic's old name, from when the tab was called AI Usage. It still works and
+answers the same rows, but it is deprecated and `topics` doesn't list it.
 
 | Field         | Value                                                                                                                                                |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1106,7 +1111,7 @@ for the row. `off` when the preview config has `enabled: false`.
 so does `preview` from the preview support; `devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
 don't go with an action, and action flags don't go with a query: either is an error before the tool
 looks for an app. Every action, refused ones too, is listed in the
-[AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab), marked as an action.
+[CLI tab](https://axonpack.dev/docs/expo-devtools/reference/cli-tab), marked as an action.
 
 #### Action flags
 
@@ -1161,15 +1166,15 @@ and its body is not shown.
 
 While the request is in flight the app answers `# wait: sending <METHOD> <url> as <id>`, and the
 tool asks again every 200 ms within the [5 seconds](#timing). A request that takes longer carries on
-in the app. Running the command again would send it again, so the error points at `ai-usage`
-instead, where the action is listed once it ends.
+in the app. Running the command again would send it again, so the error points at the CLI tab and
+`devtools cli` instead, where the action is listed once it ends.
 
 #### preview actions
 
 From the [preview support](https://axonpack.dev/docs/expo-devtools/supports/preview#switch-from-the-command-line).
 Each one restarts the app, so each needs `--yes`. The app answers first and restarts a moment later,
-or once a preview it has to download is on the device. The restart clears the log of actions, which
-is kept in memory.
+or once a preview it has to download is on the device. The restart clears the [CLI tab](#cli-tab),
+which keeps its list in memory.
 
 | Action    | Args   | Flags   | Reply                                                                                                          |
 | --------- | ------ | ------- | -------------------------------------------------------------------------------------------------------------- |
@@ -1268,7 +1273,7 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `can't read --body-file <path>: <why>`                                                                                                                                                                                                                | 1    |
 | `no reply from <app> on <device> in 5 s. Its JS may be paused at a breakpoint: resume it, then run the command again.`                                                                                                                                | 1    |
 | `still <what> after 5 s. The app keeps going, so run the same command again to pick up where it stopped.`                                                                                                                                             | 1    |
-| `still <what> after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.` (an action)                                                                                                                           | 1    |
+| `still <what> after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.` (an action)                                                                                                                 | 1    |
 | `could not reach Metro on port <port>`                                                                                                                                                                                                                | 1    |
 | `could not attach to <socket url>`                                                                                                                                                                                                                    | 1    |
 | `the debugger socket closed (<code>: <reason>)`                                                                                                                                                                                                       | 1    |
@@ -1362,7 +1367,8 @@ a key of `config.themes`.
 | `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                                   |
 | `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                                    |
 | `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                                                 |
-| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Open the AI Usage tab paused. Agents can still query the app.                                                                                                  |
+| `cli.disabledByDefault`              | `boolean`                     | `false`     | Open the CLI tab paused. Agents can still query the app.                                                                                                       |
+| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Deprecated. The old name of `cli.disabledByDefault`, which wins when both are set.                                                                             |
 | `supports`                           | `DevtoolsSupport[]`           | `undefined` | Tabs, command line topics and `>` prompt names for other packages, each from a support's `configure()`. Its provider wraps the app, with `enabled: false` too. |
 
 The Redux tab is there once a store was created with [`devtoolsReduxEnhancer()`](#devtoolsreduxenhancer).
@@ -1683,7 +1689,7 @@ property if you override it.
 
 `DevtoolsConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
 `DevtoolsStorageConfig`, `DevtoolsQueryConfig`, `DevtoolsNavigationConfig`, `DevtoolsReduxConfig`,
-`DevtoolsCrashConfig`, `DevtoolsAiUsageConfig`, `DevtoolsProviderProps`, `DevtoolsPanelControls`,
+`DevtoolsCrashConfig`, `DevtoolsCliConfig` (`DevtoolsAiUsageConfig` is its deprecated old name), `DevtoolsProviderProps`, `DevtoolsPanelControls`,
 `DevtoolsWebViewProps`, `BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`,
 `NetworkEntry`, `NetworkLogEntry`, `WebSocketLogEntry`, `NetworkLogStatus`, `ResolvedNetworkConditions`, `ThrottlePresetId`,
 `ThrottleProfile`, `UserAgentPresetId`, `ConsoleLogEntry`, `ConsoleLogLevel`, `LongTaskEntry`,

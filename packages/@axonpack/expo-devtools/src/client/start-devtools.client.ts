@@ -465,14 +465,17 @@ export type DevtoolsReduxConfig = {
   deny?: ActionTypeMatcher[];
 };
 
-/** The AI Usage tab: whether it starts recording the queries agents make with `npx devtools`. */
-export type DevtoolsAiUsageConfig = {
+/** The CLI tab: whether it starts recording the queries made with `npx devtools`. */
+export type DevtoolsCliConfig = {
   /**
-   * Open the AI Usage tab with recording paused, so no query is kept until the record button in its
-   * toolbar is pressed. Defaults to `false`. Agents can still query the app while it is paused.
+   * Open the CLI tab with recording paused, so no query is kept until the record button in its
+   * toolbar is pressed. Defaults to `false`. The CLI can still query the app while it is paused.
    */
   disabledByDefault?: boolean;
 };
+
+/** @deprecated Renamed to `DevtoolsCliConfig`, which is the same type. */
+export type DevtoolsAiUsageConfig = DevtoolsCliConfig;
 
 /**
  * Everything `<DevtoolsProvider config={...} />` accepts. Every field is optional and the defaults
@@ -533,8 +536,13 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   redux?: DevtoolsReduxConfig;
   /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
   crash?: DevtoolsCrashConfig;
-  /** The AI Usage tab: whether it starts recording. */
-  aiUsage?: DevtoolsAiUsageConfig;
+  /** The CLI tab: whether it starts recording. */
+  cli?: DevtoolsCliConfig;
+  /**
+   * @deprecated Renamed to `cli`, along with the tab. It still works, and `cli` wins when both are
+   * set.
+   */
+  aiUsage?: DevtoolsCliConfig;
   /**
    * Tabs for other packages, one per entry, each from a support module's `configure()`. A support
    * can put a provider around the app, add a tab to the panel and a panel to React Native DevTools,
@@ -612,7 +620,8 @@ export function startDevtools<TThemeName extends string = never>(
     allow: reduxAllow,
     deny: reduxDeny,
   } = config?.redux ?? {};
-  const { disabledByDefault: aiUsageStartsPaused = false } = config?.aiUsage ?? {};
+  const cliStartsPaused =
+    config?.cli?.disabledByDefault ?? config?.aiUsage?.disabledByDefault ?? false;
   const {
     enabled: crashEnabled = true,
     enableWhileDevtoolsDisabled: crashSurvivesDisabled = false,
@@ -774,7 +783,7 @@ export function startDevtools<TThemeName extends string = never>(
   reduxStore.setEnabled(true);
   if (reduxStartsPaused) reduxStore.setPaused(true);
 
-  if (aiUsageStartsPaused) aiUsageStore.setPaused(true);
+  if (cliStartsPaused) aiUsageStore.setPaused(true);
   installAgent();
 
   // Loud on purpose, after the console patch: the Metro terminal, LogBox and the Console tab all show

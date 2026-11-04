@@ -3,7 +3,7 @@ import { aiUsageStore } from '../../stores/ai-usage.store';
 import { AI_USAGE_AGENT } from '../ai-usage-agent.const';
 
 const ask = (rest: Partial<AgentQuery> = {}) =>
-  runQuery([AI_USAGE_AGENT], { topic: 'ai-usage', ...rest }).text;
+  runQuery([AI_USAGE_AGENT], { topic: 'cli', ...rest }).text;
 
 // Once, since the store numbers its ids for the life of the module.
 beforeAll(() => {
@@ -16,12 +16,12 @@ beforeAll(() => {
   aiUsageStore.record({ topic: 'nope' }, { text: 'error: unknown topic "nope"' }, 0.4);
 });
 
-describe('the ai-usage topic', () => {
+describe('the cli topic', () => {
   it('lists queries newest first with matched, total and ms', () => {
     const [first, second] = aiUsageStore.getSnapshot().map((entry) => entry.id);
     expect(ask()).toBe(
       [
-        '# ai-usage · 2 of 2 match',
+        '# CLI · 2 of 2 match',
         'id\tcommand\tmatched\ttotal\tms',
         `${first}\tnope\t-\t-\t0.4`,
         `${second}\tnetwork --where 'code>=400'\t1\t9\t12`,
@@ -43,10 +43,22 @@ describe('the ai-usage topic', () => {
     });
   });
 
-  it('keeps no reply for a query of ai-usage', () => {
-    aiUsageStore.record({ topic: 'ai-usage' }, { text: ask(), matched: 2, total: 2 }, 1);
+  it('answers ai-usage, its old name, with the same rows', () => {
+    const old = (rest: Partial<AgentQuery>) =>
+      runQuery([AI_USAGE_AGENT], { topic: 'ai-usage', ...rest }).text;
+    expect(old({})).toBe(ask());
+    expect(old({ where: ['topic=network'], json: true })).toBe(
+      ask({ where: ['topic=network'], json: true })
+    );
+    const id = aiUsageStore.getSnapshot()[1].id;
+    expect(old({ get: id, json: true })).toBe(ask({ get: id, json: true }));
+    expect(old({ get: id }).split('\n')[0]).toBe(`# CLI ${id}`);
+  });
+
+  it.each(['cli', 'ai-usage'])('keeps no reply for a query of %s', (topic) => {
+    aiUsageStore.record({ topic }, { text: ask(), matched: 2, total: 2 }, 1);
     const [entry] = aiUsageStore.getSnapshot();
-    expect(entry).toMatchObject({ topic: 'ai-usage', matched: 2, total: 2 });
+    expect(entry).toMatchObject({ topic, matched: 2, total: 2 });
     expect(entry.reply).toBeUndefined();
     expect(entry.size).toBeGreaterThan(0);
   });

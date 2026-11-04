@@ -32,7 +32,7 @@ export function errorLine(error: unknown): string {
 }
 
 function start(topics: readonly AgentTopic[], call: AgentActionCall) {
-  const topic = topics.find((each) => each.name === call?.topic);
+  const topic = topics.find((each) => each.name === call?.topic || each.alias === call?.topic);
   if (!topic) {
     const names = topics.map((each) => each.name).join(', ');
     throw new Error(`unknown topic "${call?.topic}". Topics: ${names}`);

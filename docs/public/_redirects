@@ -1,0 +1,4 @@
+# Cloudflare Pages reads this from the build output. Installed agent skills link the old page.
+/docs/expo-devtools/reference/ai-usage-tab /docs/expo-devtools/reference/cli-tab/ 301
+/docs/expo-devtools/reference/ai-usage-tab/ /docs/expo-devtools/reference/cli-tab/ 301
+/llms.mdx/docs/expo-devtools/reference/ai-usage-tab/content.md /llms.mdx/docs/expo-devtools/reference/cli-tab/content.md 301

@@ -50,7 +50,7 @@ export function AiUsageView() {
             <View style={styles.badge}>
               <MaterialIcons name="smart-toy" size={22} color={COLORS.accent} />
             </View>
-            <Text style={styles.title}>No agent queries yet</Text>
+            <Text style={styles.title}>No queries yet</Text>
             <Text style={styles.lede}>
               An AI agent, or you, can read this app's devtools from a terminal, mock a request or
               send one. Each query and action shows up here with the reply it got. Start in the

@@ -24,7 +24,7 @@ fetch-1762172290871-198   GET     500   error  92   https://api.example.com/v1/o
 
 There is nothing to set up beyond the [provider](/docs/expo-devtools/quick-start): the tool ships
 inside the package. Every query and action an agent makes, and the reply it got, is listed in the
-[AI Usage tab](#the-ai-usage-tab).
+[CLI tab](#the-cli-tab).
 
 ## Requirements
 
@@ -180,7 +180,7 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 | `navigation`  | A move the navigator made. The last 200                                                       | `id action from to`                | `id t action from to path params container noop`                                    |
 | `redux`       | A dispatched action and what it changed in the state. The last 200                            | `id type changed`                  | `id t type action changed changes`                                                  |
 | `crash`       | A captured crash                                                                              | `id kind name message`             | `id t kind name message route previous seen`                                        |
-| `ai-usage`    | A query or action an agent made, with the reply it got. The last 100                          | `id command matched total ms`      | `id t command topic action matched total ms size error cut reply`                   |
+| `cli`         | A query or action made with this tool, with the reply it got. The last 100. `ai-usage`, its old name, still works | `id command matched total ms`      | `id t command topic action matched total ms size error cut reply`                   |
 | `preview`     | From the [preview support](/docs/expo-devtools/supports/preview#from-the-command-line), only while it is in `supports`: what runs now (`id` is `now`), a dev server or a preview | `id kind title status branch active` | `id t kind title status branch active environment`                 |
 
 - In `network`, `code` is the HTTP status only, and a socket's close code is `close` (`-` on an
@@ -292,7 +292,7 @@ flags are in the [CLI reference](/docs/expo-devtools/reference/cli#actions).
   same URL, but the agent only ever sees them masked.
 - **An action that restarts the app needs `--yes`.** The `preview` topic's `switch` and `default`
   refuse without it.
-- **Every action is recorded**, refused ones too, in the [AI Usage tab](#the-ai-usage-tab).
+- **Every action is recorded**, refused ones too, in the [CLI tab](#the-cli-tab).
 - **Development only**, like the rest of the tool.
 
 ## Redaction
@@ -341,10 +341,11 @@ connection closes the DevTools window open on it. There:
 A window opened some other way than through Metro (`j` in the terminal, or Open DevTools in the dev
 menu) doesn't take calls, so the tool doesn't know about it, and connecting closes it.
 
-## The AI Usage tab
+## The CLI tab
 
-Every query and action an agent makes is listed in the **AI Usage** tab, on the device and in
-[React Native DevTools](/docs/expo-devtools/react-native-devtools#ai-usage), with the reply it got.
+Every query and action made with the tool, by an agent or by you, is listed in the **CLI** tab, on
+the device and in [React Native DevTools](/docs/expo-devtools/react-native-devtools#cli), with the
+reply it got. Up to version 3.8 it was called **AI Usage**.
 The reply is taken after every redaction, so the tab shows exactly what left the app.
 
 - A row shows the command as you would type it after `devtools`, the time, how many rows it matched
@@ -355,19 +356,20 @@ The reply is taken after every redaction, so the tab shows exactly what left the
 - Record and Clear sit in the toolbar. The tab keeps the last 100 queries, and up to 64 K characters
   of each reply.
 - `apps` and `topics` are not listed: they are probes, not queries.
-- `aiUsage: { disabledByDefault: true }` opens the tab paused. Agents can still query and act while
-  it is paused; what they do is just not kept.
+- `cli: { disabledByDefault: true }` opens the tab paused. Agents can still query and act while it
+  is paused; what they do is just not kept. The old `aiUsage` key still works, but is deprecated.
 
 The tab is also a topic, so you or another agent can check what was asked and answered:
 
 ```sh
-devtools ai-usage --since 1h --where 'topic=network'
-devtools ai-usage --where 'action?'
-devtools get ai-usage q12
+devtools cli --since 1h --where 'topic=network'
+devtools cli --where 'action?'
+devtools get cli q12
 ```
 
-A query of `ai-usage` is listed without its reply, which would otherwise repeat every earlier reply.
-Every control is in the [AI Usage tab reference](/docs/expo-devtools/reference/ai-usage-tab).
+A query of `cli` is listed without its reply, which would otherwise repeat every earlier reply. The
+old topic name, `ai-usage`, still works, but is deprecated. Every control is in the
+[CLI tab reference](/docs/expo-devtools/reference/cli-tab).
 
 ## Tell your agent about it
 
@@ -433,7 +435,7 @@ Performance tab first.
 | `2 apps match. Pick one:`                                  | Add one of the `--app` and `--device` pairs it lists.                                                         |
 | `... can't share its debugger ...`                         | See [Older React Native](#older-react-native).                                                                |
 | `POST can change data on the server, so it needs --yes`    | Add `--yes` if you mean to send it. GET, HEAD and OPTIONS need none.                                         |
-| `still sending ... after 5 s`                              | The request carries on in the app. `devtools ai-usage --where 'action?'` shows how it ended.                  |
+| `still sending ... after 5 s`                              | The request carries on in the app. The CLI tab, or `devtools cli --where 'action?'`, shows how it ended.      |
 
 ## Limits
 

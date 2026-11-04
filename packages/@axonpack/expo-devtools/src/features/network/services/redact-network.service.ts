@@ -67,7 +67,7 @@ export function maskNetworkEntryForAgent<T extends NetworkEntry>(entry: T): T {
 
 /**
  * A `Name: value` line an agent passed to an action, masked as a logged header would be, before the
- * AI Usage tab shows it in the command.
+ * CLI tab shows it in the command.
  */
 export function maskHeaderLine(line: string): string {
   const colon = line.indexOf(':');

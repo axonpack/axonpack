@@ -26,7 +26,7 @@ npx devtools network --where state=error --since 10m
 ```
 
 Your redaction settings hold, and auth headers and cookies are always masked. The
-[AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab) lists each query and action, and the reply the agent
+[CLI tab](/docs/expo-devtools/reference/cli-tab) lists each query and action, and the reply it
 got. [Use with AI agents](/docs/expo-devtools/ai-agents) has every command, and a snippet to paste
 into your `AGENTS.md` or `CLAUDE.md`. Every flag and error is in the
 [devtools CLI reference](/docs/expo-devtools/reference/cli).
@@ -49,10 +49,10 @@ npx skills add axonpack/skills
 | **[Navigation](/docs/expo-devtools/navigation)**   | Every screen the app moved through, with its params and how long it stayed                |
 | **[Preview](/docs/expo-devtools/supports/preview)** | What runs now, and switching between previews and dev servers, with `@axonpack/preview`   |
 | **[Crashes](/docs/expo-devtools/crash-reporting)** | JS errors, unhandled rejections, render errors and native exceptions, as readable reports |
-| **[AI Usage](/docs/expo-devtools/reference/ai-usage-tab)** | Every query and action an AI agent made in the app, with the reply it got               |
+| **[CLI](/docs/expo-devtools/reference/cli-tab)**   | Every query and action made in the app with the `devtools` tool, with the reply it got    |
 | **[Debug](/docs/expo-devtools/debug)**             | Tools that block or crash a thread on purpose                                             |
 
-Network, Console, Performance, Storage, Preview, Crashes, AI Usage and Debug are also on your computer, in [React Native
+Network, Console, Performance, Storage, Preview, Crashes, CLI and Debug are also on your computer, in [React Native
 DevTools](/docs/expo-devtools/react-native-devtools), from one line in `metro.config.js`.
 
 Four more guides cover things that are not tabs: [AI agents](/docs/expo-devtools/ai-agents),

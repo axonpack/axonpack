@@ -18,6 +18,10 @@ type FieldGetter<T> = (row: T) => unknown;
  */
 export type AgentTopic<T = any> = {
   name: string;
+  /** A renamed topic's old name, which still works. `topics` lists only `name`. */
+  alias?: string;
+  /** What the reply's `#` lines call the topic, when people read it another way than they type it. */
+  title?: string;
   /** One line for `devtools topics`. */
   about: string;
   /**

@@ -25,7 +25,7 @@ tab, a DevTools panel, a `devtools` command line topic, optional names in the `>
 - [x] Every support keeps its data in an AxonStore of its own, filled inside its provider, and its
       entry exports `useSupport()` over it
 - [x] A support's command line topic, listed only while it is in `supports`; an `off` topic with the
-      error when it can't run. Its actions go through `act()`, so the AI Usage tab logs them
+      error when it can't run. Its actions go through `act()`, so the CLI tab logs them
 - [x] A support's names in the `>` prompt, under the app's own `console.context`
 - [x] Preview: its store (`status`, `previews`, `servers`) fed from `usePreviewStatus()`,
       `usePreview()` and the dev server list, and `useSupport()`

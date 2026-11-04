@@ -63,7 +63,7 @@ const BUILT_IN: AxonpackPanel[] = [
   },
   {
     id: 'ai-usage',
-    title: 'AI Usage',
+    title: 'CLI',
     icon: 'smart-toy',
     component: AiUsagePanel,
   },

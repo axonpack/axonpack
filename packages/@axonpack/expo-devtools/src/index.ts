@@ -19,6 +19,7 @@ export type {
   DevtoolsNavigationConfig,
   DevtoolsQueryConfig,
   DevtoolsReduxConfig,
+  DevtoolsCliConfig,
   DevtoolsAiUsageConfig,
 } from './client/start-devtools.client';
 export type { DevtoolsSupport } from './core/stores/supports.store';

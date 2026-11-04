@@ -314,15 +314,16 @@ into a native exception on the way to killing the process.
 with it**. LogBox is one component and the two cannot be separated. Warnings are still captured by the
 Console tab. It only does anything in development; LogBox is already an empty stub in a release build.
 
-## AI Usage
+## CLI
 
 | Option                       | Type      | Default | What it does                                                                                       |
 | ---------------------------- | --------- | ------- | -------------------------------------------------------------------------------------------------- |
-| `aiUsage.disabledByDefault`  | `boolean` | `false` | Open the AI Usage tab paused, so no query is kept until you press record. Agents can still query the app. |
+| `cli.disabledByDefault`      | `boolean` | `false` | Open the CLI tab paused, so no query is kept until you press record. Agents can still query the app. |
+| `aiUsage.disabledByDefault`  | `boolean` | `false` | Deprecated. The old name of `cli.disabledByDefault`, which wins when both are set.                 |
 
 The command line tool agents use needs nothing in the config. It answers whenever the devtools are
 enabled in a development bundle, and every redaction option above applies to what it reads. See
-[Use with AI agents](/docs/expo-devtools/ai-agents) and the [AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab).
+[Use with AI agents](/docs/expo-devtools/ai-agents) and the [CLI tab](/docs/expo-devtools/reference/cli-tab).
 
 ## Related components
 

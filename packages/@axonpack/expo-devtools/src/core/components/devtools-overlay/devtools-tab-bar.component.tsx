@@ -35,7 +35,9 @@ const TABS: (TabEntry & { key: DevtoolsTab })[] = [
   { key: 'navigation', label: 'Navigation', icon: 'alt-route' },
   { key: 'redux', label: 'Redux', icon: 'data-object' },
   { key: 'crashes', label: 'Crashes', icon: 'bug-report' },
-  { key: 'ai-usage', label: 'AI Usage', icon: 'smart-toy' },
+  // The tab was called AI Usage. Its key, its panel id and its code in features/ai-usage keep that
+  // name.
+  { key: 'ai-usage', label: 'CLI', icon: 'smart-toy' },
   { key: 'debug', label: 'Debug', icon: 'construction' },
 ];
 
