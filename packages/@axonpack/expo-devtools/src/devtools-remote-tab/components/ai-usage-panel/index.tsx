@@ -15,7 +15,7 @@ const LIST_WIDTH = 420;
 const LIST_MIN = 200;
 
 /**
- * The app's AI Usage tab over the same store, so recording and clearing move together on both
+ * The app's CLI tab over the same store, so recording and clearing move together on both
  * sides. Every row is drawn, with no windowing: the store keeps 100 queries at most.
  */
 export function AiUsagePanel() {
@@ -30,7 +30,7 @@ export function AiUsagePanel() {
   return (
     <div className="axonpack-net">
       <style>{NETWORK_PANEL_CSS}</style>
-      <div className="axonpack-net-bar" role="toolbar" aria-label="AI Usage">
+      <div className="axonpack-net-bar" role="toolbar" aria-label="CLI">
         <button
           className="axonpack-net-button"
           data-icon={recording ? 'record-stop' : 'record-start'}
@@ -63,7 +63,7 @@ export function AiUsagePanel() {
           }>
           {entries.length === 0 ? (
             <div className="axonpack-net-editor">
-              <strong>No agent queries yet</strong>
+              <strong>No queries yet</strong>
               <p className="axonpack-net-none">
                 An AI agent, or you, can read this app's devtools from a terminal, mock a request or
                 send one. Each query and action shows up here with the reply it got. Start in the

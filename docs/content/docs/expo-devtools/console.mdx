@@ -54,6 +54,10 @@ way a browser console reaches a page's variables. Anything you want to poke at b
 It is also the only thing that works in a release build, where the module list the two helpers above
 read is not available.
 
+A [support](/docs/expo-devtools/supports) can add names of its own: the preview support adds
+`preview`, with what runs now and `preview.switch(id)`. A name in your `context` wins over a
+support's.
+
 <Callout type="warn" title="The prompt is on by default, in every build">
   `console.repl` defaults to `true`, and it is not gated on `__DEV__`. Wherever the devtools are on, the
   prompt is there. That includes a release build, where it will run whatever is typed into it. Ship

@@ -2,9 +2,11 @@ import type { AgentTopic } from '../../../agent/constants/agent-topics.const';
 import { aiUsageStore, type AiUsageEntry } from '../stores/ai-usage.store';
 
 export const AI_USAGE_AGENT: AgentTopic<AiUsageEntry> = {
-  name: 'ai-usage',
+  name: 'cli',
+  alias: 'ai-usage',
+  title: 'CLI',
   about:
-    'queries and actions agents made in this app (last 100), newest first, each with the reply it got (get <id> for one reply). action? lists the actions. A query of ai-usage keeps no reply',
+    'queries and actions made with this tool in this app (last 100), newest first, each with the reply it got (get <id> for one reply). action? lists the actions. A query of CLI keeps no reply',
   rows: aiUsageStore.getSnapshot,
   fields: {
     id: (e) => e.id,

@@ -16,7 +16,8 @@ only disagree with these.
 | [debug.md](./debug.md)                                                 | Blocking and crashing a thread on purpose                  |
 | [navigation.md](./navigation.md)                                       | The screens the app moved through, and moving it from here |
 | [redux.md](./redux.md)                                                 | The actions a Redux store reduced, and dispatching one     |
-| [ai-usage.md](./ai-usage.md)                                           | The queries agents made, and the replies they got          |
+| [supports.md](./supports.md)                                           | Supports for other packages; the first is preview          |
+| [cli-tab.md](./cli-tab.md)                                             | The queries made with the CLI, and the replies they got    |
 | [agent-cli.md](./agent-cli.md)                                         | Reading the devtools from a terminal, for agents and you   |
 | [react-native-devtools.md](./react-native-devtools.md)                 | The panel again, inside React Native DevTools              |
 | [devtools-console-plan.md](./devtools-console-plan.md)                 | Console in the DevTools tab, built, not yet walked         |

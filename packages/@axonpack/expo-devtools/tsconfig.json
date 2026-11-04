@@ -7,6 +7,11 @@
     "target": "esnext",
     "moduleResolution": "bundler",
     "customConditions": ["expo-source"],
+    // `@axonpack/preview`'s types reach expo-file-system, whose source (picked by `expo-source`)
+    // fails `noUnusedParameters` here. Its published types are read instead.
+    "paths": {
+      "expo-file-system": ["../preview/node_modules/expo-file-system/build/index.d.ts"]
+    },
     "module": "esnext",
     "moduleDetection": "force",
     "esModuleInterop": true,

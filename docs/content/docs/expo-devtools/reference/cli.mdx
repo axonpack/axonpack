@@ -38,7 +38,7 @@ for whichever form you use.
 | `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                              |
 | `devtools <command> --help` | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. |
 
-`apps` and `topics` are probes: the [AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab)
+`apps` and `topics` are probes: the [CLI tab](/docs/expo-devtools/reference/cli-tab)
 doesn't list them. In `apps`, the `devtools` column is the package version in the app, `-` when the
 app doesn't have it, and `?` when it can't be checked without `--force`.
 
@@ -253,10 +253,14 @@ Captured crashes, newest first. `get` adds the stack, the breadcrumbs and the de
 | `previous`    | True for a crash read back from the previous launch                                      |
 | `seen`        | True once the report was shown                                                           |
 
-### ai-usage
+### cli
 
-The queries and actions agents made, the last 100, each with the reply it got. A query of
-`ai-usage` keeps no reply. `--where 'action?'` lists the actions alone.
+The queries and actions made with this tool, the last 100, each with the reply it got. Its `#` lines
+call it CLI, as the tab does: `# CLI · <app> · <device> · 2 of 2 match`. A query of `cli` keeps no
+reply. `--where 'action?'` lists the actions alone.
+
+`ai-usage` is the topic's old name, from when the tab was called AI Usage. It still works and
+answers the same rows, but it is deprecated and `topics` doesn't list it.
 
 | Field         | Value                                                         |
 | ------------- | ------------------------------------------------------------- |
@@ -273,13 +277,38 @@ The queries and actions agents made, the last 100, each with the reply it got. A
 | `cut`         | True when only the first 64 K characters of the reply were kept |
 | `reply`       | The reply as the agent got it                                 |
 
+### Topics from supports
+
+A [support](/docs/expo-devtools/supports) in the devtools config's `supports` adds a topic of its
+own. `devtools topics` lists it only while the support is configured, and it takes the same flags as
+every other topic. When the support's package isn't installed, or is on another major, the topic is
+`off`, and its reason is the error the start logs.
+
+#### preview
+
+From the [preview support](/docs/expo-devtools/supports/preview#from-the-command-line): what runs
+now, then the dev servers, then the previews for this build. Each query first asks the bucket again
+and looks for dev servers, behind a `# wait:` line. `get` prints preview's own object for the row.
+`off` when the preview config has `enabled: false`.
+
+| Field          | Value                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------- |
+| **`id`**       | `now` for what runs now, a dev server's `host:port`, or a preview's id                                   |
+| `t`            | A preview's publish time. Empty for the other rows                                                      |
+| **`kind`**     | `now`, `server` or `preview`                                                                            |
+| **`title`**    | What runs now, a `preview start` server's title, or a preview's title. Empty for a plain `expo start` server |
+| **`status`**   | `now`: `built-in`, `expo-dev-server`, `dev-preview-server`, `preview` or `server`. A server: `compatible`, `incompatible` or `unknown`. A preview: `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken` |
+| **`branch`**   | The branch it was built from                                                                            |
+| **`active`**   | True for the row that runs now, and always for `now`                                                    |
+| `environment`  | A preview's EAS environment                                                                             |
+
 ## Actions
 
-`devtools <topic> <action> [args] [flags]` changes something in the app. Only `network` has actions;
-`devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
+`devtools <topic> <action> [args] [flags]` changes something in the app. `network` has actions, and
+so does `preview` from the preview support; `devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
 don't go with an action, and action flags don't go with a query: either is an error before the tool
 looks for an app. Every action, refused ones too, is listed in the
-[AI Usage tab](/docs/expo-devtools/reference/ai-usage-tab), marked as an action.
+[CLI tab](/docs/expo-devtools/reference/cli-tab), marked as an action.
 
 ### Action flags
 
@@ -290,7 +319,7 @@ looks for an app. Every action, refused ones too, is listed in the
 | `--body-file`    | file path                    | `override`, `send`, `replay` | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.       |
 | `--content-type` | MIME type                    | `override`                   | The mocked `content-type`. Default `application/json`.                               |
 | `--header`       | `'Name: value'`, repeatable  | `send`, `replay`             | A request header. In `replay` it replaces a header of the same name, any case.       |
-| `--yes`          | none                         | `send`, `replay`             | Needed for any method but GET, HEAD and OPTIONS. The app checks it, so a call through the window relay needs it too. |
+| `--yes`          | none                         | `send`, `replay`, `switch`, `default` | Needed for any method but GET, HEAD and OPTIONS, and always for `preview`'s actions, which restart the app. The app checks it, so a call through the window relay needs it too. |
 | `--all`          | none                         | `unoverride`                 | Remove every override instead of one.                                                |
 
 ### network actions
@@ -334,8 +363,24 @@ and its body is not shown.
 
 While the request is in flight the app answers `# wait: sending <METHOD> <url> as <id>`, and the
 tool asks again every 200 ms within the [5 seconds](#timing). A request that takes longer carries on
-in the app. Running the command again would send it again, so the error points at `ai-usage`
-instead, where the action is listed once it ends.
+in the app. Running the command again would send it again, so the error points at the CLI tab and
+`devtools cli` instead, where the action is listed once it ends.
+
+### preview actions
+
+From the [preview support](/docs/expo-devtools/supports/preview#switch-from-the-command-line). Each
+one restarts the app, so each needs `--yes`. The app answers first and restarts a moment later, or
+once a preview it has to download is on the device. The restart clears the CLI tab, which keeps its
+list in memory.
+
+| Action    | Args   | Flags   | Reply                                                                                                         |
+| --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `switch`  | `<id>` | `--yes` | `# preview · restarting the app on <id>`, ending ` once it has downloaded` for a preview not on the device yet |
+| `default` | none   | `--yes` | `# preview · restarting the app on the default bundle`                                                        |
+
+`switch` takes an `id` from the list: a dev server's `host:port` or a preview's id. A preview that
+isn't on the device yet downloads first. `default` goes back to the default bundle, as **Back to
+default** does.
 
 ## Output
 
@@ -403,6 +448,11 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `no network row "<id>", it may have aged out of the buffer`                                   | 1    |
 | `<id> is a WebSocket. replay sends HTTP requests only`                                        | 1    |
 | `<METHOD> <url> failed: <why>`, only when the request is also not in the log                  | 1    |
+| `switch restarts the app, so it needs --yes` (and `default`)                                   | 1    |
+| `no dev server or preview "<id>". devtools preview lists them`                                | 1    |
+| `<id> runs now`                                                                               | 1    |
+| `<id> is downloading. Switch to it once its status is downloaded`                             | 1    |
+| `the default bundle runs now`                                                                 | 1    |
 
 ### From the tool
 
@@ -420,7 +470,7 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `can't read --body-file <path>: <why>`                                                                      | 1    |
 | `no reply from <app> on <device> in 5 s. Its JS may be paused at a breakpoint: resume it, then run the command again.` | 1 |
 | `still <what> after 5 s. The app keeps going, so run the same command again to pick up where it stopped.`  | 1    |
-| `still <what> after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.` (an action) | 1 |
+| `still <what> after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.` (an action) | 1 |
 | `could not reach Metro on port <port>`                                                                      | 1    |
 | `could not attach to <socket url>`                                                                          | 1    |
 | `the debugger socket closed (<code>: <reason>)`                                                             | 1    |

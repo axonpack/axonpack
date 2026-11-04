@@ -13,6 +13,9 @@ The ready-made list QA uses in the app, and the hook that says what runs.
 - [x] Every piece of text can be changed
 - [x] Styled and extended like any list: its style, its padding, and the app's own header and footer
 - [x] A hook that returns what the header card shows, for a banner or badge of the app's own
+- [x] Draws without a FlatList, for a React Native DevTools tab, and Add a host types in one too
+- [x] Shown as a Preview tab in expo-devtools, when the app passes this package's config through its
+      preview support
 
 The whole list is one FlatList with a header, so it can sit in a screen, a tab or a modal without a
 scroll view around it. The rows are built by a pure function, which is what the tests cover.
@@ -23,6 +26,11 @@ was chosen, so a preview that could not start shows the default bundle running.
 
 The expo-devtools palette is typed by its shape only, so this package does not depend on
 expo-devtools. Only light and dark are built in.
+
+expo-devtools shows this list in its panel and in its React Native DevTools tab. A tab there is
+drawn from a renderer that sees no scroll position or layout, so a FlatList draws its first rows and
+stops, and a controlled `TextInput` throws when typed into. `virtualized={false}` maps the rows into
+a plain ScrollView instead, and the Add a host field is uncontrolled, cleared by mounting a new one.
 
 Every label from 0.1.0 is still accepted. The ones no longer shown are marked deprecated, and
 `backToBase` and `status` still show when an app sets them and not their new names.

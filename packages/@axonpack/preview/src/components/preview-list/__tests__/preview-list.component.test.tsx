@@ -1342,6 +1342,29 @@ test("other FlatList props are passed through", async () => {
   await act(async () => tree.unmount());
 });
 
+test("virtualized={false} draws the same rows in a plain ScrollView, with no pull to refresh", async () => {
+  const flat = await renderWith({});
+  const plain = await renderWith({
+    virtualized: false,
+    ListHeaderComponent: <Text>App header</Text>,
+    contentContainerStyle: { paddingBottom: 16 },
+  });
+  expect(plain.root.findAllByType(FlatList)).toEqual([]);
+  const scroll = plain.root.findAllByType(ScrollView)[0].props;
+  expect(scroll.refreshControl).toBeUndefined();
+  expect(StyleSheet.flatten(scroll.contentContainerStyle)).toEqual({
+    padding: 16,
+    paddingBottom: 16,
+  });
+  expect(texts(plain)).toEqual(["App header", ...texts(flat)]);
+  // The gaps between rows, as the FlatList's separator draws them.
+  expect(plain.root.findAllByType(RowGap)).toHaveLength(
+    flat.root.findAllByType(RowGap).length,
+  );
+  await act(async () => flat.unmount());
+  await act(async () => plain.unmount());
+});
+
 test("a long name wraps to two lines at most, then ends with an ellipsis", async () => {
   mockScriptUrl = "http://localhost:8081/index.bundle?platform=ios";
   const tree = await render(true);
@@ -1553,8 +1576,12 @@ describe("the hosts at the end of the dev servers card", () => {
     expect(fieldStyle(tree).borderColor).toBe(LIGHT_THEME.danger);
     // The clear button empties the field and takes the error with it.
     expect(clear(tree)[0].findAllByType(Text)).toEqual([]);
+    const typedIn = field(tree)[0];
     await act(async () => clear(tree)[0].props.onPress());
-    expect(field(tree)[0].props.value).toBe("");
+    // Uncontrolled, so a React Native DevTools tab can type in it too: clearing is a new field.
+    expect(field(tree)[0]).not.toBe(typedIn);
+    expect(field(tree)[0].props.defaultValue).toBe("");
+    expect("value" in field(tree)[0].props).toBe(false);
     expect(error(tree)).toBeUndefined();
     expect(clear(tree)).toEqual([]);
 

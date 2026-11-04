@@ -6,10 +6,10 @@
 
 **Browser-style devtools that live inside your React Native or Expo app.**
 
-Tap a floating button for ten tabs on the device itself: **Network** (every request, resendable, with
-throttling), **Console** (every log, plus a prompt that answers), **Performance** (frame rate, memory,
-the moments the app froze), **Storage** (every key you've saved), **Query**, **Navigation**,
-**Redux**, **Crashes**, **AI Usage** and **Debug**. No desktop debugger, no cable, and nothing
+Tap a floating button for eleven tabs on the device itself: **Network** (every request, resendable,
+with throttling), **Console** (every log, plus a prompt that answers), **Performance** (frame rate,
+memory, the moments the app froze), **Storage** (every key you've saved), **Query**, **Navigation**,
+**Redux**, **Preview**, **Crashes**, **CLI** and **Debug**. No desktop debugger, no cable, and nothing
 captured unless you switch it on.
 
 **[Documentation](https://axonpack.dev/docs/expo-devtools)** · [Quick start](https://axonpack.dev/docs/expo-devtools/quick-start) · [Reference](https://axonpack.dev/docs/expo-devtools/reference) · [Upgrading](https://axonpack.dev/docs/expo-devtools/upgrading) · [Changelog](https://axonpack.dev/docs/expo-devtools/changelog)
@@ -75,18 +75,34 @@ Two things need a little more than that: an in-app browser takes the `useDevtool
 the Storage tab shows nothing until you register your stores in `config.storage.adapters`, because
 this package depends on no storage library and cannot discover one.
 
+Supports connect the devtools to other packages. Each has its own entry point,
+`@axonpack/expo-devtools/support/<name>/v<major>`, never the main entry. Once you pass one in
+`supports`, it adds a tab, a topic in the `devtools` command line tool, and a `useSupport()` hook
+that returns the package's state. `<major>` is the major version of the package it supports. The
+first is preview, for [`@axonpack/preview`](https://axonpack.dev/docs/preview) 0.x:
+
+```tsx
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+
+<DevtoolsProvider config={{ enabled: __DEV__, supports: [PreviewV0Support.configure(previewConfig)] }}>
+```
+
+A support whose package isn't installed, or is on another major, logs what to do and shows it in its
+tab, and never crashes the app. See [Supports](https://axonpack.dev/docs/expo-devtools/supports).
+
 ## For AI agents
 
 An AI agent, or you, can read what the devtools recorded from a terminal: requests with their bodies,
 logs, crashes, stored values and every other tab, filtered down to the rows it needs. It can also mock
-or block a URL, and send a request from inside the app.
+or block a URL, send a request from inside the app, and, with the preview support, switch the app to a
+preview or a dev server.
 
 ```sh
 npx devtools network --where state=error --since 10m
 ```
 
 It works with any package manager, needs Node 22 or newer and `expo start`, and keeps every redaction
-you configured. The AI Usage tab lists each query and action, and the reply it got.
+you configured. The CLI tab lists each query and action, and the reply it got.
 [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) has every command, and a
 snippet to paste into your `AGENTS.md` or `CLAUDE.md`. The `axonpack`
 [agent skill](https://axonpack.dev/docs/agent-skills) has your agent learn the whole tool from the docs:
@@ -103,7 +119,7 @@ Everything else is on the docs site.
 | [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents)                | Reading the devtools from a terminal, and a snippet for your agent     |
 | [In-app browsers](https://axonpack.dev/docs/expo-devtools/in-app-browsers)             | Capturing a `<WebView />`'s requests and logs                          |
 | [React Native DevTools](https://axonpack.dev/docs/expo-devtools/react-native-devtools) | The Network tab on your computer, with the sandbox and code snippets   |
-| [Leaving it in production](https://axonpack.dev/docs/expo-devtools/production)         | What `enabled: false` does, and the two things that still run          |
+| [Leaving it in production](https://axonpack.dev/docs/expo-devtools/production)         | What `enabled: false` does, and what still runs                        |
 | [Reference](https://axonpack.dev/docs/expo-devtools/reference)                         | Every control, every config option, every exported type                |
 | [Upgrading](https://axonpack.dev/docs/expo-devtools/upgrading)                         | What moved where in 3.0, coming from 2.x                               |
 | [Changelog](https://axonpack.dev/docs/expo-devtools/changelog)                         | Every published release, also in [`CHANGELOG.md`](./CHANGELOG.md)      |
@@ -114,8 +130,8 @@ The same reference ships inside this package as [`REFERENCE.md`](./REFERENCE.md)
 
 `example/` is a runnable Expo app with one screen per tab, each a wall of buttons that produces real
 traffic, logs, stalls and crashes to look at. It doubles as a worked configuration: a custom theme, a
-REPL context, and all four storage adapters against real AsyncStorage, MMKV, SecureStore and an
-in-memory `Map`.
+REPL context, all four storage adapters against real AsyncStorage, MMKV, SecureStore and an
+in-memory `Map`, and `@axonpack/preview` set up through its support.
 
 ```sh
 cd example

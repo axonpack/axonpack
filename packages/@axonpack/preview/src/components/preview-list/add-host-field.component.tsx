@@ -29,6 +29,9 @@ export function AddHostField(props: {
 }) {
   const { theme, labels } = props;
   const [text, setText] = useState("");
+  // The field is uncontrolled, so it also types in a React Native DevTools tab, where a controlled
+  // TextInput throws. Clearing it is a new field.
+  const [cleared, setCleared] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
 
@@ -74,8 +77,9 @@ export function AddHostField(props: {
       >
         <HostIcon color={error || focused ? edge : theme.muted} />
         <TextInput
+          key={cleared}
           testID="add-host-input"
-          value={text}
+          defaultValue=""
           onChangeText={edit}
           onSubmitEditing={add}
           onFocus={() => setFocused(true)}
@@ -99,7 +103,10 @@ export function AddHostField(props: {
         />
         {text ? (
           <Pressable
-            onPress={() => edit("")}
+            onPress={() => {
+              edit("");
+              setCleared((n) => n + 1);
+            }}
             accessibilityRole="button"
             accessibilityLabel={labels.clearHost}
             // The field's 44 is the target; this tops it up sideways.

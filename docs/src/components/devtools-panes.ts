@@ -88,7 +88,7 @@ export type Row =
   /** Performance interactions. The left bar carries the severity. */
   | { kind: 'metric'; label: string; sub: string; value: string; tone: Tone }
   /**
-   * AI Usage. The command as typed after `devtools`, then matched of total (`action` for an action)
+   * CLI. The command as typed after `devtools`, then matched of total (`action` for an action)
    * and how long the app took. A refused or failed call shows its error in place of the count.
    */
   | { kind: 'query'; command: string; time: string; matched: string; took: string; error?: string };
@@ -456,7 +456,7 @@ export const panes: Pane[] = [
     },
   },
   {
-    tab: 'AI Usage',
+    tab: 'CLI',
     icon: Bot,
     tools: [],
     rows: [

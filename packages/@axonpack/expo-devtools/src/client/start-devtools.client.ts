@@ -1,6 +1,7 @@
 import { installAgent } from '../agent/services/install-agent.service';
 import type { BuiltInThemeId, ThemeConfig } from '../core/constants/theme.const';
 import { devtoolsReadyStore } from '../core/stores/devtools-ready.store';
+import { supportsStore, type DevtoolsSupport } from '../core/stores/supports.store';
 import { themeStore } from '../core/stores/theme.store';
 import { aiUsageStore } from '../features/ai-usage/stores/ai-usage.store';
 import { configureRepl } from '../features/console/services/evaluate-expression.service';
@@ -143,7 +144,8 @@ export type DevtoolsConsoleConfig = {
    * console: { context: { store, resetOnboarding } }
    * ```
    *
-   * Empty by default.
+   * Empty by default. A support in `supports` can add names of its own, such as `preview`; a name
+   * here wins over a support's.
    */
   context?: Record<string, unknown>;
   /**
@@ -463,14 +465,17 @@ export type DevtoolsReduxConfig = {
   deny?: ActionTypeMatcher[];
 };
 
-/** The AI Usage tab: whether it starts recording the queries agents make with `npx devtools`. */
-export type DevtoolsAiUsageConfig = {
+/** The CLI tab: whether it starts recording the queries made with `npx devtools`. */
+export type DevtoolsCliConfig = {
   /**
-   * Open the AI Usage tab with recording paused, so no query is kept until the record button in its
-   * toolbar is pressed. Defaults to `false`. Agents can still query the app while it is paused.
+   * Open the CLI tab with recording paused, so no query is kept until the record button in its
+   * toolbar is pressed. Defaults to `false`. The CLI can still query the app while it is paused.
    */
   disabledByDefault?: boolean;
 };
+
+/** @deprecated Renamed to `DevtoolsCliConfig`, which is the same type. */
+export type DevtoolsAiUsageConfig = DevtoolsCliConfig;
 
 /**
  * Everything `<DevtoolsProvider config={...} />` accepts. Every field is optional and the defaults
@@ -531,11 +536,32 @@ export type DevtoolsConfig<TThemeName extends string = never> = {
   redux?: DevtoolsReduxConfig;
   /** Crash reporting: which crashes are caught, what the sheet shows, and where records go. */
   crash?: DevtoolsCrashConfig;
-  /** The AI Usage tab: whether it starts recording. */
-  aiUsage?: DevtoolsAiUsageConfig;
+  /** The CLI tab: whether it starts recording. */
+  cli?: DevtoolsCliConfig;
+  /**
+   * @deprecated Renamed to `cli`, along with the tab. It still works, and `cli` wins when both are
+   * set.
+   */
+  aiUsage?: DevtoolsCliConfig;
+  /**
+   * Tabs for other packages, one per entry, each from a support module's `configure()`. A support
+   * can put a provider around the app, add a tab to the panel and a panel to React Native DevTools,
+   * a topic to the `devtools` command line tool, and names to the Console tab's `>` prompt.
+   * One support per package: with two versions of one, the first is used and the other is logged
+   * with `console.error`.
+   *
+   * Read once, like the rest of this config. Unlike the rest, a support's provider goes around the
+   * app with `enabled: false` too, since the package it supports may need it on every start. Its tab
+   * shows only while the devtools run. Unset by default: no extra tabs.
+   */
+  supports?: DevtoolsSupport[];
 };
 
 let started = false;
+
+export const supportTwice = (title: string) =>
+  `The devtools config has two ${title} supports in \`supports\`. The first one is used and the ` +
+  'other is ignored. Keep only the one for the installed version of its package.';
 
 /**
  * Configures and starts everything: installs the network and console patches, attaches the crash
@@ -551,6 +577,13 @@ export function startDevtools<TThemeName extends string = never>(
 ) {
   if (started) return;
   started = true;
+  // Before the `enabled` gate: the providers go around the app with the devtools off too. An id
+  // twice, such as two versions of one support, keeps the first, since two providers of one package
+  // would fight over it.
+  const supports = config?.supports ?? [];
+  const isFirstOfId = (support: DevtoolsSupport, i: number) =>
+    supports.findIndex(({ id }) => id === support.id) === i;
+  supportsStore.setSupports(supports.filter(isFirstOfId));
 
   const enabled = config?.enabled ?? true;
   const {
@@ -587,7 +620,8 @@ export function startDevtools<TThemeName extends string = never>(
     allow: reduxAllow,
     deny: reduxDeny,
   } = config?.redux ?? {};
-  const { disabledByDefault: aiUsageStartsPaused = false } = config?.aiUsage ?? {};
+  const cliStartsPaused =
+    config?.cli?.disabledByDefault ?? config?.aiUsage?.disabledByDefault ?? false;
   const {
     enabled: crashEnabled = true,
     enableWhileDevtoolsDisabled: crashSurvivesDisabled = false,
@@ -697,7 +731,9 @@ export function startDevtools<TThemeName extends string = never>(
   // After the console is recording, not with the handlers: a crash from the last run writes a
   // console row as well as a report now, and draining before this point threw that row away.
   drainOnce();
-  configureRepl(enableRepl, replContext);
+  // The app's own names win a clash with a support's.
+  const supportContext = Object.assign({}, ...supportsStore.getSupports().map((s) => s.context));
+  configureRepl(enableRepl, { ...supportContext, ...replContext });
 
   performanceStore.setHistorySize(historySize);
   performanceStore.setEnabled(true);
@@ -747,8 +783,15 @@ export function startDevtools<TThemeName extends string = never>(
   reduxStore.setEnabled(true);
   if (reduxStartsPaused) reduxStore.setPaused(true);
 
-  if (aiUsageStartsPaused) aiUsageStore.setPaused(true);
+  if (cliStartsPaused) aiUsageStore.setPaused(true);
   installAgent();
+
+  // Loud on purpose, after the console patch: the Metro terminal, LogBox and the Console tab all show
+  // it, as well as the support's own tab.
+  supports.forEach((support, i) => {
+    if (!isFirstOfId(support, i)) console.error(supportTwice(support.title));
+    else if (support.error) console.error(support.error);
+  });
 
   // Last, so the launcher button appears only once there is a working panel behind it. Anything
   // above throwing leaves the overlay hidden, which is the honest outcome.
