@@ -98,9 +98,9 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
   };
 
   if (query.get !== undefined) {
-    const row = rows[indexOf(query.get)];
+    const row = topic.find ? topic.find(query.get) : rows[indexOf(query.get)];
     const shown = topic.detail ? topic.detail(row, full) : row;
-    const text = JSON.stringify(shown, cutStrings(full), query.json ? undefined : 2);
+    const text = printValue(shown, full, query.json);
     return {
       text: query.json ? text : `# ${title} ${query.get}\n${text}`,
       matched: 1,
@@ -343,6 +343,11 @@ function cell(name: string, value: unknown, full: boolean): string {
 function cut(text: string, full: boolean): string {
   if (full || text.length <= CUT_AT) return text;
   return `${text.slice(0, CUT_AT)}... [cut at ${CUT_AT} of ${text.length} chars, --full for all]`;
+}
+
+/** A value as `get` prints it: indented JSON, or one line with `json`, strings cut unless `full`. */
+export function printValue(value: unknown, full: boolean, json?: boolean): string {
+  return JSON.stringify(value, cutStrings(full), json ? undefined : 2);
 }
 
 function cutStrings(full: boolean) {

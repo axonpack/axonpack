@@ -286,6 +286,9 @@ Present when the REPL is enabled through `console.repl`, which defaults to `__DE
   they return nothing.
 - Anything passed in `console.context` is in scope by name, and so is what a
   [support](#supports) adds, such as `preview`. `console.context` wins a clash.
+- The `devtools` command line tool lists the same names in its [`context` topic](#context), reads
+  one with `devtools get context <name>`, and calls a function with
+  `devtools context call <name> --yes`. With `console.repl` off, that topic is off too.
 
 Your app's own imports are **not** reachable by name: a bundled module is a private closure, so there
 is nothing for an expression to resolve. `context` is how you hand over the objects you want to poke
@@ -804,8 +807,9 @@ The sent request is also a row in the log, on both surfaces.
 
 ## The `devtools` command line tool
 
-The `devtools` command line tool reads what the devtools recorded in a running app, and can mock,
-block or send a request in it. This section lists everything it takes and prints, as does
+The `devtools` command line tool reads what the devtools recorded in a running app, can mock, block
+or send a request in it, and can call a function the app exposed to the Console tab's `>` prompt.
+This section lists everything it takes and prints, as does
 [the CLI reference](https://axonpack.dev/docs/expo-devtools/reference/cli) on the docs site.
 [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) shows how to use it, with a
 snippet for your agent.
@@ -832,14 +836,14 @@ for whichever form you use.
 
 ### Commands
 
-| Command                                    | What it prints                                                                                                                                                                                                 |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `devtools apps`                            | One row per app and device on Metro: `app`, `name`, `device`, `devtools`, `metro`, `note`.                                                                                                                     |
-| `devtools topics`                          | One row per topic in the picked app: `topic`, `rows` (`off` when the app turned it off), `actions` (comma-separated, `-` for none), `about`.                                                                   |
-| `devtools <topic> [flags]`                 | The topic's rows, newest first, with the [query flags](#query-flags).                                                                                                                                          |
-| `devtools get <topic> <id>`                | One row as indented JSON.                                                                                                                                                                                      |
-| `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                                                                                                                                                         |
-| `devtools <command> --help`                | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. |
+| Command                                    | What it prints                                                                                                                                                                                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `devtools apps`                            | One row per app and device on Metro: `app`, `name`, `device`, `devtools`, `metro`, `note`.                                                                                                                                                            |
+| `devtools topics`                          | One row per topic in the picked app: `topic`, `rows` (`off` when the app turned it off), `actions` (comma-separated, `-` for none), `about`.                                                                                                          |
+| `devtools <topic> [flags]`                 | The topic's rows, newest first, with the [query flags](#query-flags).                                                                                                                                                                                 |
+| `devtools get <topic> <id>`                | One row as indented JSON.                                                                                                                                                                                                                             |
+| `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                                                                                                                                                                                                |
+| `devtools <command> --help`                | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. The same for `context` and its `call`. |
 
 `apps` and `topics` are probes: the [CLI tab](https://axonpack.dev/docs/expo-devtools/reference/cli-tab)
 doesn't list them. In `apps`, the `devtools` column is the package version in the app, `-` when the
@@ -956,6 +960,32 @@ Console lines since launch, the last 500. A line repeated in a row is one row wi
 | `count`     | How many times it repeated                                                                |
 | `source`    | `native` for the app, or the name of the WebView that logged it                           |
 | `crash`     | The crash report's id, when the line is a crash                                           |
+
+#### context
+
+The names the Console tab's [`>` prompt](#the--prompt) has:
+the app's `console.context`, then what each [support](#topics-from-supports) adds. It reads the same
+list the prompt does, so the two always agree. A name in `console.context` wins over a support's of
+the same name, and the row's `source` says `app`. The prompt's own `$m` and `$modules` are not
+listed, and no global is. The rows keep the order the names were added in, and have no time.
+`off` when `console.repl` is `false`.
+
+| Field         | Value                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| `id`          | The name, the same as `name`                                                                     |
+| **`name`**    | The name, as the prompt reaches it                                                               |
+| **`type`**    | `function`, `object` (arrays included) or `value`                                                |
+| **`source`**  | `app` for `console.context`, or the support's id, such as `preview`                              |
+| **`preview`** | The value as one line, as the prompt prints it, cut at 80 characters. A function is `ƒ <name>()` |
+
+`get context <name>` prints the value whole, as the prompt holds it in a row: a function as
+`ƒ <name>()`, an `Error` as its stack, a `Date` as an ISO time, a `Map` as an object, a `Set` as an
+array, a cycle as `[Circular]`, and anything deeper than six levels as `[Object]` or `[Array]`.
+Strings over 2,048 characters are cut unless `--full`. The name can be a dot path into a value,
+such as `preview.status` or `store.getState`. A path through `constructor`, `prototype` or
+`__proto__` is refused.
+
+To run a function, use the [`call` action](#context-actions).
 
 #### performance
 
@@ -1107,8 +1137,9 @@ for the row. `off` when the preview config has `enabled: false`.
 
 ### Actions
 
-`devtools <topic> <action> [args] [flags]` changes something in the app. `network` has actions, and
-so does `preview` from the preview support; `devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
+`devtools <topic> <action> [args] [flags]` changes something in the app. `network` and `context`
+have actions, and so does `preview` from the preview support; `devtools topics` lists each topic's
+actions. Query flags (`--where`, `--json`, `--out` and the rest)
 don't go with an action, and action flags don't go with a query: either is an error before the tool
 looks for an app. Every action, refused ones too, is listed in the
 [CLI tab](https://axonpack.dev/docs/expo-devtools/reference/cli-tab), marked as an action.
@@ -1168,6 +1199,35 @@ While the request is in flight the app answers `# wait: sending <METHOD> <url> a
 tool asks again every 200 ms within the [5 seconds](#timing). A request that takes longer carries on
 in the app. Running the command again would send it again, so the error points at the CLI tab and
 `devtools cli` instead, where the action is listed once it ends.
+
+#### context actions
+
+| Action | Args                    | Flags   | Reply                                                                                    |
+| ------ | ----------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `call` | `<name> [args as JSON]` | `--yes` | `# context · <name> returned`, then the value as `get context` prints it, or `undefined` |
+
+`call` runs a function the app or a support exposed, the same one the `>` prompt would run, and
+nothing else: there is no way to evaluate code from the tool. `<name>` is a row's name or a dot path
+into one, such as `preview.status.refresh`, and the function runs with the object before the last
+dot as `this`, so a method on a store works.
+
+The arguments are one word of JSON. An array is the list of arguments, and any other JSON value is
+the one argument:
+
+| Args                  | The function gets  |
+| --------------------- | ------------------ |
+| none                  | no arguments       |
+| `'"pr-7"'`            | `"pr-7"`           |
+| `'["pr-7", 2]'`       | `"pr-7"` and `2`   |
+| `'{"type":"logout"}'` | that object        |
+| `'[[1, 2]]'`          | the array `[1, 2]` |
+
+A bare word such as `pr-7` isn't JSON and is refused; quote it as `'"pr-7"'`. A function that
+returns a promise is waited for: the app answers `# wait: running <name>` and the tool asks again,
+as for [`send`](#network-actions). After 5 seconds the tool stops with
+`still running <name> after 5 s` and the call carries on in the app; the CLI tab and
+`devtools cli --where 'action?'` show how it ended. A function that throws, or a promise that
+rejects, answers `error: <its message>`.
 
 #### preview actions
 
@@ -1256,6 +1316,13 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `<id> runs now`                                                                                        | 1    |
 | `<id> is downloading. Switch to it once its status is downloaded`                                      | 1    |
 | `the default bundle runs now`                                                                          | 1    |
+| `call runs a function in the app, so it needs --yes`                                                   | 1    |
+| `no context name "<name>". devtools context lists them` (also for `get context`)                       | 1    |
+| `no "<key>" in <path>`, for a dot path that goes further than the value (also for `get context`)       | 1    |
+| `<path>: the CLI doesn't reach constructor` (and `prototype`, `__proto__`; also for `get context`)     | 1    |
+| `<name> is an object, not a function. devtools get context <name> reads it` (and `a value`)            | 1    |
+| `the args must be JSON, such as '["a", 1]' for two or '"a"' for one, and <args> isn't`                 | 1    |
+| `<message>`, when the called function throws or its promise rejects                                    | 1    |
 
 #### From the tool
 
@@ -1405,7 +1472,8 @@ Each support keeps its package's data in a store of its own, filled inside its p
 package's own state. Besides its tab, its DevTools panel and `useSupport()`, it adds a topic to the
 `devtools` command line tool, named after it and listed only while it is in `supports` (see
 [Topics from supports](#topics-from-supports)), and it may add names to the [`>` prompt](#the--prompt),
-where `console.context` wins a clash.
+where `console.context` wins a clash. The `devtools` tool's [`context` topic](#context) lists them
+too, with the support's id as their `source`, and `devtools context call` runs their functions.
 
 With the devtools on, a support whose package isn't installed, or is on another major, has the
 reason logged with `console.error` at start and shown in bold in its tab. Nothing throws, and with

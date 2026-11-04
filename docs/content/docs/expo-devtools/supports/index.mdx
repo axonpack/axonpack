@@ -27,7 +27,7 @@ package's own state, so every part below shows the same state.
 | Store                             | The package's data, filled inside the support's provider.                                                                                                     | What runs now, the previews and the dev servers          |
 | `useSupport()`                    | A hook with this name in every support's entry point. It returns the store's data, typed for that support.                                                   | `{ status, previews, servers }`                          |
 | Command line topic                | A topic in the [`devtools` command line tool](/docs/expo-devtools/ai-agents), so an AI agent or a person can read the data and run the support's actions from a terminal. | `preview`, with the actions `switch` and `default`       |
-| Names in the `>` prompt, optional | What the Console tab's prompt can reach by name, next to your `console.context`.                                                                              | `preview`                                                |
+| Names in the `>` prompt, optional | What the Console tab's prompt can reach by name, next to your `console.context`. The command line tool's `context` topic lists them too, and `devtools context call` runs their functions. | `preview`                                                |
 | Tab                               | A tab in the in-app panel, before Crashes.                                                                                                                    | The Preview tab                                          |
 | Panel                             | A panel in the Axonpack tab of React Native DevTools.                                                                                                         | The Preview panel                                        |
 | Provider, when the package has one | The package's provider around your app, so you don't mount it yourself.                                                                                     | Preview's `PreviewProvider`                              |
@@ -38,6 +38,12 @@ A support's topic works like any other topic: the same query flags, `get`, and a
 actions of each topic are on its support's page.
 
 A name you put in `console.context` wins over a support's name if the two are the same.
+
+A support's names in the `>` prompt are reachable from a terminal as well. `devtools context` lists
+them with the support's id as their `source`, `devtools get context <name>` reads one, and
+`devtools context call <name> --yes` calls one of its functions, as in
+`devtools context call preview.switch '"pr-7"' --yes`. See
+[Calling what the app exposes](/docs/expo-devtools/ai-agents#calling-what-the-app-exposes).
 
 ## Versions
 

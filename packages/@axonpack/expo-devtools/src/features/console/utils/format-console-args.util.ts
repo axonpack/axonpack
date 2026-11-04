@@ -71,6 +71,11 @@ function snapshot(value: unknown, depth: number, seen: Set<object>): JsonValue {
   }
 }
 
+/** A value as a console row holds it: functions, cycles and errors become text, so JSON can carry it. */
+export function snapshotValue(value: unknown): JsonValue {
+  return snapshot(value, 0, new Set());
+}
+
 function toConsoleArg(value: unknown): ConsoleArg {
   if (value === null) return { kind: 'primitive', text: 'null', tone: 'muted' };
 

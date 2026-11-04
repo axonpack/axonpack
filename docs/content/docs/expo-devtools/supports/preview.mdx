@@ -242,6 +242,11 @@ Each action returns the line the command line tool would print, such as
 `# preview · restarting the app on pr-7`, or an `error:` line. A `preview` of your own in
 `console.context` wins over this one.
 
+The command line tool reaches this `preview` too, through its
+[`context` topic](/docs/expo-devtools/reference/cli#context): `devtools get context preview.status`
+reads it, and `devtools context call preview.switch '"pr-7"' --yes` calls one of its functions. The
+`preview` topic's actions above do the same with shorter commands.
+
 ## When preview isn't installed
 
 With the support in `supports` and `@axonpack/preview` missing, the app still builds and runs, and

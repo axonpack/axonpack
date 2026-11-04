@@ -58,6 +58,16 @@ A [support](/docs/expo-devtools/supports) can add names of its own: the preview 
 `preview`, with what runs now and `preview.switch(id)`. A name in your `context` wins over a
 support's.
 
+The [`devtools` command line tool](/docs/expo-devtools/reference/cli#context) reaches the same names,
+so an AI agent can use what you hand over here. `devtools context` lists them, `devtools get context
+store` reads one, and `devtools context call resetOnboarding --yes` calls a function. It can't run
+anything else: no code is evaluated, and no global is reachable.
+
+```sh
+npx devtools context
+npx devtools context call store.dispatch '{"type":"logout"}' --yes
+```
+
 <Callout type="warn" title="The prompt is on by default, in every build">
   `console.repl` defaults to `true`, and it is not gated on `__DEV__`. Wherever the devtools are on, the
   prompt is there. That includes a release build, where it will run whatever is typed into it. Ship

@@ -64,6 +64,9 @@ Present when the REPL is enabled through `console.repl`, which
   return nothing.
 - Anything passed in `console.context` is in scope by name, and so is what a
   [support](/docs/expo-devtools/supports) adds, such as `preview`. `console.context` wins a clash.
+- The [`devtools` CLI](/docs/expo-devtools/reference/cli#context) lists the same names in its
+  `context` topic, reads one with `devtools get context <name>`, and calls a function with
+  `devtools context call <name> --yes`. With `console.repl` off, that topic is off too.
 
 Your app's own imports are **not** reachable by name: a bundled module is a private closure, so there is
 nothing for an expression to resolve. `context` is how you hand over the objects you want to poke at,

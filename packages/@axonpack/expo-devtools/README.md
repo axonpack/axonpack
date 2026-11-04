@@ -99,6 +99,7 @@ preview or a dev server.
 
 ```sh
 npx devtools network --where state=error --since 10m
+npx devtools context call store.dispatch '{"type":"cart/clear"}' --yes
 ```
 
 It works with any package manager, needs Node 22 or newer and `expo start`, and keeps every redaction

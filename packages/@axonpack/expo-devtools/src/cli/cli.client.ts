@@ -103,12 +103,15 @@ async function command(args: CliArgs): Promise<number> {
   return typeof reply === 'number' ? reply : answer(app, reply, query, args.out);
 }
 
-/** `devtools network --help` adds the network actions, and `devtools network <action> --help` is only them. */
+/**
+ * `devtools network --help` adds the network actions, and `devtools network <action> --help` is
+ * only them. The same for `context`.
+ */
 function helpFor(name: string | undefined, action: boolean): string {
   if (name === undefined || name === 'help') return HELP.main;
   if (name === 'apps' || name === 'topics' || name === 'get') return HELP[name];
-  if (name !== 'network') return HELP.query;
-  return action ? HELP.network : `${HELP.query}\n\n${HELP.network}`;
+  if (name !== 'network' && name !== 'context') return HELP.query;
+  return action ? HELP[name] : `${HELP.query}\n\n${HELP[name]}`;
 }
 
 /** Query flags and action flags each go with their own kind of command, never quietly ignored. */

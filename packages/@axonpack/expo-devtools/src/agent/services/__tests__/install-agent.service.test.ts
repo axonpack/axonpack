@@ -41,6 +41,7 @@ it('lists one topic per feature', () => {
   expect(REAL_TOPICS.map((topic) => topic.name)).toEqual([
     'network',
     'console',
+    'context',
     'performance',
     'storage',
     'query',

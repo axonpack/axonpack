@@ -49,6 +49,8 @@ Usage
   devtools get <topic> <id>      one row, whole
   devtools <topic> <action> ...  change something in the app: mock or block a request, send
                                  one from the app. See devtools network --help
+  devtools context call <name>   call a function the app exposed to the Console tab's > prompt.
+                                 See devtools context --help
   devtools <command> --help      more on one command
 
 \`ai-usage\` is the old name of the \`cli\` topic. It still works, but it is deprecated.
@@ -187,6 +189,33 @@ Examples
   devtools network send POST https://api.example.com/v1/notes --body '{"text":"hi"}' --yes
   devtools network replay <id> --header 'X-Debug: 1'`;
 
+const CONTEXT = `devtools context call <name> [args] --yes: call a function the app exposed
+
+The names are the ones the Console tab's > prompt has: the app's console.context and what each
+support adds. \`devtools context\` lists them, and \`devtools get context <name>\` reads one.
+A name can be a dot path, such as preview.status.refresh, and the function runs with the object
+before the last dot as \`this\`. Nothing else in the app can be called, and no code is evaluated.
+
+  [args]    JSON. An array is the list of arguments, any other value is the one argument:
+            '["pr-7", 2]' is two, '"pr-7"' is one, '[[1, 2]]' is one array. None for no arguments
+  --yes     always needed, since a call can change anything the function changes
+
+The reply is "# context · <name> returned" and the value as \`get\` prints it. A promise is
+waited for; after 5 s the command stops waiting and the call carries on in the app, where the CLI
+tab shows how it ended. Each call shows in \`devtools cli\` and the CLI tab, marked as an action.
+
+Exit codes: 0 done, 1 an "error:" reply (unknown name, not a function, args not JSON, --yes
+missing, the function threw or its promise rejected) or still running after 5 s, 2 no app.
+
+${APP_FLAGS}
+
+Examples
+  devtools context
+  devtools get context preview.status
+  devtools context call resetOnboarding --yes
+  devtools context call store.dispatch '{"type":"logout"}' --yes
+  devtools context call preview.switch '"pr-7"' --yes`;
+
 export const HELP = {
   main: MAIN,
   apps: APPS,
@@ -194,4 +223,5 @@ export const HELP = {
   query: QUERY,
   get: GET,
   network: NETWORK,
+  context: CONTEXT,
 };

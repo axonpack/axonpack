@@ -18,6 +18,8 @@ that evaluates expressions against the running app.
 - [x] Inject your own values into the prompt's scope
 - [x] Browse and pull exports out of loaded modules from the prompt
 - [x] Tap a past command to load it back into the prompt
+- [x] The prompt's names (`console.context` and the supports') reachable from the `devtools` command
+      line: the `context` topic lists them, `get context` reads one, `context call` runs a function
 - [ ] Command history cycling and a live result preview while typing
 - [ ] `%s` / `%d` / `%o` format specifiers
 - [ ] Console entries included in Export

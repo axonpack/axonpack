@@ -594,6 +594,8 @@ describe('--help', () => {
     [['get', '--help'], HELP.get],
     [['network', '--help'], `${HELP.query}\n\n${HELP.network}`],
     [['network', 'send', '--help'], HELP.network],
+    [['context', '--help'], `${HELP.query}\n\n${HELP.context}`],
+    [['context', 'call', '--help'], HELP.context],
     [['console', '--help'], HELP.query],
   ])('%j prints its help without looking for apps', async (argv, help) => {
     expect(await main(argv)).toBe(0);

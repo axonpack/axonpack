@@ -32,6 +32,8 @@ tab, a DevTools panel, a `devtools` command line topic, optional names in the `>
 - [x] Preview: the `preview` topic (what runs now, the dev servers, the previews), refreshed on each
       new query, with `switch <id> --yes` and `default --yes`
 - [x] Preview: `preview` in the `>` prompt, with the data and the same actions
+- [x] A support's names in the `>` prompt are reachable from the command line through the `context`
+      topic, with the support's id as their `source`
 - [ ] Preview: the config plugin added for the app
 
 ## How it works
@@ -51,8 +53,9 @@ The agent (`agent/services/install-agent.service.ts`) answers over the feature t
 support, read from the supports store on each call, so `devtools topics` lists a support's topic only
 while it is configured, and its actions go through `act()` like any other, which logs them in the CLI
 tab. A support with an `error` has no topic of its own; the agent lists one of its `id` that is off,
-with the error as the reason, so a query says what to install. The start merges each support's
-`context` into the prompt's names, and the app's own `console.context` wins a clash.
+with the error as the reason, so a query says what to install. The start hands each support's
+`context` to `configureRepl` with the app's own `console.context`, which wins a clash, and the
+prompt and the `context` topic both read the list it keeps, with who exposed each name.
 
 Each support keeps its data in an AxonStore (`createAxonStore`) in its own folder, filled inside its
 `Provider` from the package's own state, so the topic and the prompt read it without a hook. Its

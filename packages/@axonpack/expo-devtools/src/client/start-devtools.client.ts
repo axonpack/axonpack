@@ -731,9 +731,7 @@ export function startDevtools<TThemeName extends string = never>(
   // After the console is recording, not with the handlers: a crash from the last run writes a
   // console row as well as a report now, and draining before this point threw that row away.
   drainOnce();
-  // The app's own names win a clash with a support's.
-  const supportContext = Object.assign({}, ...supportsStore.getSupports().map((s) => s.context));
-  configureRepl(enableRepl, { ...supportContext, ...replContext });
+  configureRepl(enableRepl, replContext, supportsStore.getSupports());
 
   performanceStore.setHistorySize(historySize);
   performanceStore.setEnabled(true);
