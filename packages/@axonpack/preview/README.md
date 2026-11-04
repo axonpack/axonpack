@@ -52,6 +52,8 @@ Add the config plugin to `app.json`, then run a prebuild or a new native build:
 ```
 
 The plugin bakes a key into the build. The app lists only previews published under that key.
+It also bakes in the app's slug: each app's previews go in a folder named after it, so several apps
+can share one bucket.
 `appVersion` (the default) keys on the app version; `fingerprint` keys on the native fingerprint.
 
 Wrap the app in the provider and put the list on a screen QA can reach:

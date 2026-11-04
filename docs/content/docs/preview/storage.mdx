@@ -112,6 +112,9 @@ reads only that one. So publish again every old preview QA still needs. The CLI 
 the slug folder, and `prune` never deletes there, so delete the old files by hand once nothing uses
 them.
 
+It works one way only. A build made with 0.1.0 still reads outside the slug folder, so it never
+lists a preview published with a newer CLI. Give QA a new build once you update the package.
+
 ## HTTPS
 
 Use HTTPS for a real bucket. Every file is also checked against its sha256 before it is used, but
