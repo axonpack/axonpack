@@ -1,5 +1,11 @@
 # @axonpack/react-pretty-print
 
+## 0.1.3
+
+### Patch Changes
+
+- 83cb09a: - **Agent skill from axonpack/skills**: the README's install line now uses `npx skills add axonpack/skills`
+
 ## 0.1.2
 
 ### Patch Changes
