@@ -1,4 +1,6 @@
 // The bucket layout and file formats, shared by the CLI that writes them and the app that reads them.
+// The keys below are inside the app's own folder, `<slug>/`, which `withPrefix` in s3.service adds
+// to every request, so several apps can share one bucket.
 //
 //   index.json                            every native build and its previews, for people
 //   index/<platform>/<key>.json           what one native build can run; the app reads this

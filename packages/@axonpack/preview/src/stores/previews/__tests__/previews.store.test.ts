@@ -8,6 +8,7 @@ jest.mock("expo-file-system", () =>
 const mockNative = {
   bundle: null as string | null,
   key: "fp",
+  slug: "shop",
   select: jest.fn((bundle: string | null, _key?: string | null) => {
     mockNative.bundle = bundle;
   }),
@@ -99,7 +100,8 @@ test("switching to a preview that is not on the device downloads it first", asyn
     [`files/${sha}`]: bundle,
   };
   global.fetch = jest.fn(async (url: string | URL) => {
-    const body = objects[String(url).replace("http://localhost:9000/b/", "")];
+    const body =
+      objects[String(url).replace("http://localhost:9000/b/shop/", "")];
     if (body === undefined) return new Response("", { status: 404 });
     return new Response(
       (body instanceof Uint8Array ? body : JSON.stringify(body)) as BodyInit,
@@ -121,7 +123,7 @@ test("the list shows why a refresh failed when the bucket URL answers with a web
   ) as typeof fetch;
   await previewsStore.refresh({ ...config, buildKey: "fp" });
   expect(previewsStore.getState().error).toMatch(
-    /^Expected JSON from http:\/\/localhost:9000\/b\/index\/ios\/fp\.json but got text\/html \(status 200\)/,
+    /^Expected JSON from http:\/\/localhost:9000\/b\/shop\/index\/ios\/fp\.json but got text\/html \(status 200\)/,
   );
 });
 

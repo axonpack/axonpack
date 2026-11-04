@@ -58,7 +58,8 @@ const HELP = `preview <command> [options]
 Where to publish comes from the environment (the shell, or CI secrets). For local use they can
 also go in the app's .env.local, or any env file Expo loads for a release build; the environment
 wins over them. Keep the write key out of a committed .env:
-  PREVIEW_S3_URL                 <endpoint>/<bucket>[/<folder>], e.g. http://localhost:9000/previews-public
+  PREVIEW_S3_URL                 <endpoint>/<bucket>, e.g. http://localhost:9000/previews-public.
+                                 Each app's previews go in a folder named after its slug
   PREVIEW_S3_ACCESS_KEY_ID       the write key
   PREVIEW_S3_SECRET_ACCESS_KEY
   PREVIEW_S3_REGION              optional, default us-east-1`;
@@ -93,8 +94,12 @@ async function main() {
     return;
   }
   const projectRoot = resolve(values.project ?? process.cwd());
-  // Only the bucket commands need the publish settings.
-  const s3 = () => readConfig(projectRoot);
+  // Only the bucket commands need the publish settings. Everything goes under the app's slug, so
+  // apps that share a bucket keep apart.
+  const s3 = (config = appConfig(projectRoot)) => ({
+    ...readConfig(projectRoot),
+    slug: config.slug,
+  });
 
   if (command === "publish") {
     // Before anything reads the app config: the config, fingerprint and export must all see the
@@ -125,7 +130,7 @@ async function main() {
       projectRoot,
       config,
       compatibility,
-      s3: s3(),
+      s3: s3(config),
       platforms,
       id,
       title: await askTitle({

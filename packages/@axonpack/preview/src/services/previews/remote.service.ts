@@ -9,6 +9,7 @@ import {
   PreviewConfig,
   currentPlatform,
   resolveBuildKey,
+  resolveSlug,
   toS3Config,
 } from "../../utils/config/config.util";
 
@@ -28,6 +29,12 @@ export async function fetchPreviews(
   if (!key) {
     throw new PreviewError(
       'This build has no compatibility key. Add "@axonpack/preview" to the app config plugins and rebuild, or pass `buildKey`.',
+    );
+  }
+  // Without it the app can't tell its own folder from other apps' in a shared bucket.
+  if (!resolveSlug(config)) {
+    throw new PreviewError(
+      'This build has no app slug. Add "@axonpack/preview" to the app config plugins and rebuild, or pass `slug`.',
     );
   }
   const found = await getJson<PlatformIndex>(

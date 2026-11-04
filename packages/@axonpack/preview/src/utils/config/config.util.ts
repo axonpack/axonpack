@@ -1,6 +1,6 @@
 import { Platform as RNPlatform } from "react-native";
 
-import { buildKey } from "../../services/native/build-info.service";
+import { buildKey, buildSlug } from "../../services/native/build-info.service";
 import type { Platform } from "../previews/layout.util";
 import {
   type HostAddress,
@@ -33,6 +33,11 @@ export type PreviewConfig = {
    * is not used to bake it in.
    */
   buildKey?: string;
+  /**
+   * The app's Expo slug, only when the config plugin is not used to bake it in. Previews are read
+   * from the bucket folder named after it.
+   */
+  slug?: string;
   /** @deprecated Use `s3Config.url`. */
   url?: string;
   /** @deprecated Use `s3Config.readAccessKeyId`. */
@@ -51,11 +56,12 @@ export type PreviewConfig = {
  */
 export type PreviewS3Config = {
   /**
-   * Where the previews are. With a read key: `<endpoint>/<bucket>[/<folder>]`, the same value as
-   * `PREVIEW_S3_URL` when publishing. Without one, any address the objects are public under:
-   * that same URL for a public bucket, or R2's `https://pub-<id>.r2.dev` or a CDN. An env value can
-   * still be undefined at runtime despite the type, so undefined, empty or blank means previews are
-   * not set up: nothing is read, and the list says so.
+   * Where the previews are. With a read key: `<endpoint>/<bucket>`, the same value as
+   * `PREVIEW_S3_URL` when publishing. Without one, any address the objects are public under: that
+   * same URL for a public bucket, or R2's `https://pub-<id>.r2.dev` or a CDN. Either way the app
+   * reads from the folder named after its slug under it. An env value can still be undefined at
+   * runtime despite the type, so undefined, empty or blank means previews are not set up: nothing is
+   * read, and the list says so.
    */
   url: string;
   /** Read-only key, for a private bucket. Leave out for a public one. Never the write key. */
@@ -176,6 +182,7 @@ export function toS3Config(config: PreviewConfig): S3Config {
   checkBucketUrl(url);
   const region = s3.region ?? DEFAULT_REGION;
   const { headers } = s3;
+  const slug = resolveSlug(config) ?? undefined;
   // Signing needs the bucket apart from the endpoint; a plain read only needs the base address.
   if (s3.readAccessKeyId && s3.readSecretAccessKey) {
     return {
@@ -186,9 +193,10 @@ export function toS3Config(config: PreviewConfig): S3Config {
         secretAccessKey: s3.readSecretAccessKey,
       },
       headers,
+      slug,
     };
   }
-  return { endpoint: url.trim(), region, headers };
+  return { endpoint: url.trim(), region, headers, slug };
 }
 
 export const currentPlatform = (): Platform | null =>
@@ -197,3 +205,7 @@ export const currentPlatform = (): Platform | null =>
 /** The build to ask previews for. Null means previews cannot be listed on this build. */
 export const resolveBuildKey = (config: PreviewConfig): string | null =>
   config.buildKey ?? buildKey();
+
+/** The bucket folder this app's previews are in. Null means it cannot tell, so nothing is read. */
+export const resolveSlug = (config: PreviewConfig): string | null =>
+  config.slug || buildSlug() || null;

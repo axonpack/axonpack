@@ -1,5 +1,6 @@
 import {
   getJson,
+  listKeys,
   objectUrl,
   parseBucketUrl,
   putObject,
@@ -31,6 +32,44 @@ test("splits <endpoint>/<bucket>/<prefix> and puts keys under the prefix", () =>
   expect(() => parseBucketUrl("http://localhost:9000")).toThrow(
     "has no bucket",
   );
+});
+
+describe("the app's slug folder", () => {
+  test("every key goes under it", () => {
+    expect(objectUrl({ ...config, slug: "my-app" }, "index.json")).toBe(
+      "http://localhost:9000/b/my-app/index.json",
+    );
+    expect(
+      objectUrl(
+        { endpoint: "https://pub.r2.dev", region: "auto", slug: "my-app" },
+        "files/abc",
+      ),
+    ).toBe("https://pub.r2.dev/my-app/files/abc");
+  });
+
+  test("a folder from the URL still goes in front of it", () => {
+    const parts = parseBucketUrl("http://localhost:9000/b/old-folder");
+    expect(
+      objectUrl(
+        { ...parts, region: "us-east-1", slug: "my-app" },
+        "index.json",
+      ),
+    ).toBe("http://localhost:9000/b/old-folder/my-app/index.json");
+  });
+
+  test("a listing asks only inside it and returns keys relative to it", async () => {
+    const urls: string[] = [];
+    global.fetch = jest.fn(async (url) => {
+      urls.push(String(url));
+      return new Response(
+        "<ListBucketResult><Key>old/my-app/files/a</Key><Key>old/my-app/files/b</Key><IsTruncated>false</IsTruncated></ListBucketResult>",
+      );
+    }) as typeof fetch;
+    await expect(
+      listKeys({ ...config, prefix: "old", slug: "my-app" }, "files/"),
+    ).resolves.toEqual(["files/a", "files/b"]);
+    expect(decodeURIComponent(urls[0])).toContain("prefix=old/my-app/files/");
+  });
 });
 
 test("with no bucket the endpoint is the base every key goes under", () => {
