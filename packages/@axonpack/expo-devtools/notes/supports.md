@@ -94,7 +94,8 @@ The store (`stores/preview-support.store.ts`) holds `status`, `previews` and `se
 `components/preview-store-feed.component.tsx` sits inside preview's provider, calls
 `usePreviewStatus()`, `usePreview()` and `useDevPreviewServersState()`, and writes their values to
 the store after each render. So with the support configured, `usePreviewStatus()` runs on every start,
-and in a debug build from Metro with `devPreviewServers` on it does its one look for dev servers.
+and in a debug build from Metro with preview's `enabled` and `devPreviewServers` on it does its one
+look for dev servers.
 
 The topic (`constants/preview-agent.const.ts`) is built in `configure()`, since switching to a preview
 that isn't downloaded needs the config. Rows are `now`, then each dev server (`host:port`), then each

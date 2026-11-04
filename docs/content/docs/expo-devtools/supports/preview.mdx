@@ -85,11 +85,11 @@ function PreviewBadge() {
 | ---------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `status`   | `PreviewStatusInfo \| null`  | What runs now and the build it runs in, as `usePreviewStatus()` returns it. `null` until preview's provider has rendered, and while preview can't run. |
 | `previews` | `PreviewItem[]`              | The previews published for this build, and downloads the bucket no longer lists, as `usePreview().items`.                    |
-| `servers`  | `DevPreviewServer[]`         | The dev servers preview's last look found. Empty in a release build and with `devPreviewServers` off.                        |
+| `servers`  | `DevPreviewServer[]`         | The dev servers preview's last look found. Empty in a release build, and while preview's `enabled` or `devPreviewServers` is off. |
 
 The hook works with the devtools off too, since preview's provider is there either way. Because the
-support runs `usePreviewStatus()`, a debug build that starts from Metro with `devPreviewServers` on
-looks for dev servers once at start, as any screen using that hook does.
+support runs `usePreviewStatus()`, a debug build that starts from Metro with preview's `enabled` and
+`devPreviewServers` on looks for dev servers once at start, as any screen using that hook does.
 
 ## Exports
 
@@ -127,7 +127,7 @@ The tab shows preview's own list, in the panel's theme, after Redux in the tab b
 
 - An error snackbar, only when something went wrong.
 - The header card: what runs now, **Back to default**, Refresh, and **Show details**.
-- Dev preview servers, in a debug build with `devPreviewServers` on.
+- Dev preview servers, in a debug build with preview's `enabled` and `devPreviewServers` on.
 - Published previews for this build, with Download, Switch, Update and Delete.
 - Incompatible downloads, with **Delete all**.
 

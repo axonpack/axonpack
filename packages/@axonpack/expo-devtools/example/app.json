@@ -9,13 +9,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "io.github.axonpack.bruin2.devtoolexample",
-      "appleTeamId": "GJW8263884",
-      "infoPlist": {
-        "NSLocalNetworkUsageDescription": "Finds preview servers on your network.",
-        "NSBonjourServices": [
-          "_axon-preview._tcp"
-        ]
-      }
+      "appleTeamId": "GJW8263884"
     },
     "android": {
       "package": "io.github.axonpack.bruin2.devtoolexample",

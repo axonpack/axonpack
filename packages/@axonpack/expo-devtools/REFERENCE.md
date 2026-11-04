@@ -538,13 +538,13 @@ tab shows that error instead. The guide is [Preview](https://axonpack.dev/docs/e
 and each part of the list is on preview's
 [App setup](https://axonpack.dev/docs/preview/app-setup#the-ready-made-list).
 
-| Part                | What it holds                                                                                       |
-| ------------------- | --------------------------------------------------------------------------------------------------- |
-| Error snackbar      | Only when something went wrong: what, and what to try, with Retry and Dismiss.                      |
-| Header card         | What runs now, **Back to default**, Refresh, and **Show details** for the build's facts.            |
-| Dev preview servers | This app's Metro servers, in a debug build with `devPreviewServers` on. Tap a row to restart on it. |
-| Published previews  | Each preview for this build, with Download, Switch, Update and Delete.                              |
-| Incompatible        | Downloads made for another native build, with **Delete all**.                                       |
+| Part                | What it holds                                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Error snackbar      | Only when something went wrong: what, and what to try, with Retry and Dismiss.                                              |
+| Header card         | What runs now, **Back to default**, Refresh, and **Show details** for the build's facts.                                    |
+| Dev preview servers | This app's Metro servers, in a debug build with preview's `enabled` and `devPreviewServers` on. Tap a row to restart on it. |
+| Published previews  | Each preview for this build, with Download, Switch, Update and Delete.                                                      |
+| Incompatible        | Downloads made for another native build, with **Delete all**.                                                               |
 
 The Axonpack tab in React Native DevTools has the same list as its Preview panel, after Navigation.
 There every row is drawn at once, there is no pull to refresh, and the list is read again each time
