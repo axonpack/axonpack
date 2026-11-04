@@ -12,33 +12,102 @@ Use this page to look up a name. If you are new, start with the
 | Export                         | What it is                                                                    |
 | ------------------------------ | ----------------------------------------------------------------------------- |
 | `PreviewProvider`              | `{ config: PreviewConfig, children }`. Mount it near the root, on every start |
-| `PreviewList`                  | The ready-made list. Props: `theme`, `labels`, `style`                        |
+| `PreviewList`                  | The ready-made list. Props below                                              |
 | `usePreview()`                 | The list and its actions. Needs the provider above it                         |
+| `usePreviewStatus(labels?)`    | What runs now and the build it runs in. See [below](#usepreviewstatus). Needs the provider |
 | `useRunning()`                 | What this start runs, as a [`Running`](#running). Needs the provider          |
 | `usePreviewsState()`           | The raw [store state](#usepreview), without the provider                      |
-| `useDevPreviewServersState()`  | `{ servers, activeUrl, error }` for dev preview servers                       |
+| `useDevPreviewServersState()`  | `{ servers, activeUrl, alive, error, scanning, hosts }` for dev preview servers. `alive` is every `host:port` that answered the last look, or null before one |
+
+## PreviewList props
+
+`PreviewList` is a FlatList, and takes FlatList's props as well as its own, unless `virtualized` is
+`false`.
+
+| Prop                    | What it is                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `theme`                 | Nothing, a partial theme or an expo-devtools palette. See [Theme](#theme)    |
+| `labels`                | Any text. See [Labels](#labels)                                              |
+| `style`                 | The FlatList's style, over the list's background colour                      |
+| `contentContainerStyle` | Over the list's padding: 16 all round and 112 at the end, which clears a floating tab bar. Set `paddingBottom` to fit your own |
+| `ListHeaderComponent`   | Your own element above the list's header (the error banner and the header card) |
+| `ListFooterComponent`   | Your own element after the last row                                          |
+| `virtualized`           | Default `true`. `false` draws every row at once in a plain ScrollView, for a place a FlatList can't run, such as a React Native DevTools tab. There is no pull to refresh then, and of the FlatList props only `style`, `contentContainerStyle` and `ListHeaderComponent` are used |
+| Any other FlatList prop | Passed through, such as `onScroll`, `testID` or `showsVerticalScrollIndicator` |
+
+For **Add a host**'s field, the list sets `keyboardShouldPersistTaps="handled"` and, for iOS,
+`automaticallyAdjustKeyboardInsets`. Pass your own to change them.
+
+The list keeps these for itself, so they can't be passed: `data`, `getItem`, `getItemCount`,
+`renderItem`, `keyExtractor`, `ItemSeparatorComponent`, `CellRendererComponent`, `getItemLayout`,
+`numColumns`, `columnWrapperStyle`, `horizontal`, `refreshing`, `onRefresh`, `refreshControl` (pull
+to refresh is built in, coloured from the theme) and `ListEmptyComponent` (the list always has its
+section headings, and says itself when nothing is published).
 
 ## PreviewConfig
 
 What the app passes to the provider. Nothing here is read from the environment.
 
+| Field               | Needed | What it is                                                                          |
+| ------------------- | ------ | ----------------------------------------------------------------------------------- |
+| `enabled`           | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
+| `s3Config`          | No     | The bucket and how to read it (`PreviewS3Config`, below). Without it, the list shows previews as not set up |
+| `devPreviewServers` | No     | Lists this app's Metro servers in a debug build, while `enabled` is `true`. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
+| `buildKey`          | No     | This build's key, only when the config plugin is not used to bake it in             |
+| `slug`              | No     | The app's Expo slug, only when the config plugin is not used to bake it in. Previews are read from the bucket folder named after it |
+
+`s3Config` (`PreviewS3Config`):
+
 | Field                 | Needed | What it is                                                                          |
 | --------------------- | ------ | ----------------------------------------------------------------------------------- |
-| `enabled`             | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
-| `url`                 | Yes    | With a read key: `<endpoint>/<bucket>[/<folder>]`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN |
+| `url`                 | Yes    | With a read key: `<endpoint>/<bucket>`, the same as `PREVIEW_S3_URL`. Without one: any address the files are public under, such as that URL, `https://pub-<id>.r2.dev` or a CDN. The app reads from the folder named after its slug under it. Left out or empty at runtime, the list shows previews as not set up |
 | `readAccessKeyId`     | No     | A read-only key, for a private bucket. Never the write key                          |
 | `readSecretAccessKey` | No     | Its secret                                                                          |
 | `region`              | No     | Signing region for a private bucket. Default `us-east-1`; `auto` on R2              |
 | `headers`             | No     | Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket      |
-| `devPreviewServers`   | No     | Lists this app's Metro servers in a debug build. Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
-| `buildKey`            | No     | This build's key, only when the config plugin is not used to bake it in             |
+
+```ts
+s3Config: {
+  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string,
+  readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
+  readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
+  region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
+},
+```
+
+`url` is typed as a string, and an env value can be undefined, so pass it with `as string`. Left
+out or empty at runtime, the list shows previews as not set up: the app reads nothing from a bucket
+and shows no error, and dev preview servers and the header card work as usual. A `url` that is set
+but is not a full address, such as `/previews`, is still an error.
+
+0.1.0 took these five fields at the top level of the config. They still work but are deprecated, and
+the old top-level `url` follows the same rule.
+When `s3Config` is set too, it wins, and the app logs one warning.
+
+`devPreviewServers` as an object (`DevPreviewServersOptions`). `true` is the same as `{}`.
+
+| Field              | Default | What it is                                                                 |
+| ------------------ | ------- | -------------------------------------------------------------------------- |
+| `enabled`          | `true`  | Turns the section on                                                       |
+| `allowCustomHosts` | `true`  | Shows **Add a host**, so QA can add another computer on the device          |
+| `hosts`            | none    | Other computers the app asks, such as `"192.168.1.24"` or `"qa-mac.local:19150"`. The port is the registry's, 19150 when left out. An entry that is not a host, is listed twice, or is this computer is skipped with a `console.warn` |
+
+`localhost`, `127.0.0.1`, and `10.0.2.2` on Android are always checked and need no entry.
+
+```ts
+devPreviewServers: {
+  allowCustomHosts: true,
+  hosts: ["192.168.1.24", "qa-mac.local:19150"],
+},
+```
 
 ## usePreview
 
 | Field                  | What it is                                                                 |
 | ---------------------- | -------------------------------------------------------------------------- |
 | `enabled`              | `config.enabled`                                                           |
-| `devPreviewServers`    | Whether dev preview servers are on                                         |
+| `previewsConfigured`   | A bucket URL is set. False when `s3Config.url` is undefined, empty or blank |
+| `devPreviewServers`    | Whether dev preview servers are on: `enabled` and `devPreviewServers` both |
 | `items`                | [`PreviewItem[]`](#previewitem): this build's previews, and downloads it no longer lists |
 | `incompatible`         | Downloads made for another native build                                    |
 | `loading`              | A refresh is running                                                       |
@@ -47,16 +116,17 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `remote`               | What the bucket lists for this build. Null until it has answered once      |
 | `local`                | Every download on the device                                               |
 | `downloading`          | Download progress by id, from 0 to 1                                       |
-| `activeId`             | The preview the next start loads, or null for the base bundle             |
+| `activeId`             | The preview the next start loads, or null for the default bundle          |
+| `runningId`            | The preview that runs now, or null. Not `activeId` when the chosen one did not load |
 | `broken`               | Ids of previews that stopped before they finished starting                 |
 
 | Action                   | What it does                                                             |
 | ------------------------ | ------------------------------------------------------------------------ |
-| `refresh()`              | Reads the downloads, then asks the bucket for this build's list          |
+| `refresh()`              | Reads the downloads, then asks the bucket for this build's list. With no bucket URL it asks nothing |
 | `download(id)`           | Downloads a preview, or its update                                       |
-| `switchTo(id)`           | Restarts into a preview, downloading it first if needed                  |
-| `switchTo(null)`         | Back to base. Also stops a dev preview server                            |
-| `remove(id)`             | Deletes a download. If it runs, goes back to base first                  |
+| `switchTo(id)`           | Restarts into a preview, downloading it first if needed. Also stops a dev preview server |
+| `switchTo(null)`         | Back to the default bundle. Also stops a dev preview server              |
+| `remove(id)`             | Deletes a download. If it runs, goes back to the default bundle first    |
 | `removeIncompatible()`   | Deletes every download made for another native build                     |
 
 ### PreviewItem
@@ -64,93 +134,263 @@ What the app passes to the provider. Nothing here is read from the environment.
 | Field      | What it is                                                                       |
 | ---------- | -------------------------------------------------------------------------------- |
 | `id`       | The preview's id                                                                 |
-| `entry`    | The bucket's entry: `title`, `branch`, `commit`, `author`, `publishedAt`, `appVersion`, `buildNumber`, `compatibility`, `fingerprint`, `size`, `changelog`, `revision`, `manifest` |
+| `entry`    | The bucket's entry: `title`, `branch`, `commit`, `author`, `publishedAt`, `appVersion`, `buildNumber`, `compatibility`, `fingerprint`, `environment` (only when published with `--environment`), `size`, `changelog`, `revision`, `manifest` |
 | `status`   | `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken` |
 | `progress` | 0 to 1 while downloading, else null                                              |
-| `active`   | It is the one the next start loads                                               |
+| `active`   | It runs now: what native started from, not only what was chosen                  |
 | `local`    | The download on the device, or null                                              |
 
 ### Running
 
 | `kind`     | Fields                                                             |
 | ---------- | ------------------------------------------------------------------ |
-| `base`     | none                                                               |
+| `default`  | `source` (`built-in`, `expo-dev-server` or `dev-preview-server`), `url`, `hostPort`, `server` |
 | `preview`  | `id`, `title`                                                      |
 | `local`    | `url`, `hostPort`, `server` (null until the list has found it)     |
+
+0.1.0 called the default bundle `kind: 'base'`, with no other fields. It is `kind: 'default'` now.
+A picked server that is the Metro the app starts on anyway counts as the default.
+
+## usePreviewStatus
+
+Everything the list's header card shows, for a banner, badge or debug screen of your own. Pass the
+list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
+
+| Field           | What it is                                                                     |
+| --------------- | ------------------------------------------------------------------------------ |
+| `running`       | What runs now, as `useRunning()` returns it                                     |
+| `kind`          | `default`, `preview` or `local` (a server picked in the list)                  |
+| `bundleKind`    | Where it comes from: `built-in`, `expo-dev-server`, `dev-preview-server`, `preview`, or `server` for a server no look has found, whose kind is not known. Picks the header card's chip |
+| `title`         | The header card's title: the preview's title, a `preview start` server's title, Default for the Metro the app starts on, another server's address, or the kind's name |
+| `id`            | The running preview's id, or null                                              |
+| `branch`        | The running preview's or server's branch, or null                              |
+| `address`       | A server's `host:port`, with loopback shown as localhost, or null              |
+| `label`         | One sentence for what runs, such as "Expo server, localhost:8081"              |
+| `isDefault`     | The default bundle runs: nothing picked, or what was picked is what the app starts on anyway |
+| `online`        | Whether the server the app runs from answers: false once a look for dev preview servers did not find it. Null for a preview or a bundle built into the app, before the first look, and with dev preview servers off |
+| `scanning`      | A full scan of every port for dev preview servers runs now: on open, on refresh, and every 30 seconds. The quick look every 2 seconds does not count |
+| `hosts`         | Where the app looks for dev preview servers: `{ host, port, source }`, where `source` is `built-in`, `app` (from the config) or `user` (added on the device). Empty until the first look |
+| `environment`   | The running preview's EAS environment, or null                                 |
+| `author`        | The running preview's author, or null                                          |
+| `commit`        | The running preview's full commit, or null                                     |
+| `publishedAt`   | The running preview's ISO publish date, or null                                |
+| `app`           | `{ name, version, buildNumber, platform }` of this build. Nulls on a native side older than the JS |
+| `compatibility` | `{ mode, key }`: `appVersion` or `fingerprint`, and the build key               |
+| `previewsConfigured` | A bucket URL is set. False when `s3Config.url` is undefined, empty or blank, and then nothing is read from a bucket |
+| `loading`       | The previews list is loading                                                   |
+| `error`         | The last error, as text, or null                                               |
+| `canGoBack`     | A preview is chosen (even one that could not load) or a server is picked (even one that did not answer) |
+
+| Action            | What it does                                                               |
+| ----------------- | -------------------------------------------------------------------------- |
+| `backToDefault()` | Restarts on the default bundle, clearing the chosen preview and the picked server |
+| `refresh()`       | Asks the bucket again, and scans every port for dev preview servers when they are on |
 
 ## Functions
 
 | Function                      | What it does                                                                 |
 | ----------------------------- | ---------------------------------------------------------------------------- |
-| `selectPreview(id, key?)`     | Chooses what the next start or `reload()` loads: a preview id, or null for the base bundle. False where the native module is missing |
+| `selectPreview(id, key?)`     | Chooses what the next start or `reload()` loads: a preview id, or null for the default bundle. False where the native module is missing |
 | `reload()`                    | Restarts JS, so a new choice takes effect. False where the native module is missing |
 | `previewBundlePath(id)`       | Where a preview's bundle sits, relative to the preview folder                |
 | `markLaunched()`              | Tells the native side this start worked. The provider calls it               |
 | `buildKey()`                  | The key the plugin baked into this build, or null                            |
 | `buildCompatibility()`        | `appVersion` or `fingerprint`, as baked in, or null                          |
-| `buildSlug()`                 | The app's slug, as baked in, or null                                         |
+| `buildSlug()`                 | The app's slug, as baked in, or null. It names the app's folder in the bucket |
 | `previewTitle(id)`            | The readable title for an id: `task-1-login-fix` becomes "Task 1 login fix"  |
 | `previewItems(state)`         | `{ items, incompatible }` from the store state                               |
 | `runningNow(input)`           | The pure form of `useRunning()`                                              |
-| `resolveTheme(theme, scheme)` | A full list theme from a partial one and the device's colour scheme         |
+| `runningLabel(running, labels)` | One sentence for what runs, as `usePreviewStatus().label`                  |
+| `runningKind(running, labels)` | The kind's name, such as "Expo server" or "Preview"                         |
+| `sameServer(a, b)`            | Whether two `host:port` values are one server: the same port, and the same host or two names for this computer (`localhost`, `127.0.0.1`, `10.0.2.2`) |
+| `resolveTheme(theme, scheme)` | A full list theme from the `theme` prop and the device's colour scheme      |
+| `fromDevtoolsPalette(palette)` | The list theme keys an expo-devtools palette maps to                       |
+
+Types: `PreviewConfig`, `PreviewS3Config`, `PreviewsState`, `PreviewItem`, `PreviewStatus`,
+`Running`, `DefaultSource`, `BundleKind`, `PreviewStatusInfo`, `PreviewListProps`,
+`PreviewListTheme`, `PreviewListThemeInput`, `PreviewListFonts`, `DevtoolsPaletteLike`,
+`PreviewListLabels`, `DevPreviewServersState`, `DevPreviewServer`, `DevPreviewServersOptions`,
+`DevServerHost` and `HostAddress`.
 
 `previewsStore` and `devPreviewServersStore` are the stores behind the hooks, with `getState()` and
-`subscribe()`, for use outside React.
+`subscribe()`, for use outside React. `devPreviewServersStore.addHost({ host, port })` and
+`removeHost({ host, port })` add and remove a host on the device, as the list does. The server the
+app runs from, or the one picked in the list, has `unknown: true` when no look
+has found it answering and nothing was saved about it, so its kind and name are not known.
+`previewsStore.clearError()` hides the error, as the snackbar's **Dismiss** does.
 
 ## Theme
 
-`PreviewList`'s `theme` takes any of these. `LIGHT_THEME` and `DARK_THEME` are the defaults.
+`PreviewList`'s `theme` takes one of three things:
 
-| Token         | What it colours                                            |
-| ------------- | ---------------------------------------------------------- |
-| `mode`        | `auto` (follows the device), `light` or `dark`. Default `auto` |
-| `background`  | Behind the list                                            |
-| `card`        | Each card                                                  |
-| `surface`     | Behind the changelog and the progress track                |
-| `border`      | Card and button borders                                    |
-| `title`       | Headings                                                   |
-| `text`        | Body text                                                  |
-| `muted`       | Quiet text: branch, author, date, size                     |
-| `primary`     | Main buttons                                               |
-| `primaryText` | Text on main buttons                                       |
-| `danger`      | Delete, and errors                                         |
-| `warning`     | Update available, unpublished, and the Metro note          |
-| `success`     | Downloaded                                                 |
-| `radius`      | Card corner radius. Buttons scale from it. Default 14      |
-| `fonts`       | `{ regular, medium, bold }` font family names. Each falls back to the system font |
+- **Nothing.** `LIGHT_THEME` or `DARK_THEME`, following the device. Only these two are built in.
+- **A partial `PreviewListTheme`.** Any keys below. The rest come from light or dark, picked by
+  `mode`.
+- **An expo-devtools palette** (`DevtoolsPaletteLike`, the shape of its `Palette`), told apart by its
+  `textPrimary` and `accent` keys. `fromDevtoolsPalette` maps it: `surface` to `card`, `sectionTint`
+  to `surface` and `tint`, `textPrimary` to `title` and `text`, `textSecondary` to `muted`, `accent`
+  to `primary`, `error` and `errorSurface` to `danger` and `dangerSurface`, and `codeKeyword`,
+  `jsonNumber` and `jsonString` to `info`, `accent2` and `accent3`. `mode` comes from how dark its
+  background is, and `primaryText` is white or black, whichever reads on `accent`.
+
+A chip's text is its tone on a light wash of it; where the tone would be hard to read on the card
+or the header card's tint, its text is darkened (or lightened, on a dark theme) just enough. A tone
+that is not a hex colour gets an outline instead of a wash.
+
+| Key             | Light     | Dark      | What it colours                                            |
+| --------------- | --------- | --------- | ---------------------------------------------------------- |
+| `mode`          | `auto`    | `auto`    | `auto` (follows the device), `light` or `dark`             |
+| `background`    | `#f4f6fa` | `#12151f` | Behind the list                                            |
+| `card`          | `#ffffff` | `#1c2130` | Each card                                                  |
+| `surface`       | `#eef1f6` | `#262c3d` | Behind the changelog and the progress track, and a pressed row |
+| `tint`          | `#e6eefc` | `#1f2b47` | The header card, and the row the app runs from             |
+| `tintBorder`    | `#c9d6ef` | `#3a4560` | The header card's border, which `border` would lose on the tint |
+| `border`        | `#e4e8f0` | `#323a4f` | Card, button and divider lines                             |
+| `title`         | `#0f172a` | `#f8fafc` | Headings, and the error snackbar's message                 |
+| `text`          | `#334155` | `#cbd5e1` | Body text                                                  |
+| `muted`         | `#56637a` | `#94a3b8` | Quiet text: hints, who published and when, size, and plain chips |
+| `primary`       | `#2563eb` | `#5b8def` | Main buttons, Show details, the Preview chip and Downloading |
+| `primaryText`   | `#ffffff` | `#0b1220` | Text on main buttons                                       |
+| `danger`        | `#dc2626` | `#f87171` | Delete, the error snackbar's edge, Offline, Unpublished and Broken |
+| `dangerSurface` | `#fff6f6` | `#3b1d1d` | Behind the error snackbar                                  |
+| `warning`       | `#d97706` | `#fbbf24` | Update available, Made for another native build, and the Metro note |
+| `success`       | `#16a34a` | `#4ade80` | Active and Downloaded                                      |
+| `info`          | `#0e7490` | `#22d3ee` | The `server: Expo` chip and the branch line                |
+| `accent2`       | `#7c3aed` | `#a78bfa` | The `server: Preview` chip                                 |
+| `accent3`       | `#be185d` | `#f472b6` | The `env:` chip                                            |
+| `radius`        | `14`      | `14`      | Card corner radius. Buttons scale from it                  |
+| `fonts`         | `{}`      | `{}`      | `{ regular, medium, bold }` font family names. Each falls back to the system font |
 
 ## Labels
 
-`PreviewList`'s `labels` takes any of these. `DEFAULT_LABELS` has the defaults.
+`PreviewList`'s `labels` takes any of these. `DEFAULT_LABELS` has the defaults. A name in
+braces, such as `{host}`, is filled in. `status`, `statusShort` and `timeAgo` are merged per key, so
+`labels={{ statusShort: { broken: 'Crashed' } }}` changes only that one.
 
-| Label                    | Default                                                                       |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| `title`                  | Previews                                                                      |
-| `running`                | Running                                                                       |
-| `base`                   | Embedded bundle                                                               |
-| `backToBase`             | Back to base                                                                  |
-| `metroBypassed`          | Debug build: Metro is not used while a preview runs. Go back to base to load from Metro again. |
-| `refresh`                | Refresh                                                                       |
-| `empty`                  | No previews published for this build yet.                                     |
-| `noBuildKey`             | This build has no compatibility key, so it cannot list previews. Add the config plugin and rebuild. |
-| `download`               | Download                                                                      |
-| `switchTo`               | Switch                                                                        |
-| `update`                 | Update                                                                        |
-| `delete`                 | Delete                                                                        |
-| `status`                 | One per status: Not downloaded, Downloading, Downloaded, Update available, Unpublished, Broken: it stopped while starting |
-| `incompatibleTitle`      | Incompatible                                                                  |
-| `incompatibleHint`       | Made for another native build. They can't run on this one.                    |
-| `deleteAll`              | Delete all                                                                    |
-| `devPreviewServersTitle` | Dev preview servers                                                           |
-| `devPreviewServersHint`  | Metro servers for this app on your computer. Debug builds only.               |
-| `noDevPreviewServers`    | No Metro server found. Start one with npx preview start.                      |
-| `noBuildSlug`            | This build has no app slug, so it cannot tell its servers from other apps'. Add the config plugin and rebuild. |
-| `stopDevPreviewServer`   | Stop using dev preview server                                                 |
-| `localSuffix`            | local                                                                         |
-| `localIncompatible`      | Made for another native build                                                 |
-| `localUnknownBuild`      | Native build unknown                                                          |
+### Header card
 
-`status` is merged per key, so `labels={{ status: { broken: 'Crashed' } }}` changes only that one.
+| Label                      | Default                       | Where it shows                                         |
+| -------------------------- | ----------------------------- | ------------------------------------------------------ |
+| `running`                  | Running                       | What a screen reader says before what runs             |
+| `defaultServerChip`        | Default server                | The chip on the Metro the app starts on: on its row, and in the card while it runs |
+| `defaultBundle`            | Default bundle                | The chip in the card while the bundle built into the app runs, as in a release build |
+| `kindBuiltIn`              | Built into the app            | The title for a bundle built into the app              |
+| `kindExpoDevServer`        | Expo server                   | What a screen reader says for the `server: Expo` chip  |
+| `kindDevPreviewServer`     | Preview server                | What a screen reader says for the `server: Preview` chip |
+| `kindPreview`              | Preview                       | The chip for a running preview                         |
+| `kindServer`               | Server                        | The chip, with no hue, for a server no look has found and nothing was saved about |
+| `offline`                  | Offline                       | The chip on the card and on the row of the server the app runs from, once it stops answering, and on the row of a picked server the app started without |
+| `offlineHint`              | Start this server again, or go back to default. | Under the chips when a picked server stops answering |
+| `offlineDefaultHint`       | Start Metro again, then reload. | Under the chips when the Metro the app starts on stops answering |
+| `serverPrefix`             | server:                       | Before a server's kind on its chip                     |
+| `serverExpo`               | Expo                          | A plain Expo server's kind on its chip                 |
+| `serverPreview`            | Preview                       | A `preview start` server's kind on its chip            |
+| `refresh`                  | Refresh                       | What a screen reader says for the Refresh icon         |
+| `showDetails`              | Show details                  | Opens the rest of the facts                            |
+| `hideDetails`              | Hide details                  | Closes them                                            |
+| `author`                   | Author                        | Fact name                                              |
+| `published`                | Published                     | Fact name                                              |
+| `branch`                   | Branch                        | Fact name, and what a screen reader says before a branch |
+| `previewId`                | Preview id                    | Fact name                                              |
+| `environment`              | Environment                   | Fact name, and what a screen reader says for the `env:` chip |
+| `app`                      | App                           | Fact name                                              |
+| `version`                  | Version                       | Fact name                                              |
+| `commit`                   | Commit                        | Fact name                                              |
+| `platform`                 | Platform                      | Fact name                                              |
+| `compatibility`            | Matched by                    | Fact name                                              |
+| `compatibilityAppVersion`  | App version                   | Its value in `appVersion` mode                         |
+| `compatibilityFingerprint` | Fingerprint                   | Its value in `fingerprint` mode                        |
+| `compatibilityKey`         | Build key                     | Fact name                                              |
+| `backToDefault`            | Back to default               | The card's action: back to the default Metro in a debug build, to the bundle built into the app in a release build |
+| `metroBypassed`            | Debug build: Metro is not used while a preview runs. Back to default loads from Metro again. | Under the facts while a preview runs in a debug build |
+
+### Error snackbar
+
+Text between backticks shows in a code font.
+
+| Label                | Default                                     | Where it shows                                   |
+| -------------------- | ------------------------------------------- | ------------------------------------------------ |
+| `errorUnreachable`   | Can't reach the bucket at \{host\}.         | The bucket did not answer                        |
+| `errorEmulatorHint`  | On the Android emulator, use \`10.0.2.2\`, or run \`adb reverse tcp:\{port\} tcp:\{port\}\`. | Under it, on Android when the bucket is on localhost |
+| `errorForbidden`     | The bucket refused access.                  | A 403                                            |
+| `errorForbiddenHint` | Check the read key or the bucket's policy.  | Under it. None when you set `errorForbidden` and not this |
+| `errorNotFound`      | The bucket or the file was not found.       | A 404                                            |
+| `errorNotFoundHint`  | Check the bucket URL in the preview config. | Under it. None when you set `errorNotFound` and not this |
+| `errorGeneric`       | Something went wrong.                       | Anything else. The raw error goes under it       |
+| `retry`              | Retry                                       | Does again what was tapped last                  |
+| `dismiss`            | Dismiss                                     | Hides the snackbar                               |
+
+### Dev preview servers
+
+| Label                    | Default                                       | Where it shows                                  |
+| ------------------------ | --------------------------------------------- | ----------------------------------------------- |
+| `devPreviewServersTitle` | Dev preview servers                           | The section's heading                           |
+| `devPreviewServersHint`  | Metro servers for this app on these hosts.    | Under the heading                               |
+| `scanning`               | Scanning…                                     | What a screen reader says for the spinner after the heading's title, during a full scan of the ports |
+| `hosts`                  | Hosts                                         | The row at the end of the servers card, with a count. Opens the list of hosts |
+| `addHost`                | Add a host                                    | The last row of the servers card. Opens the field in its place |
+| `addHostPlaceholder`     | 192.168.1.24 or qa-mac.local                  | In the empty field                              |
+| `addHostHint`            | A computer running npx preview start. Add :port if its registry is not on 19150. | Under the field |
+| `clearHost`              | Clear                                         | What a screen reader says for the field's clear button |
+| `addHostConfirm`         | Add                                           | Adds what is in the field                       |
+| `cancel`                 | Cancel                                        | Closes the field                                |
+| `removeHost`             | Remove \{host\}                               | What a screen reader says for a host's ✕        |
+| `hostInvalid`            | That is not an IP address or a host name.     | Under the field, in place of the hint           |
+| `hostDuplicate`          | \{host\} is already in the list.              | Under the field                                 |
+| `hostBuiltIn`            | \{host\} is always checked.                   | Under the field, for localhost and this computer's other names |
+| `active`                 | Active                                        | The chip on the server or preview the app runs from |
+| `defaultServerTitle`     | Default                                       | The title of the Metro the app starts on, when `preview start` gave it none |
+| `switchToServer`         | Switch to \{title\}, \{address\}              | What a screen reader says for a server row      |
+| `switchToServerHint`     | Restarts the app on this server.              | Its hint                                        |
+| `localIncompatible`      | Made for another native build                 | A server's chip                                 |
+| `localUnknownBuild`      | Native build unknown                          | A server's chip                                 |
+| `noDevPreviewServers`    | No Metro server found. Start one with npx preview start. | When none is found                   |
+| `noBuildSlug`            | This build has no app slug, so it cannot tell its servers from other apps'. Add the config plugin and rebuild. | Instead of the servers, in a build without the plugin |
+
+### Published previews
+
+| Label               | Default                                   | Where it shows                                     |
+| ------------------- | ----------------------------------------- | -------------------------------------------------- |
+| `previewsTitle`     | Published previews                        | The section's heading                              |
+| `previewsNotConfigured` | Previews aren't set up                | Under the heading when the config has no `s3Config.url` |
+| `previewsNotConfiguredHint` | Add s3Config.url to the preview config to list published previews. | Under `previewsNotConfigured` |
+| `empty`             | No previews published for this build yet. | When none is published                             |
+| `noBuildKey`        | This build has no compatibility key, so it cannot list previews. Add the config plugin and rebuild. | In a build without the plugin |
+| `branchPrefix`      | Branch:                                   | Before the branch name on a row                    |
+| `statusPrefix`      | status:                                   | Before the status on its chip, which starts the status in lower case |
+| `statusName`        | Status                                    | What a screen reader says before the status        |
+| `statusShort`       | One per status: Not downloaded, Downloading, Downloaded, Update available, Unpublished, Broken | The status on its chip |
+| `brokenHint`        | It stopped while starting, so the default bundle loaded instead. | Under the chips of a broken preview |
+| `environmentPrefix` | env:                                      | Before the environment name on its chip            |
+| `byline`            | \{author\}, \{time\}                      | Who published it and when                          |
+| `timeAgo`           | `now` Just now, `minute` 1 minute ago, `minutes` \{n\} minutes ago, `hour` 1 hour ago, `hours` \{n\} hours ago, `day` 1 day ago, `days` \{n\} days ago | How long ago. Older than 30 days shows the date |
+| `showMore`          | Show more                                 | Opens a long changelog                             |
+| `showLess`          | Show less                                 | Closes it                                          |
+| `download`          | Download                                  | Action                                             |
+| `switchTo`          | Switch                                    | Action                                             |
+| `update`            | Update                                    | Action                                             |
+| `delete`            | Delete                                    | Action                                             |
+
+### Incompatible
+
+| Label               | Default                                                  | Where it shows        |
+| ------------------- | -------------------------------------------------------- | --------------------- |
+| `incompatibleTitle` | Incompatible                                             | The section's heading |
+| `incompatibleHint`  | Made for another native build, so they can't run here.   | Under the heading     |
+| `deleteAll`         | Delete all                                               | The section's action  |
+
+### Deprecated
+
+Still accepted, so an app written for 0.1.0 type-checks.
+
+| Label                  | Default                          | Now                                                   |
+| ---------------------- | -------------------------------- | ----------------------------------------------------- |
+| `title`                | Previews                         | Not shown. The list opens with the header card        |
+| `base`                 | Base                             | Not shown. The card names the default by what serves it |
+| `backToBase`           | Back to default                  | Use `backToDefault`. Still shown when `backToDefault` is not set |
+| `stopDevPreviewServer` | Stop using dev preview server    | Not shown. Back to default stops a picked server      |
+| `localSuffix`          | local                            | Not shown. The chip names the server's kind           |
+| `status`               | One per status, as `statusShort`, with Broken: it stopped while starting | Use `statusShort`. Still shown for any status `statusShort` does not set |
 
 ## Config plugin
 

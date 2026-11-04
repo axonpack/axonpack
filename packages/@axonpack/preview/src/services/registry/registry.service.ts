@@ -1,7 +1,12 @@
+import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
+import { hostname, networkInterfaces } from "node:os";
 
 import {
+  type Machine,
   type RegisteredServer,
+  type RegistryAnswer,
+  REGISTRY_VERSION,
   SERVER_TTL_MS,
 } from "../../constants/dev-preview-servers/dev-preview-servers.const";
 
@@ -32,6 +37,25 @@ export class ServerList {
   }
 }
 
+/**
+ * This computer. The id comes from its name and network cards, so it is the same on every run with
+ * no file to keep it in.
+ */
+export function thisMachine(): Machine {
+  const lan = Object.values(networkInterfaces())
+    .flatMap((list) => list ?? [])
+    .filter((i) => i.family === "IPv4" && !i.internal);
+  return {
+    id: createHash("sha256")
+      .update(
+        [hostname().split(".")[0], ...lan.map((i) => i.mac).sort()].join(","),
+      )
+      .digest("hex")
+      .slice(0, 12),
+    addresses: lan.map((i) => i.address),
+  };
+}
+
 const readBody = (req: IncomingMessage) =>
   new Promise<string>((resolve, reject) => {
     let body = "";
@@ -41,15 +65,17 @@ const readBody = (req: IncomingMessage) =>
   });
 
 /**
- * `GET /servers` lists the live servers; `POST /servers` registers one or renews its heartbeat;
- * `DELETE /servers/<id>` removes one. Plain HTTP, so the app reads it with `fetch` and `curl`
- * shows it too. Once it has been empty for `idleExitMs`, `onIdle` is called.
+ * `GET /servers` lists the live servers, with this registry's version and this computer's id and
+ * LAN addresses; `POST /servers` registers one or renews its heartbeat, and answers the same;
+ * `DELETE /servers/<id>` removes one. Plain HTTP, so the app reads it with `fetch` and `curl` shows
+ * it too. Once it has been empty for `idleExitMs`, `onIdle` is called.
  */
 export function createRegistry(
   options: {
     ttlMs?: number;
     idleExitMs?: number;
     onIdle?: () => void;
+    machine?: Machine;
     now?: () => number;
   } = {},
 ): { server: Server; list: ServerList } {
@@ -65,9 +91,15 @@ export function createRegistry(
       });
       res.end(body === undefined ? "" : JSON.stringify(body));
     };
+    const answer = (): RegistryAnswer => ({
+      servers: list.alive(now()),
+      version: REGISTRY_VERSION,
+      machineId: options.machine?.id,
+      addresses: options.machine?.addresses,
+    });
     try {
       if (req.method === "GET" && req.url === "/servers") {
-        send(200, { servers: list.alive(now()) });
+        send(200, answer());
       } else if (req.method === "POST" && req.url === "/servers") {
         const entry = JSON.parse(await readBody(req)) as RegisteredServer;
         if (typeof entry.id !== "string" || typeof entry.port !== "number") {
@@ -75,7 +107,7 @@ export function createRegistry(
           return;
         }
         list.upsert(entry, now());
-        send(204);
+        send(200, answer());
       } else if (req.method === "DELETE" && req.url?.startsWith("/servers/")) {
         list.remove(decodeURIComponent(req.url.slice("/servers/".length)));
         send(204);

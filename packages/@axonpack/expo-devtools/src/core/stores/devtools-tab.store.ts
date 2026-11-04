@@ -1,12 +1,11 @@
-import type { DevtoolsTab } from '../components/devtools-overlay/devtools-tab-bar.component';
-
-let lastTab: DevtoolsTab = 'network';
+/** A built-in tab's key, or a support's id. */
+let lastTab = 'network';
 
 export const devtoolsTabStore = {
-  get(): DevtoolsTab {
+  get(): string {
     return lastTab;
   },
-  set(next: DevtoolsTab) {
+  set(next: string) {
     lastTab = next;
   },
 };

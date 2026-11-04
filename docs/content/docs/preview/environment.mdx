@@ -17,7 +17,7 @@ The CLI never reads the app's settings, and the app never sees `PREVIEW_S3_*`.
 
 | Variable                       | Needed | What it is                                                         |
 | ------------------------------ | ------ | ------------------------------------------------------------------ |
-| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>`, plus a folder if you add more segments      |
+| `PREVIEW_S3_URL`               | Yes    | `<endpoint>/<bucket>`. The app's slug is the folder inside it      |
 | `PREVIEW_S3_ACCESS_KEY_ID`     | Yes    | The write key's id                                                 |
 | `PREVIEW_S3_SECRET_ACCESS_KEY` | Yes    | The write key's secret                                             |
 | `PREVIEW_S3_REGION`            | No     | Signing region. Default `us-east-1`, which MinIO and R2 accept     |
@@ -68,12 +68,17 @@ import type { PreviewConfig } from '@axonpack/preview';
 
 export const previewConfig: PreviewConfig = {
   enabled: true,
-  url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL ?? '',
-  readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
-  readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
-  region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
+  s3Config: {
+    url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string,
+    readAccessKeyId: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_ACCESS_KEY_ID,
+    readSecretAccessKey: process.env.EXPO_PUBLIC_PREVIEW_S3_READ_SECRET_ACCESS_KEY,
+    region: process.env.EXPO_PUBLIC_PREVIEW_S3_REGION,
+  },
 };
 ```
+
+`url` is required, and an env value is typed as possibly undefined, so it goes in with `as string`.
+Left out or empty at runtime, the list shows previews as not set up.
 
 These names are only a convention, the same ones the example app uses. Expo builds every
 `EXPO_PUBLIC_*` value into the bundle, so only a read-only key may go there. The values are read
@@ -91,8 +96,9 @@ runs in, or at none.
 
 ## Building with an EAS environment
 
-If your app keeps its variables on EAS, `--environment <name>` builds the preview with them, like
-`eas update --environment`:
+If your app keeps its variables on
+[EAS environment variables](https://docs.expo.dev/eas/environment-variables/), `--environment <name>`
+builds the preview with them, like `eas update --environment`:
 
 ```sh
 npx preview publish --environment preview
@@ -104,6 +110,9 @@ npx preview publish --environment preview
   (app version, slug), the fingerprint and `expo export:embed`. So the preview's key matches a build
   made in that environment.
 - A variable already set in your shell wins over the EAS one.
+- The environment's name is recorded in the preview's manifest and list entry. The app shows it as an
+  `env: <name>` chip on the preview's row and on the header card while it runs. Previews published
+  before this, or without the flag, have no chip.
 - Without the flag nothing changes, and eas-cli is never called.
 
 It needs eas-cli installed (`npm install -g eas-cli`), a login (`eas login`, or `EXPO_TOKEN` in CI)

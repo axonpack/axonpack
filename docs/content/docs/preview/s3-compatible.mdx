@@ -12,7 +12,7 @@ their own pages; this one is for everything else.
 
 | Need                  | Used for                                                                 |
 | --------------------- | ------------------------------------------------------------------------ |
-| Path-style URLs       | Every request goes to `<endpoint>/<bucket>/<key>`                        |
+| Path-style URLs       | Every request goes to `<endpoint>/<bucket>/<slug>/<key>`                 |
 | SigV4, service `s3`   | Every request the CLI makes, and the app's reads from a private bucket   |
 | `GET`, `HEAD`, `PUT`, `DELETE` on objects | Reading, checking, uploading and removing files       |
 | `ListObjectsV2`       | `preview prune` (`GET /<bucket>?list-type=2`)                            |
@@ -32,7 +32,7 @@ Signed requests use AWS Signature Version 4 with the service `s3`, the region yo
 `x-amz-content-sha256` header holding the body's hash. The host name is part of the signature, so a
 proxy in front must pass the `Host` header through unchanged.
 
-The region is `PREVIEW_S3_REGION` for the CLI and `region` in the app. Both default to `us-east-1`.
+The region is `PREVIEW_S3_REGION` for the CLI and `s3Config.region` in the app. Both default to `us-east-1`.
 Use whatever region your host expects; many accept `us-east-1` or `auto`.
 
 ### Conditional PUT
@@ -49,10 +49,10 @@ preview again.
 
 ### Reads from the app
 
-A public bucket needs anonymous `GET` on its objects. The app reads `<url>/<key>` with no
-signature, so `url` can be any address the files are public under, such as a CDN.
+A public bucket needs anonymous `GET` on its objects. The app reads `<url>/<slug>/<key>` with no
+signature, so `s3Config.url` can be any address the files are public under, such as a CDN.
 
-A private bucket needs a read-only key. The app signs each `GET` with it, so `url` must be the real
+A private bucket needs a read-only key. The app signs each `GET` with it, so `s3Config.url` must be the real
 `<endpoint>/<bucket>` address. Give the key `ListBucket` as well as `GetObject` if the host has
 that distinction: without it, many hosts answer a missing file with 403 instead of 404, and a build
 with nothing published yet shows an error instead of an empty list.
@@ -69,7 +69,8 @@ does not apply it either. So the bucket needs no CORS settings.
 
 ## Setup checklist
 
-1. **Create a bucket.** One bucket per app, or one shared bucket with a folder per app in the URL.
+1. **Create a bucket.** One bucket can hold several apps: each app's files go in a folder named
+   after its slug. A bucket per app works too.
 2. **Make the write key.** Read, write, delete and list on that bucket only. In S3 policy terms:
    `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` and `s3:ListBucket`.
 3. **Choose public or private.**

@@ -5,8 +5,15 @@ import {
   DEFAULT_PORT_RANGE,
   DEFAULT_REGISTRY_PORT,
   type RegisteredServer,
+  type RegistryAnswer,
 } from "../../constants/dev-preview-servers/dev-preview-servers.const";
-import type { ScannedServer } from "../../utils/dev-preview-servers/merge-servers.util";
+import type { HostAddress } from "../../utils/dev-preview-servers/hosts.util";
+import type {
+  RemoteRegistry,
+  ScannedServer,
+} from "../../utils/dev-preview-servers/merge-servers.util";
+import { sameServer } from "../../utils/previews/running.util";
+import { scriptUrl } from "../native/native.service";
 
 // Generous on purpose. Android's HTTP client runs 5 requests per host at a time, so most of the
 // 19 probes wait in its queue, and the emulator's NAT takes about 400 ms even to refuse a closed
@@ -16,7 +23,7 @@ const PROBE_MS = 2000;
 
 /**
  * Runs one request, body read included, and aborts it after `ms`. The timer is cleared once the
- * request settles, so a fast answer leaves nothing pending: a poll round sends 20 of these.
+ * request settles, so a fast answer leaves nothing pending: a full sweep sends 20 of these.
  */
 async function within<T>(
   ms: number,
@@ -31,10 +38,10 @@ async function within<T>(
   }
 }
 
-async function isMetro(host: string, port: number): Promise<boolean> {
+async function isMetro(hostPort: string): Promise<boolean> {
   try {
     const text = await within(PROBE_MS, async (signal) =>
-      (await fetch(`http://${host}:${port}/status`, { signal })).text(),
+      (await fetch(`http://${hostPort}/status`, { signal })).text(),
     );
     return text.includes("packager-status:running");
   } catch {
@@ -61,26 +68,57 @@ async function readManifest(host: string, port: number, platform: Platform) {
 async function readRegistry(
   host: string,
   port: number,
-): Promise<RegisteredServer[] | null> {
+  ms = PROBE_MS,
+): Promise<RegistryAnswer | null> {
   try {
-    const body = await within(PROBE_MS, async (signal) =>
+    const body = await within(ms, async (signal) =>
       (await fetch(`http://${host}:${port}/servers`, { signal })).json(),
     );
-    return (body as { servers: RegisteredServer[] }).servers;
+    // A host typed by hand may run something else on the port.
+    return Array.isArray(body?.servers) ? (body as RegistryAnswer) : null;
   } catch {
     return null;
   }
 }
 
+/**
+ * The addresses whose registry answered on `port`, in the order given. Each is asked once, with a
+ * short timeout, `concurrency` at a time, so a /24 takes a few seconds. Once `signal` aborts, no
+ * new address is asked. The found ones are then asked like hosts added on the device.
+ */
+export async function findRegistries(
+  addresses: string[],
+  {
+    port = DEFAULT_REGISTRY_PORT,
+    ms = 500,
+    concurrency = 32,
+    signal,
+  }: {
+    port?: number;
+    ms?: number;
+    concurrency?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<HostAddress[]> {
+  const answered = new Set<string>();
+  let next = 0;
+  const worker = async () => {
+    while (next < addresses.length && !signal?.aborted) {
+      const host = addresses[next++];
+      if (await readRegistry(host, port, ms)) answered.add(host);
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  return addresses
+    .filter((host) => answered.has(host))
+    .map((host) => ({ host, port }));
+}
+
 /** The host the app's own Metro is on, which is where its other servers are too. */
 function devServerHost(): string {
-  try {
-    const getDevServer =
-      require("react-native/Libraries/Core/Devtools/getDevServer").default;
-    return new URL(getDevServer().url).hostname;
-  } catch {
-    return "localhost";
-  }
+  // A preview or the bundle built into the app loads from a file, which names no host.
+  const url = scriptUrl();
+  return url && /^https?:\/\//i.test(url) ? new URL(url).hostname : "localhost";
 }
 
 /**
@@ -93,46 +131,168 @@ export function candidateHosts(): string[] {
   return [...new Set(hosts)];
 }
 
+/**
+ * The names this computer always goes by, which the list shows as checked, plus the computer the
+ * app's Metro is on. They are one machine, so the scan asks only `candidateHosts()`.
+ */
+export const builtInHosts = (): string[] => [
+  ...new Set([
+    "localhost",
+    "127.0.0.1",
+    ...(RNPlatform.OS === "android" ? ["10.0.2.2"] : []),
+    devServerHost(),
+  ]),
+];
+
 const manifests = new Map<
   string,
   Promise<Awaited<ReturnType<typeof readManifest>> | null>
 >();
 
-/** One look: every Metro in the range on the candidate hosts, plus the registry. */
+/**
+ * Registries that did not answer, as `host:port`. iOS logs every refused connection to the Xcode
+ * console, and a registry is down for as long as no `preview start` runs, so a quick look skips
+ * these and only a full sweep asks again. Once one answers, it is asked every 2 s again.
+ */
+const silent = new Set<string>();
+
+async function askRegistry(host: string, port: number, sweep: boolean) {
+  const id = `${host}:${port}`;
+  if (!sweep && silent.has(id)) return null;
+  const servers = await readRegistry(host, port);
+  if (servers) silent.delete(id);
+  else silent.add(id);
+  return servers;
+}
+
+async function localRegistry(hosts: string[], sweep: boolean) {
+  for (const host of hosts) {
+    const answer = await askRegistry(host, DEFAULT_REGISTRY_PORT, sweep);
+    if (answer) return { answer, registryHost: host };
+  }
+  return { answer: null, registryHost: null };
+}
+
+/**
+ * One look: every Metro in the range on the candidate hosts, plus the registry and the host it
+ * answered on. `ports` narrows the range to those ports (the registry's are always asked). `own`
+ * is the `host:port` the app runs from, asked directly. `remote` are other computers, asked only
+ * for the servers their registry lists. `alive` is every `host:port` that answered.
+ */
 export async function discover(
   platform: Platform,
-): Promise<{ registry: RegisteredServer[]; scanned: ScannedServer[] }> {
+  own: string | null = null,
+  ports: number[] | null = null,
+  remote: HostAddress[] = [],
+): Promise<{
+  registry: RegisteredServer[];
+  registryHost: string | null;
+  remote: RemoteRegistry[];
+  scanned: ScannedServer[];
+  alive: string[];
+}> {
   const [from, to] = DEFAULT_PORT_RANGE;
+  const sweep = ports === null;
   const hosts = candidateHosts();
-  let registry: RegisteredServer[] = [];
-  for (const host of hosts) {
-    const found = await readRegistry(host, DEFAULT_REGISTRY_PORT);
-    if (found) {
-      registry = found;
-      break;
-    }
-  }
-  const ports = new Set<number>(registry.map((r) => r.port));
-  for (let port = from; port <= to; port++) ports.add(port);
+  // Another computer is never scanned, so a plain `expo start` there never shows. One the app's
+  // Metro is on is scanned already.
+  const others = remote.filter((r) => !hosts.includes(r.host));
+  const [local, elsewhere] = await Promise.all([
+    localRegistry(hosts, sweep),
+    Promise.all(
+      others.map(async ({ host, port }) => ({
+        host,
+        answer: await askRegistry(host, port, sweep),
+      })),
+    ),
+  ]);
+  const registry = local.answer?.servers ?? [];
+  const registryHost = local.registryHost;
+  // A computer reached twice is listed once, the first way: this one at its LAN address typed in
+  // on the simulator, a Mac on Wi-Fi and Ethernet, or a host typed in that the sweep found too.
+  // Only a registry that answered in this look counts, so after the USB cable is pulled this
+  // computer's LAN address lists its servers.
+  const machineIds = new Set(
+    local.answer?.machineId ? [local.answer.machineId] : [],
+  );
+  const reached = elsewhere.filter(({ host, answer }) => {
+    if (local.answer?.addresses?.includes(host)) return false;
+    const id = answer?.machineId;
+    if (!id) return true;
+    if (machineIds.has(id)) return false;
+    machineIds.add(id);
+    return true;
+  });
+  const registries = reached.map(({ host, answer }) => ({
+    host,
+    servers: answer?.servers ?? [],
+  }));
+  const asked = new Set<number>(registry.map((r) => r.port));
+  if (ports) ports.forEach((port) => asked.add(port));
+  else for (let port = from; port <= to; port++) asked.add(port);
+  const listed = registries.flatMap(({ host, servers }) =>
+    servers.map(({ port }) => ({ host, port })),
+  );
+  // When the scan already asks the server the app runs from, asking it again only adds one more
+  // refused connection for iOS to log while it is down.
+  const ownAsked =
+    own !== null &&
+    ([...asked].some((port) =>
+      hosts.some((host) => sameServer(`${host}:${port}`, own)),
+    ) ||
+      listed.some(({ host, port }) => sameServer(`${host}:${port}`, own)));
 
-  const scanned: ScannedServer[] = [];
-  await Promise.all(
-    [...ports].map(async (port) => {
-      for (const host of hosts) {
-        if (!(await isMetro(host, port))) continue;
-        const id = `${host}:${port}`;
-        // Read once per server; a closed port drops its entry so a new server there is read fresh.
-        if (!manifests.has(id))
-          manifests.set(
-            id,
-            readManifest(host, port, platform).catch(() => null),
-          );
-        const manifest = await manifests.get(id);
-        if (manifest?.url) scanned.push({ host, port, ...manifest });
-        return;
-      }
-      for (const host of hosts) manifests.delete(`${host}:${port}`);
+  const alive: string[] = [];
+  const answers = async (host: string, port: number) => {
+    const id = `${host}:${port}`;
+    if (await isMetro(id)) {
+      alive.push(id);
+      return true;
+    }
+    // A closed port drops its manifest, so a new server there is read fresh.
+    manifests.delete(id);
+    return false;
+  };
+  const [found, foundElsewhere] = await Promise.all([
+    Promise.all(
+      [...asked].map(async (port) => {
+        for (const host of hosts)
+          if (await answers(host, port)) return { host, port };
+        return null;
+      }),
+    ),
+    Promise.all(
+      listed.map(async ({ host, port }) =>
+        (await answers(host, port)) ? { host, port } : null,
+      ),
+    ),
+    // The server the app runs from can be on a host or port the scan does not cover.
+    own &&
+      !ownAsked &&
+      isMetro(own).then((up) => {
+        if (up) alive.push(own);
+      }),
+  ]);
+  // In the order asked, not the order answered, so two servers on one port keep their places.
+  const scanned = await Promise.all(
+    [...found, ...foundElsewhere].map(async (hit) => {
+      if (!hit) return null;
+      const id = `${hit.host}:${hit.port}`;
+      // Read once per server.
+      if (!manifests.has(id))
+        manifests.set(
+          id,
+          readManifest(hit.host, hit.port, platform).catch(() => null),
+        );
+      const manifest = await manifests.get(id);
+      return manifest?.url ? { ...hit, ...manifest } : null;
     }),
   );
-  return { registry, scanned };
+  return {
+    registry,
+    registryHost,
+    remote: registries,
+    scanned: scanned.filter((s): s is ScannedServer => s !== null),
+    alive,
+  };
 }

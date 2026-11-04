@@ -10,8 +10,10 @@ export type S3Config = {
   endpoint: string;
   /** Left out when `endpoint` already is the bucket's base, as for the app's unsigned reads. */
   bucket?: string;
-  /** Folder inside the bucket that everything goes under, so several apps can share one bucket. */
+  /** Folder from the end of the URL. 0.2.0 and later need none; it still goes in front of the slug. */
   prefix?: string;
+  /** The app's Expo slug. Every key goes under it, so apps sharing a bucket never see each other's. */
+  slug?: string;
   region: string;
   /** Write key in the CLI, read-only key in the app. Without one, requests go unsigned. */
   credentials?: Credentials;
@@ -28,7 +30,7 @@ const encodeKey = (key: string) =>
 
 /**
  * Splits one URL, `<endpoint>/<bucket>[/<prefix>]`, so a single setting says where everything
- * lives: `http://localhost:9000/previews-public`, `https://<account>.r2.cloudflarestorage.com/previews/my-app`.
+ * lives: `http://localhost:9000/previews-public`, `https://<account>.r2.cloudflarestorage.com/previews`.
  */
 export function parseBucketUrl(
   value: string,
@@ -51,8 +53,9 @@ export function parseBucketUrl(
   };
 }
 
+// The one place every key the CLI writes and the app reads gets its folders.
 const withPrefix = (config: S3Config, key: string) =>
-  config.prefix ? `${config.prefix}/${key}` : key;
+  [config.prefix, config.slug, key].filter(Boolean).join("/");
 
 const bucketUrl = (config: S3Config) =>
   config.bucket
@@ -196,7 +199,8 @@ export async function listKeys(
   prefix: string,
 ): Promise<string[]> {
   const keys: string[] = [];
-  const strip = config.prefix ? config.prefix.length + 1 : 0;
+  const folder = withPrefix(config, "");
+  const strip = folder ? folder.length + 1 : 0;
   let token: string | undefined;
   do {
     const query: Record<string, string> = {

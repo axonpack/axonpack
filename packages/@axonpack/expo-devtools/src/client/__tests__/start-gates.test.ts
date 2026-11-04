@@ -6,6 +6,7 @@ import {
   captureCrash,
   resetCrashCapture,
 } from '../../features/crash/services/capture-crash.service';
+import { aiUsageStore } from '../../features/ai-usage/stores/ai-usage.store';
 import { getCrashPopupDetail } from '../../features/crash/services/crash-popup.service';
 import { resetCrashHandlers } from '../../features/crash/services/install-crash-handlers.service';
 import { crashStore } from '../../features/crash/stores/crash.store';
@@ -200,4 +201,22 @@ describe('which tiers capture with them on', () => {
       expect(crashStore.getSnapshot()).toHaveLength(1);
     }
   );
+});
+
+/** `aiUsage` is the old name of `cli`, and still works. */
+describe('cli.disabledByDefault', () => {
+  beforeEach(() => {
+    aiUsageStore.setPaused(false);
+  });
+
+  it.each([
+    [{ cli: { disabledByDefault: true } }, true],
+    [{ aiUsage: { disabledByDefault: true } }, true],
+    [{ cli: { disabledByDefault: false }, aiUsage: { disabledByDefault: true } }, false],
+    [{ cli: { disabledByDefault: true }, aiUsage: { disabledByDefault: false } }, true],
+    [{}, false],
+  ])('%j starts the CLI tab paused: %s', (config, paused) => {
+    startDevtools({ network: NO_NETWORK_PATCHES, ...config });
+    expect(aiUsageStore.isPaused()).toBe(paused);
+  });
 });

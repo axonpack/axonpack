@@ -10,7 +10,11 @@ export {
   selectPreview,
 } from "./services/previews/select.service";
 export { markLaunched } from "./services/native/native.service";
-export type { PreviewConfig } from "./utils/config/config.util";
+export type {
+  DevPreviewServersOptions,
+  PreviewConfig,
+  PreviewS3Config,
+} from "./utils/config/config.util";
 export {
   previewsStore,
   usePreviewsState,
@@ -23,25 +27,45 @@ export type {
 } from "./utils/previews/preview-items.util";
 export { PreviewProvider } from "./components/preview-provider/preview-provider.component";
 export { usePreview } from "./services/previews/use-preview.service";
-export { runningNow } from "./utils/previews/running.util";
-export type { Running } from "./utils/previews/running.util";
+export {
+  runningKind,
+  runningLabel,
+  runningNow,
+  sameServer,
+} from "./utils/previews/running.util";
+export type {
+  BundleKind,
+  DefaultSource,
+  Running,
+} from "./utils/previews/running.util";
 export { useRunning } from "./services/previews/use-running.service";
+export { usePreviewStatus } from "./services/previews/use-preview-status.service";
+export type { PreviewStatusInfo } from "./services/previews/use-preview-status.service";
 export { PreviewList } from "./components/preview-list/preview-list.component";
 export type { PreviewListProps } from "./components/preview-list/preview-list.component";
 export type {
   PreviewListLabels,
   PreviewListTheme,
   PreviewListFonts,
+  PreviewListThemeInput,
+  DevtoolsPaletteLike,
 } from "./components/preview-list/preview-list.types";
 export {
   DEFAULT_LABELS,
   DARK_THEME,
   LIGHT_THEME,
 } from "./constants/preview-list/theme.const";
-export { resolveTheme } from "./utils/preview-list/theme.util";
+export {
+  fromDevtoolsPalette,
+  resolveTheme,
+} from "./utils/preview-list/theme.util";
 export {
   devPreviewServersStore,
   useDevPreviewServersState,
 } from "./stores/dev-preview-servers/dev-preview-servers.store";
 export type { DevPreviewServersState } from "./stores/dev-preview-servers/dev-preview-servers.store";
 export type { DevPreviewServer } from "./utils/dev-preview-servers/merge-servers.util";
+export type {
+  DevServerHost,
+  HostAddress,
+} from "./utils/dev-preview-servers/hosts.util";

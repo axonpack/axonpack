@@ -1,5 +1,6 @@
 import { AI_USAGE_AGENT } from '../../features/ai-usage/constants/ai-usage-agent.const';
 import { CONSOLE_AGENT } from '../../features/console/constants/console-agent.const';
+import { CONTEXT_AGENT } from '../../features/console/constants/context-agent.const';
 import { CRASH_AGENT } from '../../features/crash/constants/crash-agent.const';
 import { NAVIGATION_AGENT } from '../../features/navigation/constants/navigation-agent.const';
 import { NETWORK_AGENT } from '../../features/network/constants/network-agent.const';
@@ -18,6 +19,10 @@ type FieldGetter<T> = (row: T) => unknown;
  */
 export type AgentTopic<T = any> = {
   name: string;
+  /** A renamed topic's old name, which still works. `topics` lists only `name`. */
+  alias?: string;
+  /** What the reply's `#` lines call the topic, when people read it another way than they type it. */
+  title?: string;
   /** One line for `devtools topics`. */
   about: string;
   /**
@@ -42,6 +47,11 @@ export type AgentTopic<T = any> = {
   >;
   /** The columns a list shows when the query names none. */
   show: string[];
+  /**
+   * Finds the row `get` asks for, in place of looking its id up in `rows`, for a topic whose ids
+   * reach further than its rows, such as a dot path. Throws a one-line Error when there is none.
+   */
+  find?: (id: string) => T;
   /** What `get` prints for a row, when that differs from the row itself. Lists and `--grep` never see it. */
   detail?: (row: T, full: boolean) => unknown;
   /** Why the topic holds no rows, when that is worth a `#` line under an empty list. */
@@ -85,6 +95,7 @@ export type AgentAction = {
 export const TOPICS: AgentTopic[] = [
   NETWORK_AGENT,
   CONSOLE_AGENT,
+  CONTEXT_AGENT,
   PERFORMANCE_AGENT,
   STORAGE_AGENT,
   QUERY_AGENT,

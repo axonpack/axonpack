@@ -1,0 +1,316 @@
+---
+title: Preview
+description: Set up @axonpack/preview through the devtools config, and switch previews and dev servers from a Preview tab, the devtools command line tool or the console prompt.
+---
+
+The preview support sets up [`@axonpack/preview`](/docs/preview) from the devtools config. Its
+entry point is `@axonpack/expo-devtools/support/preview/v0`, for preview 0.x. It puts preview's
+provider around the app, so the app mounts no `PreviewProvider` of its own, and adds a **Preview**
+tab to the panel and to the Axonpack tab in React Native DevTools. It also adds a `preview` topic to
+the `devtools` command line tool, `preview` to the Console tab's `>` prompt, and a `useSupport()`
+hook. How supports work in general, and how their versions work, is on the
+[Overview](/docs/expo-devtools/supports).
+
+## Install preview
+
+Install the latest `@axonpack/preview` 0.x (0.2.0 or later), and add its config plugin to `app.json`. It has native
+code, so make a new build after. Every step, with its checks, is on preview's
+[Installation](/docs/preview/installation).
+
+```sh
+npx expo install @axonpack/preview expo-file-system
+```
+
+```json
+{
+  "expo": {
+    "plugins": [["@axonpack/preview", { "compatibility": "appVersion" }]]
+  }
+}
+```
+
+The devtools don't add the config plugin for you. It changes native code, so it goes in `app.json`
+with the app's other plugins.
+
+## Turn it on
+
+```tsx
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import PreviewV0Support, { type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+const previewConfig: PreviewConfig = {
+  enabled: true,
+  s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
+  devPreviewServers: true,
+};
+
+export default function Root() {
+  return (
+    <DevtoolsProvider
+      config={{
+        enabled: process.env.EXPO_PUBLIC_DEVTOOLS === 'on',
+        supports: [PreviewV0Support.configure(previewConfig)],
+      }}
+    >
+      <App />
+    </DevtoolsProvider>
+  );
+}
+```
+
+`configure` takes the same object as preview's own `PreviewProvider`. Every field is on preview's
+[Reference](/docs/preview/reference#previewconfig), and where each value comes from is on
+[Settings and env files](/docs/preview/environment#the-apps-settings). If the app already mounts
+`<PreviewProvider>`, remove it.
+
+Preview's hooks, such as `usePreview()` and `usePreviewStatus()`, and a `PreviewList` of your own
+work anywhere inside `DevtoolsProvider`, since its provider is above them.
+
+## Read its state with useSupport
+
+`useSupport()` returns the support's store: the state the `preview` topic and the `>` prompt read.
+The support's provider fills it from preview's own `usePreviewStatus()`, `usePreview()` and
+dev server list, so it changes when they do.
+
+```tsx
+import { useSupport } from '@axonpack/expo-devtools/support/preview/v0';
+
+function PreviewBadge() {
+  const { status } = useSupport();
+  return status && !status.isDefault ? <Text>{status.label}</Text> : null;
+}
+```
+
+| Field      | Type                         | What it is                                                                                                                  |
+| ---------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `status`   | `PreviewStatusInfo \| null`  | What runs now and the build it runs in, as `usePreviewStatus()` returns it. `null` until preview's provider has rendered, and while preview can't run. |
+| `previews` | `PreviewItem[]`              | The previews published for this build, and downloads the bucket no longer lists, as `usePreview().items`.                    |
+| `servers`  | `DevPreviewServer[]`         | The dev servers preview's last look found. Empty in a release build, and while preview's `enabled` or `devPreviewServers` is off. |
+
+The hook works with the devtools off too, since preview's provider is there either way. Because the
+support runs `usePreviewStatus()`, a debug build that starts from Metro with preview's `enabled` and
+`devPreviewServers` on looks for dev servers once at start, as any screen using that hook does.
+
+## Exports
+
+| Export                     | Kind     | What it is                                                                 |
+| -------------------------- | -------- | -------------------------------------------------------------------------- |
+| `configure(config)`        | function | Takes a `PreviewConfig` and returns a `DevtoolsSupport` for `supports`      |
+| `useSupport()`             | hook     | The support's state: `{ status, previews, servers }`                        |
+| default export             | object   | `{ configure, useSupport }`                                                |
+| `PreviewConfig`            | type     | Preview's config, the object its `PreviewProvider` takes                   |
+| `PreviewS3Config`          | type     | `s3Config`: the bucket and how to read it                                  |
+| `DevPreviewServersOptions` | type     | `devPreviewServers` as an object: `enabled`, `allowCustomHosts` and `hosts` |
+| `PreviewSupportData`       | type     | What `useSupport()` returns                                                |
+| `DevtoolsSupport`          | type     | What `configure` returns                                                   |
+
+## Keep the devtools on inside a preview
+
+A preview is a release bundle, so `__DEV__` is `false` while one runs. With `enabled: __DEV__`, the
+devtools are off inside every preview, and with them the panel and the Preview tab: QA can switch to
+a preview but has no way back from inside it. Give `enabled` a value that is also on in the bundles
+QA switches between, such as an env value set for internal builds and for `preview publish`, as in
+the example above.
+
+Or keep `enabled: __DEV__` and put preview's list on a screen of your own as well. See
+[Show the list anywhere](/docs/preview/app-setup#show-the-list-anywhere).
+
+## With the devtools off
+
+Preview's provider goes around the app with `enabled: false` too, because preview has to confirm
+each start: a preview whose start is never confirmed is marked broken, and the next start loads the
+default bundle. Preview's own `enabled` still decides whether previews are on.
+
+## The Preview tab
+
+The tab shows preview's own list, in the panel's theme, after Redux in the tab bar. From the top:
+
+- An error snackbar, only when something went wrong.
+- The header card: what runs now, **Back to default**, Refresh, and **Show details**.
+- Dev preview servers, in a debug build with preview's `enabled` and `devPreviewServers` on.
+- Published previews for this build, with Download, Switch, Update and Delete.
+- Incompatible downloads, with **Delete all**.
+
+Each part is described on preview's [App setup](/docs/preview/app-setup#the-ready-made-list).
+Switching to a preview or a server restarts the app, as it does from preview's own list.
+
+## In React Native DevTools
+
+The Axonpack tab on your computer has a Preview panel with the same list, after Navigation. Set it
+up on [React Native DevTools](/docs/expo-devtools/react-native-devtools). Two things differ:
+
+- Every row is drawn at once and there is no pull to refresh, since a FlatList there draws only its
+  first rows. The header card's Refresh asks again.
+- The panel reads the list again each time you open it.
+
+## From the command line
+
+The support adds a `preview` topic to the
+[`devtools` command line tool](/docs/expo-devtools/ai-agents), so an AI agent, or you, can see what
+runs and switch from a terminal. `devtools topics` lists it only while the support is in
+`supports`. Each query first asks the bucket again and looks for dev servers, as the header card's
+Refresh does, so it can take a few seconds.
+
+```sh
+npx devtools preview
+```
+
+```
+# preview · my-app · iPhone 16 Pro · 4 of 4 match
+id	kind	title	status	branch	active
+now	now	Default	expo-dev-server	-	true
+127.0.0.1:8082	server	Login fix	compatible	feat/login	false
+pr-7	preview	Dark mode	downloaded	feat/dark	false
+pr-6	preview	Onboarding	available	feat/onboarding	false
+# next: --after now
+```
+
+The first row is what runs now. Then come the dev servers, then the previews for this build.
+
+| Row          | `id`                  | `title`                                                                                     | `status`                                                                                     |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| What runs now | `now`                | The preview's title, a `preview start` server's title, `Default` for the Metro the app starts on, or an address | Where it comes from: `built-in`, `expo-dev-server`, `dev-preview-server`, `preview`, or `server` when no look has found it yet |
+| A dev server | Its `host:port`       | Its `preview start` title. Empty for a plain `expo start` server                             | `compatible`, `incompatible` or `unknown`: whether it was made for this build                 |
+| A preview    | Its id                | Its title                                                                                   | `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken`       |
+
+The columns shown by default are `id`, `kind` (`now`, `server` or `preview`), `title`, `status`,
+`branch` and `active` (true for the row that runs now, and always for `now`). Two more fields are
+there for `--fields`, `--where` and `--sort`: `t`, a preview's publish time, and `environment`, a
+preview's EAS environment.
+
+```sh
+npx devtools preview --where kind=preview
+npx devtools preview --where kind=preview --where status=downloaded,update-available
+npx devtools preview --where kind=server --where status=compatible
+npx devtools preview --where kind=preview --fields id,title,environment,t --sort -t
+npx devtools get preview now
+npx devtools get preview pr-7
+```
+
+`get` prints preview's own object for the row: for `now` what `usePreviewStatus()` returns, without
+its two functions, for a server the server as the list has it, and for a preview its item, with the
+bucket's entry and the download.
+
+### Switch from the command line
+
+| Action               | What it does                                                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `switch <id> --yes`  | Restarts the app on a dev server or a preview, by its `id` in the list. A preview that isn't on the device yet downloads first. |
+| `default --yes`      | Restarts the app on the default bundle, as **Back to default** does.                                                    |
+
+```sh
+npx devtools preview switch pr-7 --yes
+npx devtools preview switch 127.0.0.1:8082 --yes
+npx devtools preview default --yes
+```
+
+```
+# preview · my-app · iPhone 16 Pro · restarting the app on pr-7
+```
+
+Each one needs `--yes`, since it restarts the app. Without it the reply is
+`error: switch restarts the app, so it needs --yes`. These are refused too:
+
+| Reply                                                               | When                                       |
+| ------------------------------------------------------------------- | ------------------------------------------ |
+| `error: no dev server or preview "<id>". devtools preview lists them` | The id isn't a server or a preview in the list |
+| `error: <id> runs now`                                              | It already runs                            |
+| `error: <id> is downloading. Switch to it once its status is downloaded` | The preview is still downloading          |
+| `error: the default bundle runs now`                                | `default` with nothing else picked         |
+
+The app answers, then restarts a moment later, or once a preview it has to download is on the device.
+If the download fails, the app stays on what it runs, and `devtools get preview now` shows the error
+in `error`. The CLI tab logs each action, refused ones too, but its log is kept in memory, so the
+restart clears it. Run `npx devtools preview` again once the app is back to see what runs.
+
+### Download, update and delete from the command line
+
+These are the buttons on a preview's card in the list, and they call the same functions. Each takes
+a preview's `id`, needs `--yes`, and is refused where the list shows no such button.
+
+| Action                | The list shows it on                                       | What it does                                                                 |
+| --------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `download <id> --yes` | An `available` preview                                     | Downloads it to the device, as **Download** does                             |
+| `update <id> --yes`   | An `update-available` preview                              | Downloads the new copy over the old one, as **Update** does                  |
+| `delete <id> --yes`   | A preview on the device that isn't downloading             | Deletes the download, as **Delete** does                                     |
+
+```sh
+npx devtools preview download pr-6 --yes
+npx devtools preview update pr-7 --yes
+npx devtools preview delete pr-7 --yes
+```
+
+```
+# preview · my-app · iPhone 16 Pro · downloaded pr-6
+```
+
+`download` and `update` answer once the download is done. Until then the tool waits, and after
+5 seconds it stops with `still downloading pr-6 after 5 s` while the download carries on in the app;
+`npx devtools preview` shows its status, and the CLI tab shows how the action ended. `update` on the
+preview that runs now ends `. The app runs the new copy from its next start`. `delete` on the preview
+the app is set to start goes back to the default bundle first, as the list's **Delete** does, so it
+answers `# preview · deleting pr-7 and restarting the app on the default bundle` and the app
+restarts a moment later.
+
+Without `--yes` the reply says what the action changes, such as
+`error: download writes the preview to the device, so it needs --yes`. These are refused too:
+
+| Reply                                                                         | When                                              |
+| ----------------------------------------------------------------------------- | ------------------------------------------------- |
+| `error: no preview "<id>". devtools preview --where kind=preview lists them`  | The id isn't a preview in the list, such as a server or `now` |
+| `error: <id> is <status>. Only an available preview downloads`                | `download` on a preview that isn't `available`     |
+| `error: <id> is on the device and has an update: devtools preview update <id> --yes` | `download` on an `update-available` preview |
+| `error: <id> has no update. It is <status>`                                   | `update` on a preview that isn't `update-available` |
+| `error: <id> isn't on the device`                                             | `delete` on a preview that isn't downloaded       |
+| `error: <id> is downloading. Delete it once the download ends`                | `delete` while it downloads                        |
+| `error: <preview's message>`                                                  | The download or the delete failed in the app      |
+
+With `enabled: false` in the preview config the topic is off. Every query answers
+`# preview is off: previews are off: the config passed to configure() has enabled: false`, and every
+action the same line as an `error: preview is off: ...` line.
+
+## In the console prompt
+
+The support adds `preview` to the Console tab's `>` prompt, next to your `console.context`:
+
+| Name                  | What it is                                                                    |
+| --------------------- | ----------------------------------------------------------------------------- |
+| `preview.status`      | What runs now, the same as `useSupport().status`                              |
+| `preview.previews`    | The previews, the same as `useSupport().previews`                             |
+| `preview.servers`     | The dev servers, the same as `useSupport().servers`                           |
+| `preview.switch(id)`  | The `switch` action, with no `--yes`: typing the call is the confirmation      |
+| `preview.default()`   | The `default` action, with no `--yes`                                         |
+| `preview.download(id)` | The `download` action, with no `--yes`                                       |
+| `preview.update(id)`  | The `update` action, with no `--yes`                                          |
+| `preview.delete(id)`  | The `delete` action, with no `--yes`                                          |
+
+Each action returns the line the command line tool would print, such as
+`# preview · restarting the app on pr-7`, or an `error:` line. `download`, `update` and a `delete`
+that doesn't restart the app return a promise of that line, which the prompt fills in once it
+settles. A `preview` of your own in `console.context` wins over this one.
+
+The command line tool reaches this `preview` too, through its
+[`context` topic](/docs/expo-devtools/reference/cli#context): `devtools get context preview.status`
+reads it, and `devtools context call preview.switch '"pr-7"' --yes` calls one of its functions. The
+`preview` topic's actions above do the same with shorter commands.
+
+## When preview isn't installed
+
+With the support in `supports` and `@axonpack/preview` missing, the app still builds and runs, and
+nothing throws. With the devtools on, the start logs this with `console.error`, the Preview tab
+shows it in bold in place of the list, and the `preview` topic is off with the same text. There is
+no `preview` in the `>` prompt, and `useSupport()` stays empty:
+
+```
+The devtools config sets up preview, but @axonpack/preview isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add `@axonpack/preview` to the plugins in app.json, and rebuild the app.
+```
+
+## When another major of preview is installed
+
+`support/preview/v0` is for preview 0.x. With another major installed, it works like a missing
+preview: the start logs this with `console.error` (here for 1.0.0), and the tab shows it in place of
+the list.
+
+```
+The devtools config uses @axonpack/expo-devtools/support/preview/v0, which is for @axonpack/preview 0.x, but @axonpack/preview 1.0.0 is installed. Import the support from `@axonpack/expo-devtools/support/preview/v1` instead, and update @axonpack/expo-devtools if it doesn't have that entry yet.
+```

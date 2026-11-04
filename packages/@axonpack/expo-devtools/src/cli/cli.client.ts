@@ -103,12 +103,15 @@ async function command(args: CliArgs): Promise<number> {
   return typeof reply === 'number' ? reply : answer(app, reply, query, args.out);
 }
 
-/** `devtools network --help` adds the network actions, and `devtools network <action> --help` is only them. */
+/**
+ * `devtools network --help` adds the network actions, and `devtools network <action> --help` is
+ * only them. The same for `context`.
+ */
 function helpFor(name: string | undefined, action: boolean): string {
   if (name === undefined || name === 'help') return HELP.main;
   if (name === 'apps' || name === 'topics' || name === 'get') return HELP[name];
-  if (name !== 'network') return HELP.query;
-  return action ? HELP.network : `${HELP.query}\n\n${HELP.network}`;
+  if (name !== 'network' && name !== 'context') return HELP.query;
+  return action ? HELP[name] : `${HELP.query}\n\n${HELP[name]}`;
 }
 
 /** Query flags and action flags each go with their own kind of command, never quietly ignored. */
@@ -272,7 +275,7 @@ const stillWaiting = (what: string) =>
 
 // Asking again would send it again, so this one points at where its outcome lands instead.
 const stillActing = (what: string) =>
-  `still ${what} after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.`;
+  `still ${what} after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.`;
 
 const noAgent = (app: App) =>
   `${label(app)} has no devtools agent. It needs @axonpack/expo-devtools with <DevtoolsProvider> mounted, in a dev build or Expo Go.`;

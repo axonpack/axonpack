@@ -11,7 +11,8 @@ This file ships inside the package. The same reference, split into pages and sea
 - [Console tab](#console-tab)
 - [Performance tab](#performance-tab)
 - [Storage tab](#storage-tab)
-- [AI Usage tab](#ai-usage-tab)
+- [Preview tab](#preview-tab)
+- [CLI tab](#cli-tab)
 - [React Native DevTools tab](#react-native-devtools-tab)
 - [The `devtools` command line tool](#the-devtools-command-line-tool)
 - [API](#api)
@@ -31,12 +32,12 @@ full-screen modal; the button itself never appears inside the modal. With
 
 ### Header row
 
-| Item         | What it does                                                                                                                                                                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Query**, **Navigation**, **Redux**, **Crashes**, **AI Usage**, **Debug**. Query, Navigation and Redux show only when the app has one to show. Scrolls horizontally on a narrow screen. |
-| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports.                                                                                       |
-| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                                                                                                             |
-| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                                                                                                                     |
+| Item         | What it does                                                                                                                                                                                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab bar      | **Network**, **Console**, **Performance**, **Storage**, **Query**, **Navigation**, **Redux**, **Preview**, **Crashes**, **CLI**, **Debug**. Query, Navigation, Redux and Preview show only when the app has one to show. Scrolls horizontally on a narrow screen. |
+| Error badge  | A red count on the Console tab when it isn't the active tab, showing captured `console.error`s. The Crashes tab carries the same badge for unread reports.                                                                                                        |
+| Palette (🎨) | Opens the theme list; the active one is ticked. Applies immediately.                                                                                                                                                                                              |
+| Close (✕)    | Dismisses the panel. Recording carries on while it's closed.                                                                                                                                                                                                      |
 
 In a debug build whose bundle came from Metro, a strip under the header says **Metro server
 detected**. Its **Open DevTools** button opens React Native DevTools on the Axonpack tab, the same
@@ -53,7 +54,7 @@ of the panel, and its content scrolls in what is left.
 
 ### Toolbar row
 
-On the tabs that record (Network, Console, Performance, Navigation and AI Usage) it opens with the
+On the tabs that record (Network, Console, Performance, Navigation and CLI) it opens with the
 same two controls:
 
 | Control    | What it does                                                                         |
@@ -283,7 +284,14 @@ Present when the REPL is enabled through `console.repl`, which defaults to `__DE
 - `$modules('auth')` lists loaded Metro modules matching a string; `$m('src/stores/auth')` returns
   one. Both read Metro's module registry, which only a development bundle has, so in a release build
   they return nothing.
-- Anything passed in `console.context` is in scope by name.
+- Anything passed in `console.context` is in scope by name, and so is what a
+  [support](#supports) adds, such as `preview`. `console.context` wins a clash.
+- The `devtools` command line tool lists the same names in its [`context` topic](#context), reads
+  one with `devtools get context <name>`, and calls a function with
+  `devtools context call <name> --yes`. With `console.repl` off, that topic is off too.
+- What the tool takes out through `context` follows `console.redactKeys` and `console.redact` (see
+  [`DevtoolsConfig`](#devtoolsconfig)). The prompt itself isn't redacted: it runs whatever is typed
+  on the device, and code can always reach a value some other way.
 
 Your app's own imports are **not** reachable by name: a bundled module is a private closure, so there
 is nothing for an expression to resolve. `context` is how you hand over the objects you want to poke
@@ -528,16 +536,37 @@ anywhere in the tab, and no way to add a key that isn't already there.
 - **Binary values are shown, never edited.** There is no text form of the bytes to round-trip, so only
   their length is reported.
 
-## AI Usage tab
+## Preview tab
+
+`@axonpack/preview`'s own list, in the panel's theme, there once the
+[preview support](#supports) is in `supports`. When `@axonpack/preview` isn't installed, the
+tab shows that error instead. The guide is [Preview](https://axonpack.dev/docs/expo-devtools/supports/preview),
+and each part of the list is on preview's
+[App setup](https://axonpack.dev/docs/preview/app-setup#the-ready-made-list).
+
+| Part                | What it holds                                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Error snackbar      | Only when something went wrong: what, and what to try, with Retry and Dismiss.                                              |
+| Header card         | What runs now, **Back to default**, Refresh, and **Show details** for the build's facts.                                    |
+| Dev preview servers | This app's Metro servers, in a debug build with preview's `enabled` and `devPreviewServers` on. Tap a row to restart on it. |
+| Published previews  | Each preview for this build, with Download, Switch, Update and Delete.                                                      |
+| Incompatible        | Downloads made for another native build, with **Delete all**.                                                               |
+
+The Axonpack tab in React Native DevTools has the same list as its Preview panel, after Navigation.
+There every row is drawn at once, there is no pull to refresh, and the list is read again each time
+the panel opens.
+
+## CLI tab
 
 Every query and [action](#actions) an AI agent, or you, made in the app with
 [the `devtools` command line tool](#the-devtools-command-line-tool), newest first, with the reply it
 got. Holds the **100** most recent. The reply is recorded after every redaction, so the tab shows
 exactly what left the app. The same list is a panel in the React Native DevTools tab, and the
-`ai-usage` topic of the tool.
+`cli` topic of the tool. Up to version 3.8 the tab was called **AI Usage**. The old `ai-usage` topic
+and the old `aiUsage` config key still work, but are deprecated.
 
 Record (⏺) and Clear (⊘) open the toolbar, as on the other tabs that record. Paused, agents can still
-query and act, and nothing they do is kept. `aiUsage.disabledByDefault` opens the tab paused.
+query and act, and nothing they do is kept. `cli.disabledByDefault` opens the tab paused.
 
 | Row element | Meaning                                                                                                                            |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -553,12 +582,12 @@ Matched (Action and its name, for an action), Took, Reply size and any Error, th
 
 - `apps` and `topics` are probes and are not listed.
 - Up to 64 K characters of each reply are kept. Reply size then says `cut to the first 64 K`.
-- A query of `ai-usage` itself is listed without its reply, which would otherwise repeat every
-  earlier reply.
+- A query of `cli` itself is listed without its reply, which would otherwise repeat every earlier
+  reply.
 - Every action is listed, refused ones too. One that waits on the app (`network send`, `replay`) is
   listed when it ends. In its command a masked header shows as `[redacted]`, and a body over 200
   characters as its start and length.
-- With no query yet, the tab says **No agent queries yet**, says an agent can read the devtools, mock
+- With no query yet, the tab says **No queries yet**, says an agent can read the devtools, mock
   a request or send one, and shows `npx devtools topics` to start with.
 
 ---
@@ -781,8 +810,9 @@ The sent request is also a row in the log, on both surfaces.
 
 ## The `devtools` command line tool
 
-The `devtools` command line tool reads what the devtools recorded in a running app, and can mock,
-block or send a request in it. This section lists everything it takes and prints, as does
+The `devtools` command line tool reads what the devtools recorded in a running app, can mock, block
+or send a request in it, and can call a function the app exposed to the Console tab's `>` prompt.
+This section lists everything it takes and prints, as does
 [the CLI reference](https://axonpack.dev/docs/expo-devtools/reference/cli) on the docs site.
 [Use with AI agents](https://axonpack.dev/docs/expo-devtools/ai-agents) shows how to use it, with a
 snippet for your agent.
@@ -809,16 +839,16 @@ for whichever form you use.
 
 ### Commands
 
-| Command                                    | What it prints                                                                                                                                                                                                 |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `devtools apps`                            | One row per app and device on Metro: `app`, `name`, `device`, `devtools`, `metro`, `note`.                                                                                                                     |
-| `devtools topics`                          | One row per topic in the picked app: `topic`, `rows` (`off` when the app turned it off), `actions` (comma-separated, `-` for none), `about`.                                                                   |
-| `devtools <topic> [flags]`                 | The topic's rows, newest first, with the [query flags](#query-flags).                                                                                                                                          |
-| `devtools get <topic> <id>`                | One row as indented JSON.                                                                                                                                                                                      |
-| `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                                                                                                                                                         |
-| `devtools <command> --help`                | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. |
+| Command                                    | What it prints                                                                                                                                                                                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `devtools apps`                            | One row per app and device on Metro: `app`, `name`, `device`, `devtools`, `metro`, `note`.                                                                                                                                                            |
+| `devtools topics`                          | One row per topic in the picked app: `topic`, `rows` (`off` when the app turned it off), `actions` (comma-separated, `-` for none), `about`.                                                                                                          |
+| `devtools <topic> [flags]`                 | The topic's rows, newest first, with the [query flags](#query-flags).                                                                                                                                                                                 |
+| `devtools get <topic> <id>`                | One row as indented JSON.                                                                                                                                                                                                                             |
+| `devtools <topic> <action> [args] [flags]` | Changes something in the app. See [Actions](#actions).                                                                                                                                                                                                |
+| `devtools <command> --help`                | The help for that command. `devtools`, `devtools help` and `devtools --help` print the main help. `devtools network --help` adds the network actions, and `devtools network <action> --help` prints only them. The same for `context` and its `call`. |
 
-`apps` and `topics` are probes: the [AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab)
+`apps` and `topics` are probes: the [CLI tab](https://axonpack.dev/docs/expo-devtools/reference/cli-tab)
 doesn't list them. In `apps`, the `devtools` column is the package version in the app, `-` when the
 app doesn't have it, and `?` when it can't be checked without `--force`.
 
@@ -934,6 +964,38 @@ Console lines since launch, the last 500. A line repeated in a row is one row wi
 | `source`    | `native` for the app, or the name of the WebView that logged it                           |
 | `crash`     | The crash report's id, when the line is a crash                                           |
 
+#### context
+
+The names the Console tab's [`>` prompt](#the--prompt) has:
+the app's `console.context`, then what each [support](#topics-from-supports) adds. It reads the same
+list the prompt does, so the two always agree. A name in `console.context` wins over a support's of
+the same name, and the row's `source` says `app`. The prompt's own `$m` and `$modules` are not
+listed, and no global is. The rows keep the order the names were added in, and have no time.
+`off` when `console.repl` is `false`.
+
+| Field         | Value                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| `id`          | The name, the same as `name`                                                                     |
+| **`name`**    | The name, as the prompt reaches it                                                               |
+| **`type`**    | `function`, `object` (arrays included) or `value`                                                |
+| **`source`**  | `app` for `console.context`, or the support's id, such as `preview`                              |
+| **`preview`** | The value as one line, as the prompt prints it, cut at 80 characters. A function is `ƒ <name>()` |
+
+`get context <name>` prints the value whole, as the prompt holds it in a row: a function as
+`ƒ <name>()`, an `Error` as its stack, a `Date` as an ISO time, a `Map` as an object, a `Set` as an
+array, a cycle as `[Circular]`, and anything deeper than six levels as `[Object]` or `[Array]`.
+Strings over 2,048 characters are cut unless `--full`. The name can be a dot path into a value,
+such as `preview.status` or `store.getState`. A path through `constructor`, `prototype` or
+`__proto__` is refused.
+
+Values follow `console.redactKeys` and `console.redact`. A name, a dot path segment or a key at any
+depth that matches `redactKeys` shows as `[redacted]`, then `redact` gets the name or path and the
+value, and its return value is shown. Both run before the value is printed, cut or matched by
+`--grep` and `--where`, and the same goes for the `preview` column and for what `call` returns.
+Nothing is redacted by default.
+
+To run a function, use the [`call` action](#context-actions).
+
 #### performance
 
 Long tasks, slow interactions, marks and measures, newest first. Kept only while the Performance tab
@@ -1033,10 +1095,14 @@ Captured crashes, newest first. `get` adds the stack, the breadcrumbs and the de
 | `previous`    | True for a crash read back from the previous launch                                 |
 | `seen`        | True once the report was shown                                                      |
 
-#### ai-usage
+#### cli
 
-The queries and actions agents made, the last 100, each with the reply it got. A query of
-`ai-usage` keeps no reply. `--where 'action?'` lists the actions alone.
+The queries and actions made with this tool, the last 100, each with the reply it got. Its `#` lines
+call it CLI, as the tab does: `# CLI · <app> · <device> · 2 of 2 match`. A query of `cli` keeps no
+reply. `--where 'action?'` lists the actions alone.
+
+`ai-usage` is the topic's old name, from when the tab was called AI Usage. It still works and
+answers the same rows, but it is deprecated and `topics` doesn't list it.
 
 | Field         | Value                                                                                                                                                |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1053,25 +1119,51 @@ The queries and actions agents made, the last 100, each with the reply it got. A
 | `cut`         | True when only the first 64 K characters of the reply were kept                                                                                      |
 | `reply`       | The reply as the agent got it                                                                                                                        |
 
+#### Topics from supports
+
+A [support](#supports) in the devtools config's `supports` adds a topic of its own. `devtools topics`
+lists it only while the support is configured, and it takes the same flags as every other topic.
+When the support's package isn't installed, or is on another major, the topic is `off`, and its
+reason is the error the start logs.
+
+##### preview
+
+From the [preview support](https://axonpack.dev/docs/expo-devtools/supports/preview#from-the-command-line):
+what runs now, then the dev servers, then the previews for this build. Each query first asks the
+bucket again and looks for dev servers, behind a `# wait:` line. `get` prints preview's own object
+for the row. `off` when the preview config has `enabled: false`.
+
+| Field         | Value                                                                                                                                                                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`id`**      | `now` for what runs now, a dev server's `host:port`, or a preview's id                                                                                                                                                                     |
+| `t`           | A preview's publish time. Empty for the other rows                                                                                                                                                                                         |
+| **`kind`**    | `now`, `server` or `preview`                                                                                                                                                                                                               |
+| **`title`**   | What runs now, a `preview start` server's title, or a preview's title. Empty for a plain `expo start` server                                                                                                                               |
+| **`status`**  | `now`: `built-in`, `expo-dev-server`, `dev-preview-server`, `preview` or `server`. A server: `compatible`, `incompatible` or `unknown`. A preview: `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken` |
+| **`branch`**  | The branch it was built from                                                                                                                                                                                                               |
+| **`active`**  | True for the row that runs now, and always for `now`                                                                                                                                                                                       |
+| `environment` | A preview's EAS environment                                                                                                                                                                                                                |
+
 ### Actions
 
-`devtools <topic> <action> [args] [flags]` changes something in the app. Only `network` has actions;
-`devtools topics` lists each topic's actions. Query flags (`--where`, `--json`, `--out` and the rest)
+`devtools <topic> <action> [args] [flags]` changes something in the app. `network` and `context`
+have actions, and so does `preview` from the preview support; `devtools topics` lists each topic's
+actions. Query flags (`--where`, `--json`, `--out` and the rest)
 don't go with an action, and action flags don't go with a query: either is an error before the tool
 looks for an app. Every action, refused ones too, is listed in the
-[AI Usage tab](https://axonpack.dev/docs/expo-devtools/reference/ai-usage-tab), marked as an action.
+[CLI tab](https://axonpack.dev/docs/expo-devtools/reference/cli-tab), marked as an action.
 
 #### Action flags
 
-| Flag             | Value                       | Taken by                     | What it does                                                                                                         |
-| ---------------- | --------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `--status`       | whole number, 100 to 599    | `override`                   | The mocked status. Default `200`.                                                                                    |
-| `--body`         | text                        | `override`, `send`, `replay` | The body. Default empty for `override`. Not for a GET or HEAD request.                                               |
-| `--body-file`    | file path                   | `override`, `send`, `replay` | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                                      |
-| `--content-type` | MIME type                   | `override`                   | The mocked `content-type`. Default `application/json`.                                                               |
-| `--header`       | `'Name: value'`, repeatable | `send`, `replay`             | A request header. In `replay` it replaces a header of the same name, any case.                                       |
-| `--yes`          | none                        | `send`, `replay`             | Needed for any method but GET, HEAD and OPTIONS. The app checks it, so a call through the window relay needs it too. |
-| `--all`          | none                        | `unoverride`                 | Remove every override instead of one.                                                                                |
+| Flag             | Value                       | Taken by                                                                      | What it does                                                                                                                                                                                                |
+| ---------------- | --------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--status`       | whole number, 100 to 599    | `override`                                                                    | The mocked status. Default `200`.                                                                                                                                                                           |
+| `--body`         | text                        | `override`, `send`, `replay`                                                  | The body. Default empty for `override`. Not for a GET or HEAD request.                                                                                                                                      |
+| `--body-file`    | file path                   | `override`, `send`, `replay`                                                  | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                                                                                                                             |
+| `--content-type` | MIME type                   | `override`                                                                    | The mocked `content-type`. Default `application/json`.                                                                                                                                                      |
+| `--header`       | `'Name: value'`, repeatable | `send`, `replay`                                                              | A request header. In `replay` it replaces a header of the same name, any case.                                                                                                                              |
+| `--yes`          | none                        | `send`, `replay`, `call`, `switch`, `default`, `download`, `update`, `delete` | Needed for `send` and `replay` with any method but GET, HEAD and OPTIONS, and always for `context call` and for every `preview` action. The app checks it, so a call through the window relay needs it too. |
+| `--all`          | none                        | `unoverride`                                                                  | Remove every override instead of one.                                                                                                                                                                       |
 
 #### network actions
 
@@ -1114,8 +1206,66 @@ and its body is not shown.
 
 While the request is in flight the app answers `# wait: sending <METHOD> <url> as <id>`, and the
 tool asks again every 200 ms within the [5 seconds](#timing). A request that takes longer carries on
-in the app. Running the command again would send it again, so the error points at `ai-usage`
-instead, where the action is listed once it ends.
+in the app. Running the command again would send it again, so the error points at the CLI tab and
+`devtools cli` instead, where the action is listed once it ends.
+
+#### context actions
+
+| Action | Args                    | Flags   | Reply                                                                                    |
+| ------ | ----------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `call` | `<name> [args as JSON]` | `--yes` | `# context · <name> returned`, then the value as `get context` prints it, or `undefined` |
+
+`call` runs a function the app or a support exposed, the same one the `>` prompt would run, and
+nothing else: there is no way to evaluate code from the tool. `<name>` is a row's name or a dot path
+into one, such as `preview.status.refresh`, and the function runs with the object before the last
+dot as `this`, so a method on a store works.
+
+The arguments are one word of JSON. An array is the list of arguments, and any other JSON value is
+the one argument:
+
+| Args                  | The function gets  |
+| --------------------- | ------------------ |
+| none                  | no arguments       |
+| `'"pr-7"'`            | `"pr-7"`           |
+| `'["pr-7", 2]'`       | `"pr-7"` and `2`   |
+| `'{"type":"logout"}'` | that object        |
+| `'[[1, 2]]'`          | the array `[1, 2]` |
+
+A bare word such as `pr-7` isn't JSON and is refused; quote it as `'"pr-7"'`. A function that
+returns a promise is waited for: the app answers `# wait: running <name>` and the tool asks again,
+as for [`send`](#network-actions). After 5 seconds the tool stops with
+`still running <name> after 5 s` and the call carries on in the app; the CLI tab and
+`devtools cli --where 'action?'` show how it ended. A function that throws, or a promise that
+rejects, answers `error: <its message>`. The value returned is redacted as `get context` redacts,
+with `<name>` as its name, and the message of a throw goes through `console.redact` as
+`redact(<name>, message)`, or shows as `[redacted]` if `redact` throws (`redactKeys` doesn't look
+inside a message). Both happen before the reply is printed or logged; the args you pass aren't
+redacted. A function whose name or path matches `redactKeys` can still be called: only what it
+returns is hidden.
+
+#### preview actions
+
+From the [preview support](https://axonpack.dev/docs/expo-devtools/supports/preview#switch-from-the-command-line). They
+are the buttons of preview's list, and each needs `--yes`. `switch` and `default` restart the app:
+the app answers first and restarts a moment later, or once a preview it has to download is on the
+device. The restart clears the [CLI tab](#cli-tab), which keeps its list in memory. `download`, `update` and
+`delete` take a preview's id and are refused where the list shows no such button on that preview.
+
+| Action     | Args   | Flags   | Shown in the list                                    | Reply                                                                                                                                           |
+| ---------- | ------ | ------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `switch`   | `<id>` | `--yes` | on a server or preview that isn't running            | `# preview · restarting the app on <id>`, ending ` once it has downloaded` for a preview not on the device yet                                  |
+| `default`  | none   | `--yes` | while something other than the default runs          | `# preview · restarting the app on the default bundle`                                                                                          |
+| `download` | `<id>` | `--yes` | on an `available` preview                            | `# preview · downloaded <id>`                                                                                                                   |
+| `update`   | `<id>` | `--yes` | on an `update-available` preview                     | `# preview · updated <id>`, ending `. The app runs the new copy from its next start` for the running one                                        |
+| `delete`   | `<id>` | `--yes` | on a preview on the device, unless it is downloading | `# preview · deleted <id>`, or `# preview · deleting <id> and restarting the app on the default bundle` for the preview the app is set to start |
+
+`switch` takes an `id` from the list: a dev server's `host:port` or a preview's id. A preview that
+isn't on the device yet downloads first. `default` goes back to the default bundle, as **Back to
+default** does. `download` and `update` wait for the download, behind `# wait: downloading <id>` or
+`# wait: updating <id>`, and a download that takes over 5 seconds carries on in the app, as a slow
+`send` does. A download that fails answers `error:` with preview's own message. `delete` on the
+preview the app is set to start goes back to the default bundle first, as the list's **Delete**
+does, so the app answers before it restarts.
 
 ### Output
 
@@ -1165,24 +1315,44 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 
 #### From the app, for an action
 
-| Message                                                                                                | Code |
-| ------------------------------------------------------------------------------------------------------ | ---- |
-| `<topic> has no action "<name>". Actions: <list>`                                                      | 1    |
-| `<topic> has no actions, only queries`                                                                 | 1    |
-| `<topic> is off: <reason>`                                                                             | 1    |
-| `usage: devtools <topic> <action> <args>`, such as `usage: devtools network unoverride <url> \| --all` | 1    |
-| `<topic> <action> takes no --<flag>. usage: devtools <topic> <action> <args>`                          | 1    |
-| `bad --<flag>. usage: ...`, for a value of the wrong kind (only through the window relay)              | 1    |
-| `"<url>" is not a whole URL. Use the exact URL the app requests, https:// and query included`          | 1    |
-| `bad --status <value>: use 100 to 599`                                                                 | 1    |
-| `no override on <url>. devtools network overrides lists them`                                          | 1    |
-| `bad method "<method>": use GET, POST, ...`                                                            | 1    |
-| `<METHOD> can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without`          | 1    |
-| `a GET request has no body, so drop --body` (and `HEAD`)                                               | 1    |
-| `bad --header: use 'Name: value'`                                                                      | 1    |
-| `no network row "<id>", it may have aged out of the buffer`                                            | 1    |
-| `<id> is a WebSocket. replay sends HTTP requests only`                                                 | 1    |
-| `<METHOD> <url> failed: <why>`, only when the request is also not in the log                           | 1    |
+| Message                                                                                                                                                                                           | Code |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `<topic> has no action "<name>". Actions: <list>`                                                                                                                                                 | 1    |
+| `<topic> has no actions, only queries`                                                                                                                                                            | 1    |
+| `<topic> is off: <reason>`                                                                                                                                                                        | 1    |
+| `usage: devtools <topic> <action> <args>`, such as `usage: devtools network unoverride <url> \| --all`                                                                                            | 1    |
+| `<topic> <action> takes no --<flag>. usage: devtools <topic> <action> <args>`                                                                                                                     | 1    |
+| `bad --<flag>. usage: ...`, for a value of the wrong kind (only through the window relay)                                                                                                         | 1    |
+| `"<url>" is not a whole URL. Use the exact URL the app requests, https:// and query included`                                                                                                     | 1    |
+| `bad --status <value>: use 100 to 599`                                                                                                                                                            | 1    |
+| `no override on <url>. devtools network overrides lists them`                                                                                                                                     | 1    |
+| `bad method "<method>": use GET, POST, ...`                                                                                                                                                       | 1    |
+| `<METHOD> can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without`                                                                                                     | 1    |
+| `a GET request has no body, so drop --body` (and `HEAD`)                                                                                                                                          | 1    |
+| `bad --header: use 'Name: value'`                                                                                                                                                                 | 1    |
+| `no network row "<id>", it may have aged out of the buffer`                                                                                                                                       | 1    |
+| `<id> is a WebSocket. replay sends HTTP requests only`                                                                                                                                            | 1    |
+| `<METHOD> <url> failed: <why>`, only when the request is also not in the log                                                                                                                      | 1    |
+| `switch restarts the app, so it needs --yes` (and `default`)                                                                                                                                      | 1    |
+| `no dev server or preview "<id>". devtools preview lists them`                                                                                                                                    | 1    |
+| `<id> runs now`                                                                                                                                                                                   | 1    |
+| `<id> is downloading. Switch to it once its status is downloaded`                                                                                                                                 | 1    |
+| `the default bundle runs now`                                                                                                                                                                     | 1    |
+| `download writes the preview to the device, so it needs --yes`, `update replaces the download on the device, so it needs --yes`, `delete removes the download from the device, so it needs --yes` | 1    |
+| `no preview "<id>". devtools preview --where kind=preview lists them`                                                                                                                             | 1    |
+| `<id> is <status>. Only an available preview downloads`                                                                                                                                           | 1    |
+| `<id> is on the device and has an update: devtools preview update <id> --yes`                                                                                                                     | 1    |
+| `<id> has no update. It is <status>`                                                                                                                                                              | 1    |
+| `<id> isn't on the device`                                                                                                                                                                        | 1    |
+| `<id> is downloading. Delete it once the download ends`                                                                                                                                           | 1    |
+| `<preview's own error>`, when a download or a delete fails in the app                                                                                                                             | 1    |
+| `call runs a function in the app, so it needs --yes`                                                                                                                                              | 1    |
+| `no context name "<name>". devtools context lists them` (also for `get context`)                                                                                                                  | 1    |
+| `no "<key>" in <path>`, for a dot path that goes further than the value (also for `get context`)                                                                                                  | 1    |
+| `<path>: the CLI doesn't reach constructor` (and `prototype`, `__proto__`; also for `get context`)                                                                                                | 1    |
+| `<name> is an object, not a function. devtools get context <name> reads it` (and `a value`)                                                                                                       | 1    |
+| `the args must be JSON, such as '["a", 1]' for two or '"a"' for one, and <args> isn't`                                                                                                            | 1    |
+| `<message>`, when the called function throws or its promise rejects                                                                                                                               | 1    |
 
 #### From the tool
 
@@ -1200,7 +1370,7 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `can't read --body-file <path>: <why>`                                                                                                                                                                                                                | 1    |
 | `no reply from <app> on <device> in 5 s. Its JS may be paused at a breakpoint: resume it, then run the command again.`                                                                                                                                | 1    |
 | `still <what> after 5 s. The app keeps going, so run the same command again to pick up where it stopped.`                                                                                                                                             | 1    |
-| `still <what> after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.` (an action)                                                                                                                           | 1    |
+| `still <what> after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.` (an action)                                                                                                                 | 1    |
 | `could not reach Metro on port <port>`                                                                                                                                                                                                                | 1    |
 | `could not attach to <socket url>`                                                                                                                                                                                                                    | 1    |
 | `the debugger socket closed (<code>: <reason>)`                                                                                                                                                                                                       | 1    |
@@ -1233,7 +1403,9 @@ In `apps`, an app that couldn't be asked shows why in its `note` column instead,
 
 ### What it reads
 
-Only what the stores keep, after every redaction in the config. The `authorization`, `cookie` and
+Only what the stores keep, after every redaction in the config, and the names the app exposed to the
+`>` prompt, which the `context` topic reads after `console.redactKeys` and `console.redact`. The
+`authorization`, `cookie` and
 `set-cookie` headers and a page's `document.cookie` are always `[redacted]`, in every output, and
 filters run on the masked row. An action's reply goes through the same masking. The only changes the
 tool can make are the [actions](#actions). See
@@ -1263,44 +1435,109 @@ a key of `config.themes`.
 
 ### `DevtoolsConfig`
 
-| Option                               | Type                          | Default     | What it does                                                                                                                                 |
-| ------------------------------------ | ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).                                                                 |
-| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                                                                |
-| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                                                                             |
-| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                                                                                  |
-| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                                                                            |
-| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                                                                          |
-| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                                                                                 |
-| `network.redactHeaders`              | `readonly string[]`           | `[]`        | Header names stored as `[redacted]`, any case. `cookie` also redacts `document.cookie`.                                                      |
-| `network.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactHeaders` each time a row changes, before it is stored. HTTP and WebSocket rows. `null` drops the row, and so does a throw. |
-| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.                                                                   |
-| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                                                                                 |
-| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                                                                            |
-| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                                                                         |
-| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.                                                           |
-| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                                                                               |
-| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                                                                              |
-| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                                                                 |
-| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something.                                                        |
-| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.                                                                     |
-| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.                                                          |
-| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.                                                                      |
-| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.                                                         |
-| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.                                                         |
-| `query.client`                       | `QueryClientLike`             | `undefined` | Your TanStack Query v5 `QueryClient`. Unset leaves the Query tab out of the panel.                                                           |
-| `navigation.disabledByDefault`       | `boolean`                     | `false`     | Open the Navigation tab paused. The route on screen is still shown.                                                                          |
-| `navigation.redact`                  | `(move) => move \| null`      | `undefined` | Runs on every move before it is stored. `null` drops the move, and so does a throw.                                                          |
-| `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                 |
-| `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                  |
-| `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                               |
-| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Open the AI Usage tab paused. Agents can still query the app.                                                                                |
+| Option                               | Type                          | Default     | What it does                                                                                                                                                                                     |
+| ------------------------------------ | ----------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled`                            | `boolean`                     | `true`      | Whether the devtools run at all. The only gate; see [The panel](#the-panel).                                                                                                                     |
+| `defaultTheme`                       | `ThemeId`                     | `'light'`   | Which theme the panel opens with: a built-in or one of yours.                                                                                                                                    |
+| `themes`                             | `Record<string, ThemeConfig>` | `undefined` | Your own themes: a `base` to inherit and the tokens to override.                                                                                                                                 |
+| `network.http`                       | `boolean`                     | `true`      | Capture plain requests, by whatever transport they left on.                                                                                                                                      |
+| `network.websocket`                  | `boolean`                     | `true`      | Capture WebSocket connections and their messages.                                                                                                                                                |
+| `network.sse`                        | `boolean`                     | `true`      | Capture server-sent event streams and their events.                                                                                                                                              |
+| `network.disabledByDefault`          | `boolean`                     | `false`     | Open the Network tab paused.                                                                                                                                                                     |
+| `network.redactHeaders`              | `readonly string[]`           | `[]`        | Header names stored as `[redacted]`, any case. `cookie` also redacts `document.cookie`.                                                                                                          |
+| `network.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactHeaders` each time a row changes, before it is stored. HTTP and WebSocket rows. `null` drops the row, and so does a throw.                                                     |
+| `console.capture`                    | `boolean`                     | `true`      | Mirror `console.*` into the Console tab, including from declared WebViews.                                                                                                                       |
+| `console.repl`                       | `boolean`                     | `true`      | Show the `>` prompt. Not gated on `__DEV__`.                                                                                                                                                     |
+| `console.context`                    | `Record<string, unknown>`     | `undefined` | Extra names an expression can use, e.g. `{ store, queryClient }`.                                                                                                                                |
+| `console.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Names, dot path segments and keys at any depth that the `context` topic shows as `[redacted]`. A string matches a whole key, any case. Not the `>` prompt.                                       |
+| `console.redact`                     | `(name, value) => unknown`    | `undefined` | Runs after `redactKeys` on each `context` value the tool shows: in the list, `get context` and what `context call` returns, and on the message when a `call` throws. A throw shows `[redacted]`. |
+| `console.disabledByDefault`          | `boolean`                     | `false`     | Open the Console tab paused. The prompt still works.                                                                                                                                             |
+| `performance.sampleIntervalMs`       | `number`                      | `1000`      | How often memory is sampled. Each read crosses into the engine, so keep it coarse.                                                                                                               |
+| `performance.longTaskThresholdMs`    | `number`                      | `150`       | Only keep tasks that blocked the JS thread at least this long.                                                                                                                                   |
+| `performance.interactionThresholdMs` | `number`                      | `100`       | Only keep interactions at least this long, event to next paint.                                                                                                                                  |
+| `performance.historySize`            | `number`                      | `120`       | How many memory samples, long tasks, user timings and interactions are kept.                                                                                                                     |
+| `performance.disabledByDefault`      | `boolean`                     | `true`      | Open the Performance tab paused. **Defaults to on**, since measuring costs something.                                                                                                            |
+| `storage.adapters`                   | `StorageAdapterDefinition[]`  | `undefined` | The stores the Storage tab can see. Nothing is discovered automatically.                                                                                                                         |
+| `storage.maxKeys`                    | `number`                      | `undefined` | Deprecated and ignored: every key is listed, and values are read as rows are shown.                                                                                                              |
+| `storage.readOnly`                   | `boolean`                     | `false`     | Blanket read-only default; an individual adapter can still set its own.                                                                                                                          |
+| `storage.redactKeys`                 | `(string \| RegExp)[]`        | `[]`        | Keys whose values are shown as `[redacted]`. A string matches a whole key, any case.                                                                                                             |
+| `storage.redact`                     | `(entry) => entry \| null`    | `undefined` | Runs after `redactKeys` on each value read. Change `text`, or return `null` to hide.                                                                                                             |
+| `query.client`                       | `QueryClientLike`             | `undefined` | Your TanStack Query v5 `QueryClient`. Unset leaves the Query tab out of the panel.                                                                                                               |
+| `navigation.disabledByDefault`       | `boolean`                     | `false`     | Open the Navigation tab paused. The route on screen is still shown.                                                                                                                              |
+| `navigation.redact`                  | `(move) => move \| null`      | `undefined` | Runs on every move before it is stored. `null` drops the move, and so does a throw.                                                                                                              |
+| `redux.disabledByDefault`            | `boolean`                     | `false`     | Open the Redux tab paused. The current state is still shown.                                                                                                                                     |
+| `redux.allow`                        | `ActionTypeMatcher[]`         | `undefined` | Record only these action types: a string is exact, a `RegExp` is tested. Empty records all.                                                                                                      |
+| `redux.deny`                         | `ActionTypeMatcher[]`         | `undefined` | Never record these types. Wins over `allow`; more can be added from the panel.                                                                                                                   |
+| `cli.disabledByDefault`              | `boolean`                     | `false`     | Open the CLI tab paused. Agents can still query the app.                                                                                                                                         |
+| `aiUsage.disabledByDefault`          | `boolean`                     | `false`     | Deprecated. The old name of `cli.disabledByDefault`, which wins when both are set.                                                                                                               |
+| `supports`                           | `DevtoolsSupport[]`           | `undefined` | Tabs, command line topics and `>` prompt names for other packages, each from a support's `configure()`. Its provider wraps the app, with `enabled: false` too.                                   |
 
 The Redux tab is there once a store was created with [`devtoolsReduxEnhancer()`](#devtoolsreduxenhancer).
 
+#### Supports
+
+A support connects the devtools to another package. Each has its own entry point,
+`@axonpack/expo-devtools/support/<name>/v<major>`, and the main entry has none of them, so an app that
+doesn't import one never loads its package. `<major>` is the major version of the package it
+supports: import the one that matches the installed version. A new major of that package gets a new
+entry, and the old one stays until a major release of expo-devtools removes it. The guide is
+[Supports](https://axonpack.dev/docs/expo-devtools/supports).
+
+```ts
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+// or: import * as PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+// or: import { configure, type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+supports: [PreviewV0Support.configure(previewConfig)],
+```
+
+Every support module exports the same shape:
+
+| Export              | Kind     | What it is                                                                                   |
+| ------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `configure(config)` | function | Takes the package's own config and returns a `DevtoolsSupport` for `supports`. Never throws. |
+| `useSupport()`      | hook     | The support's data, from the store its provider fills. The same name in every support.       |
+| default export      | object   | The same functions, so a default import and a namespace import read the same.                |
+| config types        | types    | The package's config types, re-exported. Named exports only; `any` without the package.      |
+| data type           | type     | What `useSupport()` returns.                                                                 |
+| `DevtoolsSupport`   | type     | What `configure` returns. Also exported from the main entry.                                 |
+
+Each support keeps its package's data in a store of its own, filled inside its provider from the
+package's own state. Besides its tab, its DevTools panel and `useSupport()`, it adds a topic to the
+`devtools` command line tool, named after it and listed only while it is in `supports` (see
+[Topics from supports](#topics-from-supports)), and it may add names to the [`>` prompt](#the--prompt),
+where `console.context` wins a clash. The `devtools` tool's [`context` topic](#context) lists them
+too, with the support's id as their `source`, and `devtools context call` runs their functions.
+
+With the devtools on, a support whose package isn't installed, or is on another major, has the
+reason logged with `console.error` at start and shown in bold in its tab. Nothing throws, and with
+`enabled: false` nothing is logged. With two supports of one id in `supports`, such as two versions
+of one support, the first is used and the start logs the other with `console.error`. Installed but
+not in `supports`, the package is never loaded. Each package is an optional peer dependency.
+
+| Support | Version | Entry point                                  | For                                     | Types                                                                                                   |
+| ------- | ------- | -------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Preview | `v0`    | `@axonpack/expo-devtools/support/preview/v0` | `@axonpack/preview` 0.x, 0.2.0 or later | `PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions`, `PreviewSupportData`, `DevtoolsSupport` |
+
+The preview support mounts preview's provider and adds the [Preview tab](#preview-tab), the
+[`preview` topic](#preview) with its [actions](#preview-actions), and `preview` in the `>` prompt.
+Its `useSupport()` returns `{ status, previews, servers }`: what `usePreviewStatus()` returns (`null`
+until preview's provider has rendered), `usePreview().items`, and the dev servers the last look
+found. In the prompt, `preview` has `status`, `previews` and `servers`, and `switch(id)`,
+`default()`, `download(id)`, `update(id)` and `delete(id)`, the topic's actions with no `--yes`, each
+returning the line the `devtools` tool would print, or a promise of it for one that waits. Without `@axonpack/preview` the topic is off, and the start logs and the tab shows: "The devtools config sets up preview, but @axonpack/preview
+isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add
+`@axonpack/preview` to the plugins in app.json, and rebuild the app." With another major installed,
+1.0.0 for example, it logs and shows: "The devtools config uses
+@axonpack/expo-devtools/support/preview/v0, which is for @axonpack/preview 0.x, but @axonpack/preview
+1.0.0 is installed. Import the support from `@axonpack/expo-devtools/support/preview/v1` instead, and
+update @axonpack/expo-devtools if it doesn't have that entry yet." The guide is
+[Preview](https://axonpack.dev/docs/expo-devtools/supports/preview).
+
 #### `crash`
 
-Crash capture is the only part of this package that runs with the devtools off. The guide is
+Crash capture is the only part of this package that runs with the devtools off, apart from the
+supports' providers. The guide is
 [Crash reporting](https://axonpack.dev/docs/expo-devtools/crash-reporting).
 
 | Option                               | Type                            | Default     | What it does                                                                                                                       |
@@ -1554,7 +1791,7 @@ property if you override it.
 
 `DevtoolsConfig`, `DevtoolsNetworkConfig`, `DevtoolsConsoleConfig`, `DevtoolsPerformanceConfig`,
 `DevtoolsStorageConfig`, `DevtoolsQueryConfig`, `DevtoolsNavigationConfig`, `DevtoolsReduxConfig`,
-`DevtoolsCrashConfig`, `DevtoolsAiUsageConfig`, `DevtoolsProviderProps`, `DevtoolsPanelControls`,
+`DevtoolsCrashConfig`, `DevtoolsCliConfig` (`DevtoolsAiUsageConfig` is its deprecated old name), `DevtoolsProviderProps`, `DevtoolsPanelControls`,
 `DevtoolsWebViewProps`, `BuiltInThemeId`, `ThemeId`, `ThemeConfig`, `Palette`,
 `NetworkEntry`, `NetworkLogEntry`, `WebSocketLogEntry`, `NetworkLogStatus`, `ResolvedNetworkConditions`, `ThrottlePresetId`,
 `ThrottleProfile`, `UserAgentPresetId`, `ConsoleLogEntry`, `ConsoleLogLevel`, `LongTaskEntry`,
@@ -1567,7 +1804,9 @@ property if you override it.
 `CrashPopupDetail`, `DevtoolsErrorBoundaryProps`, `StatusBarStyle`, `QueryClientLike`,
 `NavigationMove`, `NavigationRoute`, `NavigationRouterKind`, `NavigationState`,
 `NavigationContainerRefLike`, `NavigationContainerLike`, `ReduxAction`, `ReduxActionEntry`,
-`ActionTypeMatcher`.
+`ActionTypeMatcher`, `DevtoolsSupport`. From `@axonpack/expo-devtools/support/preview/v0`:
+`PreviewConfig`, `PreviewS3Config`, `DevPreviewServersOptions`, `PreviewSupportData` and
+`DevtoolsSupport`.
 
 ---
 

@@ -16,9 +16,20 @@ One switch in the provider's config:
 <PreviewProvider config={{ ...previewConfig, devPreviewServers: true }}>
 ```
 
-It is off by default, and it only shows in a debug build. A release build ignores it, even if a
-server choice is in the saved state. The app also needs the [config plugin](/docs/preview/compatibility),
-which bakes in the app's slug.
+It is off by default, stays off while `enabled` is false, and only shows in a debug build. A
+release build ignores it, even if a server choice is in the saved state. The app also needs the
+[config plugin](/docs/preview/compatibility), which bakes in the app's slug.
+
+To list other computers too, or to hide **Add a host**, pass an object instead of `true`:
+
+```ts
+devPreviewServers: {
+  allowCustomHosts: true, // the default: QA can add a host on the device
+  hosts: ["192.168.1.24", "qa-mac.local:19150"], // the team's own machines
+},
+```
+
+`enabled` is `true` unless the object says otherwise. See [Hosts](#hosts).
 
 ## Start a server per worktree
 
@@ -37,17 +48,151 @@ In a terminal, `start` asks for the name the app shows, prefilled with the branc
 Enter keeps it. `--title` skips the question, and so does a run with no terminal, such as an AI
 agent's shell, which takes the branch title.
 
-A plain `npx expo start --port 8085` is found too, with less detail: no branch.
+A Metro already on 8081 that no `preview start` announced, such as your own `expo start` or one left
+by a run that crashed, is never stopped. `start` takes the next free port and says so in one line.
+
+Once Metro answers, `start` prints its port, then one line for each private IPv4 address of the
+computer. That address is what a phone on the same Wi-Fi types in [**Add a host**](#hosts) when the
+[network sweep](#the-network-sweep) doesn't find the computer. A computer with no such address gets
+no line.
+
+```
+preview: Login fix on port 8082, announced on http://127.0.0.1:19150
+preview: On a phone on this Wi-Fi: Add a host → 192.168.1.38
+```
+
+A plain `npx expo start --port 8085` is found too, with less detail: no branch. It shows when the
+list opens, when you refresh it, or within 30 seconds.
+
+### An older registry
+
+`preview start` uses the registry already on port 19150 when it is from the same version of the
+package or a newer one. One from an older version, which may not give the computer's id and LAN
+addresses, is replaced, and so is one that holds the port but doesn't answer. `start` checks that
+the process on the port runs this package's `preview registry`, stops it, starts its own, and hands
+it the old one's servers whose Metro still answers. It prints one line:
+
+```
+preview: Replaced an older preview registry (pid 59356).
+```
+
+A `preview start` from an older version keeps working with the new registry. The process is found
+with `lsof`, so on Windows nothing is stopped. Neither is a process that isn't a preview registry:
+`start` says what holds the port and how to stop it.
 
 ## Switch servers in the app
 
-Open the list. **Dev preview servers** shows each server for this app within about two seconds,
-with its title, branch, port and version. **Switch** runs that server. **Stop using dev preview
-server** goes back. Stop a server with Ctrl+C and it leaves the list on its own.
+Open the list. **Dev preview servers** shows each server for this app in one grouped card. A
+`preview start` server shows within about two seconds of announcing itself, and a plain
+`expo start` server once the next full scan finds it. Each row has the server's title, its address
+and its branch, with chips:
 
-On every start of a debug build the order is: the chosen dev preview server, then a downloaded
-preview, then the default Metro. **Stop using dev preview server** brings back what ran before, a
-chosen preview included. **Back to base** stops both.
+- **Active** on the server the app runs from now. Its row takes the header card's tint.
+- **`server: Expo`** on a plain `expo start` or `expo run` Metro, and **`server: Preview`** on one
+  started with `preview start`.
+- **Default server** on the Metro the app starts on with nothing picked. Metro only knows the app's
+  name, which every server of the app shares, so this one is called **Default** unless
+  `preview start` gave it a title. Any other server without a title goes by its address.
+- **Offline** on the server the app runs from, once it stops answering, and on a picked server
+  the app had to start without (see below). Its row stays, with the
+  title, branch and kind it had when it last answered, even after a reload. A server the app never
+  saw answering shows its address and a plain **Server** chip, since its kind is not known.
+- **Made for another native build** or **Native build unknown**. See below.
+
+Tap a row to restart the app on that server. The header card then names it, and **Back to default**
+goes back. Stop a server with Ctrl+C and it leaves the list on its own, unless the app
+runs from it.
+
+On every start of a debug build the order is: the picked dev preview server, then a downloaded
+preview, then the default Metro. Switching to a preview in the list stops using the picked server,
+and **Back to default** stops both. Picking the Metro the app starts on anyway changes
+nothing, so it counts as the default.
+
+On each start the app first asks the picked server's Metro for `/status`, and waits up to a
+second. If it gets no answer, that start skips the server and goes on to the preview or the
+default Metro, so a stopped server can't leave the app on "Could not connect to development
+server". The server stays picked: its row says **Offline**, the header card shows what loaded, and
+**Back to default** forgets it. Once the server runs again, the next start uses it, or tap its row
+to switch now.
+
+## Hosts
+
+At the end of the servers card, a **Hosts** row with a count opens the list of hosts it checks:
+
+- **This computer**: `localhost`, `127.0.0.1`, and `10.0.2.2` on Android. Always there, never in the
+  config. The computer the app's own Metro runs on shows too when it is another address, such as a
+  phone on Wi-Fi started from `192.168.1.10`.
+- **The app's hosts** from `hosts` in the config. Like the ones above, they can't be removed.
+- **Hosts added on the device**, each with a ✕ to remove it.
+
+**Add a host** is the last row of the card. It opens a field in its place for an IP address or a
+host name, such as `192.168.1.24` or `qa-mac.local`. Add `:port` only when that computer's registry
+is not on 19150. A host that is not an address, is already listed, or is this computer gets a plain
+message under the field instead. Added hosts are saved on the device in
+`Documents/preview/hosts.json` and come back after a restart. An app that sets
+`allowCustomHosts: false` shows no **Add a host**, and ignores hosts added before.
+
+### Other computers show preview servers only
+
+Another computer is never scanned. The app asks its registry, `http://<host>:19150/servers`, and
+lists only the servers that registry names, for this app's slug. So a teammate's `npx preview start`
+shows, and a plain `npx expo start` on their computer never does. Each row's address says which
+computer it is on, so two computers running Metro on 8081 are two rows.
+
+On the same network you don't need to add the computer at all: see
+[The network sweep](#the-network-sweep). Add a host for a computer the sweep doesn't reach, such as
+one outside the phone's own /24 or behind a VPN, at the address `preview start` prints. It shows
+within 2 seconds of its registry answering.
+
+## The network sweep
+
+While the list is on screen, the app asks the addresses on its own network for a registry, the
+same way it asks a host you added. So a teammate's `npx preview start` on the same Wi-Fi shows with
+no address typed in, and a plain `npx expo start` on their computer still never does.
+
+- **What it asks.** `GET http://<address>:19150/servers` on every other address in the device's own
+  /24, or in its smaller network when the device is on one. It asks 32 addresses at a time and gives
+  up on each after half a second, so a /24 takes a few seconds. Only Wi-Fi and Ethernet are swept,
+  never cellular.
+- **When.** When the list opens, when the app comes back to the foreground, and when you pull to
+  refresh or tap Refresh. Never on the 2 second or 30 second looks, and it stops while the app is in
+  the background.
+- **What shows.** A computer whose registry answers is listed like a host you added: only its
+  `preview start` servers, at its IP address, and asked every 2 seconds from then on. It is not added
+  to the **Hosts** list.
+- **One row per server.** A computer the app also reaches another way, such as a host you added, or
+  your own computer at its LAN address, still has one row per server. The registry's computer id
+  and LAN addresses decide, and a host you added wins over the sweep.
+- **Local network access.** A real iPhone asks for it first (see [iOS asks first](#ios-asks-first)).
+  On Android 17 the sweep needs the same local network permission as reaching Metro (see
+  [Reaching the servers](#reaching-the-servers)).
+
+Where it can't work:
+
+- **Wi-Fi with client isolation**, common on guest and hotel networks, stops devices reaching each
+  other. Nothing finds the computer there, a host you add included. Use USB, or another network.
+- **A network bigger than a /24**, such as a /16 office network. Only the device's own /24 is swept,
+  so add a computer outside it as a host. The device remembers it.
+
+### iOS asks first
+
+On a real iPhone, iOS asks once for Local Network access, the first time the app looks beyond the
+phone itself, such as when the list sweeps the network or asks a host you added. If the user says
+no, the app reaches no other computer until they allow it in **Settings > Privacy & Security >
+Local Network**. The simulator never asks.
+
+The config plugin adds nothing for this. To word the prompt yourself, add
+`NSLocalNetworkUsageDescription` to the app config and make a new native build:
+
+```json
+"ios": {
+  "infoPlist": {
+    "NSLocalNetworkUsageDescription": "Finds test servers on your network."
+  }
+}
+```
+
+Android needs nothing in the app config.
 
 ## Which servers are listed
 
@@ -61,22 +206,61 @@ fingerprint.
 
 ## How the app finds them
 
-Two sources, merged by port:
+Four sources, merged by computer and port:
 
 - **The registry.** `preview start` runs `expo start` on a free port and announces it to a small
   registry on your computer, on port 19150, with the branch, the worktree and the native key
-  `publish` would use. The first `start` starts the registry, and it exits once no server is left.
+  `publish` would use. It announces once Metro answers, on the port Metro really took: Expo moves
+  to another port when it finds the first one taken. A Metro of the same project that was running
+  before, such as one left from an earlier run, is never taken for it. The first `start` starts the
+  registry, and it exits once no server is left.
+  A `start` replaces an [older registry](#an-older-registry).
   A heartbeat every 5 seconds keeps a server listed; it drops out 15 seconds after the last, so a
-  killed process goes too.
+  killed process goes too. Its `/servers` also gives the computer's id and LAN addresses.
 - **A port scan.** The app asks each port from 8081 to 8099 for Metro's `/status`, then reads the
   Expo manifest of each one it finds for the slug, name, version and bundle URL.
+- **Other computers' registries.** Each host from the config or added on the device is asked for its
+  registry on 19150, or the port given with it. Only the ports it lists are asked on that computer.
+- **The network sweep.** The app asks every other address in its own /24 for a registry, and asks
+  each one that answers like a host you added. See [The network sweep](#the-network-sweep).
 
-A server found both ways uses the registry's details. The app looks only while the list is on
-screen, every 2 seconds, and never starts a look while the last one runs.
+A server found both ways uses the registry's details. A computer the sweep finds that the app
+already reaches another way is left to that way.
+
+## How often it looks
+
+Only while the list is on screen, and never while the app is in the background. When the app comes
+back to the foreground, it looks once straight away. Off the list's screen, `usePreviewStatus()` and
+`useRunning()` run one full scan when they mount, if the app runs from Metro and no server is known
+yet, so a banner can name a `preview start` server.
+
+- **Every 2 seconds** it asks the registry, the other computers' registries, the servers it has
+  already found, the default Metro and the server the app runs from. That is enough for `preview start` servers: one that starts or stops
+  shows or goes within one of these looks, because the registry names its port. A found server is
+  asked again each time until it stops answering, then it leaves the list. The one the app runs
+  from stays, marked Offline.
+- **A full scan** of 8081 to 8099 runs when the list opens, when you pull to refresh or tap Refresh,
+  and 30 seconds after the last one. A refresh restarts that count. A spinner shows right after the
+  heading's title while it runs. A new plain `expo start` server shows after the next full scan, so
+  on open, on refresh, or within 30 seconds.
+- **The network sweep** runs when the list opens, when the app comes back to the foreground, and on
+  refresh. The servers of a computer it finds show within 2 seconds of it ending.
+
+A look never starts while the last one runs, and a refresh during a scan waits for that scan.
+
+A registry that does not answer, here or on another computer, is left out of the 2 second looks.
+It is asked again on the next full scan, and once it answers it is back on every 2 seconds. So the
+first `preview start` after the list opened shows on refresh, or within 30 seconds.
+
+Each closed port is a refused connection, and iOS writes every one to the Xcode console as
+`Could not connect to the server`. JS can't turn that off, so the full scan runs only this often:
+expect a burst of those lines every 30 seconds, and more during each network sweep. A server that is down but still asked every 2
+seconds (the default Metro, or the server the app runs from) adds one line each time.
 
 ## Reaching the servers
 
-The app looks on the host its own Metro is on.
+The app scans the host its own Metro is on, and asks the registries of the other hosts in the
+**Hosts** row.
 
 | Device                 | What to do                                                                 |
 | ---------------------- | -------------------------------------------------------------------------- |
@@ -91,7 +275,12 @@ Metro. Allow it in the app's settings, or on the emulator run
 
 ## Limits
 
-- **Debug builds only.** A release build has no Metro to switch to.
+- **Debug builds only.** A release build has no Metro to switch to. There, QA switches between
+  [published previews](/docs/preview/publishing).
+- **The sweep stays on one network.** It covers only the device's own /24. Add a computer outside it
+  as a host.
 - **This app only.** Servers for another slug are never listed.
+- **Plain HTTP on the local network.** An Expo app's iOS build allows plain HTTP to local addresses
+  only, so another host must be on the same network as the device, not a server on the internet.
 
 **Next:** [expo-updates](/docs/preview/expo-updates)

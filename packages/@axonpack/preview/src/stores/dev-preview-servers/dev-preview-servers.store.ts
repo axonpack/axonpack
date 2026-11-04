@@ -1,25 +1,68 @@
 import { useSyncExternalStore } from "react";
+import { AppState, type NativeEventSubscription } from "react-native";
 
 import { buildKey, buildSlug } from "../../services/native/build-info.service";
-import { currentPlatform } from "../../utils/config/config.util";
-import { discover } from "../../services/dev-preview-servers/discover.service";
+import {
+  type DevServersSetup,
+  currentPlatform,
+} from "../../utils/config/config.util";
+import {
+  builtInHosts,
+  discover,
+  findRegistries,
+} from "../../services/dev-preview-servers/discover.service";
+import { sweepRange } from "../../utils/dev-preview-servers/subnet.util";
+import {
+  readHosts,
+  saveHosts,
+} from "../../services/dev-preview-servers/hosts.service";
+import { DEFAULT_REGISTRY_PORT } from "../../constants/dev-preview-servers/dev-preview-servers.const";
+import type {
+  DevServerHost,
+  HostAddress,
+  HostProblem,
+} from "../../utils/dev-preview-servers/hosts.util";
 import {
   type DevPreviewServer,
   mergeServers,
 } from "../../utils/dev-preview-servers/merge-servers.util";
-import { nativeModule } from "../../services/native/native.service";
+import { nativeModule, scriptUrl } from "../../services/native/native.service";
+import {
+  readRunningServer,
+  saveRunningServer,
+} from "../../services/dev-preview-servers/running-server.service";
+import { hostPortOf, sameServer } from "../../utils/previews/running.util";
 
 export type DevPreviewServersState = {
+  /**
+   * This app's servers. The one the app runs from, and the one picked in the list, stay when a look
+   * misses them, as last seen answering (saved, so a reload still knows it), or marked `unknown`.
+   */
   servers: DevPreviewServer[];
   /** The bundle URL of the dev preview server the next start uses, or null. */
   activeUrl: string | null;
+  /**
+   * `host:port` of every Metro that answered in the last round, the one the app runs from
+   * included wherever it is. Null until a round has finished since the list opened.
+   */
+  alive: string[] | null;
   error: string | null;
+  /** A full sweep of the port range runs now. The quick look every 2 s does not count. */
+  scanning: boolean;
+  /**
+   * Where the list looks: this computer under its usual names, the app's hosts, and the ones
+   * added on the device. Empty until the first look.
+   */
+  hosts: DevServerHost[];
 };
 
 let state: DevPreviewServersState = {
   servers: [],
   activeUrl: null,
+  alive: null,
   error: null,
+  scanning: false,
+  hosts: [],
 };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<DevPreviewServersState>) => {
@@ -28,38 +71,232 @@ const set = (patch: Partial<DevPreviewServersState>) => {
 };
 
 const POLL_MS = 2000;
+// Each closed port in the range is a refused connection, and iOS logs every one to the Xcode
+// console, which JS can't silence. So between full sweeps a poll asks only the servers already
+// known, and a new plain `expo start` server waits at most this long to show.
+const SWEEP_MS = 30000;
 let watchers = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
+let appState: NativeEventSubscription | null = null;
 
-let polling = false;
+let round: { sweep: boolean; done: Promise<void> } | null = null;
+let lastSweep = 0;
+/** Ports that answered in the last round. Quick polls keep asking them until they stop. */
+let known: number[] = [];
 
-async function poll() {
-  const platform = currentPlatform();
-  const appSlug = buildSlug();
-  // A round can outlast the interval on a slow host; overlapping rounds would land out of order.
-  if (!platform || !appSlug || polling) return;
-  polling = true;
-  try {
-    const found = await discover(platform);
-    set({
-      servers: mergeServers({
-        ...found,
-        appSlug,
-        buildKey: buildKey(),
-        platform,
-      }),
-      activeUrl: nativeModule()?.state().localServer ?? null,
-      error: null,
+let setup: Pick<DevServersSetup, "hosts" | "allowCustomHosts"> = {
+  hosts: [],
+  allowCustomHosts: false,
+};
+/** The hosts added on the device, read from its file on each mount. */
+let userHosts: HostAddress[] = [];
+let userHostsRead: Promise<void> | null = null;
+
+/**
+ * Registries the last sweep of this device's own network found. They are asked like hosts added on
+ * the device, so a computer on the same network shows with no address typed in.
+ */
+let swept: HostAddress[] = [];
+let sweeping: AbortController | null = null;
+
+/** Sweeps this device's network for registries while the list watches, one sweep at a time. */
+function sweepNetwork() {
+  if (sweeping || !timer) return;
+  const networks = nativeModule()?.localNetworks?.() ?? [];
+  if (networks.length === 0) return;
+  const run = new AbortController();
+  sweeping = run;
+  // Two cards on one network, such as the emulator's wlan0 and eth0, give one range.
+  const own = new Set(networks.map((n) => n.address));
+  const addresses = [...new Set(networks.flatMap(sweepRange))].filter(
+    (a) => !own.has(a),
+  );
+  findRegistries(addresses, { signal: run.signal })
+    .then((found) => {
+      // Cut short, so it may have missed some. The last full one stands.
+      if (!run.signal.aborted) swept = found;
+    })
+    .finally(() => {
+      if (sweeping === run) sweeping = null;
     });
-  } catch (error) {
-    set({ error: error instanceof Error ? error.message : String(error) });
-  } finally {
-    polling = false;
-  }
 }
+
+function stopSweep() {
+  sweeping?.abort();
+  sweeping = null;
+}
+
+const sameAddress = (a: HostAddress, b: HostAddress) =>
+  a.host === b.host && a.port === b.port;
+
+function updateHosts() {
+  const user = setup.allowCustomHosts
+    ? userHosts.filter((u) => !setup.hosts.some((a) => sameAddress(a, u)))
+    : [];
+  set({
+    hosts: [
+      ...builtInHosts().map((host) => ({
+        host,
+        port: DEFAULT_REGISTRY_PORT,
+        source: "built-in" as const,
+      })),
+      ...setup.hosts.map((h) => ({ ...h, source: "app" as const })),
+      ...user.map((h) => ({ ...h, source: "user" as const })),
+    ],
+  });
+}
+
+function readUserHosts(): Promise<void> {
+  if (!userHostsRead)
+    userHostsRead = readHosts().then((found) => {
+      userHosts = found;
+      updateHosts();
+    });
+  return userHostsRead;
+}
+
+const SKIPPED: Record<HostProblem, string> = {
+  invalid: "it is not an IP address or a host name",
+  duplicate: "it is listed twice",
+  builtIn: "it is always checked",
+};
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
+
+const portOf = (hostPort: string) =>
+  Number(hostPort.slice(hostPort.lastIndexOf(":") + 1));
+
+/** The server at `own` as saved before a reload, or marked unknown when nothing was. */
+async function savedOrUnknown(
+  own: string,
+  url: string,
+  appSlug: string,
+): Promise<DevPreviewServer> {
+  const saved = await readRunningServer();
+  if (saved && sameServer(saved.hostPort, own)) return saved;
+  return {
+    hostPort: own,
+    host: own.slice(0, own.lastIndexOf(":")),
+    port: portOf(own),
+    url,
+    title: "",
+    name: "",
+    slug: appSlug,
+    version: null,
+    branch: null,
+    worktree: null,
+    key: null,
+    // It runs here, so it was made for this build.
+    compatible: true,
+    announced: false,
+    unknown: true,
+  };
+}
+
+/** One round: the whole port range on a sweep, else the registry and the servers already known. */
+async function poll(sweep: boolean) {
+  const platform = currentPlatform();
+  const appSlug = buildSlug();
+  if (!platform || !appSlug) return;
+  if (sweep) {
+    lastSweep = Date.now();
+    set({ scanning: true });
+  }
+  try {
+    await readUserHosts();
+    const typed = state.hosts.filter((h) => h.source !== "built-in");
+    const remote = [
+      ...typed,
+      ...swept.filter((s) => !typed.some((h) => sameAddress(h, s))),
+    ];
+    // The Metro the app's JS came from; null for a preview or a bundle built into the app.
+    const url = scriptUrl();
+    const own = url ? hostPortOf(url) : null;
+    const native = nativeModule()?.state();
+    const defaultMetro = native?.defaultServer;
+    // The server picked in the list. It is not what runs when it did not answer as the app started.
+    const picked = native?.localServer ?? null;
+    const pickedAt = picked ? hostPortOf(picked) : null;
+    const found = await discover(
+      platform,
+      own,
+      sweep
+        ? null
+        : [
+            ...known,
+            ...[defaultMetro, pickedAt].flatMap((at) =>
+              at ? [portOf(at)] : [],
+            ),
+          ],
+      remote,
+    );
+    // Another computer's ports are asked through its registry, never scanned here.
+    known = found.alive
+      .filter((id) => !found.remote.some((r) => id.startsWith(`${r.host}:`)))
+      .map(portOf);
+    let servers = mergeServers({
+      ...found,
+      appSlug,
+      buildKey: buildKey(),
+      platform,
+    });
+    // The picked server stays too, so QA sees why the app started without it. Read before the
+    // running server is saved below, which replaces what was saved about the picked one.
+    if (
+      picked &&
+      pickedAt &&
+      !(own && sameServer(pickedAt, own)) &&
+      !servers.some((s) => sameServer(s.hostPort, pickedAt))
+    )
+      servers = [
+        ...servers,
+        state.servers.find((s) => sameServer(s.hostPort, pickedAt)) ??
+          (await savedOrUnknown(pickedAt, picked, appSlug)),
+      ].sort((a, b) => a.port - b.port);
+    if (url && own) {
+      const seen = servers.find((s) => sameServer(s.hostPort, own));
+      const last = state.servers.find((s) => sameServer(s.hostPort, own));
+      if (seen && JSON.stringify(seen) !== JSON.stringify(last))
+        saveRunningServer(seen);
+      if (!seen)
+        servers = [
+          ...servers,
+          last ?? (await savedOrUnknown(own, url, appSlug)),
+        ].sort((a, b) => a.port - b.port);
+    }
+    set({
+      servers,
+      activeUrl: picked,
+      alive: found.alive,
+      error: null,
+      scanning: false,
+    });
+  } catch (error) {
+    set({ error: message(error), scanning: false });
+  }
+}
+
+/**
+ * Rounds never overlap: one can outlast the interval on a slow host, and overlapping rounds would
+ * land out of order. A sweep asked for during a quick round runs once that round ends.
+ */
+function look(sweep: boolean): Promise<void> {
+  if (round)
+    return sweep && !round.sweep
+      ? round.done.then(() => look(true))
+      : round.done;
+  const done = poll(sweep).finally(() => {
+    round = null;
+  });
+  round = { sweep, done };
+  return done;
+}
+
+function tick() {
+  if (AppState.currentState === "background") return;
+  look(Date.now() - lastSweep >= SWEEP_MS);
+}
 
 export const devPreviewServersStore = {
   getState: () => state,
@@ -69,26 +306,85 @@ export const devPreviewServersStore = {
   },
 
   /**
-   * Looks every 2 s while something watches (the list is on screen), and stops when nothing does.
-   * Debug builds only; returns a function that stops watching.
+   * The app's own hosts and whether hosts may be added on the device, from its config. Set it
+   * before `watch()`, which looks at once. Entries that are not hosts are skipped with a warning.
+   */
+  configure(
+    next: Pick<DevServersSetup, "hosts" | "allowCustomHosts" | "skipped">,
+  ) {
+    for (const { text, problem } of next.skipped)
+      console.warn(
+        `@axonpack/preview: devPreviewServers.hosts skips "${text}": ${SKIPPED[problem]}.`,
+      );
+    setup = next;
+    updateHosts();
+  },
+
+  /**
+   * While something watches (the list is on screen): sweeps the port range at once and every 30 s,
+   * asks the servers already known every 2 s, and sweeps this device's network for registries.
+   * Nothing while the app is in the background. Debug builds only; returns a function that stops
+   * watching.
    */
   watch(): () => void {
     if (!__DEV__) return () => undefined;
     watchers++;
     if (!timer) {
-      poll();
-      timer = setInterval(poll, POLL_MS);
+      // A round from an earlier visit may be old. Until this visit's first one, it is not known.
+      set({ alive: null });
+      userHostsRead = null;
+      look(true);
+      timer = setInterval(tick, POLL_MS);
+      sweepNetwork();
+      appState = AppState.addEventListener("change", (next) => {
+        if (next === "active") {
+          look(false);
+          sweepNetwork();
+        } else if (next === "background") {
+          stopSweep();
+        }
+      });
     }
     return () => {
       watchers--;
       if (watchers === 0 && timer) {
         clearInterval(timer);
         timer = null;
+        appState?.remove();
+        appState = null;
+        stopSweep();
       }
     };
   },
 
-  refresh: () => poll(),
+  /**
+   * Sweeps the whole port range, as pull to refresh and the Refresh button ask, and this device's
+   * network too while the list watches.
+   */
+  refresh: () => {
+    sweepNetwork();
+    return look(true);
+  },
+
+  /** Adds a host on this device, saves it, and looks for its servers. */
+  async addHost(address: HostAddress) {
+    await readUserHosts();
+    if (userHosts.some((h) => sameAddress(h, address))) return;
+    userHosts = [...userHosts, address];
+    updateHosts();
+    await saveHosts(userHosts);
+    // A full look, which also asks a registry that did not answer before it was removed.
+    await look(true);
+  },
+
+  /** Removes a host added on this device. Its servers leave the list on the next look. */
+  async removeHost(address: HostAddress) {
+    await readUserHosts();
+    userHosts = userHosts.filter((h) => !sameAddress(h, address));
+    updateHosts();
+    await saveHosts(userHosts);
+    await look(false);
+  },
 
   /** Restarts the app on a dev preview server, or back on what it ran before with null. */
   switchTo(server: DevPreviewServer | null) {

@@ -29,3 +29,28 @@ export type RegisteredServer = {
   keys: Partial<Record<Platform, string>>;
   startedAt: string;
 };
+
+/** The computer the registry runs on. */
+export type Machine = {
+  /** The same on every run, so the app can tell this computer apart however it reached it. */
+  id: string;
+  /** Its IPv4 addresses on the local network. */
+  addresses: string[];
+};
+
+/**
+ * Goes up when the registry can do something an older one can't, so `preview start` knows to
+ * replace an older one. A registry that sends no version is older than any that does.
+ */
+export const REGISTRY_VERSION = 1;
+
+/**
+ * What `GET /servers` on the registry returns, and `POST /servers` too. An older registry sends
+ * `servers` only, and answers a POST with nothing.
+ */
+export type RegistryAnswer = {
+  servers: RegisteredServer[];
+  version?: number;
+  machineId?: string;
+  addresses?: string[];
+};

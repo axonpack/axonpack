@@ -15,10 +15,10 @@ export const previewBundlePath = (id: string): string =>
   `${id}/${Platform.OS}/${BUNDLE_FILE}`;
 
 /**
- * Chooses what the next start or `reload()` loads: a preview by id, or null for the base bundle.
+ * Chooses what the next start or `reload()` loads: a preview by id, or null for the default bundle.
  * `key` is the build key the preview was published for; with it, a later build with another key
- * loads the base bundle instead.
- * A preview that is not on the device falls back to the base bundle. False where the native module
+ * loads the default bundle instead.
+ * A preview that is not on the device falls back to the default bundle. False where the native module
  * isn't linked.
  */
 export function selectPreview(id: string | null, key?: string): boolean {

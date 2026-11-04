@@ -5,7 +5,27 @@ icon: LifeBuoy
 ---
 
 Start here if something does not work. Each item has the symptom, the cause and the fix. The list
-shows the last error under its header, so read that first.
+shows the last error in a snackbar above its header card, in plain words with what to try, so read
+that first. The raw error goes to the console. The messages are listed under
+[Errors](/docs/preview/app-setup#errors).
+
+## "Previews aren't set up"
+
+**Cause.** The config has no bucket URL: `s3Config` is left out, or its `url` is undefined, empty or
+blank. Usually the env value is missing, such as a build made without its `.env`. This is a setup
+state, not an error, so there is no snackbar.
+**Fix.** Set `EXPO_PUBLIC_PREVIEW_S3_URL`, or whatever the app passes as `s3Config.url`, then restart
+Metro with `npx expo start --clear`, or rebuild. See
+[Settings and env files](/docs/preview/environment#the-apps-settings).
+
+## "The bucket URL ... is not a full address"
+
+The snackbar says "Something went wrong." with this message under it, and has no Retry.
+
+**Cause.** `s3Config.url` is set but does not start with `https://` or `http://`, such as
+`/previews` or `localhost:9000/previews`.
+**Fix.** Pass the whole address, such as `https://pub-<id>.r2.dev`, then restart Metro with
+`npx expo start --clear`, or rebuild.
 
 ## The list is empty
 
@@ -13,7 +33,8 @@ shows the last error under its header, so read that first.
 **Fix.** With the default `compatibility: "appVersion"` the key is the app version, so publish again
 after a version bump. With `"fingerprint"`, a prebuild or any native or app config change gives a
 new key, so publish again from the code the installed build was made from. `publish` prints the URL
-of the list it wrote; compare its key with the build's.
+of the list it wrote; compare its key with the build's, and its folder with the app's slug. The app
+reads only the folder named after its own slug.
 
 ## "This build has no compatibility key"
 
@@ -21,20 +42,29 @@ of the list it wrote; compare its key with the build's.
 **Fix.** Add `"@axonpack/preview"` to `plugins` in the app config and make a new native build. Or pass
 `buildKey` in the config. See [Compatibility](/docs/preview/compatibility#without-the-plugin).
 
+## "This build has no app slug"
+
+**Cause.** The build was made without the config plugin, and the config passes `buildKey` but no
+`slug`. Without the slug the app can't tell which folder in the bucket is its own, so it reads nothing.
+**Fix.** Add `"@axonpack/preview"` to `plugins` and make a new native build, or pass `slug` with
+`buildKey`. See [Compatibility](/docs/preview/compatibility#without-the-plugin).
+
 ## "Expected JSON from ... but got text/html"
 
 **Cause.** Something other than the bucket answered. The URL is not public, a tunnel or proxy is
 showing its login page, or the URL points at the wrong place.
 **Fix.** Open the URL from the message in a browser. Make the bucket or the tunnel public, give the
-app the read key, or pass the headers the proxy wants with the `headers` option.
+app the read key, or pass the headers the proxy wants with `s3Config.headers`.
 
 ## The bucket answers 403
+
+The list says "The bucket refused access."
 
 **Cause.** In the app: a private bucket without a read key, a read key without `s3:ListBucket`, or a
 signing region that does not match the bucket. In the CLI: the write key lacks one of the actions it
 needs.
 **Fix.** Check the key's policy against [Storage](/docs/preview/storage#the-two-keys), and set the
-region (`PREVIEW_S3_REGION` for the CLI, `region` in the app) for an AWS bucket outside `us-east-1`.
+region (`PREVIEW_S3_REGION` for the CLI, `s3Config.region` in the app) for an AWS bucket outside `us-east-1`.
 
 ## Publish says to set PREVIEW_S3_URL
 
@@ -55,9 +85,13 @@ region (`PREVIEW_S3_REGION` for the CLI, `region` in the app) for an AWS bucket 
 
 ## Android cannot reach the local server
 
-**Cause.** The `adb reverse` was lost when the emulator or phone restarted, or Android 17 refused the
-app local network access.
-**Fix.** Run `adb reverse tcp:9000 tcp:9000` again, or allow the permission in the app's settings.
+The list says "Can't reach the bucket at localhost:9000." On Android it also says to use `10.0.2.2`
+or `adb reverse`, with the bucket's port.
+
+**Cause.** On the emulator, `localhost` is the emulator itself, not your computer. On a phone, the
+`adb reverse` was lost when it restarted. Or Android 17 refused the app local network access.
+**Fix.** Use `10.0.2.2` for the bucket's host on the emulator, or run `adb reverse tcp:9000 tcp:9000`
+(again). Allow the local network permission in the app's settings.
 
 ## "did not match its checksum"
 
@@ -68,7 +102,7 @@ device.
 
 ## A preview shows as Broken
 
-**Cause.** It failed before the app had mounted the provider, so the next start loaded the base
+**Cause.** It failed before the app had mounted the provider, so the next start loaded the default
 bundle. On Android that happens straight away. On iOS the failed start leaves a blank screen until the
 app is closed and opened again.
 **Fix.** Look at the error in that branch's code. Also check that the provider is mounted on every
@@ -89,11 +123,32 @@ The device log has a warning for the first two cases.
 
 ## Dev preview servers lists nothing
 
-**Cause.** The build is a release build, `devPreviewServers` is off, the build has no slug, or the
-device can't reach the computer.
-**Fix.** Use a debug build with the plugin and `devPreviewServers: true`. On a USB phone, run
-`adb reverse` for each port, or start the servers with `preview start` with `adb` on the PATH. See
+**Cause.** The build is a release build, `enabled` or `devPreviewServers` is off, the build has no
+slug, or the device can't reach the computer.
+**Fix.** Use a debug build with the plugin, `enabled` and `devPreviewServers: true`. On a USB
+phone, run `adb reverse` for each port, or start the servers with `preview start` with `adb` on the
+PATH. See
 [Dev preview servers](/docs/preview/dev-preview-servers#reaching-the-servers).
+
+## A computer on the same Wi-Fi doesn't show
+
+A `preview start` on the same Wi-Fi, a teammate's or your own, doesn't show in the dev servers list.
+
+**Cause.** [The network sweep](/docs/preview/dev-preview-servers#the-network-sweep) doesn't reach
+the computer, or the device can't reach it at all. A row also needs Metro to answer at the
+computer's address and port.
+**Fix.** Pull to refresh, which sweeps again. If it still doesn't show, open
+`http://<computer's IP>:19150/servers` in the phone's browser. `preview start` prints that IP as
+`On a phone on this Wi-Fi: Add a host → <IP>`.
+
+- **The page doesn't load.** The phone can't reach the computer at all, often because the Wi-Fi
+  keeps devices apart (client isolation, common on guest Wi-Fi). Nothing finds it there, a host you
+  add included. Use USB, or another network.
+- **The page loads, and the computer's address is outside the phone's own /24.** The sweep doesn't
+  go that far. Add the computer as a host.
+- **The page loads otherwise.** Check the app's local network access: on iOS in **Settings > the
+  app > Local Network** (see [iOS asks first](/docs/preview/dev-preview-servers#ios-asks-first)),
+  and the local network permission on Android 17. Or add the computer as a host.
 
 ## npx preview fails with a 404 in a bun project
 

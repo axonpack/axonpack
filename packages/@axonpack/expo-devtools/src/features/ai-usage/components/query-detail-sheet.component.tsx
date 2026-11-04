@@ -60,7 +60,7 @@ export function QueryDetailSheet({
         <CollapsibleSection title="Reply">
           {active.reply === undefined ? (
             <Text style={styles.empty}>
-              Not kept for a query of ai-usage, since it would repeat every earlier reply.
+              Not kept for a query of CLI, since it would repeat every earlier reply.
             </Text>
           ) : parsed !== undefined ? (
             <JsonTree value={parsed} />

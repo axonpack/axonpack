@@ -6,6 +6,15 @@ type NativeModule = {
   compatibility?: string | null;
   key?: string | null;
   slug?: string | null;
+  appName?: string | null;
+  appVersion?: string | null;
+  buildNumber?: string | null;
+};
+
+export type BuildApp = {
+  name: string | null;
+  version: string | null;
+  buildNumber: string | null;
 };
 
 /**
@@ -30,4 +39,14 @@ export function buildSlug(): string | null {
   return (
     requireOptionalNativeModule<NativeModule>("AxonpackPreview")?.slug ?? null
   );
+}
+
+/** The app's name, version and build number as installed; nulls on a native side older than this JS. */
+export function buildApp(): BuildApp {
+  const native = requireOptionalNativeModule<NativeModule>("AxonpackPreview");
+  return {
+    name: native?.appName ?? null,
+    version: native?.appVersion ?? null,
+    buildNumber: native?.buildNumber ?? null,
+  };
 }

@@ -8,6 +8,7 @@ jest.mock("expo-file-system", () =>
 const mockNative = {
   bundle: null as string | null,
   key: "fp",
+  slug: "shop",
   select: jest.fn((bundle: string | null, _key?: string | null) => {
     mockNative.bundle = bundle;
   }),
@@ -50,7 +51,7 @@ beforeEach(() => {
   ) as typeof fetch;
 });
 
-test("deleting the running preview goes back to the base bundle first", async () => {
+test("deleting the running preview goes back to the default bundle first", async () => {
   saveDownload("a", "fp");
   mockNative.bundle = "a/ios/main.jsbundle";
   await previewsStore.refresh(config);
@@ -99,7 +100,8 @@ test("switching to a preview that is not on the device downloads it first", asyn
     [`files/${sha}`]: bundle,
   };
   global.fetch = jest.fn(async (url: string | URL) => {
-    const body = objects[String(url).replace("http://localhost:9000/b/", "")];
+    const body =
+      objects[String(url).replace("http://localhost:9000/b/shop/", "")];
     if (body === undefined) return new Response("", { status: 404 });
     return new Response(
       (body instanceof Uint8Array ? body : JSON.stringify(body)) as BodyInit,
@@ -121,7 +123,7 @@ test("the list shows why a refresh failed when the bucket URL answers with a web
   ) as typeof fetch;
   await previewsStore.refresh({ ...config, buildKey: "fp" });
   expect(previewsStore.getState().error).toMatch(
-    /^Expected JSON from http:\/\/localhost:9000\/b\/index\/ios\/fp\.json but got text\/html \(status 200\)/,
+    /^Expected JSON from http:\/\/localhost:9000\/b\/shop\/index\/ios\/fp\.json but got text\/html \(status 200\)/,
   );
 });
 
@@ -160,10 +162,53 @@ test("each refresh replaces the list with what the bucket says now", async () =>
   expect(global.fetch).toHaveBeenCalledTimes(2);
 });
 
-test("back to base also stops a local Metro server", async () => {
+test("back to the default bundle also stops a local Metro server", async () => {
   await previewsStore.refresh(config);
   await previewsStore.switchTo(config, null);
   expect(mockNative.selectLocalServer).toHaveBeenCalledWith(null, null);
   expect(mockNative.select).toHaveBeenCalledWith(null, null);
   expect(mockNative.reload).toHaveBeenCalled();
+});
+
+test("switching to a preview stops using a picked server first", async () => {
+  saveDownload("a", "fp");
+  await previewsStore.refresh(config);
+  await previewsStore.switchTo(config, "a");
+  expect(mockNative.selectLocalServer).toHaveBeenCalledWith(null, null);
+  expect(mockNative.selectLocalServer.mock.invocationCallOrder[0]).toBeLessThan(
+    mockNative.reload.mock.invocationCallOrder[0],
+  );
+  expect(mockNative.select).toHaveBeenCalledWith("a/ios/main.jsbundle", "fp");
+});
+
+test("with no bucket URL nothing is asked of a bucket, and it is no error", async () => {
+  saveDownload("a", "fp");
+  for (const bucket of [
+    {},
+    { s3Config: { url: undefined as unknown as string } },
+    { s3Config: { url: "" } },
+    { s3Config: { url: " " } },
+    { url: "" },
+  ]) {
+    await previewsStore.refresh({ enabled: true, buildKey: "fp", ...bucket });
+    expect(previewsStore.getState()).toMatchObject({
+      loading: false,
+      error: null,
+      remote: null,
+    });
+  }
+  // The download on the device is still listed, and one not on it can't be fetched.
+  expect(previewsStore.getState().local.map((p) => p.id)).toEqual(["a"]);
+  await previewsStore.switchTo({ enabled: true, buildKey: "fp" }, "b");
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(mockNative.reload).not.toHaveBeenCalled();
+});
+
+test("a relative bucket URL is set but wrong, so a refresh still errors", async () => {
+  await previewsStore.refresh({
+    enabled: true,
+    buildKey: "fp",
+    s3Config: { url: "/previews" },
+  });
+  expect(previewsStore.getState().error).toMatch(/is not a full address/);
 });

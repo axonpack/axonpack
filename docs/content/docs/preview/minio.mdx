@@ -40,6 +40,9 @@ the community server uses.
 - **A public bucket:** anonymous download on the bucket, and nothing else.
 - **A private bucket:** a read user with only `s3:GetObject` and `s3:ListBucket`. That is what the
   repository's `local-s3/init.sh` sets up for its private bucket, so it is a working example.
+- **Several apps in one bucket:** each app's files are under `<slug>/`, so a policy can limit a
+  key's object actions to `arn:aws:s3:::<bucket>/<slug>/*`. See
+  [Storage](/docs/preview/storage#the-two-keys).
 - **Conditional PUT:** not looked up in MinIO's docs. The package is developed and tested against
   the local MinIO server below.
 - **HTTPS**, through MinIO's own TLS or a proxy in front. A proxy must pass the original `Host` header
@@ -106,7 +109,7 @@ Reaching it from a device:
   the publish URL and the app's URL.
 - **A phone on another network:** a public tunnel to port 9000 in the app's URL, while publishing
   stays on `localhost:9000`. A private tunnel answers with a login page instead of the file. Pass
-  any header the tunnel wants with the `headers` option, for example
+  any header the tunnel wants with `s3Config.headers`, for example
   `{ 'X-Tunnel-Skip-AntiPhishing-Page': 'True' }` for a VS Code dev tunnel.
 
 Android 17 asks the user before an app may reach the local network, which includes the emulator's

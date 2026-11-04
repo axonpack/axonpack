@@ -1,6 +1,6 @@
 ---
 title: Use with AI agents
-description: An AI agent, or you, reads what the app recorded from a terminal, mocks a response or sends a request from the app. Requests, logs, crashes, storage and every other tab, filtered down to the rows you need.
+description: An AI agent, or you, reads what the app recorded from a terminal, mocks a response, sends a request from the app or calls a function the app exposed. Requests, logs, crashes, storage and every other tab, filtered down to the rows you need.
 ---
 
 An AI agent working on your app can't see the phone. The package comes with a command line tool,
@@ -8,7 +8,8 @@ An AI agent working on your app can't see the phone. The package comes with a co
 headers and bodies, the console, crashes, stored values, screens, the TanStack Query cache, Redux
 actions and performance events. The agent runs a command and gets plain text back, filtered down
 to the rows it asked for. It can also [mock a response or send a request](#mocking-and-sending-requests)
-from inside the app. You can run the same commands yourself.
+from inside the app, and [call a function](#calling-what-the-app-exposes) the app handed to the
+Console tab's `>` prompt. You can run the same commands yourself.
 
 ```sh
 npx devtools network --where state=error --since 10m
@@ -24,7 +25,7 @@ fetch-1762172290871-198   GET     500   error  92   https://api.example.com/v1/o
 
 There is nothing to set up beyond the [provider](/docs/expo-devtools/quick-start): the tool ships
 inside the package. Every query and action an agent makes, and the reply it got, is listed in the
-[AI Usage tab](#the-ai-usage-tab).
+[CLI tab](#the-cli-tab).
 
 ## Requirements
 
@@ -72,6 +73,7 @@ Every flag, field, output line and error message is listed in the
 | `devtools <topic> [flags]`  | A topic's rows, newest first                               |
 | `devtools get <topic> <id>` | One row, whole                                             |
 | `devtools network <action>` | Mock, block or send a request. See [below](#mocking-and-sending-requests) |
+| `devtools context call <name>` | Call a function the app exposed. See [below](#calling-what-the-app-exposes) |
 | `devtools <command> --help` | Every flag of one command, with examples                   |
 
 ### apps
@@ -174,13 +176,15 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 | ------------- | --------------------------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
 | `network`     | A request, socket or event stream since launch. The last 1,000                                | `id method code state ms url`      | `id t kind method code close state ms url error type size msgs source request response` |
 | `console`     | A console line since launch. The last 500, with repeats folded into one row                   | `id level text`                    | `id t level text count source crash`                                                |
+| `context`     | A name the Console tab's `>` prompt has, from `console.context` or a support. `id` is the name, and rows have no time | `name type source preview` | `id t name type source preview`                                   |
 | `performance` | A long task, slow interaction, mark or measure. Kept only while the Performance tab records, and it starts paused | `id kind name ms` | `id t kind name ms handler detail`                                                  |
 | `storage`     | A key in a registered store. `id` is `<store>/<key>`. Rows have no time, so `--since` finds none | `id type value`                 | `id t store key type size value error`                                              |
 | `query`       | A query (`id` is its hash) or a mutation (`mutation-<n>`) in the TanStack Query cache, last updated first | `id type status observers error` | `id t type key status observers variables data error`                       |
 | `navigation`  | A move the navigator made. The last 200                                                       | `id action from to`                | `id t action from to path params container noop`                                    |
 | `redux`       | A dispatched action and what it changed in the state. The last 200                            | `id type changed`                  | `id t type action changed changes`                                                  |
 | `crash`       | A captured crash                                                                              | `id kind name message`             | `id t kind name message route previous seen`                                        |
-| `ai-usage`    | A query or action an agent made, with the reply it got. The last 100                          | `id command matched total ms`      | `id t command topic action matched total ms size error cut reply`                   |
+| `cli`         | A query or action made with this tool, with the reply it got. The last 100. `ai-usage`, its old name, still works | `id command matched total ms`      | `id t command topic action matched total ms size error cut reply`                   |
+| `preview`     | From the [preview support](/docs/expo-devtools/supports/preview#from-the-command-line), only while it is in `supports`: what runs now (`id` is `now`), a dev server or a preview | `id kind title status branch active` | `id t kind title status branch active environment`                 |
 
 - In `network`, `code` is the HTTP status only, and a socket's close code is `close` (`-` on an
   HTTP row). `state` is `error` for a 4xx or 5xx answer, a request that got no answer and a socket
@@ -193,6 +197,10 @@ topic. `devtools <topic> --fields x` lists a topic's fields too, through the err
 - `redux` keeps the action and what it changed, never the whole state.
 - A tab the app has no setup for (no router, no `QueryClient`, no store with
   `devtoolsReduxEnhancer()`, no storage adapters) is an `off` topic.
+- A [support](/docs/expo-devtools/supports) adds a topic of its own, such as `preview`, and
+  `devtools topics` lists it only while the support is in the devtools config's `supports`. It
+  takes the same flags as the other topics. When the support's package isn't installed, the topic is
+  `off` and says what to install. Each support's page lists its rows and actions.
 
 ## Output
 
@@ -229,8 +237,8 @@ list is not a run of time.
 Each command gives up after 5 seconds. If the app never answered, the message says its JavaScript
 may be paused at a breakpoint: resume it and run the command again.
 
-A topic that has to read first, such as `storage` listing a store's keys or reading its values,
-answers with a `# wait:` line while it reads. The tool asks again every 200 ms within the same 5
+A topic that has to read first, such as `storage` listing a store's keys or reading its values, or
+`preview` asking the bucket and looking for dev servers, answers with a `# wait:` line while it reads. The tool asks again every 200 ms within the same 5
 seconds, and prints only the answer it ends on. If the read takes longer, the error says what the
 app is still doing, and running the same command again picks up where it stopped.
 
@@ -285,8 +293,82 @@ flags are in the [CLI reference](/docs/expo-devtools/reference/cli#actions).
 - **Replies are masked like every other reply.** The new row goes through the same redaction, so an
   `Authorization` header you sent shows as `[redacted]`. A replay sends the app's own headers to the
   same URL, but the agent only ever sees them masked.
-- **Every action is recorded**, refused ones too, in the [AI Usage tab](#the-ai-usage-tab).
+- **`context call` and every `preview` action need `--yes`.** A called function can change
+  anything it changes, and the `preview` actions restart the app or change what is on the device.
+  Each refuses without `--yes`.
+- **Every action is recorded**, refused ones too, in the [CLI tab](#the-cli-tab).
 - **Development only**, like the rest of the tool.
+
+## Calling what the app exposes
+
+The app can hand objects and functions to the Console tab's `>` prompt in
+[`console.context`](/docs/expo-devtools/console#reaching-your-own-objects), and a
+[support](/docs/expo-devtools/supports) can add its own, such as `preview`. The `context` topic
+lists the same names, so an agent can read and call exactly what the app chose to expose, and
+nothing else. No code is evaluated, and no global or import is reachable.
+
+```tsx title="App.tsx"
+<DevtoolsProvider config={{ console: { context: { store, resetOnboarding } } }}>
+```
+
+```
+$ devtools context
+# context · my-app · iPhone 16 Pro · 3 of 3 match
+name             type      source   preview
+preview          object    preview  {"status":{"running":{"kind":"default","source":"expo-dev-server","hostPort":"19...
+store            object    app      {"dispatch":"ƒ dispatch()","subscribe":"ƒ subscribe()","getState":"ƒ getState()"...
+resetOnboarding  function  app      ƒ resetOnboarding()
+# next: --after preview
+```
+
+Read a value with `get`, through a dot path if you like:
+
+```sh
+devtools get context preview.status
+devtools get context store.getState
+```
+
+Call a function with `call`, and `--yes`. The arguments are one word of JSON: an array is the list
+of arguments, any other value is the one argument. A dot path calls the function on its object, so
+`store.dispatch` runs as `store.dispatch(...)`.
+
+```sh
+devtools context call resetOnboarding --yes
+devtools context call store.dispatch '{"type":"cart/clear"}' --yes
+devtools context call preview.switch '"pr-7"' --yes
+```
+
+```
+# context · my-app · iPhone 16 Pro · store.dispatch returned
+{
+  "type": "cart/clear"
+}
+```
+
+A function that returns a promise is waited for, up to the [5 seconds](#the-5-second-timeout) every
+command gets. After that the call carries on in the app, and the [CLI tab](#the-cli-tab) shows how
+it ended. A throw or a rejected promise answers `error:` with its message. The topic is `off` when
+the app turns the prompt off with `console.repl: false`. Every rule and message is in the
+[CLI reference](/docs/expo-devtools/reference/cli#context-actions).
+
+## Previews from the terminal
+
+With the [preview support](/docs/expo-devtools/supports/preview) in `supports`, the `preview` topic
+lists what runs now, the dev servers and the previews, and its actions are the buttons of preview's
+list. Each needs `--yes`, and each is refused where the list shows no such button.
+
+```sh
+devtools preview --where kind=preview
+devtools preview download pr-7 --yes
+devtools preview switch pr-7 --yes
+devtools preview update pr-7 --yes
+devtools preview delete pr-7 --yes
+devtools preview default --yes
+```
+
+`switch` and `default` restart the app, so the app answers first and the CLI tab starts empty after
+the restart. `download` and `update` wait for the download. The [preview support's
+page](/docs/expo-devtools/supports/preview#from-the-command-line) lists the rows and each refusal.
 
 ## Redaction
 
@@ -312,8 +394,22 @@ storage: {
 },
 ```
 
-The Console, Query and Redux tabs have no redaction setting, so an agent reads what the app logged,
-cached or dispatched, as the tabs show it.
+The `context` topic follows
+[`console.redactKeys` and `console.redact`](/docs/expo-devtools/console#redaction). A name, a dot
+path segment or a key at any depth that matches shows as `[redacted]`, in the list, in
+`get context` and in what `context call` returns, before the reply is printed or the CLI tab logs
+it:
+
+```ts title="devtools.ts"
+console: {
+  context: { session, store },
+  redactKeys: ['token', /secret/i],
+},
+```
+
+The `>` prompt itself isn't redacted, since it runs whatever is typed on the device. The Console
+tab's rows and the Query and Redux tabs have no redaction setting, so an agent reads what the app
+logged (the prompt's answers included), cached or dispatched, as the tabs show it.
 
 ## Older React Native
 
@@ -334,10 +430,11 @@ connection closes the DevTools window open on it. There:
 A window opened some other way than through Metro (`j` in the terminal, or Open DevTools in the dev
 menu) doesn't take calls, so the tool doesn't know about it, and connecting closes it.
 
-## The AI Usage tab
+## The CLI tab
 
-Every query and action an agent makes is listed in the **AI Usage** tab, on the device and in
-[React Native DevTools](/docs/expo-devtools/react-native-devtools#ai-usage), with the reply it got.
+Every query and action made with the tool, by an agent or by you, is listed in the **CLI** tab, on
+the device and in [React Native DevTools](/docs/expo-devtools/react-native-devtools#cli), with the
+reply it got. Up to version 3.8 it was called **AI Usage**.
 The reply is taken after every redaction, so the tab shows exactly what left the app.
 
 - A row shows the command as you would type it after `devtools`, the time, how many rows it matched
@@ -348,19 +445,20 @@ The reply is taken after every redaction, so the tab shows exactly what left the
 - Record and Clear sit in the toolbar. The tab keeps the last 100 queries, and up to 64 K characters
   of each reply.
 - `apps` and `topics` are not listed: they are probes, not queries.
-- `aiUsage: { disabledByDefault: true }` opens the tab paused. Agents can still query and act while
-  it is paused; what they do is just not kept.
+- `cli: { disabledByDefault: true }` opens the tab paused. Agents can still query and act while it
+  is paused; what they do is just not kept. The old `aiUsage` key still works, but is deprecated.
 
 The tab is also a topic, so you or another agent can check what was asked and answered:
 
 ```sh
-devtools ai-usage --since 1h --where 'topic=network'
-devtools ai-usage --where 'action?'
-devtools get ai-usage q12
+devtools cli --since 1h --where 'topic=network'
+devtools cli --where 'action?'
+devtools get cli q12
 ```
 
-A query of `ai-usage` is listed without its reply, which would otherwise repeat every earlier reply.
-Every control is in the [AI Usage tab reference](/docs/expo-devtools/reference/ai-usage-tab).
+A query of `cli` is listed without its reply, which would otherwise repeat every earlier reply. The
+old topic name, `ai-usage`, still works, but is deprecated. Every control is in the
+[CLI tab reference](/docs/expo-devtools/reference/cli-tab).
 
 ## Tell your agent about it
 
@@ -379,6 +477,8 @@ This app uses @axonpack/expo-devtools. With the app open in a dev build or Expo 
 - `npx @axonpack/expo-devtools <topic> --help` lists every flag, with examples.
 - `npx @axonpack/expo-devtools network --help` lists the actions: mock or block a URL, send or replay
   a request from the app. Anything but GET, HEAD and OPTIONS needs `--yes`.
+- `npx @axonpack/expo-devtools context` lists what the app exposed for you to read or call, and
+  `npx @axonpack/expo-devtools context --help` shows how to call one with `--yes`.
 
 Pass the topic and each flag as separate arguments. Output is tab-separated, and `#` lines are a
 summary or a cursor: rerun with the `# next: --after <id>` line to get only new rows. Exit code 2
@@ -410,6 +510,9 @@ npx skills add axonpack/skills
 | What changed the Redux state               | `devtools redux --where 'type~cart/'`                                                        |
 | How a screen handles a failing endpoint    | `devtools network override <exact url> --status 500 --body '{"error":"down"}'`, open the screen, read `devtools console`, then `devtools network unoverride --all` |
 | Whether an endpoint answers from the app   | `devtools network send GET <url>`, then `devtools get network <id>` for the body             |
+| To run a preview or another dev server     | `devtools preview`, then `devtools preview switch <id> --yes`. Needs the [preview support](/docs/expo-devtools/supports/preview) |
+| To download, update or delete a preview    | `devtools preview --where kind=preview`, then `devtools preview download <id> --yes` (or `update`, `delete`) |
+| To run something the app exposed (a reset, a store action) | `devtools context`, then `devtools context call <name> '<args as JSON>' --yes`  |
 
 Performance has rows only while its tab records, and it starts paused, so press record in the
 Performance tab first.
@@ -425,12 +528,14 @@ Performance tab first.
 | `2 apps match. Pick one:`                                  | Add one of the `--app` and `--device` pairs it lists.                                                         |
 | `... can't share its debugger ...`                         | See [Older React Native](#older-react-native).                                                                |
 | `POST can change data on the server, so it needs --yes`    | Add `--yes` if you mean to send it. GET, HEAD and OPTIONS need none.                                         |
-| `still sending ... after 5 s`                              | The request carries on in the app. `devtools ai-usage --where 'action?'` shows how it ended.                  |
+| `still sending ... after 5 s`                              | The request carries on in the app. The CLI tab, or `devtools cli --where 'action?'`, shows how it ended.      |
+| `the args must be JSON ...`                                | `context call` takes one word of JSON. Quote a string as `'"pr-7"'`, and pass several as an array.           |
 
 ## Limits
 
-- **It acts on the network only.** Mocking, blocking, sending and replaying requests are the only
-  changes it makes. Nothing can be cleared or navigated from the terminal.
+- **It changes only what its actions reach**: requests (mock, block, send, replay), the functions
+  the app or a support exposed to the `>` prompt, and previews with the preview support. Nothing
+  else can be cleared or navigated from the terminal.
 - **It sees what the tabs keep.** A row that aged out of a tab's buffer is gone for the tool too,
   and Performance has rows only while its tab records.
 - **Development only.** A release build installs nothing the tool can talk to.

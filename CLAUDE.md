@@ -67,6 +67,8 @@ The landing page and the docs in one Next app, documented in `docs/README.md` ra
 
 - **Both live sites show only what is published.** A planned package gets no entry in `docs`'s `src/lib/packages.ts`, no `content/docs/<slug>/` folder, no card on the landing page, and there is no roadmap on either site. It earns those on the day it goes to npm. Naming a library on a public page is a promise and documentation is a promise that something works as described; neither has anything behind it until the thing is installable. Unshipped work lives in `notes/plan.md` in this repo and nowhere else.
 
+- **Docs move with the code, in the same branch.** A merge to `main` releases the package and Cloudflare rebuilds the site from `main`, so a branch must never reach `main` with docs that lag behind it. Every change a user can see (UI, config, props, hooks, exports, labels, theme keys, CLI and native behaviour) updates its page under `docs/content/docs/<package>/`, the package README, the package `notes/` and the pending changeset in the same branch, ideally in the same commit series as the code. Before a branch is ready, check every commit since `main` against the docs and fix the gaps, and retake any screenshot that no longer matches. Never document what isn't built.
+
 - **Run `bun install` inside `docs/`**, not at this root. It is not a workspace member, so the root install, `format`, `lint`, `build` and `check-types` all skip it. `turbo run` will not list it, and that is correct, not a misconfiguration.
 - `docs` is in `.prettierignore`. It has its own formatting, and the root `format` task would rewrite the whole site in one diff.
 - **Cloudflare Pages deploys it** to `https://axonpack.dev`, building `docs/` on every push to `main` and giving a PR that touches `docs/` its own preview. `docs/.github/workflows/deploy.yml` came over with the merge but never runs, since GitHub only runs workflows from the repo root. `axonpack.github.io` is now only a redirect to the new domain, because old links on npm point there forever.
@@ -102,9 +104,10 @@ everything an agent needs. `docs/content/docs/agent-skills.mdx` is the page on i
 - **Installed skills depend on the docs URLs.** The skill names `llms.txt` (which links each page's
   markdown copy), `llms-full.txt`, `/docs/<path>/`, `/llms.mdx/docs/<path>/content.md`, the agent
   guide, and the page names `installation`, `quick-start`, `compatibility`, `troubleshooting`,
-  `changelog` and expo-devtools' `ai-agents`, `reference/cli` and `reference/ai-usage-tab`. Keep
+  `changelog` and expo-devtools' `ai-agents`, `reference/cli` and `reference/cli-tab`. Keep
   their routes in `docs/src/app/` and those paths working, and keep the guide's "Where to look"
-  table in step with the skill's list.
+  table in step with the skill's list. A page that moves keeps its old URL, and its markdown copy's,
+  with a 301 line in `docs/public/_redirects`, which Cloudflare Pages reads from the build output.
 - **Test a setup change in a fresh app.** Create one in a scratch folder with
   `npx create-expo-app@latest --template blank-typescript`, install the package from `npm pack`,
   follow the installation page as written, then check `npx expo config`, `npx tsc --noEmit` and

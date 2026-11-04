@@ -5,7 +5,7 @@ import { content } from '@/lib/services/content.service';
 
 // The hero's carousel shows this pane only while it slides, and never with reduced motion, so the
 // section about it draws the same rows again, standing still.
-const aiUsage = panes.find((pane) => pane.tab === 'AI Usage');
+const aiUsage = panes.find((pane) => pane.tab === 'CLI');
 
 export function AiUsagePanel() {
   if (!aiUsage) return null;
@@ -22,7 +22,7 @@ export function AiUsagePanel() {
           <span className="size-4 rounded-full border-[1.5px] border-fd-muted-foreground/70" />
           <span className="mx-0.5 h-4 w-px bg-fd-border" />
           <Bot className="size-3.5 text-fd-primary" />
-          <span className="text-[0.75rem] font-medium">AI Usage</span>
+          <span className="text-[0.75rem] font-medium">CLI</span>
         </div>
         <ul className="divide-y">
           {aiUsage.rows.map((row, i) => row.kind === 'query' && <QueryRow key={i} row={row} />)}

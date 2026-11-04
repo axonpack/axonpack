@@ -4,7 +4,7 @@ Running the example end to end on your own machine, with no cloud account.
 
 - [x] A local S3 server (MinIO) with a public and a private bucket, started with one command
 - [x] An example app (the default `create-expo-app` template, tabs) with the list on a Previews tab
-- [x] A banner on every tab that says what runs: a dev preview server, a preview, or the base bundle
+- [x] A banner on every tab that says what runs: a dev preview server, a preview, or the default bundle
 - [x] Links that do what the list's buttons do, so a run can be scripted from a terminal
 
 ## Run the example end to end
@@ -47,7 +47,7 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
    `bunx preview publish …` works too. Use `bunx` in this repo, not `npx`: `npx` can't read
    bun's install, so it looks for a `preview` package on npm and fails with a 404. An app
    installed with npm uses `npx`.
-7. In the app's Previews tab: Refresh, Download, Switch, then Back to base. The banner at the top
+7. In the app's Previews tab: Refresh, Download, Switch, then Back to default. The banner at the top
    names what runs. Publish the same id again with other
    changes to see "Update available", or `bunx preview unpublish <id>` to see "Unpublished".
 8. Stop everything:
@@ -65,7 +65,7 @@ The example also takes links, which run the same code as its buttons:
 ## Several tasks at once (people and AI agents)
 
 One debug build of the example can run any of several Metro servers, one per task or worktree. The
-app needs `devPreviewServers: true` (the example has it).
+app needs `devPreviewServers` on (the example has it).
 
 1. In each worktree, start Metro with:
    ```sh
@@ -75,9 +75,10 @@ app needs `devPreviewServers: true` (the example has it).
    In a terminal it asks for the name the app shows, prefilled from the branch; Enter keeps it.
    `--title <name>` skips the question, and so does a run with no terminal.
    A plain `npx expo start --port 8085` is found as well, with less detail (no branch).
-2. Open the Previews tab in the app. "Dev preview servers" shows each server for this app within about two
-   seconds, with its branch, port and version. Switch runs that server; "Stop using dev preview server"
-   goes back.
+2. Open the Previews tab in the app. "Dev preview servers" shows each `preview start` server for
+   this app within about two seconds, and a plain one on refresh or within 30 seconds, with its
+   address and branch. Tap a row to run that server; "Back to default" on the
+   header card goes back.
 3. Stop a server with Ctrl+C; it leaves the list on its own.
 
 On the Android emulator nothing else is needed. A phone on USB needs `adb reverse` for each port;

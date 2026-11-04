@@ -55,10 +55,12 @@ class PreviewPackage : Package {
     listOf(
       object : ApplicationLifecycleListener {
         // Runs before any activity starts React, so the first start already gets the preview. Only
-        // touches the host when a preview is selected, so an app without one starts as it always did.
+        // touches the host when a preview or a server is chosen, so an app without one starts as it
+        // always did. A picked server counts even when it does not answer: dev support still holds
+        // its address from the last start, and only `pointDevSupport` puts the default back.
         override fun onCreate(application: Application) {
           if (
-            PreviewState.localServerHostPort(application) == null &&
+            PreviewState.pickedServer(application) == null &&
             PreviewState.bundleToLoad(application) == null
           ) {
             return

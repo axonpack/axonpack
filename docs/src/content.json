@@ -135,9 +135,9 @@
       }
     ],
     "usage": {
-      "title": "The AI Usage tab",
+      "title": "The CLI tab",
       "body": "It lists what an agent asked or changed, with the reply it got, on the phone and in React Native DevTools. Replies go through your redaction settings, and auth headers and cookies are always masked.",
-      "label": "The AI Usage tab, newest first: a DELETE refused for want of --yes, a mocked response, and three queries with how many rows each matched and how long the app took"
+      "label": "The CLI tab, newest first: a DELETE refused for want of --yes, a mocked response, and three queries with how many rows each matched and how long the app took"
     },
     "skills": {
       "title": "Agent skill",

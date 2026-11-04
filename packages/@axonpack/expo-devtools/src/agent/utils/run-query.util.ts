@@ -58,7 +58,7 @@ export function runQuery(topics: readonly AgentTopic[], query: AgentQuery): Agen
 }
 
 function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
-  const topic = topics.find((each) => each.name === query?.topic);
+  const topic = topics.find((each) => each.name === query?.topic || each.alias === query?.topic);
   if (!topic) {
     // An agent that passed the whole command as one argument, so its flags never reached the CLI.
     if (/\s/.test(query?.topic ?? '')) {
@@ -69,9 +69,10 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
     const names = topics.map((each) => each.name).join(', ') || 'none yet';
     throw new Error(`unknown topic "${query?.topic}". Topics: ${names}`);
   }
+  const title = topic.title ?? topic.name;
   if (topic.enabled?.() === false) {
     return {
-      text: `# ${topic.name} is off: ${topic.off ?? 'the app turned it off in its devtools config'}`,
+      text: `# ${title} is off: ${topic.off ?? 'the app turned it off in its devtools config'}`,
     };
   }
   const waitFor = topic.prepare?.(query);
@@ -97,11 +98,11 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
   };
 
   if (query.get !== undefined) {
-    const row = rows[indexOf(query.get)];
+    const row = topic.find ? topic.find(query.get) : rows[indexOf(query.get)];
     const shown = topic.detail ? topic.detail(row, full) : row;
-    const text = JSON.stringify(shown, cutStrings(full), query.json ? undefined : 2);
+    const text = printValue(shown, full, query.json);
     return {
-      text: query.json ? text : `# ${topic.name} ${query.get}\n${text}`,
+      text: query.json ? text : `# ${title} ${query.get}\n${text}`,
       matched: 1,
       total: rows.length,
     };
@@ -140,7 +141,7 @@ function answer(topics: readonly AgentTopic[], query: AgentQuery): AgentReply {
 
   const done = (text: string): AgentReply => ({ text, matched: hits.length, total: rows.length });
   if (query.count) return done(String(hits.length));
-  const summary = `# ${topic.name} · ${hits.length} of ${rows.length} match`;
+  const summary = `# ${title} · ${hits.length} of ${rows.length} match`;
   const why = rows.length === 0 ? topic.empty?.() : undefined;
   const emptyLine = why ? [`# ${why}`] : [];
 
@@ -342,6 +343,11 @@ function cell(name: string, value: unknown, full: boolean): string {
 function cut(text: string, full: boolean): string {
   if (full || text.length <= CUT_AT) return text;
   return `${text.slice(0, CUT_AT)}... [cut at ${CUT_AT} of ${text.length} chars, --full for all]`;
+}
+
+/** A value as `get` prints it: indented JSON, or one line with `json`, strings cut unless `full`. */
+export function printValue(value: unknown, full: boolean, json?: boolean): string {
+  return JSON.stringify(value, cutStrings(full), json ? undefined : 2);
 }
 
 function cutStrings(full: boolean) {

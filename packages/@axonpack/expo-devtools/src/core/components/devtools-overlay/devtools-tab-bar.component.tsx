@@ -8,6 +8,7 @@ import {
 import { queryStore, useQueryStore } from '../../../features/query/stores/query.store';
 import { reduxStore, useReduxStore } from '../../../features/redux/stores/redux.store';
 import { TOUCH_TARGET } from '../../constants/metrics.const';
+import { supportsStore, useSupportsStore, type DevtoolsSupport } from '../../stores/supports.store';
 import { makeThemedStyles, useThemeColors } from '../../utils/themed-styles.util';
 import type { MaterialIconName } from '../ui/icon-button.ui';
 
@@ -23,7 +24,9 @@ export type DevtoolsTab =
   | 'ai-usage'
   | 'debug';
 
-const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
+type TabEntry = { key: string; label: string; icon: MaterialIconName };
+
+const TABS: (TabEntry & { key: DevtoolsTab })[] = [
   { key: 'network', label: 'Network', icon: 'swap-vert' },
   { key: 'console', label: 'Console', icon: 'terminal' },
   { key: 'performance', label: 'Performance', icon: 'speed' },
@@ -32,32 +35,51 @@ const TABS: { key: DevtoolsTab; label: string; icon: MaterialIconName }[] = [
   { key: 'navigation', label: 'Navigation', icon: 'alt-route' },
   { key: 'redux', label: 'Redux', icon: 'data-object' },
   { key: 'crashes', label: 'Crashes', icon: 'bug-report' },
-  { key: 'ai-usage', label: 'AI Usage', icon: 'smart-toy' },
+  // The tab was called AI Usage. Its key, its panel id and its code in features/ai-usage keep that
+  // name.
+  { key: 'ai-usage', label: 'CLI', icon: 'smart-toy' },
   { key: 'debug', label: 'Debug', icon: 'construction' },
 ];
+
+/**
+ * The tabs to offer. One given `false` is left out: the app has nothing it could ever show there.
+ * The supports' tabs go before Crashes.
+ */
+export function shownTabs(
+  available: Partial<Record<DevtoolsTab, boolean>>,
+  supports: DevtoolsSupport[] = []
+): TabEntry[] {
+  const tabs: TabEntry[] = TABS.filter(({ key }) => available[key] !== false);
+  const crashes = tabs.findIndex(({ key }) => key === 'crashes');
+  tabs.splice(
+    crashes,
+    0,
+    ...supports.map(({ id, title, icon }) => ({ key: id, label: title, icon }))
+  );
+  return tabs;
+}
 
 export function DevtoolsTabBar({
   tab,
   onChange,
   badges,
 }: {
-  tab: DevtoolsTab;
-  onChange: (tab: DevtoolsTab) => void;
+  tab: string;
+  onChange: (tab: string) => void;
 
-  badges?: Partial<Record<DevtoolsTab, number>>;
+  badges?: Partial<Record<string, number>>;
 }) {
   const styles = useStyles();
   const COLORS = useThemeColors();
   // Tabs that are not always there: an app with no router, one that handed over no TanStack
-  // Query client, or one with no store using the Redux enhancer has nothing they could ever show.
+  // Query client, or one with no store using the Redux enhancer.
   const routerKind = useNavigationStore(navigationStore.getRouterKind);
   const hasQueryClient = useQueryStore(queryStore.hasClient);
   const reduxAttached = useReduxStore(reduxStore.isAttached);
-  const tabs = TABS.filter(
-    (entry) =>
-      (entry.key !== 'navigation' || routerKind !== null) &&
-      (entry.key !== 'query' || hasQueryClient) &&
-      (entry.key !== 'redux' || reduxAttached)
+  const supports = useSupportsStore(supportsStore.getSupports);
+  const tabs = shownTabs(
+    { navigation: routerKind !== null, query: hasQueryClient, redux: reduxAttached },
+    supports
   );
   return (
     <ScrollView

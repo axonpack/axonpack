@@ -37,6 +37,7 @@ const state = (patch: Partial<PreviewsState>): PreviewsState => ({
   local: [],
   downloading: {},
   activeId: null,
+  runningId: null,
   broken: [],
   ...patch,
 });
@@ -79,10 +80,27 @@ test("puts downloads for another build apart, and marks the active one", () => {
       remote: [entry("a")],
       local: [local("a"), local("old", "other")],
       activeId: "a",
+      runningId: "a",
     }),
   );
   expect(items.map((i) => [i.id, i.active])).toEqual([["a", true]]);
   expect(incompatible.map((p) => p.id)).toEqual(["old"]);
+});
+
+test("a preview chosen but not running is not Active, and keeps its Broken status", () => {
+  const { items } = previewItems(
+    state({
+      remote: [entry("a"), entry("b")],
+      local: [local("a"), local("b")],
+      activeId: "a",
+      runningId: null,
+      broken: ["a"],
+    }),
+  );
+  expect(items.map((i) => [i.id, i.active, i.status])).toEqual([
+    ["a", false, "broken"],
+    ["b", false, "downloaded"],
+  ]);
 });
 
 test("a preview that stopped before starting shows as broken", () => {

@@ -1,0 +1,137 @@
+---
+title: Overview
+description: What a support is, how to turn one on, and what happens when its package is missing.
+icon: House
+---
+
+A support connects the devtools to another package. Each one has its own entry point,
+`@axonpack/expo-devtools/support/<name>/v<major>`, and nothing of it is in the main entry, so an app
+that doesn't import a support never loads its package. Turned on, a support gives the devtools the
+parts listed in [What a support provides](#what-a-support-provides): a tab in the panel and in the
+Axonpack tab of [React Native DevTools](/docs/expo-devtools/react-native-devtools), a topic in the
+`devtools` command line tool, and a hook for your own screens.
+
+## Available supports
+
+| Support                                         | Version | Entry point                                  | For                                                      |
+| ----------------------------------------------- | ------- | -------------------------------------------- | -------------------------------------------------------- |
+| [Preview](/docs/expo-devtools/supports/preview) | `v0`    | `@axonpack/expo-devtools/support/preview/v0` | [`@axonpack/preview`](/docs/preview) 0.x, 0.2.0 or later |
+
+## What a support provides
+
+Every support keeps the package's data in a store of its own. Its provider fills the store from the
+package's own state, so every part below shows the same state.
+
+| Part                              | What it is                                                                                                                                                    | In the preview support                                   |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Store                             | The package's data, filled inside the support's provider.                                                                                                     | What runs now, the previews and the dev servers          |
+| `useSupport()`                    | A hook with this name in every support's entry point. It returns the store's data, typed for that support.                                                   | `{ status, previews, servers }`                          |
+| Command line topic                | A topic in the [`devtools` command line tool](/docs/expo-devtools/ai-agents), so an AI agent or a person can read the data and run the support's actions from a terminal. | `preview`, with the actions `switch`, `default`, `download`, `update` and `delete` |
+| Names in the `>` prompt, optional | What the Console tab's prompt can reach by name, next to your `console.context`. The command line tool's `context` topic lists them too, and `devtools context call` runs their functions. | `preview`                                                |
+| Tab                               | A tab in the in-app panel, before Crashes.                                                                                                                    | The Preview tab                                          |
+| Panel                             | A panel in the Axonpack tab of React Native DevTools.                                                                                                         | The Preview panel                                        |
+| Provider, when the package has one | The package's provider around your app, so you don't mount it yourself.                                                                                     | Preview's `PreviewProvider`                              |
+
+A support's topic works like any other topic: the same query flags, `get`, and actions that need
+`--yes` before they change anything. `devtools topics` lists it only while the support is in
+`supports`, and the CLI tab logs its queries and actions like those of any other topic. The rows and
+actions of each topic are on its support's page.
+
+A name you put in `console.context` wins over a support's name if the two are the same.
+
+A support's names in the `>` prompt are reachable from a terminal as well. `devtools context` lists
+them with the support's id as their `source`, `devtools get context <name>` reads one, and
+`devtools context call <name> --yes` calls one of its functions, as in
+`devtools context call preview.switch '"pr-7"' --yes`. `console.redactKeys` and `console.redact`
+apply to them as to your own names (see [Redaction](/docs/expo-devtools/console#redaction)). See
+[Calling what the app exposes](/docs/expo-devtools/ai-agents#calling-what-the-app-exposes).
+
+## Versions
+
+The version in a support's entry point is the major version of the package it supports:
+`support/preview/v0` is for `@axonpack/preview` 0.x. Import the one that matches the version you
+have installed. When the package moves to a new major, the support gets a new entry, such as
+`support/preview/v1`, and the old entry stays until a major release of expo-devtools removes it.
+
+Each entry is built for the latest release of that major. Keep the package on its latest version,
+and update it when you update expo-devtools. An older release of the same major may lack something
+the support uses.
+
+With the wrong one, for example `support/preview/v0` while `@axonpack/preview` 1.x is installed, the
+devtools treat it like a missing package: they log which entry to use with `console.error`, and the
+tab shows the same text. Put one version of each support in `supports`. If there are two, the first
+is used and the start logs the other with `console.error`.
+
+## Turn one on
+
+1. Install the package the support is for, as its own docs say. Each support's page links them.
+
+2. Import the support for the major you installed (see [Versions](#versions)) and pass
+   `configure(config)` in `supports`. `configure` takes the package's own config:
+
+   ```tsx
+   import { DevtoolsProvider } from '@axonpack/expo-devtools';
+   import PreviewV0Support, { type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+   const previewConfig: PreviewConfig = { enabled: true };
+
+   export default function Root() {
+     return (
+       <DevtoolsProvider
+         config={{ enabled: __DEV__, supports: [PreviewV0Support.configure(previewConfig)] }}
+       >
+         <App />
+       </DevtoolsProvider>
+     );
+   }
+   ```
+
+   Each entry in `supports` turns one support on. The list is read once, on the first render, like
+   the rest of the config.
+
+Open the panel. Each support's tab is there, before Crashes.
+
+### Import forms
+
+Every support can be imported three ways:
+
+```ts
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+import * as PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+import { configure, type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+```
+
+The default export holds the same functions as the named exports, `configure` and `useSupport`, so
+`X.configure` works with a default import and with a namespace import.
+
+## Types
+
+Each support re-exports its package's config types, so the setup needs no import from that package
+itself. It also exports `DevtoolsSupport`, the type `configure` returns, and the type of its
+`useSupport()` data. Types are named exports
+only, since the default export is a plain object. In an app without the package, they are `any`.
+Each support's page lists its types, and all of them are on
+[Provider and config](/docs/expo-devtools/reference/provider#supports).
+
+## When the package isn't installed
+
+The support is in `supports` but its package isn't installed. The app still builds and runs, and
+nothing throws. At start the devtools log what to install with `console.error`, so it shows in the
+terminal running Metro and in LogBox, and the support's tab shows the same text in bold in place of
+its content. In the `devtools` command line tool its topic is `off`, and a query answers with the
+same text. Its `useSupport()` data stays empty. Each support's page has its exact text.
+
+With `enabled: false` nothing is logged, and there is no tab.
+
+## When it's installed but not turned on
+
+Installing a package doesn't turn its support on. Without the support in `supports`, the devtools
+never load the package: no tab, no provider, and the package works on its own as its docs describe.
+Every package a support is for is an optional peer dependency, so an app that uses no support
+installs none of them.
+
+## With the devtools off
+
+A support's provider goes around the app with `enabled: false` too, since its package may need it on
+every start. The tab, the panel, the topic and the names in the `>` prompt are there only while the
+devtools run. `useSupport()` works either way, since the provider fills the store.

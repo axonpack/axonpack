@@ -34,9 +34,9 @@ A native change without a version bump is not detected, so a preview built on th
 still offered. `publish` prints a one-line warning in this mode. Two things catch most of the
 damage:
 
-- A preview whose Hermes bytecode version differs from the build's is not loaded. The base bundle
-  loads instead.
-- A preview that fails while starting falls back to the base bundle and is marked broken.
+- A preview whose Hermes bytecode version differs from the build's is not loaded. The default
+  bundle loads instead.
+- A preview that fails while starting falls back to the default bundle and is marked broken.
 
 With `fingerprint`, any native change (a new native dependency, a config plugin change, a prebuild
 with other settings) gives a new key, so older previews stop being listed for that build.
@@ -53,31 +53,34 @@ At prebuild, into `Info.plist` on iOS and as `<meta-data>` in `AndroidManifest.x
 
 Nothing secret goes into the native project. The bucket and the read key stay in your JS config.
 
-The slug is only for [dev preview servers](/docs/preview/dev-preview-servers): it tells this app's
-Metro servers apart from other apps'.
+The slug names the app's folder in the bucket, so apps can share one
+([Storage](/docs/preview/storage#the-url)). It also tells this app's
+[dev preview servers](/docs/preview/dev-preview-servers) apart from other apps'.
 
 ## After a native update
 
 When QA installs a new native build, its key may change. Downloads made for the old key are not
 deleted. They move to an **Incompatible** section of the list, with one **Delete all** button, and
-can't be switched to. A preview chosen on the old build is not started by the new one; the base
-bundle starts instead.
+can't be switched to. A preview chosen on the old build is not started by the new one; the
+default bundle starts instead.
 
 Nothing is deleted on a timer, and nothing on the device is deleted without QA asking.
 
 ## Without the plugin
 
-If you can't use the plugin, pass the key yourself in the provider's config:
+If you can't use the plugin, pass the key and the app's slug yourself in the provider's config:
 
 ```ts
 const config: PreviewConfig = {
   enabled: true,
-  url: '...',
+  s3Config: { url: '...' },
   buildKey: 'version-1.4.0',
+  slug: 'my-app',
 };
 ```
 
-It must match what `publish` uses for that build, so you take on keeping the two in step. Dev
-preview servers need the slug, which only the plugin provides.
+They must match what `publish` uses for that build, so you take on keeping them in step. Without a
+slug the list reads nothing and says so, because it can't tell which folder in the bucket is this
+app's. Dev preview servers need the slug the plugin bakes in; `slug` here doesn't reach them.
 
 **Next:** [App setup](/docs/preview/app-setup)

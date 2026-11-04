@@ -6,7 +6,9 @@ Publishing a preview so installed apps can find it.
 - [x] Replaces a preview when the same branch is published again
 - [x] Gives every preview a changelog, from the branch's commits unless one is passed in
 - [x] Keeps one list per native build for the app, and one list of everything for people
+- [x] Keeps each app in a folder named after its slug, so several apps can share one bucket
 - [x] Removes a preview, and cleans up files nothing uses any more
+- [x] Records the EAS environment a preview was built with, so the app can show it
 - [x] Runs against a local S3 server while developing
 
 Previews go to an S3-compatible bucket: S3, R2, MinIO or any other host with the S3 API. The app
@@ -119,19 +121,30 @@ any more with `preview prune`.
 ## Layout
 
 ```
-index.json                            every native build and its previews, for people
-index/<platform>/<key>.json           what one native build can run; the app reads this
-previews/<platform>/<key>/<id>.json   one preview's manifest: files, changelog, versions
-files/<sha256>                        bundle and image blobs, shared between previews
+<slug>/index.json                            every native build and its previews, for people
+<slug>/index/<platform>/<key>.json           what one native build can run; the app reads this
+<slug>/previews/<platform>/<key>/<id>.json   one preview's manifest: files, changelog, versions
+<slug>/files/<sha256>                        bundle and image blobs, shared between previews
 ```
+
+`<slug>` is the app's Expo slug, so apps that share a bucket never see each other's previews. The
+CLI reads it from the app config; the app gets it from the config plugin, which bakes it into the
+build (or from the `slug` option, beside `buildKey`, without the plugin). A build with neither reads
+nothing and says so. `withPrefix` in `src/services/s3/s3.service.ts` adds it to every key, so
+`publish`, `unpublish` and `prune` all stay inside the folder, and the keys stored in the lists stay
+relative to it. A bucket URL that still ends in a folder keeps working: the slug goes inside it,
+as `<folder>/<slug>/...`. The folder is no longer needed.
 
 `<key>` is `version-1.0.0` or `fingerprint-<hash>`. Every manifest and index entry also records the
 compatibility setting, the app version and the native fingerprint, so `index.json` can group builds
 by version whichever setting made them.
 
-```
-
-```
+0.1.0 wrote the same files without the slug folder. When the app finds no list for its build in
+the folder (missing, or refused to a key limited to the folder), it reads the one outside, and
+downloads those previews' manifests and files from there too (`withoutSlug` on the entry, set by the
+app, never written). The first publish for that build under the slug makes a new list, and the app
+reads only that one from then on, so old previews have to be published again. The CLI never writes,
+unpublishes or prunes outside the folder.
 
 Both lists are read, changed and written back only if nobody wrote in between (`If-Match` on the
 ETag, or `If-None-Match: *` for a new file). A clash reads again and retries, so two publishes at

@@ -1,7 +1,7 @@
 # Agent CLI
 
 Reading what the devtools recorded in a running app from a terminal, for an AI agent or a person,
-and mocking, blocking or sending a request in it.
+mocking, blocking or sending a request in it, and calling what the app exposed to the `>` prompt.
 
 ## Features
 
@@ -20,6 +20,8 @@ and mocking, blocking or sending a request in it.
 - [ ] Walked end to end on iOS, Android and a phone on the local network
 - [x] Act on the network from the terminal: mock or block an exact URL, list and remove those
       overrides, send a request from the app, replay a logged one with edits
+- [x] Read and call what the app exposed to the Console tab's `>` prompt (`console.context` and each
+      support's names): the `context` topic, `get` with a dot path, and `context call --yes`
 - [ ] Act on other tabs: clear a tab, navigate, throttle
 - [ ] The commands in the Expo dev server's menu and Expo's own agent tools
 
@@ -36,8 +38,8 @@ so a new tab gets all of them by adding that description and one line in the lis
 
 An action is the same evaluate of a second method, `__AXONPACK_AGENT__.act(call)`. A topic lists
 its actions by name, each with how many words it takes, the flags it reads and a handler. The
-checks (unknown action, word count, a flag it doesn't take) and the AI Usage record are written
-once. Only `network` has actions.
+checks (unknown action, word count, a flag it doesn't take) and the CLI tab record are written
+once. `network` and `context` have actions, and so does a support's topic, such as `preview`.
 
 ## Decisions worth knowing
 
@@ -75,6 +77,26 @@ once. Only `network` has actions.
   There the tool asks through the open window, which `@axonpack/react-native-devtools-tab` relays on
   its own connection, and attaches directly only when no window is open. Without `withDevtools` it
   can't tell, and refuses without `--force`.
+- **`context` reads the prompt's own list, never globals.** `configureRepl` keeps the merged names and
+  who exposed each (`app` or a support's id), and both the prompt and the topic read that one list,
+  so they always agree. The prompt's own `$m` and `$modules` aren't listed. Rows hold the value as a
+  console row would (`snapshotValue`), so `--grep` never walks a cycle and a getter is read once per
+  query. `get` takes a dot path through the topic's `find`, which the query runner calls in place of
+  looking the id up in the rows.
+- **`context` redacts as it snapshots.** The topic has no store to redact on write, so every row,
+  `get` and `call` result goes through `redactContextValue` (`redact-context.service.ts`) on the
+  way out, before printing, cutting, filters or the CLI tab. `console.redactKeys` is tested against
+  each dot path segment and, inside `snapshotValue`, against every object and Map key, so a redacted
+  key's value is never read. `console.redact` then gets the name or path and that JSON, and a throw
+  shows `[redacted]`. A `call` that throws or rejects has its message passed through `redact` too
+  (`redactContextError`), since `redactKeys` has no key to match in free text. The matcher is
+  `keyMatcher` in `core/utils/key-matcher.util.ts`, shared with `storage.redactKeys`. The `>` prompt
+  runs code, so redacting it would only ever be partial, and it isn't.
+- **`context call` is no eval.** It resolves a name the app exposed, walks a dot path, and calls the
+  function it ends on with the object before it as `this`. A path through `constructor`, `prototype`
+  or `__proto__` is refused, since each leads to `Function`. The args are one word of JSON (an array
+  is the list, any other value is the one argument), so nothing the tool sends can be code. It
+  always needs `--yes`, and a promise is waited for like a request.
 - **No middleware chain on the computer side.** It would need raw rows sent over, which is the
   cost the one evaluate avoids. If an outside plugin ever needs to wrap other topics, that is one
   hook in the app, not a chain.
@@ -91,7 +113,7 @@ once. Only `network` has actions.
   an action that waits answers `# wait:` and the tool asks again with the same call (it carries a
   random `ref`) every 200 ms, as a storage read does. The app keeps the answer until it is asked
   for, at most 20 at once. Running the command again would send the request again, so a timeout
-  points at `ai-usage` instead.
+  points at the CLI tab and `devtools cli` instead.
 - **`--yes` is checked in the app.** A call through the relay never passes through the CLI, so a
   method other than GET, HEAD and OPTIONS is refused in the handler unless the call says `yes`.
   Those three only read, so they go without.

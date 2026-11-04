@@ -39,6 +39,9 @@ The same as for the [community server](/docs/preview/minio#what-this-package-nee
   on the bucket's objects and `s3:ListBucket` on the bucket.
 - **A public bucket:** anonymous download on the bucket. **A private bucket:** a read user with only
   `s3:GetObject` and `s3:ListBucket`.
+- **Several apps in one bucket:** each app's files are under `<slug>/`, so a policy can limit a
+  key's object actions to `arn:aws:s3:::<bucket>/<slug>/*`. See
+  [Storage](/docs/preview/storage#the-two-keys).
 - **Conditional PUT:** not looked up in MinIO's docs.
 - **HTTPS**, through AIStor's TLS or a proxy that passes the original `Host` header through.
 

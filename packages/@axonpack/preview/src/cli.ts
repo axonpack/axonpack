@@ -11,7 +11,10 @@ import {
   DEFAULT_REGISTRY_PORT,
 } from "./constants/dev-preview-servers/dev-preview-servers.const";
 import { readConfig } from "./services/cli/config.service";
-import { createRegistry } from "./services/registry/registry.service";
+import {
+  createRegistry,
+  thisMachine,
+} from "./services/registry/registry.service";
 import { start } from "./services/start/start.service";
 import { askTitle } from "./services/cli/title.service";
 import { previewTitle } from "./utils/previews/preview-title.util";
@@ -41,7 +44,8 @@ const HELP = `preview <command> [options]
     --entry-file <path>
     --compatibility <c> appVersion or fingerprint; overrides the app config's plugin option
     --environment <name> build with this EAS environment's variables, like eas update
-                       (needs eas-cli and a project linked to EAS; shell variables win)
+                       (needs eas-cli and a project linked to EAS; shell variables win).
+                       The app shows its name on the preview.
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
   start [-- <expo start args>]
@@ -55,7 +59,8 @@ const HELP = `preview <command> [options]
 Where to publish comes from the environment (the shell, or CI secrets). For local use they can
 also go in the app's .env.local, or any env file Expo loads for a release build; the environment
 wins over them. Keep the write key out of a committed .env:
-  PREVIEW_S3_URL                 <endpoint>/<bucket>[/<folder>], e.g. http://localhost:9000/previews-public
+  PREVIEW_S3_URL                 <endpoint>/<bucket>, e.g. http://localhost:9000/previews-public.
+                                 Each app's previews go in a folder named after its slug
   PREVIEW_S3_ACCESS_KEY_ID       the write key
   PREVIEW_S3_SECRET_ACCESS_KEY
   PREVIEW_S3_REGION              optional, default us-east-1`;
@@ -90,8 +95,12 @@ async function main() {
     return;
   }
   const projectRoot = resolve(values.project ?? process.cwd());
-  // Only the bucket commands need the publish settings.
-  const s3 = () => readConfig(projectRoot);
+  // Only the bucket commands need the publish settings. Everything goes under the app's slug, so
+  // apps that share a bucket keep apart.
+  const s3 = (config = appConfig(projectRoot)) => ({
+    ...readConfig(projectRoot),
+    slug: config.slug,
+  });
 
   if (command === "publish") {
     // Before anything reads the app config: the config, fingerprint and export must all see the
@@ -122,7 +131,7 @@ async function main() {
       projectRoot,
       config,
       compatibility,
-      s3: s3(),
+      s3: s3(config),
       platforms,
       id,
       title: await askTitle({
@@ -132,6 +141,7 @@ async function main() {
       ...git,
       changelog,
       entryFile: values["entry-file"],
+      environment: values.environment,
     });
   } else if (command === "unpublish") {
     if (!arg) throw new Error("Which preview? preview unpublish <id>");
@@ -165,9 +175,13 @@ async function main() {
       bin: process.argv[1],
     });
   } else if (command === "registry") {
-    // Started by `preview start` when none is running; exits once no server is left.
+    // Started by `preview start` when none is running, or an older one is; exits once no server is
+    // left.
     const port = Number(values.port ?? DEFAULT_REGISTRY_PORT);
-    const { server } = createRegistry({ onIdle: () => process.exit(0) });
+    const { server } = createRegistry({
+      machine: thisMachine(),
+      onIdle: () => process.exit(0),
+    });
     server.listen(port);
   } else {
     throw new Error(`Unknown command ${command}.\n\n${HELP}`);

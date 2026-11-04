@@ -425,7 +425,7 @@ describe('an action', () => {
 
     expect(await code).toBe(1);
     expect(stderr).toBe(
-      "error: still sending GET https://x as n7 after 5 s. It carries on in the app, and devtools ai-usage --where 'action?' shows how it ended.\n"
+      "error: still sending GET https://x as n7 after 5 s. It carries on in the app, and the CLI tab or devtools cli --where 'action?' shows how it ended.\n"
     );
   });
 
@@ -594,6 +594,8 @@ describe('--help', () => {
     [['get', '--help'], HELP.get],
     [['network', '--help'], `${HELP.query}\n\n${HELP.network}`],
     [['network', 'send', '--help'], HELP.network],
+    [['context', '--help'], `${HELP.query}\n\n${HELP.context}`],
+    [['context', 'call', '--help'], HELP.context],
     [['console', '--help'], HELP.query],
   ])('%j prints its help without looking for apps', async (argv, help) => {
     expect(await main(argv)).toBe(0);

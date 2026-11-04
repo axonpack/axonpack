@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import {
   PreviewConfig,
   currentPlatform,
+  previewsConfigured,
   resolveBuildKey,
 } from "../../utils/config/config.util";
 import type { IndexEntry } from "../../utils/previews/layout.util";
@@ -14,8 +15,10 @@ import {
 } from "../../services/previews/local-previews.service";
 import {
   nativeModule,
+  scriptUrl,
   selectedPreviewId,
 } from "../../services/native/native.service";
+import { runningPreviewId } from "../../utils/previews/running.util";
 import { previewBundlePath } from "../../services/previews/select.service";
 import { fetchPreviews } from "../../services/previews/remote.service";
 
@@ -29,9 +32,14 @@ export type PreviewsState = {
   local: LocalPreview[];
   /** Download progress by id, from 0 to 1. */
   downloading: Record<string, number>;
-  /** The preview the next start loads, or null for the base bundle. */
+  /** The preview the next start loads, or null for the default bundle. */
   activeId: string | null;
-  /** Previews that stopped before they finished starting, so the base bundle loaded instead. */
+  /**
+   * The preview that runs now, or null. Not `activeId` when the chosen one did not load: a dev
+   * preview server runs instead, or it fell back to the default bundle.
+   */
+  runningId: string | null;
+  /** Previews that stopped before they finished starting, so the default bundle loaded instead. */
   broken: string[];
 };
 
@@ -43,6 +51,7 @@ let state: PreviewsState = {
   local: [],
   downloading: {},
   activeId: null,
+  runningId: null,
   broken: [],
 };
 const listeners = new Set<() => void>();
@@ -55,9 +64,15 @@ const set = (patch: Partial<PreviewsState>) => {
 const readLocal = async () => {
   const platform = currentPlatform();
   const nativeState = nativeModule()?.state() ?? {};
+  const activeId = selectedPreviewId(nativeState);
   set({
     local: platform ? await listLocalPreviews(platform) : [],
-    activeId: selectedPreviewId(nativeState),
+    activeId,
+    runningId: runningPreviewId({
+      activeId,
+      loaded: nativeState.loaded,
+      scriptUrl: scriptUrl(),
+    }),
     broken: nativeState.broken ?? [],
   });
 };
@@ -72,7 +87,10 @@ export const previewsStore = {
     return () => listeners.delete(listener);
   },
 
-  /** Reads the downloads on the device, then asks the bucket for this build's list. */
+  /**
+   * Reads the downloads on the device, then asks the bucket for this build's list. With no bucket
+   * URL set it asks nothing, and the list says previews are not set up.
+   */
   async refresh(config: PreviewConfig) {
     set({
       loading: true,
@@ -81,8 +99,10 @@ export const previewsStore = {
     });
     try {
       await readLocal();
-      const index = await fetchPreviews(config);
-      set({ remote: index.previews, loading: false });
+      const index = previewsConfigured(config)
+        ? await fetchPreviews(config)
+        : null;
+      set({ remote: index?.previews ?? null, loading: false });
     } catch (error) {
       set({ loading: false, error: message(error) });
     }
@@ -111,13 +131,14 @@ export const previewsStore = {
   },
 
   /**
-   * Restarts into a preview, downloading it first when it is not on the device, or into the base
-   * bundle with null. A preview with an update keeps its downloaded copy until QA updates it.
+   * Restarts into a preview, downloading it first when it is not on the device, or into the
+   * default bundle with null. A preview with an update keeps its downloaded copy until QA updates it.
    */
   async switchTo(config: PreviewConfig, id: string | null) {
     const native = nativeModule();
     const platform = currentPlatform();
     if (!native || !platform) return;
+    set({ error: null });
     if (
       id !== null &&
       !state.local.some((p) => p.id === id && p.key === state.buildKey)
@@ -129,8 +150,9 @@ export const previewsStore = {
     // A native side older than this JS (an app not rebuilt since the package changed) throws here.
     // The list shows the reason instead of the button silently doing nothing.
     try {
-      // "Back to base" also stops a local Metro server, so it always means the default.
-      if (id === null && typeof native.selectLocalServer === "function") {
+      // Native loads a picked server before any preview, so a server left picked would keep
+      // running instead of the preview or the default bundle chosen here.
+      if (typeof native.selectLocalServer === "function") {
         native.selectLocalServer(null, null);
       }
       native.select(
@@ -143,11 +165,12 @@ export const previewsStore = {
     }
   },
 
-  /** Deletes a download. If it is the one running, the app goes back to the base bundle first. */
+  /** Deletes a download. If it is the one running, the app goes back to the default bundle first. */
   async remove(id: string) {
     const platform = currentPlatform();
     if (!platform) return;
     const native = nativeModule();
+    set({ error: null });
     try {
       if (state.activeId === id && native) {
         native.select(null, null);
@@ -159,6 +182,8 @@ export const previewsStore = {
     }
     await readLocal();
   },
+
+  clearError: () => set({ error: null }),
 
   /** Deletes every download made for another native build. */
   async removeIncompatible() {

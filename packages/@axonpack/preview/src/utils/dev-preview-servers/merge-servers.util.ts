@@ -5,6 +5,7 @@ import {
 } from "../config/expo-config.util";
 import { compatibilityKey, type Platform } from "../previews/layout.util";
 import type { RegisteredServer } from "../../constants/dev-preview-servers/dev-preview-servers.const";
+import { sameServer } from "../previews/running.util";
 
 /** A Metro server on the developer's computer that this app can run from (debug builds only). */
 export type DevPreviewServer = {
@@ -26,6 +27,12 @@ export type DevPreviewServer = {
   compatible: boolean | null;
   /** Announced by `preview start` (with branch and worktree), or only found by the scan. */
   announced: boolean;
+  /**
+   * Only on the server the app runs from or the one picked in the list, when no look ever found it
+   * answering and nothing was saved about it: whether it is an Expo or a preview server, and its
+   * name, are not known.
+   */
+  unknown?: true;
 };
 
 export type ScannedServer = {
@@ -35,13 +42,21 @@ export type ScannedServer = {
   expo: AppConfig & { slug?: string; name?: string };
 };
 
+/** What another computer's registry lists, by the host it was asked on. */
+export type RemoteRegistry = { host: string; servers: RegisteredServer[] };
+
 /**
  * Turns what the registry announced and what the scan found into this app's list: other apps'
  * servers (another slug) are left out, the same app with another native key is kept but marked
- * incompatible, and a server found both ways uses the registry's details.
+ * incompatible, and a server found both ways uses the registry's details. An announcement belongs
+ * to its host and port only, never to a server that merely shares the app's slug or name.
  */
 export function mergeServers(input: {
   registry: RegisteredServer[];
+  /** Where the registry answered, which is the machine its ports are on. Default: this computer. */
+  registryHost?: string | null;
+  /** Other computers' registries. Their servers are found only through these. */
+  remote?: RemoteRegistry[];
   scanned: ScannedServer[];
   /** The slug the config plugin baked into the build. Only its servers are listed. */
   appSlug: string;
@@ -49,8 +64,16 @@ export function mergeServers(input: {
   platform: Platform;
 }): DevPreviewServer[] {
   const servers: DevPreviewServer[] = [];
+  const registries: RemoteRegistry[] = [
+    { host: input.registryHost ?? "localhost", servers: input.registry },
+    ...(input.remote ?? []),
+  ];
   for (const found of input.scanned) {
-    const announced = input.registry.find((r) => r.port === found.port);
+    const at = `${found.host}:${found.port}`;
+    const match = registries
+      .flatMap((g) => g.servers.map((r) => ({ g, r })))
+      .find(({ g, r }) => sameServer(`${g.host}:${r.port}`, at));
+    const announced = match?.r;
     const slug = announced?.slug ?? found.expo.slug ?? "";
     if (slug !== input.appSlug) continue;
     const key =

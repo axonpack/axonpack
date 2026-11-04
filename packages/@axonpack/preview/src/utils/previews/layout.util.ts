@@ -1,4 +1,6 @@
 // The bucket layout and file formats, shared by the CLI that writes them and the app that reads them.
+// The keys below are inside the app's own folder, `<slug>/`, which `withPrefix` in s3.service adds
+// to every request, so several apps can share one bucket.
 //
 //   index.json                            every native build and its previews, for people
 //   index/<platform>/<key>.json           what one native build can run; the app reads this
@@ -40,6 +42,12 @@ export const compatibilityKey = (
 export const compatibilityOfKey = (key: string): Compatibility =>
   key.startsWith("version-") ? "appVersion" : "fingerprint";
 
+/** A key short enough for one line: a fingerprint hash is cut to 8 characters. */
+export const shortKey = (key: string): string =>
+  key.startsWith("fingerprint-")
+    ? key.slice(0, "fingerprint-".length + 8)
+    : key;
+
 /** What `expo export:embed` names the bundle, so a preview folder matches what a build embeds. */
 export const BUNDLE_FILE: Record<Platform, string> = {
   android: "index.android.bundle",
@@ -61,7 +69,15 @@ export type PreviewInfo = {
   compatibility: Compatibility;
   /** The native build's fingerprint when it was published, whatever the compatibility setting. */
   fingerprint: string;
+  /** The EAS environment it was built with (`publish --environment`). Absent on older entries. */
+  environment?: string;
 };
+
+/** Leaves `environment` out when there is none, so entries without it look as they always did. */
+export const previewInfo = (
+  info: Omit<PreviewInfo, "environment">,
+  environment?: string,
+): PreviewInfo => (environment ? { ...info, environment } : info);
 
 export type Manifest = PreviewInfo & {
   schema: number;
@@ -79,6 +95,11 @@ export type IndexEntry = PreviewInfo & {
   size: number;
   changelog: string;
   manifest: string;
+  /**
+   * Set by the app, never written: the entry came from where 0.1.0 published, outside the slug
+   * folder, so its manifest and files are read from there too.
+   */
+  withoutSlug?: boolean;
 };
 
 export type PlatformIndex = {

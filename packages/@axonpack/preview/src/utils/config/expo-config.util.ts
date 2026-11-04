@@ -7,6 +7,8 @@ import {
 
 /** The parts of an Expo app config this package reads. */
 export type AppConfig = {
+  /** Always set by `getConfig`, from the name when the config has none. */
+  slug?: string;
   version?: string;
   plugins?: (string | [string, unknown?])[];
   ios?: { version?: string; buildNumber?: string };

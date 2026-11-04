@@ -16,7 +16,7 @@ npx expo install @axonpack/preview expo-file-system
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Expo SDK 53 or later   | The iOS hook the package uses came with SDK 53                                           |
 | React Native 0.79 or later | The version SDK 53 ships                                                             |
-| The New Architecture   | The default from SDK 53. Under the old one the package logs one warning and always loads the base bundle. On SDK 53 and 54, check the app config doesn't set `newArchEnabled` to `false` |
+| The New Architecture   | The default from SDK 53. Under the old one the package logs one warning and always loads the default bundle. On SDK 53 and 54, check the app config doesn't set `newArchEnabled` to `false` |
 | Hermes                 | Previews are Hermes bytecode, the same as a release build. On SDK 53 and 54, check the app config doesn't set `jsEngine` to `jsc` |
 | A native build         | The package has native code, so it does not run in Expo Go. A development or release build both work |
 
@@ -25,7 +25,7 @@ iOS 27 needs Expo SDK 58 or later. After moving an app to it, regenerate the iOS
 
 <Callout type="warn" title="The old architecture">
 Under the old architecture nothing breaks, but nothing switches either. The package logs one warning
-and the base bundle always loads, so the app still starts.
+and the default bundle always loads, so the app still starts.
 </Callout>
 
 ## What each package does
@@ -54,9 +54,9 @@ returns:
 ```
 
 At prebuild the plugin bakes three values into the build: the compatibility setting, the build's
-key, and the app's slug. The app uses the key to ask the bucket only for previews made for it. The
-slug tells this app's [dev preview servers](/docs/preview/dev-preview-servers) apart from other
-apps'. Which setting to pick is on [Compatibility](/docs/preview/compatibility).
+key, and the app's slug. The app uses the key to ask the bucket only for previews made for it, and
+the slug to find its own folder in the bucket. The slug also tells this app's
+[dev preview servers](/docs/preview/dev-preview-servers) apart from other apps'. Which setting to pick is on [Compatibility](/docs/preview/compatibility).
 
 `npx expo config --type public` prints the config when the plugin is found, and fails when it
 isn't. Then make a native build:
@@ -70,9 +70,17 @@ With EAS Build, the plugin runs during the build as usual.
 
 <Callout type="info" title="Without the plugin">
 A build without the plugin has no key, and the list says so instead of showing anything. If you
-can't use the plugin, pass the key yourself with the `buildKey` option. See
+can't use the plugin, pass the key and the slug yourself with the `buildKey` and `slug` options. See
 [Reference](/docs/preview/reference#previewconfig).
 </Callout>
+
+## With expo-devtools
+
+An app that uses [`@axonpack/expo-devtools`](/docs/expo-devtools) installs this package and adds the
+config plugin the same way, and makes a new native build. The devtools don't add the plugin. Then,
+on [App setup](/docs/preview/app-setup#with-expo-devtools), the config goes to the devtools through
+`@axonpack/expo-devtools/support/preview/v0` (the support for this package's 0.x versions) instead
+of a `PreviewProvider` of your own, and the list shows as a Preview tab in the devtools.
 
 ## Give your AI agent the skill
 
