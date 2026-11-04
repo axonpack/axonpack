@@ -24,7 +24,8 @@ export function usePreview() {
       ...lists,
       enabled: config.enabled,
       previewsConfigured: previewsConfigured(config),
-      devPreviewServers: devServersSetup(config.devPreviewServers).enabled,
+      devPreviewServers:
+        config.enabled && devServersSetup(config.devPreviewServers).enabled,
       refresh: () => previewsStore.refresh(config),
       download: (id: string) => previewsStore.download(config, id),
       switchTo: (id: string | null) => previewsStore.switchTo(config, id),

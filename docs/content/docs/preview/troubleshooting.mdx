@@ -123,10 +123,11 @@ The device log has a warning for the first two cases.
 
 ## Dev preview servers lists nothing
 
-**Cause.** The build is a release build, `devPreviewServers` is off, the build has no slug, or the
-device can't reach the computer.
-**Fix.** Use a debug build with the plugin and `devPreviewServers: true`. On a USB phone, run
-`adb reverse` for each port, or start the servers with `preview start` with `adb` on the PATH. See
+**Cause.** The build is a release build, `enabled` or `devPreviewServers` is off, the build has no
+slug, or the device can't reach the computer.
+**Fix.** Use a debug build with the plugin, `enabled` and `devPreviewServers: true`. On a USB
+phone, run `adb reverse` for each port, or start the servers with `preview start` with `adb` on the
+PATH. See
 [Dev preview servers](/docs/preview/dev-preview-servers#reaching-the-servers).
 
 ## Bonjour finds nothing

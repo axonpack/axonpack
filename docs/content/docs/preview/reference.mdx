@@ -50,7 +50,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | ------------------- | ------ | ----------------------------------------------------------------------------------- |
 | `enabled`           | Yes    | `true` turns previews on. You decide per build; nothing is detected                 |
 | `s3Config`          | No     | The bucket and how to read it (`PreviewS3Config`, below). Without it, the list shows previews as not set up |
-| `devPreviewServers` | No     | Lists this app's Metro servers in a debug build. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
+| `devPreviewServers` | No     | Lists this app's Metro servers in a debug build, while `enabled` is `true`. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
 | `buildKey`          | No     | This build's key, only when the config plugin is not used to bake it in             |
 | `slug`              | No     | The app's Expo slug, only when the config plugin is not used to bake it in. Previews are read from the bucket folder named after it |
 
@@ -105,7 +105,7 @@ devPreviewServers: {
 | ---------------------- | -------------------------------------------------------------------------- |
 | `enabled`              | `config.enabled`                                                           |
 | `previewsConfigured`   | A bucket URL is set. False when `s3Config.url` is undefined, empty or blank |
-| `devPreviewServers`    | Whether dev preview servers are on                                         |
+| `devPreviewServers`    | Whether dev preview servers are on: `enabled` and `devPreviewServers` both |
 | `items`                | [`PreviewItem[]`](#previewitem): this build's previews, and downloads it no longer lists |
 | `incompatible`         | Downloads made for another native build                                    |
 | `loading`              | A refresh is running                                                       |

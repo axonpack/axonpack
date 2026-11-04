@@ -16,9 +16,9 @@ One switch in the provider's config:
 <PreviewProvider config={{ ...previewConfig, devPreviewServers: true }}>
 ```
 
-It is off by default, and it only shows in a debug build. A release build ignores it, even if a
-server choice is in the saved state. The app also needs the [config plugin](/docs/preview/compatibility),
-which bakes in the app's slug.
+It is off by default, stays off while `enabled` is false, and only shows in a debug build. A
+release build ignores it, even if a server choice is in the saved state. The app also needs the
+[config plugin](/docs/preview/compatibility), which bakes in the app's slug.
 
 To list other computers too, or to hide **Add a host**, pass an object instead of `true`:
 
@@ -307,7 +307,8 @@ Metro. Allow it in the app's settings, or on the emulator run
 
 ## Limits
 
-- **Debug builds only.** A release build has no Metro to switch to.
+- **Debug builds only.** A release build has no Metro to switch to. There, QA switches between
+  [published previews](/docs/preview/publishing).
 - **Bonjour and the sweep stay on one network.** Bonjour does not cross routers, most VPNs block it,
   and the sweep covers only the device's own /24. Add a computer on another network as a host.
 - **This app only.** Servers for another slug are never listed.

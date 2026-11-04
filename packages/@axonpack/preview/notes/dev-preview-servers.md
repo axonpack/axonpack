@@ -18,13 +18,12 @@ between them live.
 - [x] Shows the hosts it checks, and lets QA add another computer's address on the device
 - [x] Lists another computer's `preview start` servers through its registry, never its plain Expo servers
 - [x] Takes the team's own computers from the app's config, and can hide adding one on the device
-- [x] Off unless the app turns it on, and debug builds only
+- [x] Off unless the app turns it on and `enabled` is on, and debug builds only
 - [x] Only this app's servers, by the slug the config plugin bakes in; a build without it says so
 - [x] Finds `preview start` servers on other computers on the network with no address typed in
 - [x] Says which computer a server found on the network runs on, and lists a server found two ways once
 - [x] Replaces an older registry, or one that hung, on its own, and says when Bonjour can't announce the computer
 - [x] Finds `preview start` servers on the device's own /24 when Bonjour doesn't get through, by asking each address for a registry
-- [ ] Lists and switches to dev servers in a release build too, when the app turns previews on
 
 ## Turning it on
 
@@ -32,7 +31,9 @@ between them live.
 <PreviewProvider config={{ ...config, devPreviewServers: true }}>
 ```
 
-It is one switch, off by default, and only shows in a debug build. An object instead of `true`,
+It is one switch, off by default, off while `enabled` is false, and only shows in a debug build. A
+release build never lists dev servers (user, 2026-11-04: QA switches between published previews
+there). An object instead of `true`,
 `{ enabled, allowCustomHosts, hosts }`, adds the team's own computers and can hide Add a host.
 Otherwise the app probes ports 8081 to 8099, asks the registry on port 19150 (the same constant `preview start` uses, in
 `src/constants/dev-preview-servers/dev-preview-servers.const.ts`), looks on the host its own Metro is on (plus `10.0.2.2` on the

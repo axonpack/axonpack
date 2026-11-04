@@ -232,6 +232,16 @@ test("a release build never shows it", async () => {
   }
 });
 
+test("with enabled false, it is not there either", async () => {
+  const tree = await renderConfig({
+    enabled: false,
+    url: "http://localhost:9000/b",
+    devPreviewServers: true,
+  });
+  expect(texts(tree)).not.toContain("Dev preview servers");
+  await act(async () => tree.unmount());
+});
+
 const METRO_NOTE =
   "Debug build: Metro is not used while a preview runs. Back to default loads from Metro again.";
 
