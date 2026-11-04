@@ -11,6 +11,25 @@ describe what the tab shows and this renders it.
 
 [Watch the demo](https://youtu.be/qMN6QO-qlF4)
 
+<div align="center">
+
+<table>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/react-native-devtools-tab/docs/screenshots/database-tab.png" width="780" alt="A Database tab in React Native DevTools listing three rows from the app's SQLite table, with a query box" /></td>
+  </tr>
+  <tr>
+    <td>A tab that lists the app's SQLite rows and runs your query on the device.</td>
+  </tr>
+  <tr>
+    <td><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/react-native-devtools-tab/docs/screenshots/counter-tab.png" width="780" alt="The Counter tab in React Native DevTools beside the app on a phone, both showing the same user and request count" /></td>
+  </tr>
+  <tr>
+    <td>The Counter tab reads the app's own store, so it shows what the phone shows.</td>
+  </tr>
+</table>
+
+</div>
+
 ## Install
 
 ```sh

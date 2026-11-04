@@ -9,6 +9,27 @@ No dependencies. Nothing in it imports `react-native` or touches the DOM, so a w
 nothing but React and configures no bundler alias, and a React Native project passes its own
 components straight in with no adapter to write.
 
+<div align="center">
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/react-pretty-print/docs/screenshots/json-tree.png" width="390" alt="A JSON tree with nested objects open and a long array split into ranges" /></td>
+    <td width="50%" valign="top"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/react-pretty-print/docs/screenshots/xml-tree.png" width="390" alt="An XML tree with attributes, text and a CDATA section" /></td>
+  </tr>
+  <tr>
+    <td>Closed nodes preview what is inside, and a long array opens in ranges of ten.</td>
+    <td>XML parsed from a string, with attributes, text and CDATA.</td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="https://raw.githubusercontent.com/axonpack/axonpack/main/packages/@axonpack/react-pretty-print/docs/screenshots/code-highlight.png" width="780" alt="Rust code highlighted, with the matches for a search marked" /></td>
+  </tr>
+  <tr>
+    <td colspan="2">Rust, one of 38 languages, with the matches for a search marked.</td>
+  </tr>
+</table>
+
+</div>
+
 ## Getting started
 
 ```sh
