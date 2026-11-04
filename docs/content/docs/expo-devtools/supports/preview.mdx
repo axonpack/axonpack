@@ -223,8 +223,51 @@ If the download fails, the app stays on what it runs, and `devtools get preview 
 in `error`. The CLI tab logs each action, refused ones too, but its log is kept in memory, so the
 restart clears it. Run `npx devtools preview` again once the app is back to see what runs.
 
-With `enabled: false` in the preview config the topic is off, and every query answers
-`# preview is off: previews are off: the config passed to configure() has enabled: false`.
+### Download, update and delete from the command line
+
+These are the buttons on a preview's card in the list, and they call the same functions. Each takes
+a preview's `id`, needs `--yes`, and is refused where the list shows no such button.
+
+| Action                | The list shows it on                                       | What it does                                                                 |
+| --------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `download <id> --yes` | An `available` preview                                     | Downloads it to the device, as **Download** does                             |
+| `update <id> --yes`   | An `update-available` preview                              | Downloads the new copy over the old one, as **Update** does                  |
+| `delete <id> --yes`   | A preview on the device that isn't downloading             | Deletes the download, as **Delete** does                                     |
+
+```sh
+npx devtools preview download pr-6 --yes
+npx devtools preview update pr-7 --yes
+npx devtools preview delete pr-7 --yes
+```
+
+```
+# preview · my-app · iPhone 16 Pro · downloaded pr-6
+```
+
+`download` and `update` answer once the download is done. Until then the tool waits, and after
+5 seconds it stops with `still downloading pr-6 after 5 s` while the download carries on in the app;
+`npx devtools preview` shows its status, and the CLI tab shows how the action ended. `update` on the
+preview that runs now ends `. The app runs the new copy from its next start`. `delete` on the preview
+the app is set to start goes back to the default bundle first, as the list's **Delete** does, so it
+answers `# preview · deleting pr-7 and restarting the app on the default bundle` and the app
+restarts a moment later.
+
+Without `--yes` the reply says what the action changes, such as
+`error: download writes the preview to the device, so it needs --yes`. These are refused too:
+
+| Reply                                                                         | When                                              |
+| ----------------------------------------------------------------------------- | ------------------------------------------------- |
+| `error: no preview "<id>". devtools preview --where kind=preview lists them`  | The id isn't a preview in the list, such as a server or `now` |
+| `error: <id> is <status>. Only an available preview downloads`                | `download` on a preview that isn't `available`     |
+| `error: <id> is on the device and has an update: devtools preview update <id> --yes` | `download` on an `update-available` preview |
+| `error: <id> has no update. It is <status>`                                   | `update` on a preview that isn't `update-available` |
+| `error: <id> isn't on the device`                                             | `delete` on a preview that isn't downloaded       |
+| `error: <id> is downloading. Delete it once the download ends`                | `delete` while it downloads                        |
+| `error: <preview's message>`                                                  | The download or the delete failed in the app      |
+
+With `enabled: false` in the preview config the topic is off. Every query answers
+`# preview is off: previews are off: the config passed to configure() has enabled: false`, and every
+action the same line as an `error: preview is off: ...` line.
 
 ## In the console prompt
 
@@ -237,10 +280,14 @@ The support adds `preview` to the Console tab's `>` prompt, next to your `consol
 | `preview.servers`     | The dev servers, the same as `useSupport().servers`                           |
 | `preview.switch(id)`  | The `switch` action, with no `--yes`: typing the call is the confirmation      |
 | `preview.default()`   | The `default` action, with no `--yes`                                         |
+| `preview.download(id)` | The `download` action, with no `--yes`                                       |
+| `preview.update(id)`  | The `update` action, with no `--yes`                                          |
+| `preview.delete(id)`  | The `delete` action, with no `--yes`                                          |
 
 Each action returns the line the command line tool would print, such as
-`# preview · restarting the app on pr-7`, or an `error:` line. A `preview` of your own in
-`console.context` wins over this one.
+`# preview · restarting the app on pr-7`, or an `error:` line. `download`, `update` and a `delete`
+that doesn't restart the app return a promise of that line, which the prompt fills in once it
+settles. A `preview` of your own in `console.context` wins over this one.
 
 The command line tool reaches this `preview` too, through its
 [`context` topic](/docs/expo-devtools/reference/cli#context): `devtools get context preview.status`

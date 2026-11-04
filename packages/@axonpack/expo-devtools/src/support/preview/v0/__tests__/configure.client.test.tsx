@@ -7,7 +7,9 @@ const CONFIG: PreviewConfig = {
 };
 
 const STATUS = { title: 'Default', bundleKind: 'built-in', canGoBack: false };
-const ITEMS = [{ id: 'pr-7', status: 'downloaded', active: false, entry: { title: 'Dark mode' } }];
+const ITEMS = [
+  { id: 'pr-7', status: 'downloaded', active: false, local: {}, entry: { title: 'Dark mode' } },
+];
 const SERVERS = [{ hostPort: 'localhost:8082', compatible: true }];
 
 const FAKE_PREVIEW = {
@@ -17,7 +19,11 @@ const FAKE_PREVIEW = {
   usePreview: () => ({ items: ITEMS }),
   useDevPreviewServersState: () => ({ servers: SERVERS }),
   sameServer: () => false,
-  previewsStore: { switchTo: jest.fn() },
+  previewsStore: {
+    switchTo: jest.fn(),
+    remove: jest.fn(async () => {}),
+    getState: () => ({ activeId: null, error: null }),
+  },
   devPreviewServersStore: { switchTo: jest.fn() },
 };
 
@@ -164,6 +170,20 @@ describe('the prompt entry', () => {
     jest.runAllTimers();
     expect(FAKE_PREVIEW.previewsStore.switchTo).toHaveBeenCalledWith(CONFIG, 'pr-7');
     jest.useRealTimers();
+  });
+
+  it("has the list's download, update and delete, answering a promise for one that waits", async () => {
+    const { configure, previewSupportStore } = load('installed');
+    const { preview } = configure(CONFIG).context as {
+      preview: Record<'download' | 'update' | 'delete', (id: string) => string | Promise<string>>;
+    };
+    previewSupportStore.setState({ status: STATUS as never, previews: ITEMS as never });
+    expect(preview.download('pr-7')).toBe(
+      'error: pr-7 is downloaded. Only an available preview downloads'
+    );
+    expect(preview.update('pr-7')).toBe('error: pr-7 has no update. It is downloaded');
+    expect(await preview.delete('pr-7')).toBe('# preview · deleted pr-7');
+    expect(FAKE_PREVIEW.previewsStore.remove).toHaveBeenCalledWith('pr-7');
   });
 });
 

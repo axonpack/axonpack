@@ -43,11 +43,14 @@ try {
 
 /**
  * The `>` prompt's `preview`: the support's data, and the topic's actions without `--yes`, since
- * typing the call is the confirmation. An action answers the line the CLI would print.
+ * typing the call is the confirmation. An action answers the line the CLI would print, or a promise
+ * of it for one that waits, such as a download.
  */
 function previewContext(topic: AgentTopic) {
-  const act = (action: string, args: string[] = []) =>
-    runAction([topic], { topic: topic.name, action, args, options: { yes: true } });
+  const act = (action: string, args: string[] = []) => {
+    const answer = runAction([topic], { topic: topic.name, action, args, options: { yes: true } });
+    return typeof answer === 'string' ? answer : answer.answer;
+  };
   return {
     get status() {
       return previewSupportStore.getState().status;
@@ -60,6 +63,9 @@ function previewContext(topic: AgentTopic) {
     },
     switch: (id: string) => act('switch', [id]),
     default: () => act('default'),
+    download: (id: string) => act('download', [id]),
+    update: (id: string) => act('update', [id]),
+    delete: (id: string) => act('delete', [id]),
   };
 }
 

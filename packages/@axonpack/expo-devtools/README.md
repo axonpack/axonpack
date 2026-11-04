@@ -94,8 +94,9 @@ tab, and never crashes the app. See [Supports](https://axonpack.dev/docs/expo-de
 
 An AI agent, or you, can read what the devtools recorded from a terminal: requests with their bodies,
 logs, crashes, stored values and every other tab, filtered down to the rows it needs. It can also mock
-or block a URL, send a request from inside the app, and, with the preview support, switch the app to a
-preview or a dev server.
+or block a URL, send a request from inside the app, call a function you handed to the Console tab's
+`>` prompt in `console.context`, and, with the preview support, switch, download, update or delete a
+preview.
 
 ```sh
 npx devtools network --where state=error --since 10m

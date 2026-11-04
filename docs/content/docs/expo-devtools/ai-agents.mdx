@@ -293,8 +293,9 @@ flags are in the [CLI reference](/docs/expo-devtools/reference/cli#actions).
 - **Replies are masked like every other reply.** The new row goes through the same redaction, so an
   `Authorization` header you sent shows as `[redacted]`. A replay sends the app's own headers to the
   same URL, but the agent only ever sees them masked.
-- **An action that restarts the app needs `--yes`.** The `preview` topic's `switch` and `default`
-  refuse without it.
+- **`context call` and every `preview` action need `--yes`.** A called function can change
+  anything it changes, and the `preview` actions restart the app or change what is on the device.
+  Each refuses without `--yes`.
 - **Every action is recorded**, refused ones too, in the [CLI tab](#the-cli-tab).
 - **Development only**, like the rest of the tool.
 
@@ -349,6 +350,25 @@ command gets. After that the call carries on in the app, and the [CLI tab](#the-
 it ended. A throw or a rejected promise answers `error:` with its message. The topic is `off` when
 the app turns the prompt off with `console.repl: false`. Every rule and message is in the
 [CLI reference](/docs/expo-devtools/reference/cli#context-actions).
+
+## Previews from the terminal
+
+With the [preview support](/docs/expo-devtools/supports/preview) in `supports`, the `preview` topic
+lists what runs now, the dev servers and the previews, and its actions are the buttons of preview's
+list. Each needs `--yes`, and each is refused where the list shows no such button.
+
+```sh
+devtools preview --where kind=preview
+devtools preview download pr-7 --yes
+devtools preview switch pr-7 --yes
+devtools preview update pr-7 --yes
+devtools preview delete pr-7 --yes
+devtools preview default --yes
+```
+
+`switch` and `default` restart the app, so the app answers first and the CLI tab starts empty after
+the restart. `download` and `update` wait for the download. The [preview support's
+page](/docs/expo-devtools/supports/preview#from-the-command-line) lists the rows and each refusal.
 
 ## Redaction
 
@@ -477,6 +497,7 @@ npx skills add axonpack/skills
 | How a screen handles a failing endpoint    | `devtools network override <exact url> --status 500 --body '{"error":"down"}'`, open the screen, read `devtools console`, then `devtools network unoverride --all` |
 | Whether an endpoint answers from the app   | `devtools network send GET <url>`, then `devtools get network <id>` for the body             |
 | To run a preview or another dev server     | `devtools preview`, then `devtools preview switch <id> --yes`. Needs the [preview support](/docs/expo-devtools/supports/preview) |
+| To download, update or delete a preview    | `devtools preview --where kind=preview`, then `devtools preview download <id> --yes` (or `update`, `delete`) |
 | To run something the app exposed (a reset, a store action) | `devtools context`, then `devtools context call <name> '<args as JSON>' --yes`  |
 
 Performance has rows only while its tab records, and it starts paused, so press record in the

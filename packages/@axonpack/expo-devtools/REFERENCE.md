@@ -1146,15 +1146,15 @@ looks for an app. Every action, refused ones too, is listed in the
 
 #### Action flags
 
-| Flag             | Value                       | Taken by                              | What it does                                                                                                                                                                    |
-| ---------------- | --------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--status`       | whole number, 100 to 599    | `override`                            | The mocked status. Default `200`.                                                                                                                                               |
-| `--body`         | text                        | `override`, `send`, `replay`          | The body. Default empty for `override`. Not for a GET or HEAD request.                                                                                                          |
-| `--body-file`    | file path                   | `override`, `send`, `replay`          | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                                                                                                 |
-| `--content-type` | MIME type                   | `override`                            | The mocked `content-type`. Default `application/json`.                                                                                                                          |
-| `--header`       | `'Name: value'`, repeatable | `send`, `replay`                      | A request header. In `replay` it replaces a header of the same name, any case.                                                                                                  |
-| `--yes`          | none                        | `send`, `replay`, `switch`, `default` | Needed for any method but GET, HEAD and OPTIONS, and always for `preview`'s actions, which restart the app. The app checks it, so a call through the window relay needs it too. |
-| `--all`          | none                        | `unoverride`                          | Remove every override instead of one.                                                                                                                                           |
+| Flag             | Value                       | Taken by                                                                      | What it does                                                                                                                                                                                                |
+| ---------------- | --------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--status`       | whole number, 100 to 599    | `override`                                                                    | The mocked status. Default `200`.                                                                                                                                                                           |
+| `--body`         | text                        | `override`, `send`, `replay`                                                  | The body. Default empty for `override`. Not for a GET or HEAD request.                                                                                                                                      |
+| `--body-file`    | file path                   | `override`, `send`, `replay`                                                  | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.                                                                                                                             |
+| `--content-type` | MIME type                   | `override`                                                                    | The mocked `content-type`. Default `application/json`.                                                                                                                                                      |
+| `--header`       | `'Name: value'`, repeatable | `send`, `replay`                                                              | A request header. In `replay` it replaces a header of the same name, any case.                                                                                                                              |
+| `--yes`          | none                        | `send`, `replay`, `call`, `switch`, `default`, `download`, `update`, `delete` | Needed for `send` and `replay` with any method but GET, HEAD and OPTIONS, and always for `context call` and for every `preview` action. The app checks it, so a call through the window relay needs it too. |
+| `--all`          | none                        | `unoverride`                                                                  | Remove every override instead of one.                                                                                                                                                                       |
 
 #### network actions
 
@@ -1231,19 +1231,27 @@ rejects, answers `error: <its message>`.
 
 #### preview actions
 
-From the [preview support](https://axonpack.dev/docs/expo-devtools/supports/preview#switch-from-the-command-line).
-Each one restarts the app, so each needs `--yes`. The app answers first and restarts a moment later,
-or once a preview it has to download is on the device. The restart clears the [CLI tab](#cli-tab),
-which keeps its list in memory.
+From the [preview support](https://axonpack.dev/docs/expo-devtools/supports/preview#switch-from-the-command-line). They
+are the buttons of preview's list, and each needs `--yes`. `switch` and `default` restart the app:
+the app answers first and restarts a moment later, or once a preview it has to download is on the
+device. The restart clears the [CLI tab](#cli-tab), which keeps its list in memory. `download`, `update` and
+`delete` take a preview's id and are refused where the list shows no such button on that preview.
 
-| Action    | Args   | Flags   | Reply                                                                                                          |
-| --------- | ------ | ------- | -------------------------------------------------------------------------------------------------------------- |
-| `switch`  | `<id>` | `--yes` | `# preview · restarting the app on <id>`, ending ` once it has downloaded` for a preview not on the device yet |
-| `default` | none   | `--yes` | `# preview · restarting the app on the default bundle`                                                         |
+| Action     | Args   | Flags   | Shown in the list                                    | Reply                                                                                                                                           |
+| ---------- | ------ | ------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `switch`   | `<id>` | `--yes` | on a server or preview that isn't running            | `# preview · restarting the app on <id>`, ending ` once it has downloaded` for a preview not on the device yet                                  |
+| `default`  | none   | `--yes` | while something other than the default runs          | `# preview · restarting the app on the default bundle`                                                                                          |
+| `download` | `<id>` | `--yes` | on an `available` preview                            | `# preview · downloaded <id>`                                                                                                                   |
+| `update`   | `<id>` | `--yes` | on an `update-available` preview                     | `# preview · updated <id>`, ending `. The app runs the new copy from its next start` for the running one                                        |
+| `delete`   | `<id>` | `--yes` | on a preview on the device, unless it is downloading | `# preview · deleted <id>`, or `# preview · deleting <id> and restarting the app on the default bundle` for the preview the app is set to start |
 
 `switch` takes an `id` from the list: a dev server's `host:port` or a preview's id. A preview that
 isn't on the device yet downloads first. `default` goes back to the default bundle, as **Back to
-default** does.
+default** does. `download` and `update` wait for the download, behind `# wait: downloading <id>` or
+`# wait: updating <id>`, and a download that takes over 5 seconds carries on in the app, as a slow
+`send` does. A download that fails answers `error:` with preview's own message. `delete` on the
+preview the app is set to start goes back to the default bundle first, as the list's **Delete**
+does, so the app answers before it restarts.
 
 ### Output
 
@@ -1293,36 +1301,44 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 
 #### From the app, for an action
 
-| Message                                                                                                | Code |
-| ------------------------------------------------------------------------------------------------------ | ---- |
-| `<topic> has no action "<name>". Actions: <list>`                                                      | 1    |
-| `<topic> has no actions, only queries`                                                                 | 1    |
-| `<topic> is off: <reason>`                                                                             | 1    |
-| `usage: devtools <topic> <action> <args>`, such as `usage: devtools network unoverride <url> \| --all` | 1    |
-| `<topic> <action> takes no --<flag>. usage: devtools <topic> <action> <args>`                          | 1    |
-| `bad --<flag>. usage: ...`, for a value of the wrong kind (only through the window relay)              | 1    |
-| `"<url>" is not a whole URL. Use the exact URL the app requests, https:// and query included`          | 1    |
-| `bad --status <value>: use 100 to 599`                                                                 | 1    |
-| `no override on <url>. devtools network overrides lists them`                                          | 1    |
-| `bad method "<method>": use GET, POST, ...`                                                            | 1    |
-| `<METHOD> can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without`          | 1    |
-| `a GET request has no body, so drop --body` (and `HEAD`)                                               | 1    |
-| `bad --header: use 'Name: value'`                                                                      | 1    |
-| `no network row "<id>", it may have aged out of the buffer`                                            | 1    |
-| `<id> is a WebSocket. replay sends HTTP requests only`                                                 | 1    |
-| `<METHOD> <url> failed: <why>`, only when the request is also not in the log                           | 1    |
-| `switch restarts the app, so it needs --yes` (and `default`)                                           | 1    |
-| `no dev server or preview "<id>". devtools preview lists them`                                         | 1    |
-| `<id> runs now`                                                                                        | 1    |
-| `<id> is downloading. Switch to it once its status is downloaded`                                      | 1    |
-| `the default bundle runs now`                                                                          | 1    |
-| `call runs a function in the app, so it needs --yes`                                                   | 1    |
-| `no context name "<name>". devtools context lists them` (also for `get context`)                       | 1    |
-| `no "<key>" in <path>`, for a dot path that goes further than the value (also for `get context`)       | 1    |
-| `<path>: the CLI doesn't reach constructor` (and `prototype`, `__proto__`; also for `get context`)     | 1    |
-| `<name> is an object, not a function. devtools get context <name> reads it` (and `a value`)            | 1    |
-| `the args must be JSON, such as '["a", 1]' for two or '"a"' for one, and <args> isn't`                 | 1    |
-| `<message>`, when the called function throws or its promise rejects                                    | 1    |
+| Message                                                                                                                                                                                           | Code |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `<topic> has no action "<name>". Actions: <list>`                                                                                                                                                 | 1    |
+| `<topic> has no actions, only queries`                                                                                                                                                            | 1    |
+| `<topic> is off: <reason>`                                                                                                                                                                        | 1    |
+| `usage: devtools <topic> <action> <args>`, such as `usage: devtools network unoverride <url> \| --all`                                                                                            | 1    |
+| `<topic> <action> takes no --<flag>. usage: devtools <topic> <action> <args>`                                                                                                                     | 1    |
+| `bad --<flag>. usage: ...`, for a value of the wrong kind (only through the window relay)                                                                                                         | 1    |
+| `"<url>" is not a whole URL. Use the exact URL the app requests, https:// and query included`                                                                                                     | 1    |
+| `bad --status <value>: use 100 to 599`                                                                                                                                                            | 1    |
+| `no override on <url>. devtools network overrides lists them`                                                                                                                                     | 1    |
+| `bad method "<method>": use GET, POST, ...`                                                                                                                                                       | 1    |
+| `<METHOD> can change data on the server, so it needs --yes. GET, HEAD and OPTIONS go without`                                                                                                     | 1    |
+| `a GET request has no body, so drop --body` (and `HEAD`)                                                                                                                                          | 1    |
+| `bad --header: use 'Name: value'`                                                                                                                                                                 | 1    |
+| `no network row "<id>", it may have aged out of the buffer`                                                                                                                                       | 1    |
+| `<id> is a WebSocket. replay sends HTTP requests only`                                                                                                                                            | 1    |
+| `<METHOD> <url> failed: <why>`, only when the request is also not in the log                                                                                                                      | 1    |
+| `switch restarts the app, so it needs --yes` (and `default`)                                                                                                                                      | 1    |
+| `no dev server or preview "<id>". devtools preview lists them`                                                                                                                                    | 1    |
+| `<id> runs now`                                                                                                                                                                                   | 1    |
+| `<id> is downloading. Switch to it once its status is downloaded`                                                                                                                                 | 1    |
+| `the default bundle runs now`                                                                                                                                                                     | 1    |
+| `download writes the preview to the device, so it needs --yes`, `update replaces the download on the device, so it needs --yes`, `delete removes the download from the device, so it needs --yes` | 1    |
+| `no preview "<id>". devtools preview --where kind=preview lists them`                                                                                                                             | 1    |
+| `<id> is <status>. Only an available preview downloads`                                                                                                                                           | 1    |
+| `<id> is on the device and has an update: devtools preview update <id> --yes`                                                                                                                     | 1    |
+| `<id> has no update. It is <status>`                                                                                                                                                              | 1    |
+| `<id> isn't on the device`                                                                                                                                                                        | 1    |
+| `<id> is downloading. Delete it once the download ends`                                                                                                                                           | 1    |
+| `<preview's own error>`, when a download or a delete fails in the app                                                                                                                             | 1    |
+| `call runs a function in the app, so it needs --yes`                                                                                                                                              | 1    |
+| `no context name "<name>". devtools context lists them` (also for `get context`)                                                                                                                  | 1    |
+| `no "<key>" in <path>`, for a dot path that goes further than the value (also for `get context`)                                                                                                  | 1    |
+| `<path>: the CLI doesn't reach constructor` (and `prototype`, `__proto__`; also for `get context`)                                                                                                | 1    |
+| `<name> is an object, not a function. devtools get context <name> reads it` (and `a value`)                                                                                                       | 1    |
+| `the args must be JSON, such as '["a", 1]' for two or '"a"' for one, and <args> isn't`                                                                                                            | 1    |
+| `<message>`, when the called function throws or its promise rejects                                                                                                                               | 1    |
 
 #### From the tool
 
@@ -1489,9 +1505,9 @@ The preview support mounts preview's provider and adds the [Preview tab](#previe
 [`preview` topic](#preview) with its [actions](#preview-actions), and `preview` in the `>` prompt.
 Its `useSupport()` returns `{ status, previews, servers }`: what `usePreviewStatus()` returns (`null`
 until preview's provider has rendered), `usePreview().items`, and the dev servers the last look
-found. In the prompt, `preview` has `status`, `previews` and `servers`, and `switch(id)` and
-`default()`, the topic's actions with no `--yes`, each returning the line the `devtools` tool would
-print. Without `@axonpack/preview` the topic is off, and the start logs and the tab shows: "The devtools config sets up preview, but @axonpack/preview
+found. In the prompt, `preview` has `status`, `previews` and `servers`, and `switch(id)`,
+`default()`, `download(id)`, `update(id)` and `delete(id)`, the topic's actions with no `--yes`, each
+returning the line the `devtools` tool would print, or a promise of it for one that waits. Without `@axonpack/preview` the topic is off, and the start logs and the tab shows: "The devtools config sets up preview, but @axonpack/preview
 isn't installed. Install it with `npx expo install @axonpack/preview expo-file-system`, add
 `@axonpack/preview` to the plugins in app.json, and rebuild the app." With another major installed,
 1.0.0 for example, it logs and shows: "The devtools config uses

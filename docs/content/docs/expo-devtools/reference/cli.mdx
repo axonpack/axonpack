@@ -347,7 +347,7 @@ looks for an app. Every action, refused ones too, is listed in the
 | `--body-file`    | file path                    | `override`, `send`, `replay` | Read the body from this file on the computer, as UTF-8 text. Not with `--body`.       |
 | `--content-type` | MIME type                    | `override`                   | The mocked `content-type`. Default `application/json`.                               |
 | `--header`       | `'Name: value'`, repeatable  | `send`, `replay`             | A request header. In `replay` it replaces a header of the same name, any case.       |
-| `--yes`          | none                         | `send`, `replay`, `switch`, `default` | Needed for any method but GET, HEAD and OPTIONS, and always for `preview`'s actions, which restart the app. The app checks it, so a call through the window relay needs it too. |
+| `--yes`          | none                         | `send`, `replay`, `call`, `switch`, `default`, `download`, `update`, `delete` | Needed for `send` and `replay` with any method but GET, HEAD and OPTIONS, and always for `context call` and for every `preview` action. The app checks it, so a call through the window relay needs it too. |
 | `--all`          | none                         | `unoverride`                 | Remove every override instead of one.                                                |
 
 ### network actions
@@ -425,19 +425,27 @@ rejects, answers `error: <its message>`.
 
 ### preview actions
 
-From the [preview support](/docs/expo-devtools/supports/preview#switch-from-the-command-line). Each
-one restarts the app, so each needs `--yes`. The app answers first and restarts a moment later, or
-once a preview it has to download is on the device. The restart clears the CLI tab, which keeps its
-list in memory.
+From the [preview support](/docs/expo-devtools/supports/preview#switch-from-the-command-line). They
+are the buttons of preview's list, and each needs `--yes`. `switch` and `default` restart the app:
+the app answers first and restarts a moment later, or once a preview it has to download is on the
+device. The restart clears the CLI tab, which keeps its list in memory. `download`, `update` and
+`delete` take a preview's id and are refused where the list shows no such button on that preview.
 
-| Action    | Args   | Flags   | Reply                                                                                                         |
-| --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
-| `switch`  | `<id>` | `--yes` | `# preview · restarting the app on <id>`, ending ` once it has downloaded` for a preview not on the device yet |
-| `default` | none   | `--yes` | `# preview · restarting the app on the default bundle`                                                        |
+| Action     | Args   | Flags   | Shown in the list                          | Reply                                                                                                         |
+| ---------- | ------ | ------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `switch`   | `<id>` | `--yes` | on a server or preview that isn't running  | `# preview · restarting the app on <id>`, ending ` once it has downloaded` for a preview not on the device yet |
+| `default`  | none   | `--yes` | while something other than the default runs | `# preview · restarting the app on the default bundle`                                                       |
+| `download` | `<id>` | `--yes` | on an `available` preview                  | `# preview · downloaded <id>`                                                                                 |
+| `update`   | `<id>` | `--yes` | on an `update-available` preview           | `# preview · updated <id>`, ending `. The app runs the new copy from its next start` for the running one       |
+| `delete`   | `<id>` | `--yes` | on a preview on the device, unless it is downloading | `# preview · deleted <id>`, or `# preview · deleting <id> and restarting the app on the default bundle` for the preview the app is set to start |
 
 `switch` takes an `id` from the list: a dev server's `host:port` or a preview's id. A preview that
 isn't on the device yet downloads first. `default` goes back to the default bundle, as **Back to
-default** does.
+default** does. `download` and `update` wait for the download, behind `# wait: downloading <id>` or
+`# wait: updating <id>`, and a download that takes over 5 seconds carries on in the app, as a slow
+`send` does. A download that fails answers `error:` with preview's own message. `delete` on the
+preview the app is set to start goes back to the default bundle first, as the list's **Delete**
+does, so the app answers before it restarts.
 
 ## Output
 
@@ -510,6 +518,14 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `<id> runs now`                                                                               | 1    |
 | `<id> is downloading. Switch to it once its status is downloaded`                             | 1    |
 | `the default bundle runs now`                                                                 | 1    |
+| `download writes the preview to the device, so it needs --yes`, `update replaces the download on the device, so it needs --yes`, `delete removes the download from the device, so it needs --yes` | 1 |
+| `no preview "<id>". devtools preview --where kind=preview lists them`                         | 1    |
+| `<id> is <status>. Only an available preview downloads`                                       | 1    |
+| `<id> is on the device and has an update: devtools preview update <id> --yes`                 | 1    |
+| `<id> has no update. It is <status>`                                                          | 1    |
+| `<id> isn't on the device`                                                                    | 1    |
+| `<id> is downloading. Delete it once the download ends`                                       | 1    |
+| `<preview's own error>`, when a download or a delete fails in the app                          | 1    |
 | `call runs a function in the app, so it needs --yes`                                          | 1    |
 | `no context name "<name>". devtools context lists them` (also for `get context`)              | 1    |
 | `no "<key>" in <path>`, for a dot path that goes further than the value (also for `get context`) | 1  |

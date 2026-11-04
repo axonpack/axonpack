@@ -109,23 +109,38 @@ function prepare(): string | undefined {
   return waiting ? 'asking the bucket for previews and looking for dev servers' : undefined;
 }
 
-const needsYes = (action: string, yes?: boolean) => {
-  if (yes !== true) throw new Error(`${action} restarts the app, so it needs --yes`);
+const needsYes = (action: string, does: string, yes?: boolean) => {
+  if (yes !== true) throw new Error(`${action} ${does}, so it needs --yes`);
 };
 
 /**
  * The `preview` topic for the `devtools` command line tool, read from the support's store. Its
- * actions switch the way the list's buttons do, so the CLI tab logs them like any other action.
+ * actions call what the list's buttons call, and refuse where the list shows no such button, so the
+ * CLI tab logs them like any other action.
  */
 export function previewAgent(
   config: PreviewConfig,
   preview: PreviewModule
 ): AgentTopic<PreviewAgentRow> {
   const list = () => rows(preview.sameServer);
+  const previewRow = (id: string) => {
+    const row = list().find((each) => each.id === id);
+    if (row?.kind !== 'preview') {
+      throw new Error(`no preview "${id}". devtools preview --where kind=preview lists them`);
+    }
+    return row;
+  };
+  // Preview's store keeps a failure in its `error` rather than throwing it.
+  const finish = (run: Promise<void>, done: string) =>
+    run.then(() => {
+      const { error } = preview.previewsStore.getState();
+      if (error) throw new Error(error);
+      return `# preview · ${done}`;
+    });
   return {
     name: 'preview',
     about:
-      'what runs now (id now), the dev servers (id host:port) and the previews for this build. switch <id> --yes and default --yes restart the app',
+      'what runs now (id now), the dev servers (id host:port) and the previews for this build. switch <id> and default restart the app, download, update and delete <id> change what is on the device, each with --yes',
     rows: list,
     enabled: () => config.enabled,
     off: 'previews are off: the config passed to configure() has enabled: false',
@@ -155,7 +170,7 @@ export function previewAgent(
           if (row.kind === 'preview' && row.status === 'downloading') {
             throw new Error(`${id} is downloading. Switch to it once its status is downloaded`);
           }
-          needsYes('switch', options.yes);
+          needsYes('switch', 'restarts the app', options.yes);
           setTimeout(
             () =>
               row.kind === 'server'
@@ -174,9 +189,68 @@ export function previewAgent(
         run: (_, options) => {
           const status = previewSupportStore.getState().status;
           if (!status?.canGoBack) throw new Error('the default bundle runs now');
-          needsYes('default', options.yes);
+          needsYes('default', 'restarts the app', options.yes);
           setTimeout(status.backToDefault, RESTART_AFTER_MS);
           return '# preview · restarting the app on the default bundle';
+        },
+      },
+      download: {
+        usage: '<id> --yes',
+        args: [1, 1],
+        options: ['yes'],
+        run: ([id], options) => {
+          const { status } = previewRow(id);
+          if (status === 'update-available') {
+            throw new Error(
+              `${id} is on the device and has an update: devtools preview update ${id} --yes`
+            );
+          }
+          if (status !== 'available') {
+            throw new Error(`${id} is ${status}. Only an available preview downloads`);
+          }
+          needsYes('download', 'writes the preview to the device', options.yes);
+          return {
+            waitingFor: `downloading ${id}`,
+            answer: finish(preview.previewsStore.download(config, id), `downloaded ${id}`),
+          };
+        },
+      },
+      update: {
+        usage: '<id> --yes',
+        args: [1, 1],
+        options: ['yes'],
+        run: ([id], options) => {
+          const { status, active } = previewRow(id);
+          if (status !== 'update-available')
+            throw new Error(`${id} has no update. It is ${status}`);
+          needsYes('update', 'replaces the download on the device', options.yes);
+          const next = active ? '. The app runs the new copy from its next start' : '';
+          return {
+            waitingFor: `updating ${id}`,
+            answer: finish(preview.previewsStore.download(config, id), `updated ${id}${next}`),
+          };
+        },
+      },
+      delete: {
+        usage: '<id> --yes',
+        args: [1, 1],
+        options: ['yes'],
+        run: ([id], options) => {
+          const { status, data } = previewRow(id);
+          if (!data.local) throw new Error(`${id} isn't on the device`);
+          if (status === 'downloading') {
+            throw new Error(`${id} is downloading. Delete it once the download ends`);
+          }
+          needsYes('delete', 'removes the download from the device', options.yes);
+          // Preview goes back to the default bundle first when it deletes the chosen one.
+          if (preview.previewsStore.getState().activeId === id) {
+            setTimeout(() => preview.previewsStore.remove(id), RESTART_AFTER_MS);
+            return `# preview · deleting ${id} and restarting the app on the default bundle`;
+          }
+          return {
+            waitingFor: `deleting ${id}`,
+            answer: finish(preview.previewsStore.remove(id), `deleted ${id}`),
+          };
         },
       },
     },

@@ -45,9 +45,15 @@ const STATUS = {
   refresh,
 } as unknown as PreviewStatusInfo;
 
+let previewsState = { activeId: null as string | null, error: null as string | null };
 const fakePreview = {
   sameServer: (a: string, b: string) => a.split(':')[1] === b.split(':')[1],
-  previewsStore: { switchTo: jest.fn(async () => {}) },
+  previewsStore: {
+    switchTo: jest.fn(async () => {}),
+    download: jest.fn(async () => {}),
+    remove: jest.fn(async () => {}),
+    getState: () => previewsState,
+  },
   devPreviewServersStore: { switchTo: jest.fn() },
 };
 
@@ -64,6 +70,7 @@ const act = (action: string, args: string[] = [], yes?: true) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  previewsState = { activeId: null, error: null };
   previewSupportStore.setState({ status: STATUS, previews: [PREVIEW], servers: [SERVER] });
 });
 
@@ -173,4 +180,127 @@ describe('its actions', () => {
     expect(act('default', [], true)).toBe('error: the default bundle runs now');
     expect(act('switch', [], true)).toBe('error: usage: devtools preview switch <id> --yes');
   });
+});
+
+describe("the list's actions", () => {
+  const ON_DEVICE = { local: {} } as Partial<PreviewItem>;
+  const withPreview = (patch: Partial<PreviewItem>) =>
+    previewSupportStore.setState({ previews: [{ ...PREVIEW, ...patch } as PreviewItem] });
+  const answer = (reply: ReturnType<typeof act>) => {
+    expect(reply).toMatchObject({ waitingFor: expect.any(String) });
+    return (reply as { answer: Promise<string> }).answer;
+  };
+
+  it('refuses each without --yes, and changes nothing', () => {
+    expect(act('download', ['pr-7'])).toBe(
+      'error: download writes the preview to the device, so it needs --yes'
+    );
+    withPreview({ ...ON_DEVICE, status: 'update-available' });
+    expect(act('update', ['pr-7'])).toBe(
+      'error: update replaces the download on the device, so it needs --yes'
+    );
+    expect(act('delete', ['pr-7'])).toBe(
+      'error: delete removes the download from the device, so it needs --yes'
+    );
+    expect(fakePreview.previewsStore.download).not.toHaveBeenCalled();
+    expect(fakePreview.previewsStore.remove).not.toHaveBeenCalled();
+  });
+
+  it('downloads an available preview, waiting until it is done', async () => {
+    const reply = act('download', ['pr-7'], true);
+    expect(reply).toMatchObject({ waitingFor: 'downloading pr-7' });
+    expect(await answer(reply)).toBe('# preview · downloaded pr-7');
+    expect(fakePreview.previewsStore.download).toHaveBeenCalledWith(CONFIG, 'pr-7');
+  });
+
+  it("answers preview's own error when the download fails", async () => {
+    fakePreview.previewsStore.download.mockImplementationOnce(async () => {
+      previewsState.error = 'The bucket said 403';
+    });
+    expect(await answer(act('download', ['pr-7'], true))).toBe('error: The bucket said 403');
+  });
+
+  it('updates a preview that has an update, through the same download', async () => {
+    withPreview({ ...ON_DEVICE, status: 'update-available' });
+    expect(await answer(act('update', ['pr-7'], true))).toBe('# preview · updated pr-7');
+    withPreview({ ...ON_DEVICE, status: 'update-available', active: true });
+    expect(await answer(act('update', ['pr-7'], true))).toBe(
+      '# preview · updated pr-7. The app runs the new copy from its next start'
+    );
+    expect(fakePreview.previewsStore.download).toHaveBeenCalledWith(CONFIG, 'pr-7');
+  });
+
+  it('deletes a download', async () => {
+    withPreview({ ...ON_DEVICE, status: 'downloaded' });
+    expect(await answer(act('delete', ['pr-7'], true))).toBe('# preview · deleted pr-7');
+    expect(fakePreview.previewsStore.remove).toHaveBeenCalledWith('pr-7');
+  });
+
+  it('deletes the chosen preview after the reply is out, since the app restarts on the default', () => {
+    jest.useFakeTimers();
+    withPreview({ ...ON_DEVICE, status: 'downloaded', active: true });
+    previewsState.activeId = 'pr-7';
+    expect(act('delete', ['pr-7'], true)).toBe(
+      '# preview · deleting pr-7 and restarting the app on the default bundle'
+    );
+    expect(fakePreview.previewsStore.remove).not.toHaveBeenCalled();
+    jest.runAllTimers();
+    expect(fakePreview.previewsStore.remove).toHaveBeenCalledWith('pr-7');
+    jest.useRealTimers();
+  });
+
+  it.each([
+    [
+      'download',
+      {},
+      '127.0.0.1:8082',
+      'error: no preview "127.0.0.1:8082". devtools preview --where kind=preview lists them',
+    ],
+    [
+      'download',
+      {},
+      'now',
+      'error: no preview "now". devtools preview --where kind=preview lists them',
+    ],
+    [
+      'download',
+      { ...ON_DEVICE, status: 'downloaded' },
+      'pr-7',
+      'error: pr-7 is downloaded. Only an available preview downloads',
+    ],
+    [
+      'download',
+      { status: 'downloading' },
+      'pr-7',
+      'error: pr-7 is downloading. Only an available preview downloads',
+    ],
+    [
+      'download',
+      { ...ON_DEVICE, status: 'update-available' },
+      'pr-7',
+      'error: pr-7 is on the device and has an update: devtools preview update pr-7 --yes',
+    ],
+    ['update', {}, 'pr-7', 'error: pr-7 has no update. It is available'],
+    [
+      'update',
+      { ...ON_DEVICE, status: 'downloaded' },
+      'pr-7',
+      'error: pr-7 has no update. It is downloaded',
+    ],
+    ['delete', {}, 'pr-7', "error: pr-7 isn't on the device"],
+    [
+      'delete',
+      { ...ON_DEVICE, status: 'downloading' },
+      'pr-7',
+      'error: pr-7 is downloading. Delete it once the download ends',
+    ],
+  ] as const)(
+    'refuses %s where the list shows no such button: %j %s',
+    (action, patch, id, error) => {
+      withPreview(patch as Partial<PreviewItem>);
+      expect(act(action, [id], true)).toBe(error);
+      expect(fakePreview.previewsStore.download).not.toHaveBeenCalled();
+      expect(fakePreview.previewsStore.remove).not.toHaveBeenCalled();
+    }
+  );
 });

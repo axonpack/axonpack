@@ -32,6 +32,8 @@ tab, a DevTools panel, a `devtools` command line topic, optional names in the `>
 - [x] Preview: the `preview` topic (what runs now, the dev servers, the previews), refreshed on each
       new query, with `switch <id> --yes` and `default --yes`
 - [x] Preview: `preview` in the `>` prompt, with the data and the same actions
+- [x] Preview: `download`, `update` and `delete <id> --yes`, the list's buttons, through the same
+      preview functions, refused where the list shows no such button, and in the prompt's `preview`
 - [x] A support's names in the `>` prompt are reachable from the command line through the `context`
       topic, with the support's id as their `source`
 - [ ] Preview: the config plugin added for the app
@@ -105,8 +107,15 @@ that isn't downloaded needs the config. Rows are `now`, then each dev server (`h
 preview. Each new query calls the status's `refresh()` and answers `# wait:` until it is done, like
 the storage topic's key listing. `switch <id>` and `default` need `--yes`, then restart through
 preview's own `previewsStore.switchTo`, `devPreviewServersStore.switchTo` and `backToDefault`, after a
-300 ms timer so the reply reaches the CLI before the app reloads. The prompt's `preview` runs the same
-actions through `runAction` with `yes` set, and reads the store through getters.
+300 ms timer so the reply reaches the CLI before the app reloads. `download`, `update` and `delete
+<id>` are the list's buttons: they call `previewsStore.download` and `previewsStore.remove`, as the
+list does, and refuse where `PreviewRow` shows no such button (`download` on `available` only,
+`update` on `update-available` only, `delete` on a preview with a download that isn't downloading).
+They answer `# wait:` until preview's call ends, then read preview's `error`, since its store keeps a
+failure there rather than throwing. `delete` on the chosen preview (`activeId`) restarts the app on
+the default bundle, as preview's `remove` does, so it runs after the same timer. The prompt's
+`preview` runs the same actions through `runAction` with `yes` set, answering a promise of the line
+for one that waits, and reads the store through getters.
 
 The tab renders preview's `PreviewList`, with the theme store's palette, which preview maps itself.
 The list reads preview's own stores, the same state the support's store is filled from.
