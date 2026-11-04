@@ -95,6 +95,11 @@ export type IndexEntry = PreviewInfo & {
   size: number;
   changelog: string;
   manifest: string;
+  /**
+   * Set by the app, never written: the entry came from where 0.1.0 published, outside the slug
+   * folder, so its manifest and files are read from there too.
+   */
+  withoutSlug?: boolean;
 };
 
 export type PlatformIndex = {

@@ -31,8 +31,10 @@ export async function downloadPreview(
   const platform = currentPlatform();
   if (!platform)
     throw new PreviewError("Previews run on Android and iOS only.");
-  const s3 = toS3Config(config);
-  const manifest = await fetchManifest(config, entry.manifest);
+  const scoped = toS3Config(config);
+  // A preview 0.1.0 published has its manifest and files outside the slug folder too.
+  const s3 = entry.withoutSlug ? { ...scoped, slug: undefined } : scoped;
+  const manifest = await fetchManifest(s3, entry.manifest);
   const totalBytes = manifest.files.reduce((sum, f) => sum + f.size, 0);
 
   const parent = new Directory(rootDirectory(), entry.id);

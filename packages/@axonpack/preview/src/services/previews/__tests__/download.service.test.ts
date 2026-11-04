@@ -162,6 +162,37 @@ test("says how to fix a build with no compatibility key", async () => {
   ).rejects.toThrow("config plugins");
 });
 
+test("with no list in the slug folder yet, the previews 0.1.0 published outside it show and download from there", async () => {
+  const requests = serve({
+    "index/ios/fp.json": { previews: [entry] },
+    [entry.manifest]: manifest([{ path: "main.jsbundle", data: bundle }]),
+    [`files/${sha256Hex(bundle)}`]: bundle,
+  });
+  const index = await fetchPreviews(config);
+  expect(index.previews).toEqual([{ ...entry, withoutSlug: true }]);
+  await downloadPreview(config, index.previews[0]);
+  expect(disk.get("file:/docs/preview/task-1/ios/main.jsbundle")).toEqual(
+    bundle,
+  );
+  expect(
+    requests.map((r) => r.url.replace(/^.*previews-public\//, "")),
+  ).toEqual([
+    "my-app/index/ios/fp.json",
+    "index/ios/fp.json",
+    entry.manifest,
+    `files/${sha256Hex(bundle)}`,
+  ]);
+});
+
+test("once the slug folder has a list, the old one outside it is not read", async () => {
+  const requests = serve({
+    "my-app/index/ios/fp.json": { previews: [] },
+    "index/ios/fp.json": { previews: [entry] },
+  });
+  expect((await fetchPreviews(config)).previews).toEqual([]);
+  expect(requests).toHaveLength(1);
+});
+
 test("reads nothing without the app's slug, since it can't tell its own folder", async () => {
   const requests = serve({});
   await expect(fetchPreviews({ ...config, slug: undefined })).rejects.toThrow(
