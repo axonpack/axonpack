@@ -74,13 +74,14 @@ With `--keep-copy` the last line is `android: kept the copy at <path>`.
 With `--in-place`, the `copying`, script, install and `deleting` lines don't show, and the `files`
 lines come once, before the first platform.
 
-The `uploading` line gives the file it is on, its number out of all the files (the bundle's and the
-file sets'), and how many MB of
-the files before it are done. In a terminal it is one line, redrawn for each file and cleared once
-every file is up. Without a terminal, as in CI, it is printed for the 1st file, the 21st, the 41st
-and so on.
+Publish uploads four files at a time. The `uploading` line counts the files that are done out of
+all the files (the bundle's and the file sets'), gives how many MB of them are done, and names the
+file it started last. In a terminal it is one line, redrawn as each file starts and finishes, and
+cleared once every file is up. Without a terminal, as in CI, it is printed after the 20th file is
+done, the 40th, the 60th and so on.
 A file the bucket already has under its sha256 is not sent again. The next line counts the files
-that were new and the ones that were already in the bucket.
+that were new and the ones that were already in the bucket. When a file fails, no new one starts,
+and publish stops with that error once the files already on their way are done.
 
 The last two lines name the build key and the URL of that build's index in the bucket. `<key>` is
 the build's compatibility key, so it has to match the key in the installed build for the preview to
@@ -190,7 +191,7 @@ Each of these stops `publish`. When it happens in the copy, the message gets a s
 | `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` or `bun.lock` |
 | `<platform>: <install command> failed with exit code <n>. If the lockfile is out of date, update it, or set EAS_NO_FROZEN_LOCKFILE=1.` | The install failed. The last sentence shows only with a frozen lockfile |
 | `<platform>: eas-build-pre-install failed with exit code <n>: <package manager> run eas-build-pre-install` | Your script failed. The same for `eas-build-post-install` |
-| `Command failed: npx expo export:embed ...` | The export failed. Its own output is above |
+| `Command failed: <node> <path>/expo/bin/cli export:embed ...` | The export failed. Its own output is above. `<path>/expo/bin/cli` is your app's own Expo CLI, run with Node |
 
 See [Troubleshooting](/docs/preview/troubleshooting#a-script-or-the-install-fails-in-the-copy).
 

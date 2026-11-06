@@ -107,7 +107,7 @@ test("the values reach the export's environment, and the shell's own values win"
     });
     // publish hands the export the CLI's env.
     buildBundle("/app", "android", { outDir: outDir(), env: process.env });
-    expect(run.mock.calls[1][0]).toBe("npx");
+    expect(run.mock.calls[1][0]).toBe(process.execPath);
     expect(exportEnv.API_URL).toBe("https://preview.example.com");
     expect(exportEnv.SHARED).toBe("from-shell");
     expect(exportEnv.SECRET_KEY).toBeUndefined();
@@ -162,7 +162,7 @@ test("without --environment the build never calls eas", () => {
     return "";
   });
   buildBundle("/app", "ios", { outDir: outDir(), env: process.env });
-  expect(run.mock.calls.map(([cmd]) => cmd)).toEqual(["npx"]);
+  expect(run.mock.calls.map(([cmd]) => cmd)).toEqual([process.execPath]);
 });
 
 test("publish settings: the shell wins over EAS, and EAS over Expo's env files", () => {

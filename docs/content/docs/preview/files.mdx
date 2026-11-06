@@ -134,6 +134,12 @@ the moment it is called. Until the set is ready that is the preview's `uri` with
 the function can't wait, so call it again later or use the hook. Both throw for a name the config's
 `files` doesn't list.
 
+If the app builds file URLs in several places, such as deep links, URL helpers and native
+navigation, read the folder in one place. Once `usePreviewFiles(name)` gives `ready: true`, set its
+`uri` as the app's one root, before any URL is built, and have every place read that root. A place
+that keeps its own path, such as the default copy's, still points at the installed files while a
+preview runs.
+
 ## Run your own step on a download
 
 The package never changes the files. When the app needs to, for example to write the folder's path

@@ -11,6 +11,7 @@ Publishing a preview so installed apps can find it.
 - [x] Records the EAS environment a preview was built with, so the app can show it
 - [x] Runs against a local S3 server while developing
 - [x] Shows upload progress, and says how many files the bucket already had
+- [x] Uploads four files at a time, and starts no new one after a failure
 - [x] Names the request and the network error when a request fails, and sends it again when the
       connection dropped
 
@@ -34,17 +35,24 @@ runs, so the bundle is Hermes bytecode with its images beside it. It builds in a
 with its own install, unless `--in-place` (see [bundles.md](./bundles.md)). It reads the `compatibility`
 option from the app config (see [bundles.md](./bundles.md)), builds the same key the app was built
 with, records the app version and the native fingerprint either way, uploads each file once under
-its sha256, writes the preview's manifest, and only then adds it to the lists. `--compatibility`
+its sha256 (four at a time), writes the preview's manifest, and only then adds it to the lists. `--compatibility`
 overrides the option, with a warning, since a build of the app would then not list the preview. An app never sees a preview whose files
 are not all there. The changelog is the commit subjects since the branch left the base branch
 (`--base`, default: the repo's default branch); `--changelog=<text>` or `--changelog-file` replace it.
 
 ### Output and errors
 
-While it uploads, `publish` prints `<platform>: uploading <n>/<total> (<done>/<all> MB) <path>`.
-In a terminal that is one line redrawn in place (cut to the terminal's width, since a wrapped line
-can't be redrawn) and cleared at the end; when a request fails it stays, so the error under it shows
-the file. Without a terminal it is printed for the 1st file and every 20th after it. The summary is
+Each file is a `HEAD` and, when the bucket doesn't have it, a `PUT`. Four files go at once, through
+`forEachAtOnce` (`src/utils/s3/for-each-at-once.util.ts`), the same queue the app's download uses.
+One at a time, a publish to a server across the internet spent about 2.4 s on each new file, small
+ones too, since most of that is waiting on the server. After the first failure no file starts, the
+ones on the way are awaited, and the first error is thrown.
+
+While it uploads, `publish` prints `<platform>: uploading <n>/<total> (<done>/<all> MB) <path>`:
+the files finished, their MB, and the file started last. In a terminal that is one line redrawn in
+place as each file starts and finishes (cut to the terminal's width, since a wrapped line can't be
+redrawn) and cleared at the end; when a request fails it stays, so the error under it shows how far
+the upload got. Without a terminal it is printed after every 20th finished file. The summary is
 `<platform>: <n> files, <new> new, <skipped> already in the bucket`.
 
 Every request goes through `s3Fetch` (`src/services/s3/s3.service.ts`), the app's too. When `fetch`

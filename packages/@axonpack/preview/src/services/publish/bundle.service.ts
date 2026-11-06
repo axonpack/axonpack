@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { BUNDLE_FILE, Platform } from "../../utils/previews/layout.util";
+import { appRequire } from "../cli/project.service";
 import { listFiles } from "./file-sets.service";
 
 /** Hermes bytecode starts with an 8-byte magic number, then its version as a 32-bit int. */
@@ -34,7 +35,9 @@ export function buildBundle(
 ) {
   mkdirSync(out, { recursive: true });
   const args = [
-    "expo",
+    // The app's own Expo CLI, run with Node and no package manager. Through npx, npm printed
+    // EBADDEVENGINES warnings in a workspace whose devEngines names pnpm or bun.
+    appRequire(root).resolve("./bin/cli"),
     "export:embed",
     "--platform",
     platform,
@@ -47,7 +50,7 @@ export function buildBundle(
     out,
   ];
   if (entryFile) args.push("--entry-file", entryFile);
-  execFileSync("npx", args, { cwd: root, stdio: "inherit", env });
+  execFileSync(process.execPath, args, { cwd: root, stdio: "inherit", env });
 
   const files = listFiles(out);
   const bundle = readFileSync(join(out, BUNDLE_FILE[platform]));

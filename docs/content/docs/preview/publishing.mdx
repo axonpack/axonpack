@@ -34,8 +34,9 @@ settings. For each platform, Android then iOS:
 5. **Works out the key** from the `compatibility` option in your app config, the same way the
    [config plugin](/docs/preview/compatibility) did for the build. It records the app version and the
    native fingerprint either way. Both come from your own folder.
-6. **Uploads each file once**, under its sha256. Files already in the bucket are skipped. It shows
-   which file it is on, and a request whose connection drops is sent again, up to 4 tries. See
+6. **Uploads each file once**, under its sha256, four files at a time. Files already in the bucket
+   are skipped. It shows how many files are done and the one it started last, and a request whose
+   connection drops is sent again, up to 4 tries. See
    [Errors and retries](/docs/preview/cli#errors-and-retries).
 7. **Writes the manifest**: the files, their hashes and sizes, the changelog and the versions, and
    the EAS environment when `--environment` is passed. The app shows that as an `env: <name>` chip.

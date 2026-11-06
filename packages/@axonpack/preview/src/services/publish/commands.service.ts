@@ -28,6 +28,7 @@ import {
   putObject,
 } from "../s3/s3.service";
 import { previewTitle } from "../../utils/previews/preview-title.util";
+import { forEachAtOnce } from "../../utils/s3/for-each-at-once.util";
 import { buildBundle } from "./bundle.service";
 import { prepareCopy, removeInBackground } from "./copy.service";
 import { buildFileSets, readFileSets } from "./file-sets.service";
@@ -49,8 +50,11 @@ import { fingerprint } from "../cli/project.service";
 type Env = NodeJS.ProcessEnv;
 const log = (message: string) => process.stdout.write(`${message}\n`);
 const mb = (bytes: number) => (bytes / 1e6).toFixed(1);
-// Without a terminal (CI), one progress line per this many files.
+// Without a terminal (CI), one progress line per this many finished files.
 const PROGRESS_EVERY = 20;
+// Each file is a HEAD and often a PUT, and over a slow link most of that is waiting on the
+// server, so a small file took as long as a big one when they went one at a time.
+const UPLOADS_AT_ONCE = 4;
 
 /**
  * Read, change, write back only if nobody else wrote in between (the ETag still matches), and
@@ -168,16 +172,22 @@ export async function publish(options: PublishOptions) {
       const total = files.reduce((sum, f) => sum + f.size, 0);
       const tty = process.stdout.isTTY;
       let uploaded = 0;
+      let finished = 0;
       let done = 0;
+      let latest = "";
+      const progress = () =>
+        `${platform}: uploading ${finished}/${files.length} (${mb(done)}/${mb(total)} MB) ${latest}`;
+      const redraw = () => {
+        // Cut to the terminal's width: a line that wraps can't be redrawn in place.
+        if (tty)
+          process.stdout.write(
+            `\r\x1b[K${progress().slice(0, (process.stdout.columns || 80) - 1)}`,
+          );
+      };
       try {
-        for (const [i, file] of files.entries()) {
-          const line = `${platform}: uploading ${i + 1}/${files.length} (${mb(done)}/${mb(total)} MB) ${file.path}`;
-          // Cut to the terminal's width: a line that wraps can't be redrawn in place.
-          if (tty)
-            process.stdout.write(
-              `\r\x1b[K${line.slice(0, (process.stdout.columns || 80) - 1)}`,
-            );
-          else if (i % PROGRESS_EVERY === 0) log(line);
+        await forEachAtOnce(files, UPLOADS_AT_ONCE, async (file) => {
+          latest = file.path;
+          redraw();
           if (!(await exists(s3, fileKey(file.sha256)))) {
             await putObject(
               s3,
@@ -186,10 +196,13 @@ export async function publish(options: PublishOptions) {
             );
             uploaded++;
           }
+          finished++;
           done += file.size;
-        }
+          redraw();
+          if (!tty && finished % PROGRESS_EVERY === 0) log(progress());
+        });
       } catch (error) {
-        // Keep the last line, so the error printed under it shows which file was going up.
+        // Keep the last line, so the error printed under it shows how far it got.
         if (tty) process.stdout.write("\n");
         throw error;
       }

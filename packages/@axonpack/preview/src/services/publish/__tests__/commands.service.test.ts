@@ -207,13 +207,96 @@ test("says how many files were already in the bucket, and redraws one line in a 
   } finally {
     Object.assign(process.stdout, { isTTY, columns });
   }
-  expect(written()).toContain(
-    "ios: uploading 1/1 (0.0/0.0 MB) main.jsbundle\n",
-  );
   expect(written()).toContain("ios: 1 files, 1 new, 0 already in the bucket\n");
-  // Cut to the width, so it never wraps.
+  // Drawn when the file starts and again when it is done, cut to the width so it never wraps.
+  expect(written()).toContain("\r\x1b[Kios: uploading 0/1 ");
   expect(written()).toContain("\r\x1b[Kios: uploading 1/1 ");
   expect(written()).toContain("ios: 1 files, 0 new, 1 already in the bucket\n");
+});
+
+describe("four files at a time", () => {
+  const files = Array.from({ length: 45 }, (_, i) => ({
+    absolutePath: mockBundle,
+    path: `assets/${i}.png`,
+    sha256: i.toString(16).padStart(64, "0"),
+    size: 100_000,
+  }));
+  /**
+   * The bucket above, answering each file request after `delay(key)` ms and refusing the PUT of
+   * `refused`. It counts the file requests open at once and the files asked about.
+   */
+  const slowly = (delay: (key: string) => number, refused?: string) => {
+    const seen = { open: 0, most: 0, puts: [] as string[], asked: new Set() };
+    global.fetch = jest.fn(async (input: string | URL, init?: RequestInit) => {
+      const key = new URL(String(input)).pathname.replace(/^\/b\/one\//, "");
+      if (!key.startsWith("files/")) return bucket(input, init);
+      seen.open++;
+      seen.most = Math.max(seen.most, seen.open);
+      seen.asked.add(key);
+      if (init?.method === "PUT") seen.puts.push(key);
+      await new Promise((resolve) => setTimeout(resolve, delay(key)));
+      seen.open--;
+      if (init?.method === "PUT" && key === refused)
+        return new Response("", { status: 403 });
+      return bucket(input, init);
+    }) as typeof fetch;
+    return seen;
+  };
+  const sent = (list: typeof files) => list.map((f) => `files/${f.sha256}`);
+
+  test("never more than four, each new file sent once, a CI line every 20 done, and the summary", async () => {
+    // Five are in the bucket from an earlier publish.
+    for (const key of sent(files.slice(0, 5)))
+      objects.set(`one/${key}`, { body: "x", etag: '"0"' });
+    (buildBundle as jest.Mock).mockReturnValueOnce({
+      files,
+      hermesVersion: 96,
+    });
+    const seen = slowly(() => 5);
+    const { isTTY } = process.stdout;
+    try {
+      Object.assign(process.stdout, { isTTY: false });
+      await publish(options("one", "task-1"));
+    } finally {
+      Object.assign(process.stdout, { isTTY });
+    }
+
+    expect(seen.most).toBe(4);
+    expect(seen.puts.sort()).toEqual(sent(files.slice(5)).sort());
+    expect(
+      written()
+        .filter((line) => line.startsWith("ios: uploading"))
+        .map((line) => line.split(" (")[0]),
+    ).toEqual(["ios: uploading 20/45", "ios: uploading 40/45"]);
+    expect(written()).toContainEqual(
+      expect.stringMatching(
+        /^ios: uploading 20\/45 \(2\.0\/4\.5 MB\) assets\//,
+      ),
+    );
+    expect(written()).toContain(
+      "ios: 45 files, 40 new, 5 already in the bucket\n",
+    );
+  });
+
+  test("after a failure no new file starts, and the ones on the way finish before it throws", async () => {
+    const [bad] = sent([files[1]]);
+    (buildBundle as jest.Mock).mockReturnValueOnce({
+      files,
+      hermesVersion: 96,
+    });
+    // The refused file answers at once, while the three beside it are still on their way.
+    const seen = slowly((key) => (key === bad ? 0 : 20), bad);
+    let openWhenThrown = -1;
+    const failed = publish(options("one", "task-1")).catch((error) => {
+      openWhenThrown = seen.open;
+      throw error;
+    });
+
+    await expect(failed).rejects.toThrow(`S3 403 for ${bad}`);
+    expect(openWhenThrown).toBe(0);
+    expect([...seen.asked].sort()).toEqual(sent(files.slice(0, 4)).sort());
+    expect(objects.has("one/index/ios/version-1.0.0.json")).toBe(false);
+  });
 });
 
 describe("where it builds", () => {
@@ -314,10 +397,10 @@ describe("where it builds", () => {
   test("a step in the copy that fails removes it and points at --keep-copy", async () => {
     const work = temp("run");
     mocked(buildBundle).mockImplementationOnce(() => {
-      throw new Error("Command failed: npx expo export:embed");
+      throw new Error("Command failed: node expo/bin/cli export:embed");
     });
     await expect(publish(both({ work }))).rejects.toThrow(
-      "Command failed: npx expo export:embed\nRun again with --keep-copy to look inside the copy.",
+      "Command failed: node expo/bin/cli export:embed\nRun again with --keep-copy to look inside the copy.",
     );
     expect(existsSync(join(work, "android"))).toBe(false);
     expect(written()).toContain("android: removed the copy\n");

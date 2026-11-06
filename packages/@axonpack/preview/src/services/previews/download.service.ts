@@ -6,6 +6,7 @@ import {
   fileKey,
 } from "../../utils/previews/layout.util";
 import { S3Config, s3Fetch } from "../s3/s3.service";
+import { forEachAtOnce } from "../../utils/s3/for-each-at-once.util";
 import { sha256Hex } from "../../utils/s3/sigv4.util";
 import {
   PreviewConfig,
@@ -70,25 +71,14 @@ export async function downloadPreview(
 
   try {
     let bytes = 0;
-    let next = 0;
-    const errors: unknown[] = [];
     onProgress?.({ bytes, totalBytes });
-    // After a failure no file starts, and the ones on the way are waited for, so none of them
-    // writes into the folder after it is deleted below.
-    const worker = async () => {
-      while (errors.length === 0 && next < manifest.files.length) {
-        const file = manifest.files[next++];
-        try {
-          await downloadFile(s3, partial, file);
-          bytes += file.size;
-          onProgress?.({ bytes, totalBytes });
-        } catch (error) {
-          errors.push(error);
-        }
-      }
-    };
-    await Promise.all(Array.from({ length: DOWNLOADS_AT_ONCE }, worker));
-    if (errors.length > 0) throw errors[0];
+    // After a failure the files on the way are waited for, so none of them writes into the folder
+    // after it is deleted below.
+    await forEachAtOnce(manifest.files, DOWNLOADS_AT_ONCE, async (file) => {
+      await downloadFile(s3, partial, file);
+      bytes += file.size;
+      onProgress?.({ bytes, totalBytes });
+    });
     const destination = previewDirectory(entry.id, platform);
     if (destination.exists) destination.delete();
     partial.rename(platform);

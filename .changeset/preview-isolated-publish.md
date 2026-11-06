@@ -8,3 +8,4 @@
 - **`--in-place`** builds in the app's folder as before, with no copy, install or scripts. The CI sample workflows pass it
 - **`--keep-copy`** keeps the copies in the temp folder, to look inside
 - **`--environment` leaves nothing in `.eas/.env/`**: file-type variables go to publish's temp folder, and the export's own temp folder is deleted too
+- **Uploads go four files at a time**: `preview publish` sends four files at once where it sent one, so a publish of hundreds of small files no longer waits on the bucket for each in turn. The export also runs your app's own Expo CLI with Node, without `npx`, so npm's `EBADDEVENGINES` warnings no longer show in a pnpm or bun workspace
