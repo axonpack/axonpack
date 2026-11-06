@@ -33,7 +33,9 @@ that field is missing, the default bundle loads and a warning says why. On iOS, 
 in release builds) and expo-dev-client's launcher (debug builds) start React with their own bundle
 URL in place of this package's. With a preview chosen before the launch, the default bundle starts
 and the app reloads once straight into the preview. A switch made in the app hands the preview to
-React directly, so the start after it does not reload again. Going back to the default bundle hands
+React directly, so the start after it does not reload again. That fix was made for the dev
+launcher; a release build with expo-updates takes the same path by the code, but it hasn't been
+run there. Going back to the default bundle hands
 the start back to expo-updates, or to Metro under the dev launcher.
 
 ## Testing next to expo-updates
