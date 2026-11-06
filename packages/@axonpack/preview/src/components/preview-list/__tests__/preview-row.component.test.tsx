@@ -294,3 +294,20 @@ test("a short changelog is shown whole, with nothing to open", () => {
   expect(texts(tree.root)).toContain("Fixed login.");
   expect(texts(tree.root)).not.toContain("Show more");
 });
+
+test("a preview published with file sets names each one and its size, under its own size", () => {
+  const tree = render(
+    item(
+      "downloaded",
+      {},
+      {
+        fileSets: {
+          www: { files: 40, size: 2.5 * 1024 * 1024 },
+          content: { files: 1, size: 300 },
+        },
+      },
+    ),
+  );
+  expect(texts(tree.root)).toContain("Files: www 2.5 MB, content 1 KB");
+  expect(texts(render(item("downloaded")).root).join()).not.toContain("Files");
+});

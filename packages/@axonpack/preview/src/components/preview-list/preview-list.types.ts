@@ -145,6 +145,15 @@ export type PreviewListLabels = {
   environmentPrefix: string;
   compatibilityKey: string;
   /**
+   * File sets: before a preview's sets and their sizes on its row, as in "Files: www 1.2 MB", and
+   * before each set's name in the header card's details.
+   */
+  files: string;
+  /** In the header card's details, which copy of a file set is in use: the running preview's own. */
+  filesPreview: string;
+  /** Or the app's own, the default copy. */
+  filesDefault: string;
+  /**
    * Goes back to the default, stopping a picked dev preview server too: the Metro the app starts
    * on in a debug build, the bundle built into the app in a release build.
    */

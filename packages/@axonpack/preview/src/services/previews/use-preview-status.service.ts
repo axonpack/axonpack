@@ -1,3 +1,6 @@
+import { useContext, useMemo, useSyncExternalStore } from "react";
+
+import { ConfigContext } from "../../components/preview-provider/preview-provider.component";
 import { DEFAULT_LABELS } from "../../constants/preview-list/theme.const";
 import type { PreviewListLabels } from "../../components/preview-list/preview-list.types";
 import {
@@ -24,6 +27,12 @@ import {
   buildKey,
 } from "../native/build-info.service";
 import { nativeModule } from "../native/native.service";
+import {
+  type PreviewFiles,
+  filesCheck,
+  previewFilesPath,
+  subscribeFilesCheck,
+} from "./preview-files.service";
 import { usePreview } from "./use-preview.service";
 import { useRunning } from "./use-running.service";
 
@@ -78,6 +87,11 @@ export type PreviewStatusInfo = {
   /** How this build is matched with previews, and the key it lists them under. */
   compatibility: { mode: Compatibility | null; key: string | null };
   /**
+   * Which copy of each file set in the preview config's `files` is in use, by name, as
+   * `usePreviewFiles(name)` returns it. Empty without `files`.
+   */
+  files: Record<string, PreviewFiles>;
+  /**
    * A bucket URL is set. False when `s3Config.url` is left out, empty or blank: the app reads
    * nothing from a bucket, and the list says previews are not set up.
    */
@@ -101,6 +115,7 @@ export function usePreviewStatus(
   labels?: Partial<PreviewListLabels>,
 ): PreviewStatusInfo {
   const preview = usePreview();
+  const config = useContext(ConfigContext);
   const running = useRunning();
   const { alive, scanning, hosts } = useDevPreviewServersState();
   const words = { ...DEFAULT_LABELS, ...labels };
@@ -132,6 +147,18 @@ export function usePreviewStatus(
   const picked =
     pickedAt !== null &&
     !(native?.defaultServer && sameServer(pickedAt, native.defaultServer));
+  // What runs changes only with a restart. `ready` changes once, when the start's check settles.
+  const check = useSyncExternalStore(subscribeFilesCheck, filesCheck);
+  const files = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.keys(config?.files ?? {}).map((name) => [
+          name,
+          previewFilesPath(name, config!),
+        ]),
+      ),
+    [config, check],
+  );
 
   return {
     running,
@@ -156,6 +183,7 @@ export function usePreviewStatus(
       mode: buildCompatibility(),
       key: preview.buildKey ?? buildKey(),
     },
+    files,
     previewsConfigured: preview.previewsConfigured,
     loading: preview.loading,
     error: preview.error,

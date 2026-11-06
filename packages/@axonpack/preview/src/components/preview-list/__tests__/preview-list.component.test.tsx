@@ -31,7 +31,7 @@ import { HeroCard } from "../hero-card.component";
 import { RefreshIcon } from "../ui/refresh-icon.ui";
 import { Scanning } from "../ui/scanning.ui";
 import { devPreviewServersStore } from "../../../stores/dev-preview-servers/dev-preview-servers.store";
-import { File } from "expo-file-system";
+import { Directory, File } from "expo-file-system";
 
 import {
   previewDirectory,
@@ -1624,4 +1624,31 @@ describe("the hosts at the end of the dev servers card", () => {
     expect(await saved()).toEqual([]);
     await act(async () => tree.unmount());
   });
+});
+
+test("Show details says which copy of each file set the app uses", async () => {
+  const config = {
+    enabled: true,
+    url: "http://localhost:9000/b",
+    files: {
+      www: { default: "file:///android_asset/www/" },
+      docs: { default: "file:///docs/" },
+    },
+  };
+  // The running preview was published with www only.
+  new Directory(previewDirectory("task-1", "ios"), "files/www").create({
+    intermediates: true,
+  });
+  mockNativeState = {
+    bundle: "task-1/ios/main.jsbundle",
+    loaded: { kind: "preview", id: "task-1" },
+  };
+  global.fetch = bucketWithPreview();
+  const tree = await renderConfig(config);
+  await showDetails(tree);
+  const card = textsOf(tree.root.findByType(HeroCard));
+  expect(card[card.indexOf("Files: www") + 1]).toBe("Preview's copy");
+  expect(card[card.indexOf("Files: docs") + 1]).toBe("Default copy");
+  await act(async () => tree.unmount());
+  previewDirectory("task-1", "ios").delete();
 });
