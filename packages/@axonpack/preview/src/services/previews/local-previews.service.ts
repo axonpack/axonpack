@@ -14,6 +14,8 @@ export type LocalPreview = {
   revision: string;
   downloadedAt: string;
   entry: IndexEntry;
+  /** The folder each file set's `onPostDownload` last ran with, by set name. */
+  onPostDownloadUris?: Record<string, string>;
 };
 
 /** The same folder the native side reads: Documents on iOS, the files folder on Android. */

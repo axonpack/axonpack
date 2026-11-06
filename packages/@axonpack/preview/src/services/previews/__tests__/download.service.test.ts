@@ -219,3 +219,147 @@ test("reads nothing without the app's slug, since it can't tell its own folder",
   );
   expect(requests).toEqual([]);
 });
+
+describe("file sets", () => {
+  const page = new TextEncoder().encode("<p>web</p>");
+  const withSet = () =>
+    serve({
+      [`my-app/${entry.manifest}`]: {
+        ...manifest([
+          { path: "main.jsbundle", data: bundle },
+          { path: "files/www/index.html", data: page },
+        ]),
+        fileSets: { www: { files: 1, size: page.length } },
+      },
+      [`my-app/files/${sha256Hex(bundle)}`]: bundle,
+      [`my-app/files/${sha256Hex(page)}`]: page,
+    });
+  const WWW = "file:/docs/preview/task-1/ios/files/www";
+
+  test("come down with the bundle into files/<name>/, then onPostDownload runs once on the final folder", async () => {
+    withSet();
+    const onPostDownload = jest.fn(async (_name: string, uri: string) => {
+      // The files are already in place when it runs.
+      expect(disk.get(`${uri}index.html`)).toEqual(page);
+    });
+    await downloadPreview(
+      {
+        ...config,
+        files: { www: { default: "file:///www/", onPostDownload } },
+      },
+      entry,
+    );
+    expect(disk.get(`${WWW}/index.html`)).toEqual(page);
+    expect(onPostDownload).toHaveBeenCalledTimes(1);
+    expect(onPostDownload).toHaveBeenCalledWith("www", `${WWW}/`, {
+      previousUri: undefined,
+    });
+    // Recorded, so a start after the app's folder moved can tell.
+    const [local] = await listLocalPreviews("ios");
+    expect(local.onPostDownloadUris).toEqual({ www: `${WWW}/` });
+  });
+
+  test("a set file that fails its checksum fails the whole download", async () => {
+    serve({
+      [`my-app/${entry.manifest}`]: manifest([
+        { path: "main.jsbundle", data: bundle },
+        { path: "files/www/index.html", data: page, sha: "0".repeat(64) },
+      ]),
+      [`my-app/files/${sha256Hex(bundle)}`]: bundle,
+      [`my-app/files/${"0".repeat(64)}`]: page,
+    });
+    await expect(downloadPreview(config, entry)).rejects.toThrow(
+      "files/www/index.html did not match its checksum",
+    );
+    expect(disk.has("file:/docs/preview/task-1/ios")).toBe(false);
+  });
+
+  test("an onPostDownload that throws leaves no download behind", async () => {
+    withSet();
+    const onPostDownload = () => {
+      throw new Error("rewrite failed");
+    };
+    await expect(
+      downloadPreview(
+        {
+          ...config,
+          files: { www: { default: "file:///www/", onPostDownload } },
+        },
+        entry,
+      ),
+    ).rejects.toThrow("rewrite failed");
+    expect(disk.has("file:/docs/preview/task-1/ios")).toBe(false);
+    expect(await listLocalPreviews("ios")).toEqual([]);
+  });
+
+  test("an app that doesn't list the set still downloads it, and nothing runs", async () => {
+    withSet();
+    await downloadPreview(config, entry);
+    expect(disk.get(`${WWW}/index.html`)).toEqual(page);
+  });
+});
+
+describe("four files at a time", () => {
+  const files = Array.from({ length: 10 }, (_, i) => ({
+    path: `files/www/${i}.js`,
+    data: new TextEncoder().encode(`file ${i}`),
+  }));
+  /** Serves each file after `delay(key)` ms, counting the requests open at once. */
+  const serveSlowly = (
+    objects: Record<string, unknown>,
+    delay: (key: string) => number,
+  ) => {
+    let open = 0;
+    const seen = { most: 0 };
+    global.fetch = jest.fn(async (url: string | URL) => {
+      const key = String(url).replace(
+        "http://localhost:9000/previews-public/",
+        "",
+      );
+      open++;
+      seen.most = Math.max(seen.most, open);
+      await new Promise((resolve) => setTimeout(resolve, delay(key)));
+      open--;
+      const body = objects[key];
+      if (body === undefined) return new Response("", { status: 404 });
+      return new Response(
+        (body instanceof Uint8Array ? body : JSON.stringify(body)) as BodyInit,
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    return seen;
+  };
+  const objectsFor = (
+    list: { path: string; data: Uint8Array; sha?: string }[],
+  ) => ({
+    [`my-app/${entry.manifest}`]: manifest(list),
+    ...Object.fromEntries(
+      list.map((f) => [`my-app/files/${f.sha ?? sha256Hex(f.data)}`, f.data]),
+    ),
+  });
+
+  test("never more than four, and every file lands checked", async () => {
+    const seen = serveSlowly(objectsFor(files), () => 5);
+    await downloadPreview(config, entry);
+    expect(seen.most).toBe(4);
+    for (const f of files)
+      expect(disk.get(`file:/docs/preview/task-1/ios/${f.path}`)).toEqual(
+        f.data,
+      );
+  });
+
+  test("a failure waits for the downloads on the way, then leaves no folder behind", async () => {
+    const bad = { ...files[1], sha: "0".repeat(64) };
+    const list = [files[0], bad, ...files.slice(2)];
+    // The bad file answers at once, while the three beside it are still on their way.
+    serveSlowly(objectsFor(list), (key) =>
+      key.endsWith("0".repeat(64)) ? 0 : 20,
+    );
+    await expect(downloadPreview(config, entry)).rejects.toThrow(
+      "files/www/1.js did not match its checksum",
+    );
+    // Let anything still running finish, as it would on a device.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect([...disk.keys()].filter((k) => k.includes("task-1/"))).toEqual([]);
+  });
+});
