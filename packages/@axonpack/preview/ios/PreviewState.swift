@@ -294,11 +294,11 @@ enum PreviewState {
     guard let root, let data = try? Data(contentsOf: root.appendingPathComponent("state.json")) else {
       return nil
     }
-    guard
-      let state = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-      let relative = state["bundle"] as? String, !relative.isEmpty
-    else {
+    guard let state = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
       previewLog.warning("Could not read the preview state, loading the base bundle")
+      return nil
+    }
+    guard let relative = state["bundle"] as? String, !relative.isEmpty else {
       return nil
     }
     let bundle = root.appendingPathComponent(relative).standardizedFileURL
