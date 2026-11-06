@@ -31,7 +31,9 @@ npx preview prune
 ```
 
 `publish` builds with `expo export:embed --dev false --bytecode`, the same step a release build
-runs, so the bundle is Hermes bytecode with its images beside it. It builds in a copy of the project
+runs, so the bundle is Hermes bytecode with its images beside it. It runs the app's own
+`expo/bin/cli`, resolved from the app's folder, with `process.execPath`. Through `npx`, npm printed
+`EBADDEVENGINES` in a workspace whose `devEngines` names pnpm or bun. It builds in a copy of the project
 with its own install, unless `--in-place` (see [bundles.md](./bundles.md)). It reads the `compatibility`
 option from the app config (see [bundles.md](./bundles.md)), builds the same key the app was built
 with, records the app version and the native fingerprint either way, uploads each file once under
@@ -44,9 +46,10 @@ are not all there. The changelog is the commit subjects since the branch left th
 
 Each file is a `HEAD` and, when the bucket doesn't have it, a `PUT`. Four files go at once, through
 `forEachAtOnce` (`src/utils/s3/for-each-at-once.util.ts`), the same queue the app's download uses.
-One at a time, a publish to a server across the internet spent about 2.4 s on each new file, small
-ones too, since most of that is waiting on the server. After the first failure no file starts, the
-ones on the way are awaited, and the first error is thrown.
+Most of a request is waiting on the server, so one at a time a small file took about as long as a
+big one. Against a local fake bucket that added 300 ms to each `PUT`, the example's 44 Android files
+took 13.4 s one at a time and 3.4 s four at a time. After the first failure no file starts, the ones
+on the way are awaited, and the first error is thrown.
 
 While it uploads, `publish` prints `<platform>: uploading <n>/<total> (<done>/<all> MB) <path>`:
 the files finished, their MB, and the file started last. In a terminal that is one line redrawn in

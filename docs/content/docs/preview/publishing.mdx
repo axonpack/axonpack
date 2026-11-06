@@ -29,7 +29,8 @@ settings. For each platform, Android then iOS:
 3. **Builds the file sets** in the copy: each [file set's](/docs/preview/files) `build` command,
    then it reads the sets' folders there.
 4. **Builds** with `expo export:embed --dev false --bytecode` in the copy, the same step a release
-   build runs. The result is Hermes bytecode with its images beside it, in the folders the native
+   build runs. It starts your app's own Expo CLI with Node, with no `npx` or other package manager
+   in between. The result is Hermes bytecode with its images beside it, in the folders the native
    build uses.
 5. **Works out the key** from the `compatibility` option in your app config, the same way the
    [config plugin](/docs/preview/compatibility) did for the build. It records the app version and the
