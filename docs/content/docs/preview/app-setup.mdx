@@ -140,7 +140,9 @@ such as `localhost:8081`, is under it. Chips say what it is:
 
 A preview also shows who published it and when. **Show details** opens the rest: the branch, the
 preview id, the environment, the app's name, version and build, the commit, the platform, what the
-build is matched by (app version or fingerprint) and its build key.
+build is matched by (app version or fingerprint) and its build key. With `files` in the config, it
+also has a row for each [file set](/docs/preview/files), such as `Files: www`, that says
+**Preview's copy** or **Default copy**.
 
 When the server the app runs from stops, the card says **Offline** and what to do: start it again,
 or, for a picked server, go back to default. Its title and kind stay as they were when it last
@@ -199,8 +201,9 @@ hosts the app checks, and **Add a host**, for another computer's address. See
 ![Published previews with status and environment chips, changelogs, and Delete, Switch and Update](/preview/screenshots/list-published-previews.png)
 
 Each preview is a card: its title, its branch, chips, the changelog (cut to three lines with **Show
-more**), who published it and how long ago, its size, one main action, and **Delete** once it is on
-the device. The one that
+more**), who published it and how long ago, its size, its [file sets](/docs/preview/files) and
+their sizes when it has any (`Files: www 2.1 MB`), one main action, and **Delete** once it is on the
+device. The one that
 runs takes the header card's tint and has an **Active** chip. `env: <name>` shows when it was
 published with `--environment`.
 
