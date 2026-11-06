@@ -7,5 +7,4 @@
 - **The copy's env**: its install, scripts, set builds and export get `EAS_BUILD=1`, `EAS_BUILD_PLATFORM`, `EAS_BUILD_WORKINGDIR`, `EAS_BUILD_GIT_COMMIT_HASH` and `PREVIEW_PUBLISH=1`, so a script can skip what only makes sense on EAS. `EAS_NO_FROZEN_LOCKFILE=1` installs without freezing the lockfile
 - **`--in-place`** builds in the app's folder as before, with no copy, install or scripts. The CI sample workflows pass it
 - **`--keep-copy`** keeps the copies in the temp folder, to look inside
-- **`--environment` leaves nothing in `.eas/.env/`**: file-type variables go to publish's temp folder, and the export's own temp folder is deleted too
-- **Uploads go four files at a time**: `preview publish` sends four files at once where it sent one, so a publish of hundreds of small files no longer waits on the bucket for each in turn. The export runs your app's own Expo CLI with Node instead of `npx`, so npm no longer prints `EBADDEVENGINES` in a pnpm or bun workspace
+- **Uploads go four files at a time**: `preview publish` sends four files at once where it sent one, so a publish of hundreds of small files no longer waits on the bucket for each in turn

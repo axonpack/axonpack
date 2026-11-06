@@ -9,3 +9,4 @@
 - **Downloads go four files at a time**, so a preview with a large web export comes down faster
 - **The list shows file sets**: a preview row names its sets and their size, and Show details says which copy of each set is in use. New labels `files`, `filesPreview` and `filesDefault`
 - **A changed web build shows Update available**, since the files count toward the preview's revision
+- **`usePreviewStatus()` has `files`**: which copy of each set is in use. New types `PreviewFiles` and `PreviewFilesOptions`
