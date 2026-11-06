@@ -28,9 +28,12 @@ the app, loads as usual.
 expo-updates is placed ahead of every other module on both platforms, so this package is never
 asked first. On Android a chosen preview is also put straight into React's host, in the private
 field expo-dev-launcher uses, so it wins even after expo-updates has applied a downloaded update; if
-that field is missing, the default bundle loads and a warning says why. On iOS, while expo-updates is active,
-the default bundle starts and the app reloads once straight into the preview. Going back to the
-default bundle hands the start back to expo-updates.
+that field is missing, the default bundle loads and a warning says why. On iOS, expo-updates (active
+in release builds) and expo-dev-client's launcher (debug builds) start React with their own bundle
+URL in place of this package's. With a preview chosen before the launch, the default bundle starts
+and the app reloads once straight into the preview. A switch made in the app hands the preview to
+React directly, so the start after it does not reload again. Going back to the default bundle hands
+the start back to expo-updates, or to Metro under the dev launcher.
 
 ## Testing next to expo-updates
 

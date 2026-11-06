@@ -9,9 +9,10 @@ import React
 
  React keeps the URL block it was created with, so it is swapped before the first root view exists,
  which is when this handler runs. Returning nil lets the normal root view be made with the new block.
- expo-updates is ordered ahead of every other handler and answers itself, so with it active this
- handler is not asked; the module then reloads into a selected preview once it starts
- (`startOnSelectedPreview`).
+ Every handler is asked, but expo-updates (when active, so in a release build) and the dev launcher
+ (a debug build with expo-dev-client) put a block of their own in its place when they start React,
+ so ours is never asked again. Then the module reloads into a preview chosen before the launch when
+ it starts (`startOnSelectedPreview`), and `reload()` hands React the choice itself.
  */
 public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
   private typealias BundleURLBlock = @convention(block) () -> URL?
@@ -70,9 +71,10 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
   }
 
   /**
-   For an app whose start this handler did not see (expo-updates answered first): if a preview is
-   selected but the base is what started, reload once into the preview. Once per process, so a
-   preview that cannot load never turns into a reload loop.
+   For a launch whose bundle our block did not pick, because expo-updates or the dev launcher replaced
+   it: if a preview is selected but the base is what started, reload once into the preview. Never
+   after any `reload()` in this process, since that already put the choice in React's bundle
+   configuration. So a preview that cannot load never turns into a reload loop either.
    */
   static func startOnSelectedPreview() {
     // The plain lookup, not `bundleToLoad`: that would count this start as a preview start and the
@@ -88,7 +90,6 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
     if installed, lastServed?.standardizedFileURL == preview.standardizedFileURL {
       return
     }
-    hopped = true
     reload()
   }
 
@@ -100,6 +101,9 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
    whether or not the block above was installed. Each step is checked, since a missing key throws.
    */
   static func reload() {
+    // The start this triggers must not hop again: a second reload would claim a second start, find
+    // this one's claim still pending, and mark the preview broken.
+    hopped = true
     PreviewState.nextStart()
     defer { RCTTriggerReloadCommandListeners("preview: switch bundle") }
     guard
@@ -117,8 +121,9 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
       return
     }
     manager.setValue(configuration, forKey: "bundleConfig")
-    // With expo-updates first the block above is not installed, so this is the only record of the
-    // start. With the block, the reload asks it next and it records the same choice, or the server.
+    // Once expo-updates or the dev launcher has replaced the block above, this is the only record of
+    // the start. While the block is React's, the reload asks it next and it records the same choice,
+    // or the server.
     PreviewState.recordLoaded(local: nil, preview: preview)
   }
 
