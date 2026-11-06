@@ -133,6 +133,29 @@ the preview was made for another native build.
 **Fix.** Turn on the New Architecture. Publish again from the code the installed build was made from.
 The device log has a warning for the first two cases.
 
+## A preview shows the installed build's web app
+
+**Cause.** The preview was published without the [file set](/docs/preview/files), or under another
+name than the one the app asks for. Under **Show details** the header card then says **Default
+copy**.
+**Fix.** Check that publish printed `files <name>: <n> files from <folder>`, and that the name in
+the plugin's `files` option, the preview config's `files` and `usePreviewFiles(name)` is the same.
+A device that downloaded the preview before it had the set shows **Update available**; update it.
+
+## "files.www: web/dist has no files"
+
+**Cause.** The folder named in the plugin's `files` option is missing or empty when you publish.
+**Fix.** Build the web app first or give the set a
+[`build` command](/docs/preview/files#build-the-files-when-you-publish), or fix the folder, which is
+relative to the app's root. With a `build` command, check that it writes into that folder.
+
+## "files.www: the build command failed"
+
+**Cause.** The set's `build` command exited with an error, so nothing was published. Its own output
+is above the message.
+**Fix.** Run the command from the app's root to see it fail there. With `--environment`, a variable
+with secret visibility isn't passed to it; set that one in the shell or as a CI secret.
+
 ## Dev preview servers lists nothing
 
 **Cause.** The build is a release build, `enabled` or `devPreviewServers` is off, the build has no

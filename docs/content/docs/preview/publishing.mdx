@@ -18,7 +18,8 @@ With bun, use `bunx preview`; with pnpm, `pnpm exec preview`; with yarn, `yarn p
 
 ## What publish does
 
-For each platform, Android then iOS:
+First it runs the `build` command of each [file set](/docs/preview/files) that has one, and reads
+the sets' folders. Then, for each platform, Android then iOS:
 
 1. **Builds** with `expo export:embed --dev false --bytecode`, the same step a release build runs.
    The result is Hermes bytecode with its images beside it, in the folders the native build uses.
@@ -105,6 +106,9 @@ Everything goes in a folder named after the app's slug, so several apps can shar
 | `<slug>/index.json`                          | People. Every native build and its previews          |
 | `<slug>/previews/<platform>/<key>/<id>.json` | The app, when it downloads that preview              |
 | `<slug>/files/<sha256>`                      | The app, when it downloads that preview              |
+
+A preview's [file sets](/docs/preview/files) go up the same way: each file once, under its sha256,
+listed in the manifest under `files/<name>/`.
 
 Two publishes at the same time both end up listed. The lists are written only if nobody wrote in
 between, and a clash reads again and retries.

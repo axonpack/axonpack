@@ -12,9 +12,25 @@ live. No rebuild per task.
 
 One switch in the provider's config:
 
+<Tabs items={['Without devtools', 'With expo-devtools']}>
+
+<Tab value="Without devtools">
+
 ```ts
 <PreviewProvider config={{ ...previewConfig, devPreviewServers: true }}>
 ```
+
+</Tab>
+
+<Tab value="With expo-devtools">
+
+```ts
+supports: [PreviewV0Support.configure({ ...previewConfig, devPreviewServers: true })],
+```
+
+</Tab>
+
+</Tabs>
 
 It is off by default, stays off while `enabled` is false, and only shows in a debug build. A
 release build ignores it, even if a server choice is in the saved state. The app also needs the

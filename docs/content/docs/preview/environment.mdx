@@ -109,6 +109,8 @@ npx preview publish --environment preview
 - The values go into the environment of every step that reads the app config: the config itself
   (app version, slug), the fingerprint and `expo export:embed`. So the preview's key matches a build
   made in that environment.
+- They also reach each [file set's](/docs/preview/files#build-the-files-when-you-publish) `build`
+  command, so a web export built there uses the same values as the bundle.
 - A variable already set in your shell wins over the EAS one.
 - The environment's name is recorded in the preview's manifest and list entry. The app shows it as an
   `env: <name>` chip on the preview's row and on the header card while it runs. Previews published

@@ -97,6 +97,10 @@ npx preview publish
 The write key is for publishing only. Never put it in the app: the app gets the bucket's public
 address, or a read-only key for a private bucket.
 
+A folder that ships beside the JS, such as the web app a WebView shows, can go with each preview.
+Name it in the plugin's `files` option, and `usePreviewFiles(name)` gives the copy that goes with
+the running bundle. See [Files with a preview](https://axonpack.dev/docs/preview/files).
+
 An [agent skill](https://axonpack.dev/docs/agent-skills) teaches your coding agent this package:
 `npx skills add axonpack/skills`.
 
@@ -116,6 +120,7 @@ Everything else is on the docs site.
 | [CI](https://axonpack.dev/docs/preview/ci)                                   | Publish every pull request with GitHub Actions                                                               |
 | [Compatibility](https://axonpack.dev/docs/preview/compatibility)             | The config plugin, and app version or fingerprint                                                            |
 | [App setup](https://axonpack.dev/docs/preview/app-setup)                     | The provider, the list and its theme, your own screen, and the status                                        |
+| [Files with a preview](https://axonpack.dev/docs/preview/files)              | A folder, such as a WebView's web app, published with each preview, and its path in the app                  |
 | [Dev preview servers](https://axonpack.dev/docs/preview/dev-preview-servers) | Several Metro servers, one per worktree or computer, found on the network and switched live in a debug build |
 | [expo-updates](https://axonpack.dev/docs/preview/expo-updates)               | How previews sit on top of a build that expo-updates manages                                                 |
 | [Troubleshooting](https://axonpack.dev/docs/preview/troubleshooting)         | An empty list, a failed download, and what to check                                                          |
@@ -126,7 +131,9 @@ Everything else is on the docs site.
 ## Example app
 
 `example/` is the default `create-expo-app` template with the list on a Previews tab and a banner
-on every tab that says what runs. It publishes to a local MinIO, so it needs no cloud account:
+on every tab that says what runs. Its Home tab reads `web/content.json` from the copy that goes with
+the running bundle, so a preview published with a changed file shows the change. It publishes to a
+local MinIO, so it needs no cloud account:
 
 ```sh
 bun run storage:local                       # MinIO in Docker or Podman

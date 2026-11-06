@@ -16,6 +16,15 @@ preview <command> [options]
 
 Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/preview/publishing).
 
+With the config plugin's `files` option it uploads those folders too. Before it builds the bundle,
+it runs each set's `build` command, if it has one, after printing `files <name>: building with <command>`.
+A command that fails stops it with `files.<name>: the build command failed with exit code <n>: <command>`.
+Then it prints `files <name>: <n> files from <folder>` for each set, and it stops with
+`files.<name>: <folder> has no files.` when a folder is missing or empty. That error ends with
+`Build it before publishing, or give the set a build command.`, or with
+`Check that its build command writes there.` for a set that has one.
+See [Files with a preview](/docs/preview/files).
+
 | Option                     | Default                     | What it does                                                                   |
 | -------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
 | `--id <id>`                | the git branch              | The preview's id. Publishing an id again replaces it                           |
@@ -26,11 +35,15 @@ Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/
 | `--changelog-file <path>`  |                             | Read the changelog from a file                                                 |
 | `--entry-file <path>`      | Expo's own                  | Passed to `expo export:embed`                                                  |
 | `--compatibility <c>`      | the plugin option           | `appVersion` or `fingerprint`. Overrides the app config, with a warning        |
-| `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
+| `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. The values also reach each file set's `build` command. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
 
-For each platform it prints these lines, with the output of `expo export:embed` after the first:
+With one file set named `www` that has a `build` command, it prints these lines. The `files` lines
+come once, before the first bundle, with the command's own output after `building with`. The rest
+repeat for each platform, with the output of `expo export:embed` after `building`:
 
 ```
+files www: building with npm --prefix ../web run build
+files www: 12 files from ../web/out
 android: building task-1
 android: uploading 31/79 (1.2/23.4 MB) drawable-xxhdpi/foo.png
 android: 79 files, 12 new, 67 already in the bucket
@@ -38,7 +51,8 @@ android: published task-1 for build version-1.0.0
 android: https://<server>/<bucket>/<slug>/index/android/version-1.0.0.json
 ```
 
-The `uploading` line gives the file it is on, its number out of all the files, and how many MB of
+The `uploading` line gives the file it is on, its number out of all the files (the bundle's and the
+file sets'), and how many MB of
 the files before it are done. In a terminal it is one line, redrawn for each file and cleared once
 every file is up. Without a terminal, as in CI, it is printed for the 1st file, the 21st, the 41st
 and so on.

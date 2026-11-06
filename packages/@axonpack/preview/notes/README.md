@@ -13,6 +13,7 @@ only disagree with these.
 | [testing.md](./testing.md)                         | Running the example end to end on your own machine                |
 | [dev-preview-servers.md](./dev-preview-servers.md) | Several local Metro servers for one app, switched live (debug)    |
 | [list.md](./list.md)                               | The ready-made list in the app, and the hook that says what runs  |
+| [files.md](./files.md)                             | Folders that go with a preview beside its bundle, such as a `www` |
 
 To run the example end to end without a cloud account, follow [testing.md](./testing.md).
 

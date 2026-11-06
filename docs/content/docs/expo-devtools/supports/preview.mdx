@@ -63,8 +63,11 @@ export default function Root() {
 [Settings and env files](/docs/preview/environment#the-apps-settings). If the app already mounts
 `<PreviewProvider>`, remove it.
 
-Preview's hooks, such as `usePreview()` and `usePreviewStatus()`, and a `PreviewList` of your own
-work anywhere inside `DevtoolsProvider`, since its provider is above them.
+Preview's hooks, such as `usePreview()`, `usePreviewStatus()` and `usePreviewFiles()`, and a
+`PreviewList` of your own work anywhere inside `DevtoolsProvider`, since its provider is above them.
+
+A folder can go with each preview, such as the web app a WebView shows. Its default copy goes under
+`files` in this same config. See [Files with a preview](/docs/preview/files#with-expo-devtools).
 
 ## Read its state with useSupport
 

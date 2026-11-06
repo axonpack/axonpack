@@ -70,6 +70,12 @@ These names have no `EXPO_PUBLIC_` prefix, so Expo never builds them into the ap
 }
 ```
 
+Then mount the provider. Use whichever of these matches your app.
+
+<Tabs items={['Without devtools', 'With expo-devtools']}>
+
+<Tab value="Without devtools">
+
 ```tsx title="App.tsx"
 import { PreviewList, PreviewProvider } from '@axonpack/preview';
 
@@ -86,6 +92,42 @@ export default function App() {
 
 In a real app the list goes on a screen QA can reach, and the provider wraps the whole app. See
 [App setup](/docs/preview/app-setup).
+
+</Tab>
+
+<Tab value="With expo-devtools">
+
+With [`@axonpack/expo-devtools`](/docs/expo-devtools), the devtools mount preview's provider, and
+the list is their **Preview** tab:
+
+```tsx title="App.tsx"
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import PreviewV0Support, { type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+const previewConfig: PreviewConfig = {
+  enabled: true,
+  s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
+};
+
+export default function App() {
+  return (
+    <DevtoolsProvider
+      config={{ enabled: true, supports: [PreviewV0Support.configure(previewConfig)] }}
+    >
+      <YourApp />
+    </DevtoolsProvider>
+  );
+}
+```
+
+If the app already has a `DevtoolsProvider`, add the support to its `supports`. A preview is a
+release bundle, so `enabled: __DEV__` would hide the tab inside one. See
+[Keep the devtools on inside a preview](/docs/expo-devtools/supports/preview#keep-the-devtools-on-inside-a-preview)
+and [With expo-devtools](/docs/preview/app-setup#with-expo-devtools).
+
+</Tab>
+
+</Tabs>
 
 </Step>
 <Step>
@@ -132,6 +174,8 @@ this way the default and the preview look different.
 
 Open the list in the app and pull it down, or tap the Refresh icon. The preview is there. Tap **Download**, then
 **Switch**. The app restarts into the preview and shows your change. Tap **Back to default** to return.
+
+With expo-devtools, the list is the **Preview** tab in the devtools panel.
 
 Publish the same id again with another change and the row says **Update available**.
 
