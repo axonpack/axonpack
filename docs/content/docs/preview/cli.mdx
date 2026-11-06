@@ -97,6 +97,35 @@ Expo loads for a release build; the environment wins over them. Keep the write k
 
 `start` needs none of them.
 
+## Errors and retries
+
+When a request to the bucket can't be sent, or the connection drops before the answer, the message
+names the request and the reason Node gave, with its error code:
+
+```
+preview: PUT files/<sha256> failed: ECONNRESET read ECONNRESET
+preview: HEAD files/<sha256> failed: ENOTFOUND getaddrinfo ENOTFOUND minio.example.com
+```
+
+Keys are shown as they are inside the app's slug folder. A listing, from `prune`, shows its prefix
+with the slug instead, such as `GET <slug>/files/ failed: ...`.
+
+When the code says the connection was reset or refused, or timed out (`ECONNRESET`,
+`ECONNREFUSED`, `ETIMEDOUT`, `EPIPE`, `UND_ERR_SOCKET` or `UND_ERR_CONNECT_TIMEOUT`), the CLI sends
+the request again after 1, 2 and 4 seconds. If the fourth try fails too, the message says so:
+
+```
+preview: PUT files/<sha256> failed after 4 tries: ECONNREFUSED connect ECONNREFUSED 203.0.113.7:9000
+```
+
+Every request it sends is safe to repeat. A list write whose first try did land gets 412 on the
+repeat, and the CLI reads the list again and writes it again, as it does when two publishes clash.
+
+When the bucket answers with an error status, nothing is retried and the message gives the status,
+the key and the start of the bucket's answer: `S3 403 for <key>: <body>`.
+
+A publish that stopped partway can be run again. The files already in the bucket are skipped.
+
 ## Exit codes
 
 A command that fails prints `preview: <message>` and exits with 1.

@@ -72,6 +72,18 @@ region (`PREVIEW_S3_REGION` for the CLI, `s3Config.region` in the app) for an AW
 **Fix.** Set it in the shell or CI secrets, or in `.env.local` in the app's root. See
 [Settings and env files](/docs/preview/environment).
 
+## Publish fails with "failed: ECONNRESET" or "ECONNREFUSED"
+
+For example `preview: PUT files/<sha256> failed after 4 tries: ECONNRESET read ECONNRESET`.
+
+**Cause.** The connection to the bucket dropped, or nothing answered on its port: the server
+restarted or stopped, or a proxy or the network cut the connection. The CLI already tried that
+request 4 times over 7 seconds.
+**Fix.** Check that the server is up and that this machine reaches it, then run publish again. The
+files already uploaded are skipped. `ENOTFOUND` means the host name in `PREVIEW_S3_URL` doesn't
+resolve, and a certificate code such as `CERT_HAS_EXPIRED` means the HTTPS certificate is the
+problem. Neither is retried. See [Errors and retries](/docs/preview/cli#errors-and-retries).
+
 ## "No git branch to name the preview after"
 
 **Cause.** A detached HEAD, which is normal on CI.

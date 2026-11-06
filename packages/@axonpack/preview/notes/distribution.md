@@ -10,6 +10,8 @@ Publishing a preview so installed apps can find it.
 - [x] Removes a preview, and cleans up files nothing uses any more
 - [x] Records the EAS environment a preview was built with, so the app can show it
 - [x] Runs against a local S3 server while developing
+- [x] Names the request and the network error when a request fails, and sends it again when the
+      connection dropped
 
 Previews go to an S3-compatible bucket: S3, R2, MinIO or any other host with the S3 API. The app
 gets the endpoint, the bucket and, for a private bucket, a read-only key from the config it passes
@@ -34,6 +36,21 @@ its sha256, writes the preview's manifest, and only then adds it to the lists. `
 overrides the option, with a warning, since a build of the app would then not list the preview. An app never sees a preview whose files
 are not all there. The changelog is the commit subjects since the branch left the base branch
 (`--base`, default: the repo's default branch); `--changelog=<text>` or `--changelog-file` replace it.
+
+### Output and errors
+
+Every request goes through `s3Fetch` (`src/services/s3/s3.service.ts`), the app's too. When `fetch`
+throws, Node's message is only `fetch failed` and the reason is on `cause`, so `s3Fetch` throws
+`<METHOD> <key> failed: <code> <message>` with the original as `cause`. Without a code on the cause
+(React Native's fetch sets none) it keeps fetch's own message first, which is what the list's error
+matching reads. It retries only a thrown fetch whose cause code is `ECONNRESET`, `ECONNREFUSED`,
+`ETIMEDOUT`, `EPIPE`, `UND_ERR_SOCKET` or `UND_ERR_CONNECT_TIMEOUT`, after 1, 2 and 4 s, and then says
+`failed after 4 tries`. An HTTP status is never retried, and since React Native's fetch sets no
+cause code, the app never retries at all. Every request is safe to send twice: reads, files named by their hash, manifests that are overwritten
+anyway, and the two lists, where a repeat whose first try landed gets 412 and `updateJson` reads its
+own write back and writes the same change again (`upsertPreview`, `removePreview` and
+`syncRootVersion` give the same result when run twice). A publish that stopped partway can be run
+again; the files already up are skipped.
 
 ### EAS environment
 

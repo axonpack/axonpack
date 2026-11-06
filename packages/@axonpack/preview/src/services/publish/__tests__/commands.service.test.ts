@@ -31,7 +31,7 @@ jest.mock("../../cli/project.service", () => ({
 // One fake bucket: GET, HEAD, PUT with If-Match / If-None-Match, DELETE and ListObjectsV2.
 const objects = new Map<string, { body: string; etag: string }>();
 let writes = 0;
-global.fetch = jest.fn(async (input: string | URL, init?: RequestInit) => {
+const bucket = async (input: string | URL, init?: RequestInit) => {
   const url = new URL(String(input));
   const method = init?.method ?? "GET";
   const headers = (init?.headers ?? {}) as Record<string, string>;
@@ -60,7 +60,7 @@ global.fetch = jest.fn(async (input: string | URL, init?: RequestInit) => {
   return new Response(method === "HEAD" ? null : found.body, {
     headers: { etag: found.etag },
   });
-}) as typeof fetch;
+};
 
 const s3 = (slug: string): S3Config => ({
   endpoint: "http://s3.test",
@@ -89,8 +89,10 @@ const listed = (slug: string) =>
 
 beforeEach(() => {
   objects.clear();
+  global.fetch = jest.fn(bucket) as typeof fetch;
   jest.spyOn(process.stdout, "write").mockImplementation(() => true);
 });
+afterEach(() => jest.restoreAllMocks());
 
 test("two apps in one bucket each keep to their own folder", async () => {
   await publish(options("one", "task-1"));
@@ -120,4 +122,40 @@ test("two apps in one bucket each keep to their own folder", async () => {
   await prune(s3("one"));
   expect(objects.has(`one/files/${"a".repeat(64)}`)).toBe(false);
   expect(objects.has(`two/files/${"a".repeat(64)}`)).toBe(true);
+});
+
+test("a list write that landed before the connection dropped is read again, and the preview listed once", async () => {
+  const index = "one/index/ios/version-1.0.0.json";
+  let puts = 0;
+  global.fetch = jest.fn(async (input: string | URL, init?: RequestInit) => {
+    const res = await bucket(input, init);
+    if (
+      init?.method === "PUT" &&
+      String(input).endsWith(index) &&
+      ++puts === 1
+    ) {
+      // The bucket kept the write, but the answer never arrived.
+      throw Object.assign(new TypeError("fetch failed"), {
+        cause: Object.assign(new Error("read ECONNRESET"), {
+          code: "ECONNRESET",
+        }),
+      });
+    }
+    return res;
+  }) as typeof fetch;
+  const realSetTimeout = global.setTimeout;
+  jest
+    .spyOn(global, "setTimeout")
+    .mockImplementation(((fn: () => void) =>
+      realSetTimeout(fn, 0)) as unknown as typeof setTimeout);
+
+  await publish(options("one", "task-1"));
+
+  // The first try landed, the repeat got 412, and the list was read and written again.
+  expect(puts).toBe(3);
+  expect(listed("one").map((p) => p.id)).toEqual(["task-1"]);
+  const root = JSON.parse(objects.get("one/index.json")!.body);
+  expect(root.versions[0].previews.map((p: { id: string }) => p.id)).toEqual([
+    "task-1",
+  ]);
 });
