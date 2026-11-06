@@ -298,5 +298,11 @@ Metro. Allow it in the app's settings, or on the emulator run
 - **This app only.** Servers for another slug are never listed.
 - **Plain HTTP on the local network.** An Expo app's iOS build allows plain HTTP to local addresses
   only, so another host must be on the same network as the device, not a server on the internet.
+- **With expo-dev-client, the dev launcher picks the server at launch.** A cold launch starts on
+  the server the dev launcher opens, even when another one is picked in this list. Tap the picked
+  server's row to switch to it. On iOS that switch works with Expo SDK 58, and 57.0.23 or later.
+  With an older release, such as 57.0.8, the app stays on the dev launcher's server. While a
+  picked server runs on iOS, no row says **Default server**, and picking the dev launcher's own
+  server shows it as picked, not as the default.
 
 **Next:** [expo-updates](/docs/preview/expo-updates)

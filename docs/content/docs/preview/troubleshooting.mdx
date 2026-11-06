@@ -213,6 +213,16 @@ phone, run `adb reverse` for each port, or start the servers with `preview start
 PATH. See
 [Dev preview servers](/docs/preview/dev-preview-servers#reaching-the-servers).
 
+## A picked dev preview server doesn't load with expo-dev-client
+
+The app starts on the server the dev launcher opened, not the one picked in the dev servers list.
+
+**Cause.** In a build with expo-dev-client, the dev launcher chooses the server at launch. On iOS,
+an older Expo release, such as 57.0.8, also keeps the dev launcher's server when you tap a row.
+**Fix.** Tap the picked server's row after each launch. On iOS, use Expo SDK 58, or 57.0.23 or
+later. See
+[Limits](/docs/preview/dev-preview-servers#limits).
+
 ## A computer on the same Wi-Fi doesn't show
 
 A `preview start` on the same Wi-Fi, a teammate's or your own, doesn't show in the dev servers list.

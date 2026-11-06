@@ -149,3 +149,15 @@ native would load the server first; "Back to default" clears both. A picked serv
 Metro the app starts on anyway counts as the default. The server the app runs from is read from what the
 app actually loaded, so the default's Metro shows Active too, not only one picked by hand.
 Loopback names (`localhost`, `127.0.0.1`, the emulator's `10.0.2.2`) count as one machine.
+
+**Under expo-dev-client.** The dev launcher starts React on its own server, so at a cold launch it
+wins over a picked server on both platforms (from the code, not run). On iOS it also replaces the
+bundle URL block before the block ever runs, so the block never reads the picked server or React's
+own URL. iOS `reload()` then puts the picked server in React's bundle configuration as Expo's
+`EXBundleConfiguration`, the class the dev launcher uses for its own server, and records the server
+as loaded. Expo 58 and 57.0.23 have the class, 57.0.8 doesn't, and without it the reload stays on
+the dev launcher's server. Like the dev launcher's own, that configuration keeps the server on
+every later reload, even once it stops answering. `defaultServer` stays null there, so no row is
+marked Default while a picked server runs, and picking the dev launcher's own server doesn't count
+as the default. Android points dev support at the server as without the dev launcher, which writes
+its own server through the same `debugServerHost`.
