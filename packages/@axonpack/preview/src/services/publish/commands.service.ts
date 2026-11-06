@@ -43,6 +43,9 @@ import {
 import { fingerprint } from "../cli/project.service";
 
 const log = (message: string) => process.stdout.write(`${message}\n`);
+const mb = (bytes: number) => (bytes / 1e6).toFixed(1);
+// Without a terminal (CI), one progress line per this many files.
+const PROGRESS_EVERY = 20;
 
 /**
  * Read, change, write back only if nobody else wrote in between (the ETag still matches), and
@@ -105,17 +108,38 @@ export async function publish(options: PublishOptions) {
       options.compatibility === "appVersion" ? version : fp,
     );
 
+    const total = files.reduce((sum, f) => sum + f.size, 0);
+    const tty = process.stdout.isTTY;
     let uploaded = 0;
-    for (const file of files) {
-      if (await exists(s3, fileKey(file.sha256))) continue;
-      await putObject(
-        s3,
-        fileKey(file.sha256),
-        readFileSync(file.absolutePath),
-      );
-      uploaded++;
+    let done = 0;
+    try {
+      for (const [i, file] of files.entries()) {
+        const line = `${platform}: uploading ${i + 1}/${files.length} (${mb(done)}/${mb(total)} MB) ${file.path}`;
+        // Cut to the terminal's width: a line that wraps can't be redrawn in place.
+        if (tty)
+          process.stdout.write(
+            `\r\x1b[K${line.slice(0, (process.stdout.columns || 80) - 1)}`,
+          );
+        else if (i % PROGRESS_EVERY === 0) log(line);
+        if (!(await exists(s3, fileKey(file.sha256)))) {
+          await putObject(
+            s3,
+            fileKey(file.sha256),
+            readFileSync(file.absolutePath),
+          );
+          uploaded++;
+        }
+        done += file.size;
+      }
+    } catch (error) {
+      // Keep the last line, so the error printed under it shows which file was going up.
+      if (tty) process.stdout.write("\n");
+      throw error;
     }
-    log(`${platform}: ${files.length} files, ${uploaded} new`);
+    if (tty) process.stdout.write("\r\x1b[K");
+    log(
+      `${platform}: ${files.length} files, ${uploaded} new, ${files.length - uploaded} already in the bucket`,
+    );
 
     const info = previewInfo(
       {
@@ -158,7 +182,7 @@ export async function publish(options: PublishOptions) {
         )
         .digest("hex")
         .slice(0, 16),
-      size: files.reduce((sum, f) => sum + f.size, 0),
+      size: total,
       changelog: shortChangelog(options.changelog),
       manifest: manifestPath,
     };

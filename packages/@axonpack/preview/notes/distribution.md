@@ -10,6 +10,7 @@ Publishing a preview so installed apps can find it.
 - [x] Removes a preview, and cleans up files nothing uses any more
 - [x] Records the EAS environment a preview was built with, so the app can show it
 - [x] Runs against a local S3 server while developing
+- [x] Shows upload progress, and says how many files the bucket already had
 - [x] Names the request and the network error when a request fails, and sends it again when the
       connection dropped
 
@@ -38,6 +39,12 @@ are not all there. The changelog is the commit subjects since the branch left th
 (`--base`, default: the repo's default branch); `--changelog=<text>` or `--changelog-file` replace it.
 
 ### Output and errors
+
+While it uploads, `publish` prints `<platform>: uploading <n>/<total> (<done>/<all> MB) <path>`.
+In a terminal that is one line redrawn in place (cut to the terminal's width, since a wrapped line
+can't be redrawn) and cleared at the end; when a request fails it stays, so the error under it shows
+the file. Without a terminal it is printed for the 1st file and every 20th after it. The summary is
+`<platform>: <n> files, <new> new, <skipped> already in the bucket`.
 
 Every request goes through `s3Fetch` (`src/services/s3/s3.service.ts`), the app's too. When `fetch`
 throws, Node's message is only `fetch failed` and the reason is on `cause`, so `s3Fetch` throws

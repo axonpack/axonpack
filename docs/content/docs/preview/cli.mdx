@@ -28,9 +28,26 @@ Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/
 | `--compatibility <c>`      | the plugin option           | `appVersion` or `fingerprint`. Overrides the app config, with a warning        |
 | `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
 
-When it is done, it prints two lines per platform: `<platform>: published <id> for build <key>`,
-then the URL of that build's index in the bucket. `<key>` is the build's compatibility key, so it
-has to match the key in the installed build for the preview to show in its list.
+For each platform it prints these lines, with the output of `expo export:embed` after the first:
+
+```
+android: building task-1
+android: uploading 31/79 (1.2/23.4 MB) drawable-xxhdpi/foo.png
+android: 79 files, 12 new, 67 already in the bucket
+android: published task-1 for build version-1.0.0
+android: https://<server>/<bucket>/<slug>/index/android/version-1.0.0.json
+```
+
+The `uploading` line gives the file it is on, its number out of all the files, and how many MB of
+the files before it are done. In a terminal it is one line, redrawn for each file and cleared once
+every file is up. Without a terminal, as in CI, it is printed for the 1st file, the 21st, the 41st
+and so on.
+A file the bucket already has under its sha256 is not sent again. The next line counts the files
+that were new and the ones that were already in the bucket.
+
+The last two lines name the build key and the URL of that build's index in the bucket. `<key>` is
+the build's compatibility key, so it has to match the key in the installed build for the preview to
+show in its list.
 
 ## unpublish
 

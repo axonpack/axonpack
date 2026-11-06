@@ -87,6 +87,9 @@ const listed = (slug: string) =>
   JSON.parse(objects.get(`${slug}/index/ios/version-1.0.0.json`)!.body)
     .previews as { id: string }[];
 
+const written = () =>
+  (process.stdout.write as jest.Mock).mock.calls.map(([text]) => String(text));
+
 beforeEach(() => {
   objects.clear();
   global.fetch = jest.fn(bucket) as typeof fetch;
@@ -158,4 +161,23 @@ test("a list write that landed before the connection dropped is read again, and 
   expect(root.versions[0].previews.map((p: { id: string }) => p.id)).toEqual([
     "task-1",
   ]);
+});
+
+test("says how many files were already in the bucket, and redraws one line in a terminal", async () => {
+  const { isTTY, columns } = process.stdout;
+  try {
+    Object.assign(process.stdout, { isTTY: false });
+    await publish(options("one", "task-1"));
+    Object.assign(process.stdout, { isTTY: true, columns: 20 });
+    await publish(options("one", "task-2"));
+  } finally {
+    Object.assign(process.stdout, { isTTY, columns });
+  }
+  expect(written()).toContain(
+    "ios: uploading 1/1 (0.0/0.0 MB) main.jsbundle\n",
+  );
+  expect(written()).toContain("ios: 1 files, 1 new, 0 already in the bucket\n");
+  // Cut to the width, so it never wraps.
+  expect(written()).toContain("\r\x1b[Kios: uploading 1/1 ");
+  expect(written()).toContain("ios: 1 files, 0 new, 1 already in the bucket\n");
 });
