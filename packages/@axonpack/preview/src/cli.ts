@@ -128,7 +128,8 @@ async function main() {
     try {
       // Before anything reads the app config: the config, fingerprint and export must all see the
       // same variables a build in that environment saw, or the key would not match.
-      if (values.environment) applyEasEnv(projectRoot, values.environment);
+      if (values.environment)
+        applyEasEnv(projectRoot, values.environment, join(work, "env"));
       const git = gitInfo(projectRoot, { id: values.id });
       const id = values.id ?? git.branch;
       if (!id)

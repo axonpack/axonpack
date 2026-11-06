@@ -212,7 +212,7 @@ describe("publish", () => {
 
   test("a set's build runs first, from the project root, with the --environment values", async () => {
     const root = project();
-    applyEasEnv(root, "preview");
+    applyEasEnv(root, "preview", join(root, "env"));
     try {
       await run(root, {
         www: {

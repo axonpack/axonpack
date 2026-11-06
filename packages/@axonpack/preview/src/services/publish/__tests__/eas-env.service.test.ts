@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -26,6 +34,7 @@ afterAll(() =>
   made.forEach((dir) => rmSync(dir, { recursive: true, force: true })),
 );
 const outDir = () => join(temp("run"), "out");
+const filesDir = () => join(temp("run"), "env");
 
 const pulledFile = () => {
   const args: string[] = run.mock.calls[0][1];
@@ -54,7 +63,7 @@ beforeEach(() => run.mockReset());
 
 test("pulls with eas env:pull into a temp file outside the project, and deletes it", () => {
   pullWrites(pulled);
-  expect(pullEasEnv("/app", "preview")).toEqual({
+  expect(pullEasEnv("/app", "preview", filesDir())).toEqual({
     API_URL: "https://preview.example.com",
     SHARED: "from-eas",
   });
@@ -77,7 +86,7 @@ test("the temp file is deleted when eas fails too", () => {
     writeFileSync(args[args.indexOf("--path") + 1], pulled);
     throw new Error("boom");
   });
-  expect(() => pullEasEnv("/app", "preview")).toThrow("boom");
+  expect(() => pullEasEnv("/app", "preview", filesDir())).toThrow("boom");
   expect(existsSync(dirname(pulledFile()))).toBe(false);
 });
 
@@ -86,7 +95,7 @@ test("the values reach the export's environment, and the shell's own values win"
   process.env = { ...env, SHARED: "from-shell" };
   try {
     pullWrites(pulled);
-    applyEasEnv("/app", "preview");
+    applyEasEnv("/app", "preview", filesDir());
     let exportEnv: Record<string, string | undefined> = {};
     run.mockImplementationOnce((_cmd, args: string[], { env }) => {
       exportEnv = env;
@@ -110,7 +119,7 @@ test("the values reach the export's environment, and the shell's own values win"
 describe("says what to do when eas", () => {
   test("is not installed", () => {
     failsWith({ code: "ENOENT" });
-    expect(() => pullEasEnv("/app", "preview")).toThrow(
+    expect(() => pullEasEnv("/app", "preview", filesDir())).toThrow(
       "npm install -g eas-cli",
     );
   });
@@ -122,7 +131,9 @@ describe("says what to do when eas", () => {
         "An Expo user account is required to proceed.\nEither log in with eas login or set the EXPO_TOKEN environment variable",
       stderr: "    Error: env:pull command failed.\n",
     });
-    expect(() => pullEasEnv("/app", "preview")).toThrow("run eas login");
+    expect(() => pullEasEnv("/app", "preview", filesDir())).toThrow(
+      "run eas login",
+    );
   });
 
   test("has no project linked", () => {
@@ -132,14 +143,14 @@ describe("says what to do when eas", () => {
         "EAS project not configured.\nMust configure EAS project by running 'eas init' before this command can be run in non-interactive mode.\n",
       stderr: "    Error: env:pull command failed.\n",
     });
-    expect(() => pullEasEnv("/app", "preview")).toThrow(
+    expect(() => pullEasEnv("/app", "preview", filesDir())).toThrow(
       "linked to EAS: run eas init",
     );
   });
 
   test("fails another way: its own output is passed on", () => {
     failsWith({ status: 1, stdout: "", stderr: "Environment not found\n" });
-    expect(() => pullEasEnv("/app", "staging")).toThrow(
+    expect(() => pullEasEnv("/app", "staging", filesDir())).toThrow(
       "eas env:pull --environment staging failed:\nEnvironment not found",
     );
   });
@@ -166,10 +177,69 @@ test("publish settings: the shell wins over EAS, and EAS over Expo's env files",
   const env: Record<string, string | undefined> = {
     [ENV.secretAccessKey]: "shell-secret",
   };
-  applyEasEnv(project, "preview", env);
+  applyEasEnv(project, "preview", filesDir(), env);
   expect(readConfig(project, env)).toMatchObject({
     bucket: "from-eas",
     region: "file-region",
     credentials: { accessKeyId: "eas-id", secretAccessKey: "shell-secret" },
+  });
+});
+
+describe("file-type variables", () => {
+  /** What eas-cli does with one: the file in the project's .eas/.env/, its path as the value. */
+  const pullWritesFile = (project: string) =>
+    run.mockImplementationOnce((_cmd, args: string[]) => {
+      const dir = join(project, ".eas/.env");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "SERVICE_FILE"), "{ service }");
+      writeFileSync(
+        args[args.indexOf("--path") + 1],
+        `SERVICE_FILE=${join(dir, "SERVICE_FILE")}\nAPI_URL=https://api\n`,
+      );
+      return "";
+    });
+
+  test("are moved out of the project, and the value points at the moved file", () => {
+    const project = temp("project");
+    const files = filesDir();
+    pullWritesFile(project);
+
+    const values = pullEasEnv(project, "preview", files);
+
+    expect(values).toEqual({
+      SERVICE_FILE: join(files, "SERVICE_FILE"),
+      API_URL: "https://api",
+    });
+    expect(readFileSync(values.SERVICE_FILE, "utf8")).toBe("{ service }");
+    expect(existsSync(join(project, ".eas"))).toBe(false);
+  });
+
+  test("what the project already had in .eas stays, and only the pulled files go", () => {
+    const project = temp("project");
+    mkdirSync(join(project, ".eas/build"), { recursive: true });
+    writeFileSync(join(project, ".eas/build/build.yml"), "build: {}");
+    mkdirSync(join(project, ".eas/.env"));
+    writeFileSync(join(project, ".eas/.env/MINE"), "mine");
+    pullWritesFile(project);
+
+    pullEasEnv(project, "preview", filesDir());
+
+    expect(readdirSync(join(project, ".eas/.env"))).toEqual(["MINE"]);
+    expect(readFileSync(join(project, ".eas/build/build.yml"), "utf8")).toBe(
+      "build: {}",
+    );
+  });
+
+  test("a file the project already had stays where it is, and the value points at a copy", () => {
+    const project = temp("project");
+    mkdirSync(join(project, ".eas/.env"), { recursive: true });
+    writeFileSync(join(project, ".eas/.env/SERVICE_FILE"), "old");
+    const files = filesDir();
+    pullWritesFile(project);
+
+    const values = pullEasEnv(project, "preview", files);
+
+    expect(existsSync(join(project, ".eas/.env/SERVICE_FILE"))).toBe(true);
+    expect(values.SERVICE_FILE).toBe(join(files, "SERVICE_FILE"));
   });
 });
