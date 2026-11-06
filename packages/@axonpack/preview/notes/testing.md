@@ -50,6 +50,9 @@ From `packages/@axonpack/preview`, after `bun install` at the repo root.
 7. In the app's Previews tab: Refresh, Download, Switch, then Back to default. The banner at the top
    names what runs. Publish the same id again with other
    changes to see "Update available", or `bunx preview unpublish <id>` to see "Unpublished".
+   To see a file set follow the bundle, change `message` in `example/web/content.json`, publish,
+   and switch: the Home tab shows the new text with "From preview <id>", and the default text
+   again after Back to default.
 8. Stop everything:
    ```sh
    cd .. && bun run storage:local:stop

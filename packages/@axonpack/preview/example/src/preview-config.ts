@@ -1,4 +1,6 @@
 import type { PreviewConfig } from "@axonpack/preview";
+import { Directory, Paths } from "expo-file-system";
+import { Platform } from "react-native";
 
 // From .env (see .env.example). Expo builds EXPO_PUBLIC_* values into the app, so only a read-only
 // key may go there, never the write key.
@@ -20,4 +22,11 @@ export const previewConfig: PreviewConfig = {
     // QA can add another computer's address in the list.
     allowCustomHosts: true,
   },
+  // The app's own copy of each file set the config plugin's `files` option publishes. A preview
+  // published with the set brings its own copy, and usePreviewFiles("content") then returns that.
+  // expo-file-system has no folders on web, where the demo is not shown.
+  files:
+    Platform.OS === "web"
+      ? {}
+      : { content: { default: new Directory(Paths.document, "content").uri } },
 };
