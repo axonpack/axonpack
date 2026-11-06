@@ -65,9 +65,11 @@ jobs:
       # Branch names and inputs go through env, not straight into the script, so none of them
       # can ever run as shell code. A pull request uses its branch and base branch; a dispatch
       # uses the id input (else its branch) and the repository's default branch.
+      # --in-place builds in the checkout. Without it, publish copies the project to a temp folder
+      # and installs there too, which a fresh CI checkout doesn't need.
       - run: >-
           bunx preview publish --id "$PREVIEW_ID" --base "origin/$BASE_BRANCH"
-          --platform "$PLATFORM"
+          --platform "$PLATFORM" --in-place
           ${EAS_ENVIRONMENT:+--environment "$EAS_ENVIRONMENT"}
         env:
           PREVIEW_ID: ${{ github.head_ref || inputs.id || github.ref_name }}

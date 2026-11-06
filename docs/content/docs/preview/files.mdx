@@ -20,6 +20,10 @@ Each entry is a name and a folder, relative to the app's root. Build the folder 
 or give the set a [build command](#build-the-files-when-you-publish). Publish uploads what is in it,
 and stops with an error when the folder is missing or empty.
 
+Publish reads the folder from its [copy of the project](/docs/preview/publishing#the-copy), which
+has the folder even when git ignores it. A folder that a `.easignore` lists isn't in the copy, so
+give that set a build command.
+
 A name can use letters, digits, `.`, `_` and `-`, and can't start with a dot. Both platforms get the
 same files.
 
@@ -41,16 +45,20 @@ A set can also be an object, with the command that builds its folder:
 }]
 ```
 
-`preview publish` runs each set's `build` once, before it reads the folders and before it builds the
-bundle. The command runs in a shell from the app's root, and its output shows in the terminal. If
-it exits with an error, nothing is published:
+`preview publish` runs each set's `build` in its copy of the project, after the copy's install and
+before it reads the folders and builds the bundle. The command runs in a shell from the app's folder
+in the copy, and its output shows in the terminal. Each platform has its own copy, so the command
+runs once per platform. With `--in-place` it runs once, from the app's root. If it exits with an
+error, nothing is published:
 
 ```
 files.www: the build command failed with exit code 1: npm --prefix ../web run build
 ```
 
-With `--environment <name>`, the command gets that EAS environment's variables, the same ones the
-app config and the bundle are built with. So a web export that reads `NEXT_PUBLIC_*` values matches
+The command gets `PREVIEW_PUBLISH=1` and the other variables in
+[The copy's environment](/docs/preview/environment#the-copys-environment). With
+`--environment <name>`, it also gets that EAS environment's variables, the same ones the app config
+and the bundle are built with. So a web export that reads `NEXT_PUBLIC_*` values matches
 the bundle published with it. Variables with secret visibility aren't included, because
 `eas env:pull` doesn't return them. Set those in the shell or as CI secrets. A variable already set
 there wins over the EAS one. See
@@ -227,14 +235,16 @@ sets appear there as in [In the list](#in-the-list).
 
 ## What publish and download do with them
 
-Before it builds the bundle, publish runs each set's `build` command and prints one line per set:
+Before it builds the bundle, publish runs each set's `build` command in the copy and prints one
+line per set:
 
 ```
 files www: building with npm --prefix ../web run build
 files www: 40 files from ../web/out
 ```
 
-The `building with` line shows only for a set with a `build` command.
+The `building with` line shows only for a set with a `build` command. The lines come for each
+platform, or once with `--in-place`.
 
 Each file then goes up like a bundle file: once, under its sha256, so a file that didn't change is
 not sent again. The manifest lists the set's files under `files/www/`, and its `fileSets` field gives

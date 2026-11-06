@@ -436,7 +436,7 @@ Still accepted, so an app written for 0.1.0 type-checks.
 | Option          | Default      | Values                       |
 | --------------- | ------------ | ---------------------------- |
 | `compatibility` | `appVersion` | `appVersion` or `fingerprint` |
-| `files`         | none         | File sets to publish with each preview: a name and a folder from the app's root, such as `{ "www": "web/dist" }`, or a name and `{ "folder": "web/dist", "build": "<command>" }`, whose command `preview publish` runs first, from the app's root and with the `--environment` values. Read by `preview publish` only |
+| `files`         | none         | File sets to publish with each preview: a name and a folder from the app's root, such as `{ "www": "web/dist" }`, or a name and `{ "folder": "web/dist", "build": "<command>" }`, whose command `preview publish` runs first, from the app's folder in its copy of the project (the app's root with `--in-place`) and with the `--environment` values. Read by `preview publish` only |
 
 `preview publish` stops with an error that names the option when `files` is not an object of names
 and folders, when a name has a character other than letters, digits, `.`, `_` and `-` or starts with

@@ -97,6 +97,12 @@ npx preview publish
 The write key is for publishing only. Never put it in the app: the app gets the bucket's public
 address, or a read-only key for a private bucket.
 
+Publish builds in a copy of the project in a temp folder, like an EAS build: the copy gets its own
+install and runs your `eas-build-pre-install` and `eas-build-post-install` scripts with
+`PREVIEW_PUBLISH=1`, and your folder isn't written to. `--in-place` builds in the folder instead,
+which is faster and is what the CI samples use. See
+[Publishing](https://axonpack.dev/docs/preview/publishing#what-publish-does).
+
 A folder that ships beside the JS, such as the web app a WebView shows, can go with each preview.
 Name it in the plugin's `files` option, and `usePreviewFiles(name)` gives the copy that goes with
 the running bundle. See [Files with a preview](https://axonpack.dev/docs/preview/files).

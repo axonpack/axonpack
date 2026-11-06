@@ -17,12 +17,15 @@ Folders that go with a preview beside its bundle, such as the web app a WebView 
 
 A file set is a name and a folder, in the plugin's `files` option: `{ "www": "web/dist" }`, or a
 name and `{ "folder": "web/dist", "build": "<command>" }`. The plugin itself ignores it; only
-`preview publish` reads it. A `build` runs once, before the folders are read and before the bundle,
-in a shell from the project root with `stdio: "inherit"` and the CLI's env. After `--environment`
-that env holds the EAS values (`applyEasEnv` puts them on `process.env`), so a web export gets the
-same variables as the bundle, minus secret-visibility ones, which `eas env:pull` never returns. A
-command that exits non-zero stops the publish, naming the set and the command. There is no copy of
-the project and no package.json hook: the command is the whole contract. It hashes every file in the folder and
+`preview publish` reads it. A `build` runs in publish's copy of the project (see
+[bundles.md](./bundles.md)), after the copy's install and before the folders are read and the bundle
+is built, in a shell from the app's folder in the copy with `stdio: "inherit"` and the copy's env.
+So it runs once per platform; with `--in-place` it runs once, from the project root. After
+`--environment` that env holds the EAS values (`applyEasEnv` puts them on `process.env`), so a web
+export gets the same variables as the bundle, minus secret-visibility ones, which `eas env:pull`
+never returns. A command that exits non-zero stops the publish, naming the set and the command. The
+folders are read from the copy, which has git-ignored folders too, so a set without `build` still
+finds a folder built beforehand. One a `.easignore` lists isn't there, and the error says so. It hashes every file in the folder and
 adds them to the same file list as the bundle, at `files/<name>/<path>`, so the upload, the
 manifest, the revision, `prune`, the download, the sha256 check and the `.partial` rename all work
 on them with no code of their own. The manifest and the index entry also get `fileSets`, each set's

@@ -145,16 +145,62 @@ A device that downloaded the preview before it had the set shows **Update availa
 ## "files.www: web/dist has no files"
 
 **Cause.** The folder named in the plugin's `files` option is missing or empty when you publish.
+With `in the copy` in the message, it's missing from publish's
+[copy of the project](/docs/preview/publishing#the-copy). A `.easignore` that lists the folder leaves
+it out of the copy.
 **Fix.** Build the web app first or give the set a
 [`build` command](/docs/preview/files#build-the-files-when-you-publish), or fix the folder, which is
-relative to the app's root. With a `build` command, check that it writes into that folder.
+relative to the app's root. With a `build` command, check that it writes into that folder. Take the
+folder out of `.easignore`, or give the set a `build` command so the copy builds it.
 
 ## "files.www: the build command failed"
 
 **Cause.** The set's `build` command exited with an error, so nothing was published. Its own output
 is above the message.
 **Fix.** Run the command from the app's root to see it fail there. With `--environment`, a variable
-with secret visibility isn't passed to it; set that one in the shell or as a CI secret.
+with secret visibility isn't passed to it; set that one in the shell or as a CI secret. Publish runs
+it in its copy of the project, after the copy's install. To look at the copy as the command saw it,
+run publish again with `--keep-copy`.
+
+## A script or the install fails in the copy
+
+For example `android: eas-build-post-install failed with exit code 1: bun run eas-build-post-install`,
+or `android: bun install --frozen-lockfile failed with exit code 1.` The message ends with
+`Run again with --keep-copy to look inside the copy.`
+
+**Cause.** Publish runs your `eas-build-pre-install` and `eas-build-post-install` scripts, and an
+install with a frozen lockfile, in its [copy of the project](/docs/preview/publishing#install-and-hooks).
+A script written for an EAS build machine may install system packages, use `sudo` or write to the
+home folder, which now happens on your computer. On EAS, `eas-build-post-install` runs after
+prebuild; the copy has no prebuild, so a script that edits `ios` or `android` fails when git
+ignores those folders. A frozen install fails when the lockfile doesn't match `package.json`.
+**Fix.**
+- Make the script skip what only makes sense on EAS: `[ -n "$PREVIEW_PUBLISH" ] && exit 0`.
+- Update the lockfile with an install in your folder, or set `EAS_NO_FROZEN_LOCKFILE=1`, as on EAS.
+- Or publish with `--in-place`, which runs no script and no install.
+- `--keep-copy` keeps the copy, so you can run the script there yourself.
+
+## "no lockfile in the app's folder or its workspace root"
+
+**Cause.** The copy needs an install, and publish found no `package-lock.json`, `yarn.lock`,
+`pnpm-lock.yaml` or `bun.lock` next to the app or at its workspace root.
+**Fix.** Run your package manager's install once to make the lockfile, or publish with `--in-place`.
+
+## Publish is slow, or the copy is large
+
+**Cause.** Publish copies your workspace root, git-ignored files included, and installs in the copy,
+once per platform. A large generated folder that isn't on the [skip list](/docs/preview/publishing#the-copy),
+such as a web app's build cache, is copied each time.
+**Fix.** List big generated folders in a `.easignore` at the workspace root, in `.gitignore`
+syntax. For a quick publish from a folder that's already installed, use `--in-place`.
+
+## "no git in the copy"
+
+**Cause.** Your folder is a git worktree, or a submodule, whose `.git` is a file pointing at the real
+repository. Publish leaves it out, since git in the copy would change that repository. A script in
+the copy that runs git then fails with `not a git repository`.
+**Fix.** The preview's branch and commit still come from your folder. If a script needs git, publish
+with `--in-place`, or from a normal clone.
 
 ## Dev preview servers lists nothing
 

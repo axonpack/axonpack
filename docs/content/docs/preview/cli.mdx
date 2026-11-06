@@ -14,15 +14,21 @@ preview <command> [options]
 
 ## publish
 
-Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/preview/publishing).
+Builds this app's JS bundle in a copy of the project and uploads it as a preview. The copy goes in a
+temp folder, one per platform, and gets its own install and your `eas-build-pre-install` and
+`eas-build-post-install` scripts. Your app's folder isn't written to. `--in-place` builds in the
+folder instead. See [Publishing](/docs/preview/publishing#what-publish-does).
 
 With the config plugin's `files` option it uploads those folders too. Before it builds the bundle,
-it runs each set's `build` command, if it has one, after printing `files <name>: building with <command>`.
-A command that fails stops it with `files.<name>: the build command failed with exit code <n>: <command>`.
-Then it prints `files <name>: <n> files from <folder>` for each set, and it stops with
-`files.<name>: <folder> has no files.` when a folder is missing or empty. That error ends with
-`Build it before publishing, or give the set a build command.`, or with
-`Check that its build command writes there.` for a set that has one.
+it runs each set's `build` command in the copy, if it has one, after printing
+`files <name>: building with <command>`. A command that fails stops it with
+`files.<name>: the build command failed with exit code <n>: <command>`. Then it prints
+`files <name>: <n> files from <folder>` for each set, and it stops with
+`files.<name>: <folder> has no files in the copy.` when a folder is missing or empty (without
+`in the copy` with `--in-place`). That error ends with
+`Build it before publishing, or give the set a build command.` and, from a copy,
+`Check that .easignore doesn't list it.` For a set with a `build` command it ends with
+`Check that its build command writes there.`
 See [Files with a preview](/docs/preview/files).
 
 | Option                     | Default                     | What it does                                                                   |
@@ -33,23 +39,40 @@ See [Files with a preview](/docs/preview/files).
 | `--base <branch>`          | the repo's default branch   | The branch the changelog counts commits from                                   |
 | `--changelog=<text>`       | the commit subjects         | Changelog text. Use `=` when it starts with a dash, as a `- item` list does    |
 | `--changelog-file <path>`  |                             | Read the changelog from a file                                                 |
-| `--entry-file <path>`      | Expo's own                  | Passed to `expo export:embed`                                                  |
+| `--entry-file <path>`      | Expo's own                  | Passed to `expo export:embed`. A relative path is taken from the app's root, and points at the same file in the copy |
 | `--compatibility <c>`      | the plugin option           | `appVersion` or `fingerprint`. Overrides the app config, with a warning        |
-| `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. The values also reach each file set's `build` command. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
+| `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. The values also reach the copy's install, its `eas-build-*` scripts and each file set's `build` command. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
+| `--in-place`               | off                         | Build in the app's folder: no copy, no install, no `eas-build-*` scripts, and the file sets build once for both platforms. Faster where the folder is a clean checkout, as on CI. See [Build in place](/docs/preview/publishing#build-in-place) |
+| `--keep-copy`              | off                         | Keep the temp folder with each platform's copy, to look inside. Delete it yourself after |
 
-With one file set named `www` that has a `build` command, it prints these lines. The `files` lines
-come once, before the first bundle, with the command's own output after `building with`. The rest
-repeat for each platform, with the output of `expo export:embed` after `building`:
+With one file set named `www` that has a `build` command, it prints these lines for each platform,
+with the output of each command after its line:
 
 ```
+android: copying /Users/me/my-app to /var/folders/xx/T/preview-publish-Xa1b2C/android
+android: eas-build-pre-install
+android: bun install --frozen-lockfile
+android: eas-build-post-install
 files www: building with npm --prefix ../web run build
 files www: 12 files from ../web/out
+
 android: building task-1
 android: uploading 31/79 (1.2/23.4 MB) drawable-xxhdpi/foo.png
 android: 79 files, 12 new, 67 already in the bucket
 android: published task-1 for build version-1.0.0
 android: https://<server>/<bucket>/<slug>/index/android/version-1.0.0.json
+android: deleting the copy in the background
 ```
+
+The `copying` line names the folder it copies and the copy. A line for an `eas-build-*` script
+shows only when `package.json` has that script, and the install line shows the command for your
+package manager (see [Install and hooks](/docs/preview/publishing#install-and-hooks)). In a git
+worktree, a line after `copying` says
+`android: no git in the copy, since .git in <root> is a file pointing at another folder (a git worktree or submodule)`.
+With `--keep-copy` the last line is `android: kept the copy at <path>`.
+
+With `--in-place`, the `copying`, script, install and `deleting` lines don't show, and the `files`
+lines come once, before the first platform.
 
 The `uploading` line gives the file it is on, its number out of all the files (the bundle's and the
 file sets'), and how many MB of
@@ -157,6 +180,22 @@ the key and the start of the bucket's answer: `S3 403 for <key>: <body>`.
 
 A publish that stopped partway can be run again. The files already in the bucket are skipped.
 
+## Errors in the copy
+
+Each of these stops `publish`. When it happens in the copy, the message gets a second line,
+`Run again with --keep-copy to look inside the copy.`, and the copy is deleted.
+
+| Message | Cause |
+| ------- | ----- |
+| `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` or `bun.lock` |
+| `<platform>: <install command> failed with exit code <n>. If the lockfile is out of date, update it, or set EAS_NO_FROZEN_LOCKFILE=1.` | The install failed. The last sentence shows only with a frozen lockfile |
+| `<platform>: eas-build-pre-install failed with exit code <n>: <package manager> run eas-build-pre-install` | Your script failed. The same for `eas-build-post-install` |
+| `Command failed: npx expo export:embed ...` | The export failed. Its own output is above |
+
+See [Troubleshooting](/docs/preview/troubleshooting#a-script-or-the-install-fails-in-the-copy).
+
 ## Exit codes
 
-A command that fails prints `preview: <message>` and exits with 1.
+A command that fails prints `preview: <message>` and exits with 1. Ctrl-C during `publish` deletes
+its temp folder, unless `--keep-copy`, and exits with 130. If a command such as the install was
+running, it stops with that command's error and exits with 1.

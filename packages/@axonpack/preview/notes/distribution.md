@@ -30,7 +30,8 @@ npx preview prune
 ```
 
 `publish` builds with `expo export:embed --dev false --bytecode`, the same step a release build
-runs, so the bundle is Hermes bytecode with its images beside it. It reads the `compatibility`
+runs, so the bundle is Hermes bytecode with its images beside it. It builds in a copy of the project
+with its own install, unless `--in-place` (see [bundles.md](./bundles.md)). It reads the `compatibility`
 option from the app config (see [bundles.md](./bundles.md)), builds the same key the app was built
 with, records the app version and the native fingerprint either way, uploads each file once under
 its sha256, writes the preview's manifest, and only then adds it to the lists. `--compatibility`
@@ -77,8 +78,10 @@ It needs eas-cli installed, a login (`eas login`, or `EXPO_TOKEN` in CI) and the
 EAS project (`eas init`); publish says which one is missing. Variables with **secret** visibility
 are never readable outside EAS servers: `eas env:pull` leaves them out (as a comment), so set them
 in the shell if the bundle needs them. Plain text and sensitive ones come through. A file-type
-variable is written by `eas env:pull` itself into the app's `.eas/.env/` folder, and its value is
-that file's path.
+variable is written by `eas env:pull` itself into the app's `.eas/.env/` folder whatever `--path`
+says, and its value is that file's path. `pullEasEnv` copies each such file into the run's temp
+folder, points the value there, and deletes what the pull added (`.eas`, `.eas/.env` or single
+files, whichever it created); a file that was already there stays.
 
 ## CI
 
@@ -93,7 +96,8 @@ does not run them from this package.
 | `pnpm-lock.yaml`    | [`preview.pnpm.yml`](../ci/github-actions/preview.pnpm.yml) |
 | `yarn.lock`         | [`preview.yarn.yml`](../ci/github-actions/preview.yarn.yml) |
 
-All four have the same jobs; only the setup, install and run steps differ. The yarn file uses
+All four have the same jobs; only the setup, install and run steps differ. They pass `--in-place`:
+a CI checkout is already a clean, throwaway copy, so a second copy and install would only cost time. The yarn file uses
 `yarn install --immutable` (Yarn 2 and later); for Yarn 1 change it to `--frozen-lockfile`. It
 publishes each pull request when it is opened, pushed to or reopened, with the branch name as the
 id and the pull request's base branch for the changelog. Pull requests from forks get no secrets,
