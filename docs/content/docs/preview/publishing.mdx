@@ -5,7 +5,8 @@ icon: Upload
 ---
 
 Run the CLI from your app's root, or pass `--project <dir>`. It needs the
-[publish settings](/docs/preview/environment) and a git checkout.
+[publish settings](/docs/preview/environment), a lockfile for [the copy's install](#install-and-hooks),
+and a git checkout, unless you pass `--id`.
 
 ```sh
 npx preview publish                  # id = git branch, both platforms; asks for the title
@@ -72,8 +73,8 @@ The copy has your `.git` folder, so scripts that run git work there. In a git wo
 submodule, `.git` is a file that points at the real repository, and git in the copy would change
 that repository. So it is left out, and publish prints
 `<platform>: no git in the copy, since .git in <root> is a file pointing at another folder (a git worktree or submodule)`.
-The preview's branch and commit come from your folder either way, and publish works without a git
-repository too.
+The preview's branch and commit come from your folder either way. Outside a git repository publish
+still works, given `--id`, with no branch or commit, and no changelog unless you pass one.
 
 The copy goes in `<temp>/preview-publish-<random>/<platform>`, where `<temp>` is the system's temp
 folder (`$TMPDIR`). Each platform gets its own copy. Once a platform is published, its copy is
@@ -92,7 +93,7 @@ copy's root:
 | `yarn.lock`, Yarn 1 | `yarn install --frozen-lockfile --production false`  |
 | `yarn.lock`, Yarn 2+ | `yarn install --inline-builds --immutable`          |
 | `pnpm-lock.yaml`    | `pnpm install --frozen-lockfile`                     |
-| `bun.lock`          | `bun install --frozen-lockfile`                      |
+| `bun.lock`, `bun.lockb` | `bun install --frozen-lockfile`                  |
 
 With `EAS_NO_FROZEN_LOCKFILE=1` set, as on EAS, the lockfile isn't frozen: `npm install`,
 `--no-immutable`, `--no-frozen-lockfile`, or no flag for Yarn 1 and bun. Without a lockfile publish

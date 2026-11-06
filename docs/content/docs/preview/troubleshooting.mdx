@@ -185,7 +185,7 @@ ignores those folders. A frozen install fails when the lockfile doesn't match `p
 ## "no lockfile in the app's folder or its workspace root"
 
 **Cause.** The copy needs an install, and publish found no `package-lock.json`, `yarn.lock`,
-`pnpm-lock.yaml` or `bun.lock` next to the app or at its workspace root.
+`pnpm-lock.yaml`, `bun.lock` or `bun.lockb` next to the app or at its workspace root.
 **Fix.** Run your package manager's install once to make the lockfile, or publish with `--in-place`.
 
 ## Publish is slow, or the copy is large

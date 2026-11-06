@@ -161,7 +161,8 @@ Make a change you can see, for example a different title, then from the app's ro
 npx preview publish --id task-1-login-fix
 ```
 
-It builds for Android and iOS and uploads both. In a terminal it asks for the title QA sees,
+It builds for Android and iOS and uploads both, each in a copy of your project with its own
+install, so your folder isn't changed. In a terminal it asks for the title QA sees,
 prefilled with "Task 1 login fix"; Enter keeps it. Without `--id` the id is the current git branch.
 
 Now undo the change in your code. In a debug build the default bundle is whatever Metro serves, so

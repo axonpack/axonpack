@@ -188,7 +188,7 @@ Each of these stops `publish`. When it happens in the copy, the message gets a s
 
 | Message | Cause |
 | ------- | ----- |
-| `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` or `bun.lock` |
+| `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock` or `bun.lockb` |
 | `<platform>: <install command> failed with exit code <n>. If the lockfile is out of date, update it, or set EAS_NO_FROZEN_LOCKFILE=1.` | The install failed. The last sentence shows only with a frozen lockfile |
 | `<platform>: eas-build-pre-install failed with exit code <n>: <package manager> run eas-build-pre-install` | Your script failed. The same for `eas-build-post-install` |
 | `Command failed: <node> <path>/expo/bin/cli export:embed ...` | The export failed. Its own output is above. `<path>/expo/bin/cli` is your app's own Expo CLI, run with Node |
