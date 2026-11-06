@@ -56,6 +56,15 @@ export const BUNDLE_FILE: Record<Platform, string> = {
 
 export type ManifestFile = { path: string; sha256: string; size: number };
 
+/** One file set of a preview: how many files it has and their size together. */
+export type FileSetInfo = { files: number; size: number };
+
+/**
+ * Where a file set sits inside a preview's folder, and so where its files' manifest paths start:
+ * `files/<name>`. The CLI writes it and the app reads it.
+ */
+export const fileSetPath = (name: string) => `files/${name}`;
+
 /** Shown to QA in the list, and kept in both the manifest and the index entry. */
 export type PreviewInfo = {
   id: string;
@@ -71,6 +80,11 @@ export type PreviewInfo = {
   fingerprint: string;
   /** The EAS environment it was built with (`publish --environment`). Absent on older entries. */
   environment?: string;
+  /**
+   * The file sets published with it (the config plugin's `files` option), by name. Their files are
+   * in `files` under `fileSetPath(name)`. Absent when it has none, and on older entries.
+   */
+  fileSets?: Record<string, FileSetInfo>;
 };
 
 /** Leaves `environment` out when there is none, so entries without it look as they always did. */

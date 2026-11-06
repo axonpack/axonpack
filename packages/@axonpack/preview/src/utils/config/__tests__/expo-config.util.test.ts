@@ -8,6 +8,7 @@ import {
   PLUGIN_NAME,
   appVersionOf,
   compatibilityOf,
+  fileSetsOf,
   resolveCompatibility,
 } from "../expo-config.util";
 
@@ -91,4 +92,45 @@ test("a flag that disagrees with the app config is used, with a warning", () => 
   expect(() => resolveCompatibility("appVersion", "nope")).toThrow(
     "--compatibility must be",
   );
+});
+
+test("file sets come from the plugin's files option, and a bad one says what to write", () => {
+  expect(fileSetsOf({ plugins: [PLUGIN_NAME] })).toEqual({});
+  expect(fileSetsOf({ plugins: [[PLUGIN_NAME, {}]] })).toEqual({});
+  expect(
+    fileSetsOf({
+      plugins: [[PLUGIN_NAME, { files: { www: "web/dist", "docs.v2": "d" } }]],
+    }),
+  ).toEqual({ www: { folder: "web/dist" }, "docs.v2": { folder: "d" } });
+  const bad = (files: unknown) => () =>
+    fileSetsOf({ plugins: [[PLUGIN_NAME, { files }]] });
+  expect(bad(["web/dist"])).toThrow('such as { "www": "web/dist" }');
+  expect(bad({ "..": "web" })).toThrow('".." can\'t name a file set');
+  expect(bad({ "a/b": "web" })).toThrow("can't name a file set");
+  expect(bad({ www: "" })).toThrow("files.www must be a folder");
+  expect(bad({ www: 3 })).toThrow("files.www must be a folder");
+});
+
+test("a file set can also be an object with its folder and a build command", () => {
+  const sets = (files: unknown) =>
+    fileSetsOf({ plugins: [[PLUGIN_NAME, { files }]] });
+  expect(
+    sets({ www: { folder: "../web/out", build: "pnpm turbo run web#build" } }),
+  ).toEqual({
+    www: { folder: "../web/out", build: "pnpm turbo run web#build" },
+  });
+  expect(sets({ www: { folder: "web/dist" } })).toEqual({
+    www: { folder: "web/dist" },
+  });
+  for (const set of [
+    { build: "npm run build" },
+    { folder: "", build: "npm run build" },
+    { folder: "web/dist", build: "" },
+    { folder: "web/dist", build: ["npm", "run", "build"] },
+    null,
+    ["web/dist"],
+  ])
+    expect(() => sets({ www: set })).toThrow(
+      `files.www must be a folder, such as "web/dist", or { "folder": "web/dist", "build": "<a command that builds it>" }`,
+    );
 });

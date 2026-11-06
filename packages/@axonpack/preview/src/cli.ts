@@ -32,7 +32,8 @@ import {
 
 const HELP = `preview <command> [options]
 
-  publish            build this app's JS bundle and upload it as a preview
+  publish            build this app's JS bundle and upload it as a preview, with the folders
+                     in the config plugin's files option (a set's build command runs first)
     --id <id>          preview id (default: the git branch)
     --title <title>    name QA sees; without it a terminal asks, prefilled with a readable
                        form of the id (Enter keeps it). No prompt without a terminal (CI)
@@ -43,8 +44,9 @@ const HELP = `preview <command> [options]
     --changelog-file <path>
     --entry-file <path>
     --compatibility <c> appVersion or fingerprint; overrides the app config's plugin option
-    --environment <name> build with this EAS environment's variables, like eas update
-                       (needs eas-cli and a project linked to EAS; shell variables win).
+    --environment <name> build with this EAS environment's variables, like eas update, file
+                       sets' build commands included (needs eas-cli and a project linked
+                       to EAS; shell variables win).
                        The app shows its name on the preview.
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more

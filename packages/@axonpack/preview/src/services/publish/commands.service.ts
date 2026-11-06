@@ -28,6 +28,7 @@ import {
 } from "../s3/s3.service";
 import { previewTitle } from "../../utils/previews/preview-title.util";
 import { buildBundle } from "./bundle.service";
+import { buildFileSets, readFileSets } from "./file-sets.service";
 import { shortChangelog } from "../../utils/publish/changelog.util";
 import {
   indexesListing,
@@ -39,6 +40,7 @@ import {
   AppConfig,
   appVersionOf,
   buildNumberOf,
+  fileSetsOf,
 } from "../../utils/config/expo-config.util";
 import { fingerprint } from "../cli/project.service";
 
@@ -93,14 +95,22 @@ export async function publish(options: PublishOptions) {
   const { s3, id } = options;
   const title = options.title || previewTitle(id);
   const publishedAt = new Date().toISOString();
+  // Before the bundle, so a missing folder stops the publish early. Both platforms get the same files.
+  const folders = fileSetsOf(options.config);
+  buildFileSets(options.projectRoot, folders);
+  const sets = readFileSets(options.projectRoot, folders);
+  for (const [name, set] of Object.entries(sets.fileSets ?? {}))
+    log(`files ${name}: ${set.files} files from ${folders[name].folder}`);
 
   for (const platform of options.platforms) {
     log(`\n${platform}: building ${id}`);
-    const { files, hermesVersion } = buildBundle(
+    const { files: bundleFiles, hermesVersion } = buildBundle(
       options.projectRoot,
       platform,
       options.entryFile,
     );
+    // Uploaded, downloaded, checked and counted in the revision like any bundle file.
+    const files = [...bundleFiles, ...sets.files];
     const fp = await fingerprint(options.projectRoot, platform);
     const version = appVersionOf(options.config, platform);
     const key = compatibilityKey(
@@ -153,6 +163,7 @@ export async function publish(options: PublishOptions) {
         buildNumber: buildNumberOf(options.config, platform),
         compatibility: options.compatibility,
         fingerprint: fp,
+        ...(sets.fileSets && { fileSets: sets.fileSets }),
       },
       options.environment,
     );

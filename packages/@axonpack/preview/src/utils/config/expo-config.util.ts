@@ -35,6 +35,67 @@ export function compatibilityOf(config: AppConfig): Compatibility {
   return DEFAULT_COMPATIBILITY;
 }
 
+// A name is a folder in the app's documents and a part of every file's path, so it is kept to
+// characters that are safe in both. A leading dot would allow "." and "..".
+const FILE_SET_NAME = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
+
+/** One file set from the plugin's `files` option, in its object form. */
+export type FileSet = {
+  /** Relative to the project root. */
+  folder: string;
+  /** A shell command `preview publish` runs from the project root before it reads the folder. */
+  build?: string;
+};
+
+const nonEmpty = (value: unknown): value is string =>
+  typeof value === "string" && value.trim() !== "";
+
+/**
+ * The `files` option of the plugin entry: each file set's name, folder (relative to the project
+ * root) and build command, such as `{ www: "web/dist" }` or
+ * `{ www: { folder: "web/dist", build: "npm run build:web" } }`. Empty without it.
+ */
+export function fileSetsOf(config: AppConfig): Record<string, FileSet> {
+  const entry = config.plugins?.find(
+    (plugin) => Array.isArray(plugin) && plugin[0] === PLUGIN_NAME,
+  );
+  const files = Array.isArray(entry)
+    ? (entry[1] as { files?: unknown } | undefined)?.files
+    : undefined;
+  if (files === undefined) return {};
+  if (typeof files !== "object" || files === null || Array.isArray(files)) {
+    throw new Error(
+      `${PLUGIN_NAME}: files must name each file set and its folder, such as { "www": "web/dist" }`,
+    );
+  }
+  const sets: Record<string, FileSet> = {};
+  for (const [name, value] of Object.entries(files)) {
+    if (!FILE_SET_NAME.test(name)) {
+      throw new Error(
+        `${PLUGIN_NAME}: "${name}" can't name a file set. Use letters, digits, ".", "_" and "-", not starting with a dot.`,
+      );
+    }
+    const set = value as { folder?: unknown; build?: unknown } | null;
+    if (nonEmpty(value)) sets[name] = { folder: value };
+    else if (
+      typeof set === "object" &&
+      set !== null &&
+      !Array.isArray(set) &&
+      nonEmpty(set.folder) &&
+      (set.build === undefined || nonEmpty(set.build))
+    )
+      sets[name] = {
+        folder: set.folder,
+        ...(set.build !== undefined && { build: set.build }),
+      };
+    else
+      throw new Error(
+        `${PLUGIN_NAME}: files.${name} must be a folder, such as "web/dist", or { "folder": "web/dist", "build": "<a command that builds it>" }`,
+      );
+  }
+  return sets;
+}
+
 /** The app version a platform's build reports: its own `version` when set, else `expo.version`. */
 export const appVersionOf = (config: AppConfig, platform: Platform): string =>
   String(config[platform]?.version ?? config.version ?? "");

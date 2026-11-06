@@ -1,21 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, sep } from "node:path";
+import { join } from "node:path";
 
-import {
-  BUNDLE_FILE,
-  ManifestFile,
-  Platform,
-} from "../../utils/previews/layout.util";
-
-export type BuiltFile = ManifestFile & { absolutePath: string };
-
-const walk = (dir: string): string[] =>
-  readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-    entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)],
-  );
+import { BUNDLE_FILE, Platform } from "../../utils/previews/layout.util";
+import { listFiles } from "./file-sets.service";
 
 /** Hermes bytecode starts with an 8-byte magic number, then its version as a 32-bit int. */
 const HERMES_MAGIC = Buffer.from([
@@ -49,15 +38,7 @@ export function buildBundle(
   if (entryFile) args.push("--entry-file", entryFile);
   execFileSync("npx", args, { cwd: projectRoot, stdio: "inherit" });
 
-  const files: BuiltFile[] = walk(out).map((absolutePath) => {
-    const data = readFileSync(absolutePath);
-    return {
-      absolutePath,
-      path: relative(out, absolutePath).split(sep).join("/"),
-      sha256: createHash("sha256").update(data).digest("hex"),
-      size: statSync(absolutePath).size,
-    };
-  });
+  const files = listFiles(out);
   const bundle = readFileSync(join(out, BUNDLE_FILE[platform]));
   return { files, hermesVersion: hermesVersion(bundle) };
 }
