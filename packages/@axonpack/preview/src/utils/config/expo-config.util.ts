@@ -43,7 +43,10 @@ const FILE_SET_NAME = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
 export type FileSet = {
   /** Relative to the project root. */
   folder: string;
-  /** A shell command `preview publish` runs from the project root before it reads the folder. */
+  /**
+   * A shell command `preview publish` runs before it reads the folder, from the app's folder in its
+   * copy of the project (the project root with --in-place).
+   */
   build?: string;
 };
 
