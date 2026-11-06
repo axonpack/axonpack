@@ -274,6 +274,18 @@ internal object PreviewState {
     return true
   }
 
+  /**
+   * JS calls this after a download: the new copy may not have the fault that broke the old one, so
+   * the list should offer it again.
+   */
+  fun clearBroken(context: Context, id: String) {
+    val json = readJson(context)
+    val broken = brokenIds(json)
+    if (id !in broken) return
+    json.put("broken", JSONArray(broken - id))
+    writeJson(context, json)
+  }
+
   /** JS calls this once the app has mounted: this start worked. */
   fun confirmStart(context: Context) {
     val json = readJson(context)

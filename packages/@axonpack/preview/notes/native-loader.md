@@ -20,7 +20,8 @@ If a preview fails before the app has mounted, it is marked broken and the defau
 Android that happens straight away: the app restarts into the default bundle. On iOS the failed preview
 leaves a blank screen until the app is closed and opened again, and that next start is the default
 bundle. Errors that do not come from a starting preview are thrown on as usual, so the app behaves as
-it would without this package.
+it would without this package. The mark stays until the preview is downloaded again or switched to,
+and a newer revision in the bucket shows as Update available, not Broken.
 
 With no preview chosen, the package changes nothing at startup: expo-updates, or the bundle inside
 the app, loads as usual.

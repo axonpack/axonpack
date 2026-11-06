@@ -174,6 +174,17 @@ enum PreviewState {
     writeJson(json)
   }
 
+  /// JS calls this after a download: the new copy may not have the fault that broke the old one, so
+  /// the list should offer it again.
+  static func clearBroken(_ id: String) {
+    var json = readJson()
+    guard let broken = json["broken"] as? [String], broken.contains(id) else {
+      return
+    }
+    json["broken"] = broken.filter { $0 != id }
+    writeJson(json)
+  }
+
   // Local Metro servers (debug builds only). `localServer` sits next to the preview fields and
   // never changes them, so stopping a local server brings back whatever preview was chosen.
 

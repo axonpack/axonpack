@@ -118,7 +118,9 @@ device.
 bundle. On Android that happens straight away. On iOS the failed start leaves a blank screen until the
 app is closed and opened again.
 **Fix.** Look at the error in that branch's code. Also check that the provider is mounted on every
-start, not behind a login or a lazy screen: a start that never mounts it counts as a failure.
+start, not behind a login or a lazy screen: a start that never mounts it counts as a failure. Once
+the fix is published, the row shows Update available, and the new download takes the Broken mark
+off. Switching to the preview also clears it.
 
 ## Switch does nothing, or says the native side is older
 

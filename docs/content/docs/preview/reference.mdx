@@ -136,12 +136,12 @@ devPreviewServers: {
 | `downloading`          | Download progress by id, from 0 to 1                                       |
 | `activeId`             | The preview the next start loads, or null for the default bundle          |
 | `runningId`            | The preview that runs now, or null. Not `activeId` when the chosen one did not load |
-| `broken`               | Ids of previews that stopped before they finished starting                 |
+| `broken`               | Ids of previews that stopped before they finished starting, until they are downloaded again or switched to |
 
 | Action                   | What it does                                                             |
 | ------------------------ | ------------------------------------------------------------------------ |
 | `refresh()`              | Reads the downloads, then asks the bucket for this build's list. With no bucket URL it asks nothing |
-| `download(id)`           | Downloads a preview, or its update                                       |
+| `download(id)`           | Downloads a preview, or its update, and takes it off `broken`            |
 | `switchTo(id)`           | Restarts into a preview, downloading it first if needed. Also stops a dev preview server |
 | `switchTo(null)`         | Back to the default bundle. Also stops a dev preview server              |
 | `remove(id)`             | Deletes a download. If it runs, goes back to the default bundle first    |

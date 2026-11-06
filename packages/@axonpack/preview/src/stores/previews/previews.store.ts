@@ -122,6 +122,9 @@ export const previewsStore = {
           },
         }),
       );
+      // The new copy may not have the fault that broke the old one, so it is offered again.
+      const native = nativeModule();
+      if (typeof native?.clearBroken === "function") native.clearBroken(id);
     } catch (error) {
       set({ error: message(error) });
     } finally {

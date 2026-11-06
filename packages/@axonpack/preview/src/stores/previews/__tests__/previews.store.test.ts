@@ -15,6 +15,7 @@ const mockNative = {
   reload: jest.fn(),
   markLaunched: jest.fn(),
   selectLocalServer: jest.fn(),
+  clearBroken: jest.fn(),
   state: () => ({ bundle: mockNative.bundle, broken: [] as string[] }),
 };
 jest.mock("expo", () => ({ requireOptionalNativeModule: () => mockNative }));
@@ -110,6 +111,7 @@ test("switching to a preview that is not on the device downloads it first", asyn
   await previewsStore.refresh({ ...config, buildKey: "fp" });
   await previewsStore.switchTo({ ...config, buildKey: "fp" }, "t");
   expect(disk.get("file:/docs/preview/t/ios/main.jsbundle")).toEqual(bundle);
+  expect(mockNative.clearBroken).toHaveBeenCalledWith("t");
   expect(mockNative.select).toHaveBeenCalledWith("t/ios/main.jsbundle", "fp");
   expect(mockNative.reload).toHaveBeenCalled();
 });
