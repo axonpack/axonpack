@@ -158,8 +158,8 @@ When a request to the bucket can't be sent, or the connection drops before the a
 names the request and the reason Node gave, with its error code:
 
 ```
-preview: PUT files/<sha256> failed: ECONNRESET read ECONNRESET
 preview: HEAD files/<sha256> failed: ENOTFOUND getaddrinfo ENOTFOUND minio.example.com
+preview: HEAD files/<sha256> failed: CERT_HAS_EXPIRED certificate has expired
 ```
 
 Keys are shown as they are inside the app's slug folder. A listing, from `prune`, shows its prefix
