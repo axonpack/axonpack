@@ -118,8 +118,9 @@ function act(call: AgentActionCall): string {
 }
 
 /**
- * The CLI evaluates `__AXONPACK_AGENT__.run(...)` or `.act(...)` over the debugger socket. Dev builds only: a
- * release build has no debugger to answer anyway.
+ * The CLI evaluates `__AXONPACK_AGENT__.run(...)` or `.act(...)` over the debugger socket. Development
+ * bundles only. A preview in a debug build is a release bundle with the debugger still attached, so
+ * the CLI finds it and answers that it has no devtools agent.
  */
 export function installAgent() {
   if (!__DEV__) return;
