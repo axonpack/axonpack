@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -15,6 +15,17 @@ jest.mock("../../cli/project.service", () => ({
       .createRequire(require.resolve("expo/package.json")),
 }));
 const run = execFileSync as unknown as jest.Mock;
+// Every temp folder a test makes, deleted after the file's tests.
+const made: string[] = [];
+const temp = (name: string) => {
+  const dir = mkdtempSync(join(tmpdir(), `preview-${name}-`));
+  made.push(dir);
+  return dir;
+};
+afterAll(() =>
+  made.forEach((dir) => rmSync(dir, { recursive: true, force: true })),
+);
+const outDir = () => join(temp("run"), "out");
 
 const pulledFile = () => {
   const args: string[] = run.mock.calls[0][1];
@@ -77,15 +88,16 @@ test("the values reach the export's environment, and the shell's own values win"
     pullWrites(pulled);
     applyEasEnv("/app", "preview");
     let exportEnv: Record<string, string | undefined> = {};
-    run.mockImplementationOnce((_cmd, args: string[]) => {
-      exportEnv = { ...process.env };
+    run.mockImplementationOnce((_cmd, args: string[], { env }) => {
+      exportEnv = env;
       writeFileSync(
         args[args.indexOf("--bundle-output") + 1],
         Buffer.alloc(16),
       );
       return "";
     });
-    buildBundle("/app", "android");
+    // publish hands the export the CLI's env.
+    buildBundle("/app", "android", { outDir: outDir(), env: process.env });
     expect(run.mock.calls[1][0]).toBe("npx");
     expect(exportEnv.API_URL).toBe("https://preview.example.com");
     expect(exportEnv.SHARED).toBe("from-shell");
@@ -138,7 +150,7 @@ test("without --environment the build never calls eas", () => {
     writeFileSync(args[args.indexOf("--bundle-output") + 1], Buffer.alloc(16));
     return "";
   });
-  buildBundle("/app", "ios");
+  buildBundle("/app", "ios", { outDir: outDir(), env: process.env });
   expect(run.mock.calls.map(([cmd]) => cmd)).toEqual(["npx"]);
 });
 

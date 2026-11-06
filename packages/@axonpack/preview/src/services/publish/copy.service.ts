@@ -1,10 +1,11 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   constants,
   cpSync,
   existsSync,
   lstatSync,
   readFileSync,
+  renameSync,
 } from "node:fs";
 import { createRequire } from "node:module";
 import { basename, join, relative, sep } from "node:path";
@@ -77,6 +78,24 @@ export function copyProject(
     },
   });
   return { git };
+}
+
+/**
+ * Deletes `dir` from a process of its own that publish doesn't wait for, since a copy with its
+ * `node_modules` takes about 20 s to delete. It moves to `to` first, out of the run folder, so the
+ * run folder's own delete at the end doesn't reach into it.
+ */
+export function removeInBackground(dir: string, to: string) {
+  renameSync(dir, to);
+  spawn(
+    process.execPath,
+    [
+      "-e",
+      'require("fs").rmSync(process.argv[1], { recursive: true, force: true })',
+      to,
+    ],
+    { detached: true, stdio: "ignore", windowsHide: true },
+  ).unref();
 }
 
 /** The install EAS runs for each package manager. */

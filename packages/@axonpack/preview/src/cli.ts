@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import { PLATFORMS, Platform } from "./utils/previews/layout.util";
@@ -33,7 +34,11 @@ import {
 const HELP = `preview <command> [options]
 
   publish            build this app's JS bundle and upload it as a preview, with the folders
-                     in the config plugin's files option (a set's build command runs first)
+                     in the config plugin's files option (a set's build command runs first).
+                     It builds in a copy of the project in a temp folder, one per platform:
+                     the copy installs with a frozen lockfile and runs the eas-build-pre-install
+                     and eas-build-post-install scripts, then it's deleted in the background.
+                     The app's folder isn't written to
     --id <id>          preview id (default: the git branch)
     --title <title>    name QA sees; without it a terminal asks, prefilled with a readable
                        form of the id (Enter keeps it). No prompt without a terminal (CI)
@@ -48,6 +53,9 @@ const HELP = `preview <command> [options]
                        sets' build commands included (needs eas-cli and a project linked
                        to EAS; shell variables win).
                        The app shows its name on the preview.
+    --in-place         build in this folder instead, with no copy, no install and no hooks.
+                       Faster where the folder is already a clean checkout, as in CI
+    --keep-copy        keep the copies in the temp folder, to look inside
   unpublish <id>     remove a preview from every build's list
   prune              delete files no preview uses any more
   start [-- <expo start args>]
@@ -85,6 +93,8 @@ async function main() {
       "entry-file": { type: "string" },
       compatibility: { type: "string" },
       environment: { type: "string" },
+      "in-place": { type: "boolean" },
+      "keep-copy": { type: "boolean" },
       project: { type: "string" },
       port: { type: "string" },
       ports: { type: "string" },
@@ -105,46 +115,66 @@ async function main() {
   });
 
   if (command === "publish") {
-    // Before anything reads the app config: the config, fingerprint and export must all see the
-    // same variables a build in that environment saw, or the key would not match.
-    if (values.environment) applyEasEnv(projectRoot, values.environment);
-    const git = gitInfo(projectRoot, { id: values.id });
-    const id = values.id ?? git.branch;
-    if (!id)
-      throw new Error("No git branch to name the preview after; pass --id.");
-    const platforms =
-      values.platform === "all" ? PLATFORMS : [values.platform as Platform];
-    if (!platforms.every((p) => PLATFORMS.includes(p))) {
-      throw new Error(`--platform must be android, ios or all`);
-    }
-    const changelog =
-      values.changelog ??
-      (values["changelog-file"]
-        ? readFileSync(resolve(values["changelog-file"]), "utf8").trim()
-        : changelogSince(projectRoot, values.base ?? defaultBase(projectRoot)));
-    const config = appConfig(projectRoot);
-    const { compatibility, warnings } = resolveCompatibility(
-      compatibilityOf(config),
-      values.compatibility,
-    );
-    for (const warning of warnings)
-      process.stderr.write(`warning: ${warning}\n`);
-    await publish({
-      projectRoot,
-      config,
-      compatibility,
-      s3: s3(config),
-      platforms,
-      id,
-      title: await askTitle({
-        given: values.title,
-        fallback: previewTitle(id),
-      }),
-      ...git,
-      changelog,
-      entryFile: values["entry-file"],
-      environment: values.environment,
+    // The copies, the export output and the EAS file variables, all deleted at the end.
+    const work = mkdtempSync(join(tmpdir(), "preview-publish-"));
+    const keepCopy = values["keep-copy"] ?? false;
+    const removeWork = () => {
+      if (!keepCopy) rmSync(work, { recursive: true, force: true });
+    };
+    process.once("SIGINT", () => {
+      removeWork();
+      process.exit(130);
     });
+    try {
+      // Before anything reads the app config: the config, fingerprint and export must all see the
+      // same variables a build in that environment saw, or the key would not match.
+      if (values.environment) applyEasEnv(projectRoot, values.environment);
+      const git = gitInfo(projectRoot, { id: values.id });
+      const id = values.id ?? git.branch;
+      if (!id)
+        throw new Error("No git branch to name the preview after; pass --id.");
+      const platforms =
+        values.platform === "all" ? PLATFORMS : [values.platform as Platform];
+      if (!platforms.every((p) => PLATFORMS.includes(p))) {
+        throw new Error(`--platform must be android, ios or all`);
+      }
+      const changelog =
+        values.changelog ??
+        (values["changelog-file"]
+          ? readFileSync(resolve(values["changelog-file"]), "utf8").trim()
+          : changelogSince(
+              projectRoot,
+              values.base ?? defaultBase(projectRoot),
+            ));
+      const config = appConfig(projectRoot);
+      const { compatibility, warnings } = resolveCompatibility(
+        compatibilityOf(config),
+        values.compatibility,
+      );
+      for (const warning of warnings)
+        process.stderr.write(`warning: ${warning}\n`);
+      await publish({
+        projectRoot,
+        config,
+        compatibility,
+        s3: s3(config),
+        platforms,
+        id,
+        title: await askTitle({
+          given: values.title,
+          fallback: previewTitle(id),
+        }),
+        ...git,
+        changelog,
+        entryFile: values["entry-file"],
+        environment: values.environment,
+        work,
+        inPlace: values["in-place"],
+        keepCopy,
+      });
+    } finally {
+      removeWork();
+    }
   } else if (command === "unpublish") {
     if (!arg) throw new Error("Which preview? preview unpublish <id>");
     await unpublish(s3(), arg);

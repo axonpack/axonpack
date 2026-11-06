@@ -1,9 +1,25 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { S3Config } from "../../s3/s3.service";
+import { PLUGIN_NAME } from "../../../utils/config/expo-config.util";
+import { fingerprint } from "../../cli/project.service";
+import { buildBundle } from "../bundle.service";
 import { PublishOptions, prune, publish, unpublish } from "../commands.service";
+import { prepareCopy, removeInBackground } from "../copy.service";
+import { buildFileSets } from "../file-sets.service";
+
+// Every temp folder a test makes, deleted after the file's tests.
+const made: string[] = [];
+const temp = (name: string) => {
+  const dir = mkdtempSync(join(tmpdir(), `preview-${name}-`));
+  made.push(dir);
+  return dir;
+};
+afterAll(() =>
+  made.forEach((dir) => rmSync(dir, { recursive: true, force: true })),
+);
 
 const mockBundle = join(
   mkdtempSync(join(tmpdir(), "preview-commands-")),
@@ -12,7 +28,7 @@ const mockBundle = join(
 writeFileSync(mockBundle, "bundle bytes");
 
 jest.mock("../bundle.service", () => ({
-  buildBundle: () => ({
+  buildBundle: jest.fn(() => ({
     files: [
       {
         absolutePath: mockBundle,
@@ -22,10 +38,26 @@ jest.mock("../bundle.service", () => ({
       },
     ],
     hermesVersion: 96,
-  }),
+  })),
 }));
 jest.mock("../../cli/project.service", () => ({
-  fingerprint: async () => "fp",
+  fingerprint: jest.fn(async () => "fp"),
+}));
+// A copy is a folder with the app in app/.
+jest.mock("../copy.service", () => ({
+  prepareCopy: jest.fn(
+    ({ dest, platform }: { dest: string; platform: string }) => {
+      const { mkdirSync: mkdir } =
+        jest.requireActual<typeof import("node:fs")>("node:fs");
+      mkdir(`${dest}/app`, { recursive: true });
+      return { appDir: `${dest}/app`, env: { COPY: platform } };
+    },
+  ),
+  removeInBackground: jest.fn(),
+}));
+jest.mock("../file-sets.service", () => ({
+  buildFileSets: jest.fn(),
+  readFileSets: jest.fn(() => ({ files: [] })),
 }));
 
 // One fake bucket: GET, HEAD, PUT with If-Match / If-None-Match, DELETE and ListObjectsV2.
@@ -81,6 +113,7 @@ const options = (slug: string, id: string): PublishOptions => ({
   commit: "abc",
   author: "Dev",
   changelog: "- a",
+  work: temp("run"),
 });
 
 const listed = (slug: string) =>
@@ -91,6 +124,7 @@ const written = () =>
   (process.stdout.write as jest.Mock).mock.calls.map(([text]) => String(text));
 
 beforeEach(() => {
+  jest.clearAllMocks();
   objects.clear();
   global.fetch = jest.fn(bucket) as typeof fetch;
   jest.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -180,4 +214,126 @@ test("says how many files were already in the bucket, and redraws one line in a 
   // Cut to the width, so it never wraps.
   expect(written()).toContain("\r\x1b[Kios: uploading 1/1 ");
   expect(written()).toContain("ios: 1 files, 0 new, 1 already in the bucket\n");
+});
+
+describe("where it builds", () => {
+  const mocked = <T extends (...args: never[]) => unknown>(fn: T) =>
+    fn as unknown as jest.Mock<ReturnType<T>, Parameters<T>>;
+  const both = (extra: Partial<PublishOptions> = {}): PublishOptions => ({
+    ...options("one", "task-1"),
+    config: {
+      version: "1.0.0",
+      plugins: [
+        [PLUGIN_NAME, { files: { www: { folder: "web", build: "make" } } }],
+      ],
+    },
+    platforms: ["android", "ios"],
+    ...extra,
+  });
+
+  test("--in-place: no copy, the sets built once for both platforms, everything in the project", async () => {
+    await publish(both({ inPlace: true }));
+    expect(prepareCopy).not.toHaveBeenCalled();
+    expect(mocked(buildFileSets).mock.calls).toEqual([
+      [
+        "/app",
+        expect.anything(),
+        expect.objectContaining({ PREVIEW_PUBLISH: "1" }),
+      ],
+    ]);
+    expect(mocked(buildBundle).mock.calls.map(([root]) => root)).toEqual([
+      "/app",
+      "/app",
+    ]);
+    expect(written().join("")).not.toContain("copy");
+  });
+
+  test("by default: a copy per platform, the sets and the export in it, the fingerprint from the project", async () => {
+    const work = temp("run");
+    await publish(both({ work, entryFile: "src/main.tsx" }));
+
+    expect(
+      mocked(prepareCopy).mock.calls.map(([o]) => [o.dest, o.platform]),
+    ).toEqual([
+      [join(work, "android"), "android"],
+      [join(work, "ios"), "ios"],
+    ]);
+    expect(
+      mocked(buildFileSets).mock.calls.map(([root, , env]) => [root, env]),
+    ).toEqual([
+      [join(work, "android/app"), { COPY: "android" }],
+      [join(work, "ios/app"), { COPY: "ios" }],
+    ]);
+    expect(mocked(buildBundle).mock.calls).toEqual([
+      [
+        join(work, "android/app"),
+        "android",
+        {
+          entryFile: join(work, "android/app/src/main.tsx"),
+          outDir: join(work, "android-out"),
+          env: { COPY: "android" },
+        },
+      ],
+      [
+        join(work, "ios/app"),
+        "ios",
+        {
+          entryFile: join(work, "ios/app/src/main.tsx"),
+          outDir: join(work, "ios-out"),
+          env: { COPY: "ios" },
+        },
+      ],
+    ]);
+    expect(mocked(fingerprint).mock.calls).toEqual([
+      ["/app", "android"],
+      ["/app", "ios"],
+    ]);
+    // Each copy goes to the background delete once its platform is published, out of the run
+    // folder and before the next is made.
+    expect(mocked(removeInBackground).mock.calls).toEqual([
+      [join(work, "android"), `${work}-android`],
+      [join(work, "ios"), `${work}-ios`],
+    ]);
+    const out = written();
+    expect(
+      out.indexOf("android: deleting the copy in the background\n"),
+    ).toBeLessThan(out.indexOf("\nios: building task-1\n"));
+  });
+
+  test("--keep-copy keeps each copy and says where", async () => {
+    const work = temp("run");
+    await publish(both({ work, keepCopy: true }));
+    expect(existsSync(join(work, "android/app"))).toBe(true);
+    expect(existsSync(join(work, "ios/app"))).toBe(true);
+    expect(removeInBackground).not.toHaveBeenCalled();
+    expect(written()).toContain(
+      `android: kept the copy at ${join(work, "android")}\n`,
+    );
+  });
+
+  test("a step in the copy that fails removes it and points at --keep-copy", async () => {
+    const work = temp("run");
+    mocked(buildBundle).mockImplementationOnce(() => {
+      throw new Error("Command failed: npx expo export:embed");
+    });
+    await expect(publish(both({ work }))).rejects.toThrow(
+      "Command failed: npx expo export:embed\nRun again with --keep-copy to look inside the copy.",
+    );
+    expect(existsSync(join(work, "android"))).toBe(false);
+    expect(written()).toContain("android: removed the copy\n");
+    expect(removeInBackground).not.toHaveBeenCalled();
+    expect(prepareCopy).toHaveBeenCalledTimes(1);
+  });
+
+  test("a failed upload removes the copy too, with no --keep-copy hint", async () => {
+    const work = temp("run");
+    global.fetch = jest.fn(
+      async () => new Response("", { status: 403 }),
+    ) as typeof fetch;
+    const failed = publish(both({ work }));
+    await expect(failed).rejects.toThrow("S3 403");
+    await expect(failed).rejects.not.toThrow("--keep-copy");
+    expect(existsSync(join(work, "android"))).toBe(false);
+    expect(removeInBackground).not.toHaveBeenCalled();
+  });
 });

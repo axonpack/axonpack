@@ -19,6 +19,7 @@ import {
   easignore,
   installCommand,
   prepareCopy,
+  removeInBackground,
 } from "../copy.service";
 
 const actual =
@@ -208,6 +209,21 @@ describe("what goes in the copy", () => {
       actual.execFileSync("git", ["status"], { cwd: dest, stdio: "pipe" }),
     ).toThrow(/not a git repository/);
   });
+});
+
+test("removeInBackground moves the folder out at once and deletes it from another process", async () => {
+  const run = temp("run");
+  write(run, {
+    "android/node_modules/a/index.js": "a",
+    "android/app.json": "{}",
+  });
+  const to = `${run}-android`;
+  made.push(to);
+  removeInBackground(join(run, "android"), to);
+  expect(existsSync(join(run, "android"))).toBe(false);
+  for (let i = 0; i < 100 && existsSync(to); i++)
+    await new Promise((done) => setTimeout(done, 50));
+  expect(existsSync(to)).toBe(false);
 });
 
 describe("installCommand", () => {

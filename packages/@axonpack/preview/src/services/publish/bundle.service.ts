@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { BUNDLE_FILE, Platform } from "../../utils/previews/layout.util";
@@ -15,13 +14,25 @@ export const hermesVersion = (bundle: Buffer): number | null =>
     ? bundle.readUInt32LE(8)
     : null;
 
-/** The same release bundle and images the native build embeds, as Hermes bytecode. */
+/**
+ * The same release bundle and images the native build embeds, as Hermes bytecode, exported from
+ * `root` (the app's folder in the copy, or the project root with --in-place) into `outDir`, which
+ * is inside the publish's run folder and goes with it.
+ */
 export function buildBundle(
-  projectRoot: string,
+  root: string,
   platform: Platform,
-  entryFile?: string,
+  {
+    entryFile,
+    outDir: out,
+    env,
+  }: {
+    entryFile?: string;
+    outDir: string;
+    env: NodeJS.ProcessEnv;
+  },
 ) {
-  const out = mkdtempSync(join(tmpdir(), `preview-${platform}-`));
+  mkdirSync(out, { recursive: true });
   const args = [
     "expo",
     "export:embed",
@@ -36,7 +47,7 @@ export function buildBundle(
     out,
   ];
   if (entryFile) args.push("--entry-file", entryFile);
-  execFileSync("npx", args, { cwd: projectRoot, stdio: "inherit" });
+  execFileSync("npx", args, { cwd: root, stdio: "inherit", env });
 
   const files = listFiles(out);
   const bundle = readFileSync(join(out, BUNDLE_FILE[platform]));

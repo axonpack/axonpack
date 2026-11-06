@@ -1,6 +1,12 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -9,7 +15,7 @@ import { PLUGIN_NAME } from "../../../utils/config/expo-config.util";
 import type { IndexEntry, Manifest } from "../../../utils/previews/layout.util";
 import { publish } from "../commands.service";
 import { applyEasEnv } from "../eas-env.service";
-import { readFileSets } from "../file-sets.service";
+import { buildFileSets, readFileSets } from "../file-sets.service";
 
 jest.mock("node:child_process", () => {
   const actual =
@@ -49,6 +55,17 @@ jest.mock("../bundle.service", () => ({
 jest.mock("../../cli/project.service", () => ({
   fingerprint: async () => "fp",
 }));
+
+// Every temp folder a test makes, deleted after the file's tests.
+const made: string[] = [];
+const temp = (name: string) => {
+  const dir = mkdtempSync(join(tmpdir(), `preview-${name}-`));
+  made.push(dir);
+  return dir;
+};
+afterAll(() =>
+  made.forEach((dir) => rmSync(dir, { recursive: true, force: true })),
+);
 
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
@@ -90,6 +107,30 @@ test("a missing or empty folder stops the publish and names it", () => {
   expect(() => readFileSets(root, { www: { folder: "empty" } })).toThrow(
     "files.www: empty has no files",
   );
+  expect(() =>
+    readFileSets(root, { www: { folder: "web/out" } }, true),
+  ).toThrow(
+    "files.www: web/out has no files in the copy. Build it before publishing, or give the set a build command. Check that .easignore doesn't list it.",
+  );
+});
+
+test("a set's build runs from the folder and with the env it is given", () => {
+  jest.spyOn(process.stdout, "write").mockImplementationOnce(() => true);
+  const root = project();
+  buildFileSets(
+    root,
+    {
+      www: {
+        folder: "out",
+        build: 'mkdir out && printf %s "$PREVIEW_PUBLISH" > out/v',
+      },
+    },
+    {
+      ...process.env,
+      PREVIEW_PUBLISH: "1",
+    },
+  );
+  expect(readFileSync(join(root, "out/v"), "utf8")).toBe("1");
 });
 
 describe("publish", () => {
@@ -138,6 +179,8 @@ describe("publish", () => {
       commit: "abc",
       author: "Dev",
       changelog: "- a",
+      work: temp("run"),
+      inPlace: true,
     });
   const lines = () =>
     (process.stdout.write as jest.Mock).mock.calls.map(([text]) =>

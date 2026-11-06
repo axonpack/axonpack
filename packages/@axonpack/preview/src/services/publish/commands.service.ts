@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
 import {
   BUNDLE_FILE,
@@ -28,6 +29,7 @@ import {
 } from "../s3/s3.service";
 import { previewTitle } from "../../utils/previews/preview-title.util";
 import { buildBundle } from "./bundle.service";
+import { prepareCopy, removeInBackground } from "./copy.service";
 import { buildFileSets, readFileSets } from "./file-sets.service";
 import { shortChangelog } from "../../utils/publish/changelog.util";
 import {
@@ -44,6 +46,7 @@ import {
 } from "../../utils/config/expo-config.util";
 import { fingerprint } from "../cli/project.service";
 
+type Env = NodeJS.ProcessEnv;
 const log = (message: string) => process.stdout.write(`${message}\n`);
 const mb = (bytes: number) => (bytes / 1e6).toFixed(1);
 // Without a terminal (CI), one progress line per this many files.
@@ -89,132 +92,188 @@ export type PublishOptions = {
   entryFile?: string;
   /** The EAS environment the bundle was built with, recorded for the app to show. */
   environment?: string;
+  /** The run's temp folder. Each platform's copy and export go in it. */
+  work: string;
+  /** Build in the project folder itself, with no copy. */
+  inPlace?: boolean;
+  /** Leave each copy in `work` after the publish, to look inside. */
+  keepCopy?: boolean;
 };
 
 export async function publish(options: PublishOptions) {
-  const { s3, id } = options;
+  const { s3, id, projectRoot, work } = options;
   const title = options.title || previewTitle(id);
   const publishedAt = new Date().toISOString();
-  // Before the bundle, so a missing folder stops the publish early. Both platforms get the same files.
   const folders = fileSetsOf(options.config);
-  buildFileSets(options.projectRoot, folders);
-  const sets = readFileSets(options.projectRoot, folders);
-  for (const [name, set] of Object.entries(sets.fileSets ?? {}))
-    log(`files ${name}: ${set.files} files from ${folders[name].folder}`);
+  // Before the bundle, so a missing folder stops the publish early.
+  const fileSets = (root: string, env: Env) => {
+    buildFileSets(root, folders, env);
+    const sets = readFileSets(root, folders, !options.inPlace);
+    for (const [name, set] of Object.entries(sets.fileSets ?? {}))
+      log(`files ${name}: ${set.files} files from ${folders[name].folder}`);
+    return sets;
+  };
+  // In place, both platforms get the same files, built once.
+  let inPlaceSets: ReturnType<typeof readFileSets> | undefined;
 
-  for (const platform of options.platforms) {
-    log(`\n${platform}: building ${id}`);
-    const { files: bundleFiles, hermesVersion } = buildBundle(
-      options.projectRoot,
-      platform,
-      options.entryFile,
-    );
-    // Uploaded, downloaded, checked and counted in the revision like any bundle file.
-    const files = [...bundleFiles, ...sets.files];
-    const fp = await fingerprint(options.projectRoot, platform);
-    const version = appVersionOf(options.config, platform);
-    const key = compatibilityKey(
-      options.compatibility,
-      options.compatibility === "appVersion" ? version : fp,
-    );
-
-    const total = files.reduce((sum, f) => sum + f.size, 0);
-    const tty = process.stdout.isTTY;
-    let uploaded = 0;
-    let done = 0;
+  /** The copy and its install, the file sets and the export: everything that runs before upload. */
+  const build = (platform: Platform, copy: string) => {
     try {
-      for (const [i, file] of files.entries()) {
-        const line = `${platform}: uploading ${i + 1}/${files.length} (${mb(done)}/${mb(total)} MB) ${file.path}`;
-        // Cut to the terminal's width: a line that wraps can't be redrawn in place.
-        if (tty)
-          process.stdout.write(
-            `\r\x1b[K${line.slice(0, (process.stdout.columns || 80) - 1)}`,
-          );
-        else if (i % PROGRESS_EVERY === 0) log(line);
-        if (!(await exists(s3, fileKey(file.sha256)))) {
-          await putObject(
-            s3,
-            fileKey(file.sha256),
-            readFileSync(file.absolutePath),
-          );
-          uploaded++;
-        }
-        done += file.size;
-      }
+      let root = projectRoot;
+      let env: Env = { ...process.env, PREVIEW_PUBLISH: "1" };
+      if (options.inPlace) inPlaceSets ??= fileSets(root, env);
+      else
+        ({ appDir: root, env } = prepareCopy({
+          projectRoot,
+          dest: copy,
+          platform,
+        }));
+      const sets = inPlaceSets ?? fileSets(root, env);
+      log(`\n${platform}: building ${id}`);
+      const bundle = buildBundle(root, platform, {
+        // Given from the project root, so it moves to the same place in the copy.
+        entryFile:
+          options.entryFile &&
+          join(
+            root,
+            relative(projectRoot, resolve(projectRoot, options.entryFile)),
+          ),
+        outDir: join(work, `${platform}-out`),
+        env,
+      });
+      return { sets, ...bundle };
     } catch (error) {
-      // Keep the last line, so the error printed under it shows which file was going up.
-      if (tty) process.stdout.write("\n");
+      if (!options.inPlace && !options.keepCopy && error instanceof Error)
+        error.message +=
+          "\nRun again with --keep-copy to look inside the copy.";
       throw error;
     }
-    if (tty) process.stdout.write("\r\x1b[K");
-    log(
-      `${platform}: ${files.length} files, ${uploaded} new, ${files.length - uploaded} already in the bucket`,
-    );
+  };
 
-    const info = previewInfo(
-      {
-        id,
-        title,
-        branch: options.branch,
-        commit: options.commit,
-        author: options.author,
-        publishedAt,
-        appVersion: version,
-        buildNumber: buildNumberOf(options.config, platform),
-        compatibility: options.compatibility,
-        fingerprint: fp,
-        ...(sets.fileSets && { fileSets: sets.fileSets }),
-      },
-      options.environment,
-    );
-    const manifest: Manifest = {
-      schema: SCHEMA,
-      ...info,
-      platform,
-      key,
-      bundle: BUNDLE_FILE[platform],
-      hermesVersion,
-      changelog: options.changelog,
-      files: files.map(({ path, sha256, size }) => ({ path, sha256, size })),
-    };
-    const manifestPath = manifestKey(platform, key, id);
-    await putObject(s3, manifestPath, JSON.stringify(manifest, null, 2), {
-      contentType: "application/json",
-    });
+  for (const platform of options.platforms) {
+    const copy = join(work, platform);
+    let published = false;
+    try {
+      const { sets, files: bundleFiles, hermesVersion } = build(platform, copy);
+      // Uploaded, downloaded, checked and counted in the revision like any bundle file.
+      const files = [...bundleFiles, ...sets.files];
+      // From the user's folder, as eas-cli does it, never from the copy.
+      const fp = await fingerprint(projectRoot, platform);
+      const version = appVersionOf(options.config, platform);
+      const key = compatibilityKey(
+        options.compatibility,
+        options.compatibility === "appVersion" ? version : fp,
+      );
 
-    const entry: IndexEntry = {
-      ...info,
-      revision: createHash("sha256")
-        .update(
-          manifest.files
-            .map((f) => `${f.path}:${f.sha256}`)
-            .sort()
-            .join("\n"),
-        )
-        .digest("hex")
-        .slice(0, 16),
-      size: total,
-      changelog: shortChangelog(options.changelog),
-      manifest: manifestPath,
-    };
-    // Last, so an app never sees an entry whose files are not all there yet.
-    const index = await updateJson<PlatformIndex>(
-      s3,
-      platformIndexKey(platform, key),
-      (current) =>
-        upsertPreview(
-          current,
-          platform,
-          { key, compatibility: options.compatibility },
-          entry,
+      const total = files.reduce((sum, f) => sum + f.size, 0);
+      const tty = process.stdout.isTTY;
+      let uploaded = 0;
+      let done = 0;
+      try {
+        for (const [i, file] of files.entries()) {
+          const line = `${platform}: uploading ${i + 1}/${files.length} (${mb(done)}/${mb(total)} MB) ${file.path}`;
+          // Cut to the terminal's width: a line that wraps can't be redrawn in place.
+          if (tty)
+            process.stdout.write(
+              `\r\x1b[K${line.slice(0, (process.stdout.columns || 80) - 1)}`,
+            );
+          else if (i % PROGRESS_EVERY === 0) log(line);
+          if (!(await exists(s3, fileKey(file.sha256)))) {
+            await putObject(
+              s3,
+              fileKey(file.sha256),
+              readFileSync(file.absolutePath),
+            );
+            uploaded++;
+          }
+          done += file.size;
+        }
+      } catch (error) {
+        // Keep the last line, so the error printed under it shows which file was going up.
+        if (tty) process.stdout.write("\n");
+        throw error;
+      }
+      if (tty) process.stdout.write("\r\x1b[K");
+      log(
+        `${platform}: ${files.length} files, ${uploaded} new, ${files.length - uploaded} already in the bucket`,
+      );
+
+      const info = previewInfo(
+        {
+          id,
+          title,
+          branch: options.branch,
+          commit: options.commit,
+          author: options.author,
           publishedAt,
-        ),
-    );
-    await updateJson<RootIndex>(s3, ROOT_INDEX_KEY, (root) =>
-      syncRootVersion(root, index, publishedAt),
-    );
-    log(`${platform}: published ${id} for build ${key}`);
-    log(`${platform}: ${objectUrl(s3, platformIndexKey(platform, key))}`);
+          appVersion: version,
+          buildNumber: buildNumberOf(options.config, platform),
+          compatibility: options.compatibility,
+          fingerprint: fp,
+          ...(sets.fileSets && { fileSets: sets.fileSets }),
+        },
+        options.environment,
+      );
+      const manifest: Manifest = {
+        schema: SCHEMA,
+        ...info,
+        platform,
+        key,
+        bundle: BUNDLE_FILE[platform],
+        hermesVersion,
+        changelog: options.changelog,
+        files: files.map(({ path, sha256, size }) => ({ path, sha256, size })),
+      };
+      const manifestPath = manifestKey(platform, key, id);
+      await putObject(s3, manifestPath, JSON.stringify(manifest, null, 2), {
+        contentType: "application/json",
+      });
+
+      const entry: IndexEntry = {
+        ...info,
+        revision: createHash("sha256")
+          .update(
+            manifest.files
+              .map((f) => `${f.path}:${f.sha256}`)
+              .sort()
+              .join("\n"),
+          )
+          .digest("hex")
+          .slice(0, 16),
+        size: total,
+        changelog: shortChangelog(options.changelog),
+        manifest: manifestPath,
+      };
+      // Last, so an app never sees an entry whose files are not all there yet.
+      const index = await updateJson<PlatformIndex>(
+        s3,
+        platformIndexKey(platform, key),
+        (current) =>
+          upsertPreview(
+            current,
+            platform,
+            { key, compatibility: options.compatibility },
+            entry,
+            publishedAt,
+          ),
+      );
+      await updateJson<RootIndex>(s3, ROOT_INDEX_KEY, (root) =>
+        syncRootVersion(root, index, publishedAt),
+      );
+      log(`${platform}: published ${id} for build ${key}`);
+      log(`${platform}: ${objectUrl(s3, platformIndexKey(platform, key))}`);
+      published = true;
+    } finally {
+      if (!options.inPlace && options.keepCopy)
+        log(`${platform}: kept the copy at ${copy}`);
+      else if (!options.inPlace && published) {
+        removeInBackground(copy, `${work}-${platform}`);
+        log(`${platform}: deleting the copy in the background`);
+      } else if (!options.inPlace) {
+        rmSync(copy, { recursive: true, force: true });
+        log(`${platform}: removed the copy`);
+      }
+    }
   }
 }
 
