@@ -31,6 +31,14 @@ it runs each set's `build` command in the copy, if it has one, after printing
 `Check that its build command writes there.`
 See [Files with a preview](/docs/preview/files).
 
+A `files` option it can't read stops it before the copy is made, with one of these:
+
+```
+@axonpack/preview: files must name each file set and its folder, such as { "www": "web/dist" }
+@axonpack/preview: "<name>" can't name a file set. Use letters, digits, ".", "_" and "-", not starting with a dot.
+@axonpack/preview: files.<name> must be a folder, such as "web/dist", or { "folder": "web/dist", "build": "<a command that builds it>" }
+```
+
 | Option                     | Default                     | What it does                                                                   |
 | -------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
 | `--id <id>`                | the git branch              | The preview's id. Publishing an id again replaces it                           |
@@ -69,7 +77,8 @@ shows only when `package.json` has that script, and the install line shows the c
 package manager (see [Install and hooks](/docs/preview/publishing#install-and-hooks)). In a git
 worktree, a line after `copying` says
 `android: no git in the copy, since .git in <root> is a file pointing at another folder (a git worktree or submodule)`.
-With `--keep-copy` the last line is `android: kept the copy at <path>`.
+With `--keep-copy` the last line is `android: kept the copy at <path>`. When the platform fails, the
+copy is deleted before the error shows, and the last line is `android: removed the copy`.
 
 With `--in-place`, the `copying`, script, install and `deleting` lines don't show, and the `files`
 lines come once, before the first platform.
