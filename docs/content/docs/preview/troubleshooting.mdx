@@ -185,8 +185,18 @@ ignores those folders. A frozen install fails when the lockfile doesn't match `p
 ## "no lockfile in the app's folder or its workspace root"
 
 **Cause.** The copy needs an install, and publish found no `package-lock.json`, `yarn.lock`,
-`pnpm-lock.yaml`, `bun.lock` or `bun.lockb` next to the app or at its workspace root.
+`pnpm-lock.yaml`, `bun.lock`, `bun.lockb` or `nub.lock` next to the app or at its workspace root.
+With nub, an `@expo/package-manager` older than 1.14 doesn't know `nub.lock`, so you get this
+message too.
 **Fix.** Run your package manager's install once to make the lockfile, or publish with `--in-place`.
+For nub, update `expo` so that `npm ls @expo/package-manager` shows 1.14 or later.
+
+## "can't install with ... in a copy of the project"
+
+**Cause.** Expo found a package manager that publish has no install for. It installs the copy with
+npm, Yarn, pnpm, bun or nub (see [Install and hooks](/docs/preview/publishing#install-and-hooks)).
+The message names the manager Expo found and its lockfile. Publish stops before it copies anything.
+**Fix.** Publish with `--in-place`, which builds in your app's folder with no install.
 
 ## Publish is slow, or the copy is large
 

@@ -7,7 +7,7 @@
 Axonpack is a set of free, open-source libraries for React Native and Expo apps, each published on
 npm as its own `@axonpack/*` package. They cover in-app devtools that an AI agent can also read from
 a terminal, your own tabs in React Native DevTools, JSON and code viewers, store update prompts, and
-JS previews of a branch inside a build you already installed.
+over-the-air previews of a branch or pull request inside a build you already installed.
 
 **[Documentation](https://axonpack.dev/docs)** · [Board](https://github.com/orgs/axonpack/projects/1)
 
@@ -54,7 +54,7 @@ Each package is published to npm and versioned on its own, so you install only t
 | [`@axonpack/react-native-devtools-tab`](./packages/@axonpack/react-native-devtools-tab)<br/>[Docs](https://axonpack.dev/docs/react-native-devtools-tab) | Your own tab in React Native DevTools, drawn from a component that runs in the app                                     | [![npm](https://img.shields.io/npm/v/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-native-devtools-tab.svg)](https://www.npmjs.com/package/@axonpack/react-native-devtools-tab) |
 | [`@axonpack/react-pretty-print`](./packages/@axonpack/react-pretty-print)<br/>[Docs](https://axonpack.dev/docs/react-pretty-print)                      | Collapsible JSON and XML trees and a syntax highlighter, for React and React Native from one implementation            | [![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               | [![downloads](https://img.shields.io/npm/dm/@axonpack/react-pretty-print.svg)](https://www.npmjs.com/package/@axonpack/react-pretty-print)               |
 | [`@axonpack/in-app-updates`](./packages/@axonpack/in-app-updates)<br/>[Docs](https://axonpack.dev/docs/in-app-updates)                                  | Store version checks, force updates and a ready-made update modal for React Native and Expo                            | [![npm](https://img.shields.io/npm/v/@axonpack/in-app-updates.svg)](https://www.npmjs.com/package/@axonpack/in-app-updates)                       | [![downloads](https://img.shields.io/npm/dm/@axonpack/in-app-updates.svg)](https://www.npmjs.com/package/@axonpack/in-app-updates)                       |
-| [`@axonpack/preview`](./packages/@axonpack/preview)<br/>[Docs](https://axonpack.dev/docs/preview)                                                       | Publish a JS bundle per branch and switch to it in the installed app, with no native rebuild                           | [![npm](https://img.shields.io/npm/v/@axonpack/preview.svg)](https://www.npmjs.com/package/@axonpack/preview)                                     | [![downloads](https://img.shields.io/npm/dm/@axonpack/preview.svg)](https://www.npmjs.com/package/@axonpack/preview)                                     |
+| [`@axonpack/preview`](./packages/@axonpack/preview)<br/>[Docs](https://axonpack.dev/docs/preview)                                                       | Over-the-air PR previews: a JS bundle per branch in your own bucket, switched in the installed app                     | [![npm](https://img.shields.io/npm/v/@axonpack/preview.svg)](https://www.npmjs.com/package/@axonpack/preview)                                     | [![downloads](https://img.shields.io/npm/dm/@axonpack/preview.svg)](https://www.npmjs.com/package/@axonpack/preview)                                     |
 
 ### @axonpack/expo-devtools
 
@@ -180,13 +180,13 @@ export default function App() {
 
 ### @axonpack/preview
 
-This package publishes a JS bundle per branch to your own S3-compatible bucket, such as AWS S3,
-Cloudflare R2 or MinIO, and QA switches to it in the build they already have, with no native
-rebuild. `npx preview publish` builds and uploads the current branch, and each app's previews go in a
-folder named after its Expo slug, so several apps can share one bucket. With `devPreviewServers` on,
-a debug build also lists each Metro started with `npx preview start`, one per worktree, and switches
-between them live. It has native code and a config plugin, so it runs in a development or release
-build and doesn't run in Expo Go.
+This package lets QA try each pull request of an Expo app over the air. It publishes a JS bundle per
+branch to your own S3-compatible bucket, such as AWS S3, Cloudflare R2 or MinIO, and QA switches to
+it in the build they already have, with no native rebuild. `npx preview publish` builds and uploads
+the current branch, and each app's previews go in a folder named after its Expo slug, so several
+apps can share one bucket. With `devPreviewServers` on, a debug build also lists each Metro started
+with `npx preview start`, one per worktree, and switches between them live. It has native code and a
+config plugin, so it runs in a development or release build and doesn't run in Expo Go.
 
 ```sh
 npx expo install @axonpack/preview expo-file-system

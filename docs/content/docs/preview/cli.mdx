@@ -78,7 +78,8 @@ package manager (see [Install and hooks](/docs/preview/publishing#install-and-ho
 worktree, a line after `copying` says
 `android: no git in the copy, since .git in <root> is a file pointing at another folder (a git worktree or submodule)`.
 With `--keep-copy` the last line is `android: kept the copy at <path>`. When the platform fails, the
-copy is deleted before the error shows, and the last line is `android: removed the copy`.
+copy is deleted before the error shows, and the last line is `android: removed the copy`. When
+publish stops before it copies anything, as with no lockfile, neither line shows.
 
 With `--in-place`, the `copying`, script, install and `deleting` lines don't show, and the `files`
 lines come once, before the first platform.
@@ -193,13 +194,15 @@ A publish that stopped partway can be run again. The files already in the bucket
 ## Errors in the copy
 
 Each of these stops `publish`. When it happens in the copy, the message gets a second line,
-`Run again with --keep-copy to look inside the copy.`, and the copy is deleted.
+`Run again with --keep-copy to look inside the copy.`, and the copy is deleted. The first two stop
+it before anything is copied, so they have no second line.
 
 | Message | Cause |
 | ------- | ----- |
-| `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock` or `bun.lockb` |
+| `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `bun.lockb` or `nub.lock`. A `nub.lock` counts from `@expo/package-manager` 1.14 |
+| `<platform>: can't install with <package manager> (<lockfile>) in a copy of the project. Run preview publish with --in-place to build in the app's folder.` | Expo found a package manager other than npm, Yarn, pnpm, bun and nub, which publish has no install for |
 | `<platform>: <install command> failed with exit code <n>. If the lockfile is out of date, update it, or set EAS_NO_FROZEN_LOCKFILE=1.` | The install failed. The last sentence shows only with a frozen lockfile |
-| `<platform>: eas-build-pre-install failed with exit code <n>: <package manager> run eas-build-pre-install` | Your script failed. The same for `eas-build-post-install` |
+| `<platform>: eas-build-pre-install failed with exit code <n>: <command>` | Your script failed. `<command>` is how it ran, such as `bun run eas-build-pre-install` (see [Install and hooks](/docs/preview/publishing#install-and-hooks)). The same for `eas-build-post-install` |
 | `Command failed: <node> <path>/expo/bin/cli export:embed ...` | The export failed. Its own output is above. `<path>/expo/bin/cli` is your app's own Expo CLI, run with Node |
 
 See [Troubleshooting](/docs/preview/troubleshooting#a-script-or-the-install-fails-in-the-copy).

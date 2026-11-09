@@ -94,15 +94,23 @@ copy's root:
 | `yarn.lock`, Yarn 2+ | `yarn install --inline-builds --immutable`          |
 | `pnpm-lock.yaml`    | `pnpm install --frozen-lockfile`                     |
 | `bun.lock`, `bun.lockb` | `bun install --frozen-lockfile`                  |
+| `nub.lock`          | `nub install --frozen-lockfile`                      |
+
+Expo finds nub from a `nub.lock` when your app's `@expo/package-manager` is 1.14 or later. It comes
+with `expo`, and `npm ls @expo/package-manager` shows which one you have. With an older one, publish
+says there is no lockfile.
 
 With `EAS_NO_FROZEN_LOCKFILE=1` set, as on EAS, the lockfile isn't frozen: `npm install`,
 `--no-immutable`, `--no-frozen-lockfile`, or no flag for Yarn 1 and bun. Without a lockfile publish
-stops.
+stops. It also stops, before copying anything, when Expo finds a package manager that isn't in this
+table. Publish that app with `--in-place`.
 
 Before the install, publish runs `eas-build-pre-install` from your app's `package.json`, and after
 it `eas-build-post-install`, each as `<package manager> run <name>` in the app's folder in the copy.
-Under Yarn, `eas-build-pre-install` runs through npm, as on EAS. A script the app doesn't have is
-skipped. The end-of-build scripts (`eas-build-on-success`, `-on-error`, `-on-complete`,
+Under Yarn, `eas-build-pre-install` runs through npm, as on EAS. Under nub it runs as
+`nub run --node eas-build-pre-install`, without nub's TypeScript support: `nub run` reads your
+`tsconfig.json` first, and that fails while what it extends, such as `expo/tsconfig.base`, isn't
+installed yet. A script the app doesn't have is skipped. The end-of-build scripts (`eas-build-on-success`, `-on-error`, `-on-complete`,
 `-on-cancel`) never run, since a preview isn't a native build.
 
 The scripts, the install, the file sets' `build` commands and the export get `EAS_BUILD=1`,

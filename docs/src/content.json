@@ -192,7 +192,7 @@
       },
       "preview": {
         "scene": "QA wants to try the login fix from a pull request. The change is only JavaScript, but getting it onto their phone still means a new native build and a wait while it uploads.",
-        "fix": "Preview publishes one JS bundle per branch to your own S3 bucket. In the app, QA picks the branch from a list and the app restarts into it. Going back to the base build is one tap, and each build lists only the previews made for its native code.",
+        "fix": "Preview publishes one JS bundle per branch to your own S3 bucket. In the app, QA picks the branch from a list, and the app downloads it over the air and restarts into it. Going back to the base build is one tap, and each build lists only the previews made for its native code.",
         "sample": {
           "lang": "sh",
           "title": "Terminal",

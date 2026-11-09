@@ -1,15 +1,15 @@
 ---
 title: Overview
-description: Publish one JS bundle per branch, and let QA switch to it inside the build they already have.
+description: Over-the-air PR previews for Expo apps. Publish a JS bundle per branch to your own S3-compatible bucket and switch to it in the build you already have.
 icon: House
 ---
 
-This package lets QA try the JS of a branch or pull request without a new native build. You publish
-one bundle per branch to your own S3-compatible bucket. In the app, QA opens a list, picks a
-preview, and the app restarts into it. Going back to the default bundle is one tap.
+This package lets QA try a branch or pull request of your Expo app over the air. You publish the
+branch's JS bundle, called a preview, to your own S3-compatible bucket. In the app, QA opens a list,
+picks a preview, and the app restarts into it without a new native build. Going back to the default
+bundle is one tap.
 
-It is an over-the-air JS update made only for previews. Your store releases and expo-updates
-keep working as they do.
+Your store releases and expo-updates keep working as they do.
 
 ```sh
 npx expo install @axonpack/preview expo-file-system

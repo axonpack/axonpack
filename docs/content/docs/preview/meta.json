@@ -1,6 +1,6 @@
 {
   "title": "Preview",
-  "description": "Download and switch between preview JS bundles without a native rebuild",
+  "description": "Over-the-air PR previews from your own bucket, switched in the app with no native rebuild",
   "root": true,
   "icon": "GitPullRequest",
   "pages": [
