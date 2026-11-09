@@ -9,6 +9,7 @@ import { ThemeSwitch } from 'fumadocs-ui/layouts/shared/slots/theme-switch';
 import { Logo } from './logo';
 import { Icon } from '@/components/icon';
 import { StarCount } from '@/components/star-count';
+import { StarHint } from '@/components/star-hint';
 import { appName, gitConfig } from '@/lib/shared';
 import { documented, packages } from '@/lib/services/packages.service';
 import { getReleases } from '@/lib/services/blog-entries.service';
@@ -183,16 +184,21 @@ export function SiteNav(props: React.ComponentProps<'header'>) {
               room for them beside the logo, and a search box worth typing into needs real width. */}
           <FullSearchTrigger className="max-lg:hidden" />
           <ThemeSwitch className="max-lg:hidden" />
-          <a
-            href={`https://github.com/${gitConfig.user}/${gitConfig.repo}`}
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label={`${appName} on GitHub`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-fd-muted-foreground transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground"
-          >
-            <Icon name="github" className="size-4" />
-            <StarCount className="text-xs font-medium tabular-nums max-sm:hidden" />
-          </a>
+          <div className="relative">
+            <a
+              href={`https://github.com/${gitConfig.user}/${gitConfig.repo}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label={`${appName} on GitHub`}
+              className="inline-flex h-9 items-center gap-2 rounded-full border px-3 text-fd-muted-foreground transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground"
+            >
+              <Icon name="github" className="size-5 shrink-0 text-fd-foreground" />
+              <StarCount className="inline-flex items-center gap-1 text-xs font-medium tabular-nums max-sm:hidden">
+                <Icon name="star" className="size-3.5" />
+              </StarCount>
+            </a>
+            <StarHint />
+          </div>
           <button
             type="button"
             aria-label={drawer ? 'Close menu' : 'Open menu'}
