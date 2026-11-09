@@ -61,8 +61,8 @@ soft and forced updates and skipping a version. Its docs:
 
 _Shipped._
 
-Download and switch between preview JS bundles of an app, one per task branch, without a native
-rebuild. Its docs: [docs/content/docs/preview](../docs/content/docs/preview/index.mdx).
+Over-the-air PR previews for an Expo app: one JS bundle per task branch in your own bucket, switched
+in the app without a native rebuild. Its docs: [docs/content/docs/preview](../docs/content/docs/preview/index.mdx).
 
 ## @axonpack/api-kit
 

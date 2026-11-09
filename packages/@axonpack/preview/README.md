@@ -4,11 +4,12 @@
 
 # @axonpack/preview
 
-**Hand QA the JS of every pull request, inside the build they already have.**
+**Preview every pull request of your Expo app over the air, from your own S3-compatible bucket.**
 
-Publish one JS bundle per branch to your own S3-compatible bucket. QA opens a list in the app,
-picks a preview, and the app restarts into it. No native rebuild, no new install, and the default
-bundle comes back with one tap. An over-the-air JS update made only for previews.
+Publish a JS bundle per branch, called a preview, to your own bucket on AWS S3, Cloudflare R2, MinIO
+or any host with the S3 API. The app lists the previews made for its native build. Pick one from the
+ready-made list or a screen of your own, and it downloads and runs after a restart, with no native
+rebuild or new install. Going back to the default bundle is one tap.
 
 **[Documentation](https://axonpack.dev/docs/preview)** · [Quick start](https://axonpack.dev/docs/preview/quick-start) · [CLI](https://axonpack.dev/docs/preview/cli) · [Changelog](https://axonpack.dev/docs/preview/changelog)
 

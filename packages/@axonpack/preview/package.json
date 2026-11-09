@@ -1,13 +1,18 @@
 {
   "name": "@axonpack/preview",
   "version": "0.3.0",
-  "description": "Download and switch between preview JS bundles of an Expo app without a native rebuild",
+  "description": "Over-the-air PR previews for Expo apps: publish a JS bundle per branch to your own S3-compatible bucket and switch to it in the app, with no native rebuild",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
     "preview",
+    "pr-preview",
+    "pull-request",
     "ota",
-    "bundle",
+    "over-the-air",
+    "self-hosted",
+    "s3",
     "qa",
+    "bundle",
     "expo",
     "react-native"
   ],

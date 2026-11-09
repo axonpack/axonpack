@@ -8,8 +8,9 @@ foundation libraries for React Native / Expo apps. Five are published:
 own tab in React Native DevTools. The fourth,
 [`@axonpack/in-app-updates`](./packages/@axonpack/in-app-updates), checks the stores for a newer
 version of the app and shows an update modal. The fifth,
-[`@axonpack/preview`](./packages/@axonpack/preview), publishes a JS bundle per branch and lets QA
-switch to it in the installed app, with no native rebuild. The devtools
+[`@axonpack/preview`](./packages/@axonpack/preview), is for pull request previews over the air: it
+publishes a JS bundle per branch to your own bucket and lets QA switch to it in the installed app,
+with no native rebuild. The devtools
 [documentation](https://axonpack.dev/docs/expo-devtools) covers what it does, and its
 [notes](./packages/@axonpack/expo-devtools/notes/README.md) record what is built, area by area, and
 what is still open.
