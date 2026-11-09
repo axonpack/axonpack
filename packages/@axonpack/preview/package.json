@@ -1,6 +1,6 @@
 {
   "name": "@axonpack/preview",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Over-the-air PR previews for Expo apps: publish a JS bundle per branch to your own S3-compatible bucket and switch to it in the app, with no native rebuild",
   "author": "Md Asadujjaman <abappi2019@gmail.com> (https://github.com/abappi19)",
   "keywords": [
