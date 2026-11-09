@@ -1,5 +1,37 @@
 # @axonpack/preview
 
+## 0.3.0
+
+### Minor Changes
+
+- fe4a2a2: - **Files with a preview**: name a folder in the config plugin's `files` option, such as `{ "www": "web/dist" }`, and `preview publish` uploads it with each preview. The app downloads it with the bundle and checks every file
+  - **A build command per file set**: `{ "www": { "folder": "web/out", "build": "npm run build:web" } }` runs the command before publishing, with the `--environment` values, so the files and the bundle use the same variables
+  - **`usePreviewFiles(name)` and `previewFilesPath(name, config)`**: give the folder that goes with the running bundle, the preview's own copy or the app's default from the preview config's `files`, and `ready`, false until the set's `onPostDownload` has run on start
+  - **`onPostDownload(name, uri, { previousUri })`**: runs your own step, such as a path rewrite, once each time a preview's copy finishes downloading. On iOS it runs again after an app update moved the app's folder, with the old folder as `previousUri`
+  - **Downloads go four files at a time**, so a preview with a large web export comes down faster
+  - **The list shows file sets**: a preview row names its sets and their size, and Show details says which copy of each set is in use. New labels `files`, `filesPreview` and `filesDefault`
+  - **A changed web build shows Update available**, since the files count toward the preview's revision
+  - **`usePreviewStatus()` has `files`**: which copy of each set is in use. New types `PreviewFiles` and `PreviewFilesOptions`
+- 689c75b: - **Publish builds in a copy of the project**: `preview publish` copies the app's workspace root to a temp folder for each platform, installs there with a frozen lockfile, runs your `eas-build-pre-install` and `eas-build-post-install` scripts, builds the file sets and the bundle there, then deletes the copy in the background. Your folder isn't written to
+  - **What the copy holds**: every file, git-ignored ones such as `.env.local` included, except `node_modules`, `.expo` and native build output. A `.easignore` at the root leaves out more. A `.git` folder comes along, a git worktree's `.git` file doesn't
+  - **The copy's env**: its install, scripts, set builds and export get `EAS_BUILD=1`, `EAS_BUILD_PLATFORM`, `EAS_BUILD_WORKINGDIR`, `EAS_BUILD_GIT_COMMIT_HASH` and `PREVIEW_PUBLISH=1`, so a script can skip what only makes sense on EAS. `EAS_NO_FROZEN_LOCKFILE=1` installs without freezing the lockfile
+  - **`--in-place`** builds in the app's folder as before, with no copy, install or scripts. The CI sample workflows pass it
+  - **`--keep-copy`** keeps the copies in the temp folder, to look inside
+  - **Uploads go four files at a time**: `preview publish` sends four files at once where it sent one, so a publish of hundreds of small files no longer waits on the bucket for each in turn
+
+### Patch Changes
+
+- dbb273e: - **Network errors name the request**: when the connection to the bucket fails, the CLI says which request and why, such as `HEAD files/<sha256> failed: ENOTFOUND getaddrinfo ENOTFOUND minio.example.com`, where 0.2.0 said only `fetch failed`
+  - **Dropped connections are tried again**: a request whose connection was reset, refused or timed out is sent again after 1, 2 and 4 seconds. If the last try fails too, the message says `failed after 4 tries`
+  - **Upload progress**: `preview publish` shows the file it is uploading and how much is done, and its summary says how many files were already in the bucket
+- 111aece: - **`--environment` leaves nothing in `.eas/.env/`**: `eas env:pull` writes file-type variables into the project's `.eas/.env/`, and publish left them there. They now go to publish's temp folder and are deleted with it. A file that was already in `.eas/.env/` stays
+  - **The export's temp folder is deleted**: each publish left one per platform in the system's temp folder
+  - **No `EBADDEVENGINES` from npm**: the export runs your app's own Expo CLI with Node instead of `npx`, so npm no longer prints `EBADDEVENGINES` in a pnpm or bun workspace
+- 6617af4: - **The first switch to a preview no longer marks it broken on iOS**: in a debug build with expo-dev-client, the first switch after the app started on the default bundle restarted the app twice, so the preview was marked broken ("stopped before it finished starting") and Metro loaded again. Later switches worked. The switch now counts as the start, so the app restarts once. Needs a native rebuild
+  - **A broken preview offers its update**: once a newer revision is published, a preview marked broken shows Update available where it kept saying Broken, and downloading it again, after an update or a delete, takes the mark off. The mark clears on download only after a native rebuild
+  - **No "Could not read the preview state" warning when nothing is chosen**: iOS logged it whenever nothing was chosen, such as at a launch after Back to default or after a preview was marked broken. It now logs only when `state.json` can't be read as JSON. Needs a native rebuild
+  - **A picked dev preview server loads under expo-dev-client on iOS**: in a debug build with expo-dev-client, tapping a server in the dev servers list restarted the app on the dev launcher's server instead. The switch now hands React the picked server. Needs Expo SDK 58, or 57.0.23 or later, and a native rebuild
+
 ## 0.2.0
 
 ### Minor Changes
