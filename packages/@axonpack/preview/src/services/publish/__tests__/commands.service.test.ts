@@ -394,6 +394,18 @@ describe("where it builds", () => {
     );
   });
 
+  test("a stop before anything is copied says nothing about a copy, with --keep-copy too", async () => {
+    for (const keepCopy of [false, true]) {
+      mocked(prepareCopy).mockImplementationOnce(() => {
+        throw new Error("android: no lockfile");
+      });
+      await expect(
+        publish(both({ work: temp("run"), keepCopy })),
+      ).rejects.toThrow("android: no lockfile");
+    }
+    expect(written().join("")).not.toContain("copy");
+  });
+
   test("a step in the copy that fails removes it and points at --keep-copy", async () => {
     const work = temp("run");
     mocked(buildBundle).mockImplementationOnce(() => {

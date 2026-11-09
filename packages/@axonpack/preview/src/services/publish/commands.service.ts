@@ -283,12 +283,14 @@ export async function publish(options: PublishOptions) {
       log(`${platform}: ${objectUrl(s3, platformIndexKey(platform, key))}`);
       published = true;
     } finally {
-      if (!options.inPlace && options.keepCopy)
+      // No copy to keep or remove when it stopped before copying, as with no lockfile.
+      const copied = !options.inPlace && existsSync(copy);
+      if (copied && options.keepCopy)
         log(`${platform}: kept the copy at ${copy}`);
-      else if (!options.inPlace && published) {
+      else if (copied && published) {
         removeInBackground(copy, `${work}-${platform}`);
         log(`${platform}: deleting the copy in the background`);
-      } else if (!options.inPlace) {
+      } else if (copied) {
         rmSync(copy, { recursive: true, force: true });
         log(`${platform}: removed the copy`);
       }

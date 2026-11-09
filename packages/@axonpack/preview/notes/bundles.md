@@ -34,8 +34,9 @@ project's tsconfig.json could not be read in full". `--node` skips nub's TypeScr
 script lookup, `npm_*` variables and `.bin` on the PATH. `eas-build-post-install` is a plain
 `nub run`. A manager outside npm, Yarn, pnpm, bun and nub (one a later `@expo/package-manager`
 finds) stops publish before the copy, naming it and its lockfile (the module's `<NAME>_LOCK_FILE`)
-and pointing at `--in-place`. An error from before the copy exists gets no `--keep-copy` hint. The
-end-of-build hooks never run. Every step in the copy gets `EAS_BUILD=1`, `EAS_BUILD_PLATFORM`,
+and pointing at `--in-place`. An error from before the copy exists gets no `--keep-copy` hint and no
+line about a copy. The end-of-build hooks never run. Every step in the copy gets `EAS_BUILD=1`,
+`EAS_BUILD_PLATFORM`,
 `EAS_BUILD_WORKINGDIR`, `EAS_BUILD_GIT_COMMIT_HASH` (read from the user's folder) and
 `PREVIEW_PUBLISH=1`, and never a build id, profile or runner, since there is none. The fingerprint,
 app config and git info stay on the user's folder, as eas-cli computes them before upload. One copy

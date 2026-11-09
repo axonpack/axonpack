@@ -78,7 +78,8 @@ package manager (see [Install and hooks](/docs/preview/publishing#install-and-ho
 worktree, a line after `copying` says
 `android: no git in the copy, since .git in <root> is a file pointing at another folder (a git worktree or submodule)`.
 With `--keep-copy` the last line is `android: kept the copy at <path>`. When the platform fails, the
-copy is deleted before the error shows, and the last line is `android: removed the copy`.
+copy is deleted before the error shows, and the last line is `android: removed the copy`. When
+publish stops before it copies anything, as with no lockfile, neither line shows.
 
 With `--in-place`, the `copying`, script, install and `deleting` lines don't show, and the `files`
 lines come once, before the first platform.
