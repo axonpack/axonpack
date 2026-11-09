@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 import {
@@ -147,7 +147,13 @@ export async function publish(options: PublishOptions) {
       });
       return { sets, ...bundle };
     } catch (error) {
-      if (!options.inPlace && !options.keepCopy && error instanceof Error)
+      // Not when it stopped before copying, as with no lockfile or a package manager it can't use.
+      if (
+        !options.inPlace &&
+        !options.keepCopy &&
+        existsSync(copy) &&
+        error instanceof Error
+      )
         error.message +=
           "\nRun again with --keep-copy to look inside the copy.";
       throw error;

@@ -193,11 +193,13 @@ A publish that stopped partway can be run again. The files already in the bucket
 ## Errors in the copy
 
 Each of these stops `publish`. When it happens in the copy, the message gets a second line,
-`Run again with --keep-copy to look inside the copy.`, and the copy is deleted.
+`Run again with --keep-copy to look inside the copy.`, and the copy is deleted. The first two stop
+it before anything is copied, so they have no second line.
 
 | Message | Cause |
 | ------- | ----- |
 | `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock` or `bun.lockb` |
+| `<platform>: can't install with <package manager> (<lockfile>) in a copy of the project. Run preview publish with --in-place to build in the app's folder.` | The lockfile is for a package manager publish has no install for, such as nub (`nub.lock`) |
 | `<platform>: <install command> failed with exit code <n>. If the lockfile is out of date, update it, or set EAS_NO_FROZEN_LOCKFILE=1.` | The install failed. The last sentence shows only with a frozen lockfile |
 | `<platform>: eas-build-pre-install failed with exit code <n>: <package manager> run eas-build-pre-install` | Your script failed. The same for `eas-build-post-install` |
 | `Command failed: <node> <path>/expo/bin/cli export:embed ...` | The export failed. Its own output is above. `<path>/expo/bin/cli` is your app's own Expo CLI, run with Node |

@@ -24,7 +24,11 @@ with `ignore` from `@expo/fingerprint` (a dependency of expo since SDK 53). Othe
 them there when publish is slow. A `.git` folder is copied; a `.git` file (a worktree or submodule
 pointer) isn't, because git in the copy would write to the real repository through it. The copy then
 runs `eas-build-pre-install` (through npm under Yarn, as EAS does), the frozen install EAS runs for
-that package manager (`EAS_NO_FROZEN_LOCKFILE` turns freezing off) and `eas-build-post-install`. The
+that package manager (`EAS_NO_FROZEN_LOCKFILE` turns freezing off) and `eas-build-post-install`.
+`@expo/package-manager` 1.14 also finds nub from a `nub.lock`. `installCommand` has no entry for it,
+so a manager outside npm, Yarn, pnpm and bun stops publish before the copy, naming it and its
+lockfile (the module's `<NAME>_LOCK_FILE`) and pointing at `--in-place`. An error from before the
+copy exists gets no `--keep-copy` hint. The
 end-of-build hooks never run. Every step in the copy gets `EAS_BUILD=1`, `EAS_BUILD_PLATFORM`,
 `EAS_BUILD_WORKINGDIR`, `EAS_BUILD_GIT_COMMIT_HASH` (read from the user's folder) and
 `PREVIEW_PUBLISH=1`, and never a build id, profile or runner, since there is none. The fingerprint,

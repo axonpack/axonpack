@@ -419,4 +419,15 @@ describe("where it builds", () => {
     expect(existsSync(join(work, "android"))).toBe(false);
     expect(removeInBackground).not.toHaveBeenCalled();
   });
+
+  test("a stop before anything is copied has no --keep-copy hint", async () => {
+    mocked(prepareCopy).mockImplementationOnce(() => {
+      throw new Error("android: can't install with nub (nub.lock)");
+    });
+    const failed = publish(both({ work: temp("run") }));
+    await expect(failed).rejects.toThrow(
+      /^android: can't install with nub \(nub\.lock\)$/,
+    );
+    expect(buildBundle).not.toHaveBeenCalled();
+  });
 });

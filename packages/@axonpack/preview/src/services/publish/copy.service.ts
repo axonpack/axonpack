@@ -14,7 +14,10 @@ import type { Platform } from "../../utils/previews/layout.util";
 import { appRequire, gitHead } from "../cli/project.service";
 
 type Env = NodeJS.ProcessEnv;
-export type Manager = "npm" | "yarn" | "pnpm" | "bun";
+const MANAGERS = ["npm", "yarn", "pnpm", "bun"] as const;
+export type Manager = (typeof MANAGERS)[number];
+const canInstall = (name: string): name is Manager =>
+  (MANAGERS as readonly string[]).includes(name);
 
 const log = (message: string) => process.stdout.write(`${message}\n`);
 
@@ -182,11 +185,19 @@ export function prepareCopy({
 }): { appDir: string; env: Env } {
   // The app's own copy, the one its `expo` uses, finds the workspace root and its lockfile.
   const pm = appRequire(projectRoot)("@expo/package-manager");
-  const manager: Manager | null = pm.resolvePackageManager(projectRoot);
+  const manager: string | null = pm.resolvePackageManager(projectRoot);
   if (!manager)
     throw new Error(
       `${platform}: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.`,
     );
+  // @expo/package-manager 1.14 also finds nub (nub.lock), which has no install command here.
+  if (!canInstall(manager)) {
+    const lockfile: string | undefined =
+      pm[`${manager.toUpperCase()}_LOCK_FILE`];
+    throw new Error(
+      `${platform}: can't install with ${manager}${lockfile ? ` (${lockfile})` : ""} in a copy of the project. Run preview publish with --in-place to build in the app's folder.`,
+    );
+  }
   const root: string = pm.resolveWorkspaceRoot(projectRoot) ?? projectRoot;
   log(`${platform}: copying ${root} to ${dest}`);
   if (!copyProject(root, dest, easignore(projectRoot, root)).git)

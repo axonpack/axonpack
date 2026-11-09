@@ -97,7 +97,8 @@ copy's root:
 
 With `EAS_NO_FROZEN_LOCKFILE=1` set, as on EAS, the lockfile isn't frozen: `npm install`,
 `--no-immutable`, `--no-frozen-lockfile`, or no flag for Yarn 1 and bun. Without a lockfile publish
-stops.
+stops. It also stops, before copying anything, when the lockfile is for another package manager,
+such as nub's `nub.lock`. Publish that app with `--in-place`.
 
 Before the install, publish runs `eas-build-pre-install` from your app's `package.json`, and after
 it `eas-build-post-install`, each as `<package manager> run <name>` in the app's folder in the copy.

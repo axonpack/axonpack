@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { appRequire } from "../../cli/project.service";
 import {
   copyEnv,
   copyProject,
@@ -34,10 +35,11 @@ jest.mock("node:child_process", () => {
 jest.mock("../../cli/project.service", () => ({
   ...jest.requireActual("../../cli/project.service"),
   // The package's own expo stands in for the app's.
-  appRequire: () =>
+  appRequire: jest.fn(() =>
     jest
       .requireActual<typeof import("node:module")>("node:module")
       .createRequire(require.resolve("expo/package.json")),
+  ),
 }));
 const exec = execFileSync as unknown as jest.Mock;
 
@@ -427,6 +429,29 @@ describe("prepareCopy", () => {
       }),
     ).toThrow("android: no lockfile in the app's folder or its workspace root");
     expect(calls).toEqual([]);
+  });
+
+  test("a package manager it has no install for stops it before the copy, naming it and its lockfile", () => {
+    const { dir } = repo({ "package.json": "{}", "nub.lock": "" });
+    // What @expo/package-manager 1.14 finds from a nub.lock.
+    (appRequire as jest.Mock).mockReturnValueOnce(() => ({
+      resolvePackageManager: () => "nub",
+      NUB_LOCK_FILE: "nub.lock",
+    }));
+    fake();
+    const dest = join(temp("dest"), "android");
+    expect(() =>
+      prepareCopy({
+        projectRoot: dir,
+        dest,
+        platform: "android",
+        env: vars(),
+      }),
+    ).toThrow(
+      "android: can't install with nub (nub.lock) in a copy of the project. Run preview publish with --in-place to build in the app's folder.",
+    );
+    expect(calls).toEqual([]);
+    expect(existsSync(dest)).toBe(false);
   });
 
   test("works outside a git repo, with no commit in the env", () => {
