@@ -422,11 +422,11 @@ describe("where it builds", () => {
 
   test("a stop before anything is copied has no --keep-copy hint", async () => {
     mocked(prepareCopy).mockImplementationOnce(() => {
-      throw new Error("android: can't install with nub (nub.lock)");
+      throw new Error("android: can't install with acme (acme.lock)");
     });
     const failed = publish(both({ work: temp("run") }));
     await expect(failed).rejects.toThrow(
-      /^android: can't install with nub \(nub\.lock\)$/,
+      /^android: can't install with acme \(acme\.lock\)$/,
     );
     expect(buildBundle).not.toHaveBeenCalled();
   });

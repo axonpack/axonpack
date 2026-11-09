@@ -25,10 +25,16 @@ them there when publish is slow. A `.git` folder is copied; a `.git` file (a wor
 pointer) isn't, because git in the copy would write to the real repository through it. The copy then
 runs `eas-build-pre-install` (through npm under Yarn, as EAS does), the frozen install EAS runs for
 that package manager (`EAS_NO_FROZEN_LOCKFILE` turns freezing off) and `eas-build-post-install`.
-`@expo/package-manager` 1.14 also finds nub from a `nub.lock`. `installCommand` has no entry for it,
-so a manager outside npm, Yarn, pnpm and bun stops publish before the copy, naming it and its
-lockfile (the module's `<NAME>_LOCK_FILE`) and pointing at `--in-place`. An error from before the
-copy exists gets no `--keep-copy` hint. The
+`@expo/package-manager` 1.14 also finds nub from a `nub.lock` (1.13 doesn't, so that app gets the
+no-lockfile error). nub takes pnpm's flags, so it gets pnpm's install, `nub install
+--frozen-lockfile` (`--no-frozen-lockfile` unfrozen). Its `eas-build-pre-install` runs as
+`nub run --node`: `nub run` first parses the tsconfig.json that governs the folder, and in the copy,
+before the install, the `expo/tsconfig.base` it extends is missing, so the run stops with "the
+project's tsconfig.json could not be read in full". `--node` skips nub's TypeScript layer and keeps
+script lookup, `npm_*` variables and `.bin` on the PATH. `eas-build-post-install` is a plain
+`nub run`. A manager outside npm, Yarn, pnpm, bun and nub (one a later `@expo/package-manager`
+finds) stops publish before the copy, naming it and its lockfile (the module's `<NAME>_LOCK_FILE`)
+and pointing at `--in-place`. An error from before the copy exists gets no `--keep-copy` hint. The
 end-of-build hooks never run. Every step in the copy gets `EAS_BUILD=1`, `EAS_BUILD_PLATFORM`,
 `EAS_BUILD_WORKINGDIR`, `EAS_BUILD_GIT_COMMIT_HASH` (read from the user's folder) and
 `PREVIEW_PUBLISH=1`, and never a build id, profile or runner, since there is none. The fingerprint,

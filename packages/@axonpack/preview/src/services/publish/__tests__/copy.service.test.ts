@@ -240,6 +240,8 @@ describe("installCommand", () => {
     ["pnpm", false, false, "pnpm install --no-frozen-lockfile"],
     ["bun", false, true, "bun install --frozen-lockfile"],
     ["bun", false, false, "bun install"],
+    ["nub", false, true, "nub install --frozen-lockfile"],
+    ["nub", false, false, "nub install --no-frozen-lockfile"],
   ] as const)(
     "%s (Yarn 2+: %s, frozen: %s)",
     (manager, yarnModern, frozen, command) => {
@@ -431,12 +433,37 @@ describe("prepareCopy", () => {
     expect(calls).toEqual([]);
   });
 
-  test("a package manager it has no install for stops it before the copy, naming it and its lockfile", () => {
-    const { dir } = repo({ "package.json": "{}", "nub.lock": "" });
-    // What @expo/package-manager 1.14 finds from a nub.lock.
+  test("nub runs the hooks and the frozen install with nub, pre-install as plain Node", () => {
+    const { dir } = repo({
+      "package.json": JSON.stringify({
+        scripts: {
+          "eas-build-pre-install": "echo pre",
+          "eas-build-post-install": "echo post",
+        },
+      }),
+      "nub.lock": "",
+    });
+    // What @expo/package-manager 1.14 finds from a nub.lock. The tests' own copy is older.
     (appRequire as jest.Mock).mockReturnValueOnce(() => ({
       resolvePackageManager: () => "nub",
-      NUB_LOCK_FILE: "nub.lock",
+      resolveWorkspaceRoot: () => null,
+    }));
+    fake();
+    const dest = join(temp("dest"), "ios");
+    prepareCopy({ projectRoot: dir, dest, platform: "ios", env: vars() });
+    expect(calls.map(({ command, cwd }) => [command, cwd])).toEqual([
+      ["nub run --node eas-build-pre-install", dest],
+      ["nub install --frozen-lockfile", dest],
+      ["nub run eas-build-post-install", dest],
+    ]);
+  });
+
+  test("a package manager it has no install for stops it before the copy, naming it and its lockfile", () => {
+    const { dir } = repo({ "package.json": "{}", "acme.lock": "" });
+    // A manager a later @expo/package-manager could find.
+    (appRequire as jest.Mock).mockReturnValueOnce(() => ({
+      resolvePackageManager: () => "acme",
+      ACME_LOCK_FILE: "acme.lock",
     }));
     fake();
     const dest = join(temp("dest"), "android");
@@ -448,7 +475,7 @@ describe("prepareCopy", () => {
         env: vars(),
       }),
     ).toThrow(
-      "android: can't install with nub (nub.lock) in a copy of the project. Run preview publish with --in-place to build in the app's folder.",
+      "android: can't install with acme (acme.lock) in a copy of the project. Run preview publish with --in-place to build in the app's folder.",
     );
     expect(calls).toEqual([]);
     expect(existsSync(dest)).toBe(false);
