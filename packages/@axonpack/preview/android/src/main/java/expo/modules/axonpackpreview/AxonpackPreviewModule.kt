@@ -43,6 +43,10 @@ class AxonpackPreviewModule : Module() {
       appContext.reactContext?.let { PreviewState.confirmStart(it) }
     }
 
+    Function("clearBroken") { id: String ->
+      appContext.reactContext?.let { PreviewState.clearBroken(it, id) }
+    }
+
     Function("reload") { reload() }
 
     // For the network sweep.

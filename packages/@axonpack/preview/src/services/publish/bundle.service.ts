@@ -1,21 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, relative, sep } from "node:path";
+import { mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
-import {
-  BUNDLE_FILE,
-  ManifestFile,
-  Platform,
-} from "../../utils/previews/layout.util";
-
-export type BuiltFile = ManifestFile & { absolutePath: string };
-
-const walk = (dir: string): string[] =>
-  readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-    entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)],
-  );
+import { BUNDLE_FILE, Platform } from "../../utils/previews/layout.util";
+import { appRequire } from "../cli/project.service";
+import { listFiles } from "./file-sets.service";
 
 /** Hermes bytecode starts with an 8-byte magic number, then its version as a 32-bit int. */
 const HERMES_MAGIC = Buffer.from([
@@ -26,15 +15,29 @@ export const hermesVersion = (bundle: Buffer): number | null =>
     ? bundle.readUInt32LE(8)
     : null;
 
-/** The same release bundle and images the native build embeds, as Hermes bytecode. */
+/**
+ * The same release bundle and images the native build embeds, as Hermes bytecode, exported from
+ * `root` (the app's folder in the copy, or the project root with --in-place) into `outDir`, which
+ * is inside the publish's run folder and goes with it.
+ */
 export function buildBundle(
-  projectRoot: string,
+  root: string,
   platform: Platform,
-  entryFile?: string,
+  {
+    entryFile,
+    outDir: out,
+    env,
+  }: {
+    entryFile?: string;
+    outDir: string;
+    env: NodeJS.ProcessEnv;
+  },
 ) {
-  const out = mkdtempSync(join(tmpdir(), `preview-${platform}-`));
+  mkdirSync(out, { recursive: true });
   const args = [
-    "expo",
+    // The app's own Expo CLI, run with Node and no package manager. Through npx, npm printed
+    // EBADDEVENGINES warnings in a workspace whose devEngines names pnpm or bun.
+    appRequire(root).resolve("./bin/cli"),
     "export:embed",
     "--platform",
     platform,
@@ -47,17 +50,9 @@ export function buildBundle(
     out,
   ];
   if (entryFile) args.push("--entry-file", entryFile);
-  execFileSync("npx", args, { cwd: projectRoot, stdio: "inherit" });
+  execFileSync(process.execPath, args, { cwd: root, stdio: "inherit", env });
 
-  const files: BuiltFile[] = walk(out).map((absolutePath) => {
-    const data = readFileSync(absolutePath);
-    return {
-      absolutePath,
-      path: relative(out, absolutePath).split(sep).join("/"),
-      sha256: createHash("sha256").update(data).digest("hex"),
-      size: statSync(absolutePath).size,
-    };
-  });
+  const files = listFiles(out);
   const bundle = readFileSync(join(out, BUNDLE_FILE[platform]));
   return { files, hermesVersion: hermesVersion(bundle) };
 }

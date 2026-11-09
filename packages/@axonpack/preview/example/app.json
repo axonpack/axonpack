@@ -35,7 +35,14 @@
           "imageWidth": 76
         }
       ],
-      "@axonpack/preview",
+      [
+        "@axonpack/preview",
+        {
+          "files": {
+            "content": "web"
+          }
+        }
+      ],
       [
         "expo-build-properties",
         {

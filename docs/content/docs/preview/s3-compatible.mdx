@@ -40,7 +40,9 @@ Use whatever region your host expects; many accept `us-east-1` or `auto`.
 The two lists, `index.json` and `index/<platform>/<key>.json`, are read, changed and written back.
 The write sends `If-Match` with the ETag it read, or `If-None-Match: *` when the file is new. If the
 host answers 412 or 409, someone else wrote first: the CLI reads again and retries, up to 8 times.
-That is what lets two publishes at the same time both end up listed.
+That is what lets two publishes at the same time both end up listed. It also covers a write the CLI
+sent again after the connection dropped: if the first try did land, the repeat gets 412, and the
+CLI reads its own write back and writes the same change again.
 
 If a host ignores those headers, publishing still works, but two publishes that overlap can lose
 one of the entries: the later write wins. Files and manifests are not affected. Publishing one at a

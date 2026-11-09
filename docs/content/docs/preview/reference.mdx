@@ -16,6 +16,7 @@ Use this page to look up a name. If you are new, start with the
 | `usePreview()`                 | The list and its actions. Needs the provider above it                         |
 | `usePreviewStatus(labels?)`    | What runs now and the build it runs in. See [below](#usepreviewstatus). Needs the provider |
 | `useRunning()`                 | What this start runs, as a [`Running`](#running). Needs the provider          |
+| `usePreviewFiles(name)`        | Which copy of a file set goes with the running bundle, as [`PreviewFiles`](#previewfiles). Needs the provider |
 | `usePreviewsState()`           | The raw [store state](#usepreview), without the provider                      |
 | `useDevPreviewServersState()`  | `{ servers, activeUrl, alive, error, scanning, hosts }` for dev preview servers. `alive` is every `host:port` that answered the last look, or null before one |
 
@@ -55,6 +56,7 @@ What the app passes to the provider. Nothing here is read from the environment.
 | `devPreviewServers` | No     | Lists this app's Metro servers in a debug build, while `enabled` is `true`. `true`, or an object (below). Default off. See [Dev preview servers](/docs/preview/dev-preview-servers) |
 | `buildKey`          | No     | This build's key, only when the config plugin is not used to bake it in             |
 | `slug`              | No     | The app's Expo slug, only when the config plugin is not used to bake it in. Previews are read from the bucket folder named after it |
+| `files`             | No     | The app's own copy of each file set, by the name the config plugin's `files` option gives it (`PreviewFilesOptions`, below). See [Files with a preview](/docs/preview/files) |
 
 `s3Config` (`PreviewS3Config`):
 
@@ -94,6 +96,22 @@ When `s3Config` is set too, it wins, and the app logs one warning.
 
 `localhost`, `127.0.0.1`, and `10.0.2.2` on Android are always checked and need no entry.
 
+Each entry of `files` (`PreviewFilesOptions`):
+
+| Field     | Needed | What it is                                                                          |
+| --------- | ------ | ----------------------------------------------------------------------------------- |
+| `default` | Yes    | The folder of the app's own copy, as a `file://` URI, such as `file:///android_asset/www/` |
+| `onPostDownload` | No     | `(name, uri, { previousUri }) => void \| Promise<void>`. Runs once each time a preview's copy finishes downloading, with the folder it stays in and `previousUri` undefined. The download is done when it returns. On iOS it runs again on the first start after an app update moved the folder, for the running preview, with the old folder as `previousUri`. If it throws, the download is deleted. See [After an app update](/docs/preview/files#after-an-app-update) |
+
+```ts
+files: {
+  www: {
+    default: 'file:///android_asset/www/',
+    onPostDownload: (name, uri, { previousUri }) => rewritePaths(uri, previousUri),
+  },
+},
+```
+
 ```ts
 devPreviewServers: {
   allowCustomHosts: true,
@@ -118,12 +136,12 @@ devPreviewServers: {
 | `downloading`          | Download progress by id, from 0 to 1                                       |
 | `activeId`             | The preview the next start loads, or null for the default bundle          |
 | `runningId`            | The preview that runs now, or null. Not `activeId` when the chosen one did not load |
-| `broken`               | Ids of previews that stopped before they finished starting                 |
+| `broken`               | Ids of previews that stopped before they finished starting, until they are downloaded again or switched to |
 
 | Action                   | What it does                                                             |
 | ------------------------ | ------------------------------------------------------------------------ |
 | `refresh()`              | Reads the downloads, then asks the bucket for this build's list. With no bucket URL it asks nothing |
-| `download(id)`           | Downloads a preview, or its update                                       |
+| `download(id)`           | Downloads a preview, or its update, and takes it off `broken`            |
 | `switchTo(id)`           | Restarts into a preview, downloading it first if needed. Also stops a dev preview server |
 | `switchTo(null)`         | Back to the default bundle. Also stops a dev preview server              |
 | `remove(id)`             | Deletes a download. If it runs, goes back to the default bundle first    |
@@ -134,7 +152,7 @@ devPreviewServers: {
 | Field      | What it is                                                                       |
 | ---------- | -------------------------------------------------------------------------------- |
 | `id`       | The preview's id                                                                 |
-| `entry`    | The bucket's entry: `title`, `branch`, `commit`, `author`, `publishedAt`, `appVersion`, `buildNumber`, `compatibility`, `fingerprint`, `environment` (only when published with `--environment`), `size`, `changelog`, `revision`, `manifest` |
+| `entry`    | The bucket's entry: `title`, `branch`, `commit`, `author`, `publishedAt`, `appVersion`, `buildNumber`, `compatibility`, `fingerprint`, `environment` (only when published with `--environment`), `fileSets` (only when published with file sets: `{ [name]: { files, size } }`), `size`, `changelog`, `revision`, `manifest` |
 | `status`   | `available`, `downloading`, `downloaded`, `update-available`, `unpublished` or `broken` |
 | `progress` | 0 to 1 while downloading, else null                                              |
 | `active`   | It runs now: what native started from, not only what was chosen                  |
@@ -176,6 +194,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `publishedAt`   | The running preview's ISO publish date, or null                                |
 | `app`           | `{ name, version, buildNumber, platform }` of this build. Nulls on a native side older than the JS |
 | `compatibility` | `{ mode, key }`: `appVersion` or `fingerprint`, and the build key               |
+| `files`         | Which copy of each file set in the config's `files` is in use, by name, as [`PreviewFiles`](#previewfiles). Empty without `files` |
 | `previewsConfigured` | A bucket URL is set. False when `s3Config.url` is undefined, empty or blank, and then nothing is read from a bucket |
 | `loading`       | The previews list is loading                                                   |
 | `error`         | The last error, as text, or null                                               |
@@ -193,6 +212,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `selectPreview(id, key?)`     | Chooses what the next start or `reload()` loads: a preview id, or null for the default bundle. False where the native module is missing |
 | `reload()`                    | Restarts JS, so a new choice takes effect. False where the native module is missing |
 | `previewBundlePath(id)`       | Where a preview's bundle sits, relative to the preview folder                |
+| `previewFilesPath(name, config)` | `usePreviewFiles(name)` outside React, with the config passed in. Throws for a name `config.files` doesn't list |
 | `markLaunched()`              | Tells the native side this start worked. The provider calls it               |
 | `buildKey()`                  | The key the plugin baked into this build, or null                            |
 | `buildCompatibility()`        | `appVersion` or `fingerprint`, as baked in, or null                          |
@@ -206,7 +226,7 @@ list's `labels` to name the kinds the same way. Its type is `PreviewStatusInfo`.
 | `resolveTheme(theme, scheme)` | A full list theme from the `theme` prop and the device's colour scheme      |
 | `fromDevtoolsPalette(palette)` | The list theme keys an expo-devtools palette maps to                       |
 
-Types: `PreviewConfig`, `PreviewS3Config`, `PreviewsState`, `PreviewItem`, `PreviewStatus`,
+Types: `PreviewConfig`, `PreviewS3Config`, `PreviewFilesOptions`, `PreviewFiles`, `PreviewsState`, `PreviewItem`, `PreviewStatus`,
 `Running`, `DefaultSource`, `BundleKind`, `PreviewStatusInfo`, `PreviewListProps`,
 `PreviewListTheme`, `PreviewListThemeInput`, `PreviewListFonts`, `DevtoolsPaletteLike`,
 `PreviewListLabels`, `DevPreviewServersState`, `DevPreviewServer`, `DevPreviewServersOptions`,
@@ -218,6 +238,17 @@ Types: `PreviewConfig`, `PreviewS3Config`, `PreviewsState`, `PreviewItem`, `Prev
 app runs from, or the one picked in the list, has `unknown: true` when no look
 has found it answering and nothing was saved about it, so its kind and name are not known.
 `previewsStore.clearError()` hides the error, as the snackbar's **Dismiss** does.
+
+### PreviewFiles
+
+What `usePreviewFiles(name)` and `previewFilesPath(name, config)` return.
+
+| Field       | What it is                                                                          |
+| ----------- | ----------------------------------------------------------------------------------- |
+| `uri`       | The copy's folder, as a `file://` URI that always ends in `/`                        |
+| `source`    | `preview` when the running preview was published with the set, else `default`      |
+| `previewId` | The preview whose copy it is, or null for the default copy                          |
+| `ready`     | False while the preview's copy waits for its `onPostDownload` on start, and for the rest of the start once that `onPostDownload` threw. Always true for the default copy and for a set without `onPostDownload`. The hook renders again when it changes; `previewFilesPath` returns what is true when it is called |
 
 ## Theme
 
@@ -301,6 +332,9 @@ braces, such as `{host}`, is filled in. `status`, `statusShort` and `timeAgo` ar
 | `compatibilityAppVersion`  | App version                   | Its value in `appVersion` mode                         |
 | `compatibilityFingerprint` | Fingerprint                   | Its value in `fingerprint` mode                        |
 | `compatibilityKey`         | Build key                     | Fact name                                              |
+| `files`                    | Files                         | Before each file set's name in the details, as in "Files: www" |
+| `filesPreview`             | Preview's copy                | Its value when the running preview's copy is in use    |
+| `filesDefault`             | Default copy                  | Its value when the app's own copy is in use            |
 | `backToDefault`            | Back to default               | The card's action: back to the default Metro in a debug build, to the bundle built into the app in a release build |
 | `metroBypassed`            | Debug build: Metro is not used while a preview runs. Back to default loads from Metro again. | Under the facts while a preview runs in a debug build |
 
@@ -363,6 +397,7 @@ Text between backticks shows in a code font.
 | `brokenHint`        | It stopped while starting, so the default bundle loaded instead. | Under the chips of a broken preview |
 | `environmentPrefix` | env:                                      | Before the environment name on its chip            |
 | `byline`            | \{author\}, \{time\}                      | Who published it and when                          |
+| `files`             | Files                                     | Before a preview's file sets and their sizes, as in "Files: www 2.1 MB" |
 | `timeAgo`           | `now` Just now, `minute` 1 minute ago, `minutes` \{n\} minutes ago, `hour` 1 hour ago, `hours` \{n\} hours ago, `day` 1 day ago, `days` \{n\} days ago | How long ago. Older than 30 days shows the date |
 | `showMore`          | Show more                                 | Opens a long changelog                             |
 | `showLess`          | Show less                                 | Closes it                                          |
@@ -401,5 +436,12 @@ Still accepted, so an app written for 0.1.0 type-checks.
 | Option          | Default      | Values                       |
 | --------------- | ------------ | ---------------------------- |
 | `compatibility` | `appVersion` | `appVersion` or `fingerprint` |
+| `files`         | none         | File sets to publish with each preview: a name and a folder from the app's root, such as `{ "www": "web/dist" }`, or a name and `{ "folder": "web/dist", "build": "<command>" }`, whose command `preview publish` runs first, from the app's folder in its copy of the project (the app's root with `--in-place`) and with the `--environment` values. Read by `preview publish` only |
 
-See [Compatibility](/docs/preview/compatibility) for what it writes into the build.
+`preview publish` stops with an error that names the option when `files` is not an object of names
+and folders, when a name has a character other than letters, digits, `.`, `_` and `-` or starts with
+a dot, or when a set is neither a folder nor an object with a `folder`, as text that isn't empty. A
+`build`, when given, must be text that isn't empty too.
+
+See [Compatibility](/docs/preview/compatibility) for what it writes into the build, and
+[Files with a preview](/docs/preview/files) for `files`.

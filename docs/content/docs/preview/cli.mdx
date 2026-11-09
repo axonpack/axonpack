@@ -14,7 +14,30 @@ preview <command> [options]
 
 ## publish
 
-Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/preview/publishing).
+Builds this app's JS bundle in a copy of the project and uploads it as a preview. The copy goes in a
+temp folder, one per platform, and gets its own install and your `eas-build-pre-install` and
+`eas-build-post-install` scripts. Your app's folder isn't written to. `--in-place` builds in the
+folder instead. See [Publishing](/docs/preview/publishing#what-publish-does).
+
+With the config plugin's `files` option it uploads those folders too. Before it builds the bundle,
+it runs each set's `build` command in the copy, if it has one, after printing
+`files <name>: building with <command>`. A command that fails stops it with
+`files.<name>: the build command failed with exit code <n>: <command>`. Then it prints
+`files <name>: <n> files from <folder>` for each set, and it stops with
+`files.<name>: <folder> has no files in the copy.` when a folder is missing or empty (without
+`in the copy` with `--in-place`). That error ends with
+`Build it before publishing, or give the set a build command.` and, from a copy,
+`Check that .easignore doesn't list it.` For a set with a `build` command it ends with
+`Check that its build command writes there.`
+See [Files with a preview](/docs/preview/files).
+
+A `files` option it can't read stops it before the copy is made, with one of these:
+
+```
+@axonpack/preview: files must name each file set and its folder, such as { "www": "web/dist" }
+@axonpack/preview: "<name>" can't name a file set. Use letters, digits, ".", "_" and "-", not starting with a dot.
+@axonpack/preview: files.<name> must be a folder, such as "web/dist", or { "folder": "web/dist", "build": "<a command that builds it>" }
+```
 
 | Option                     | Default                     | What it does                                                                   |
 | -------------------------- | --------------------------- | ------------------------------------------------------------------------------ |
@@ -24,13 +47,54 @@ Builds this app's JS bundle and uploads it as a preview. See [Publishing](/docs/
 | `--base <branch>`          | the repo's default branch   | The branch the changelog counts commits from                                   |
 | `--changelog=<text>`       | the commit subjects         | Changelog text. Use `=` when it starts with a dash, as a `- item` list does    |
 | `--changelog-file <path>`  |                             | Read the changelog from a file                                                 |
-| `--entry-file <path>`      | Expo's own                  | Passed to `expo export:embed`                                                  |
+| `--entry-file <path>`      | Expo's own                  | Passed to `expo export:embed`. A relative path is taken from the app's root, and points at the same file in the copy |
 | `--compatibility <c>`      | the plugin option           | `appVersion` or `fingerprint`. Overrides the app config, with a warning        |
-| `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
+| `--environment <name>`     |                             | Build with this EAS environment's variables, like `eas update`, and record its name, which the app shows as `env: <name>`. The values also reach the copy's install, its `eas-build-*` scripts and each file set's `build` command. Needs eas-cli and a project linked to EAS; shell variables win. See [Settings and env files](/docs/preview/environment#building-with-an-eas-environment) |
+| `--in-place`               | off                         | Build in the app's folder: no copy, no install, no `eas-build-*` scripts, and the file sets build once for both platforms. Faster where the folder is a clean checkout, as on CI. See [Build in place](/docs/preview/publishing#build-in-place) |
+| `--keep-copy`              | off                         | Keep the temp folder with each platform's copy, to look inside. Delete it yourself after |
 
-When it is done, it prints two lines per platform: `<platform>: published <id> for build <key>`,
-then the URL of that build's index in the bucket. `<key>` is the build's compatibility key, so it
-has to match the key in the installed build for the preview to show in its list.
+With one file set named `www` that has a `build` command, it prints these lines for each platform,
+with the output of each command after its line:
+
+```
+android: copying /Users/me/my-app to /var/folders/xx/T/preview-publish-Xa1b2C/android
+android: eas-build-pre-install
+android: bun install --frozen-lockfile
+android: eas-build-post-install
+files www: building with npm --prefix ../web run build
+files www: 12 files from ../web/out
+
+android: building task-1
+android: uploading 31/79 (1.2/23.4 MB) drawable-xxhdpi/foo.png
+android: 79 files, 12 new, 67 already in the bucket
+android: published task-1 for build version-1.0.0
+android: https://<server>/<bucket>/<slug>/index/android/version-1.0.0.json
+android: deleting the copy in the background
+```
+
+The `copying` line names the folder it copies and the copy. A line for an `eas-build-*` script
+shows only when `package.json` has that script, and the install line shows the command for your
+package manager (see [Install and hooks](/docs/preview/publishing#install-and-hooks)). In a git
+worktree, a line after `copying` says
+`android: no git in the copy, since .git in <root> is a file pointing at another folder (a git worktree or submodule)`.
+With `--keep-copy` the last line is `android: kept the copy at <path>`. When the platform fails, the
+copy is deleted before the error shows, and the last line is `android: removed the copy`.
+
+With `--in-place`, the `copying`, script, install and `deleting` lines don't show, and the `files`
+lines come once, before the first platform.
+
+Publish uploads four files at a time. The `uploading` line counts the files that are done out of
+all the files (the bundle's and the file sets'), gives how many MB of them are done, and names the
+file it started last. In a terminal it is one line, redrawn as each file starts and finishes, and
+cleared once every file is up. Without a terminal, as in CI, it is printed after the 20th file is
+done, the 40th, the 60th and so on.
+A file the bucket already has under its sha256 is not sent again. The next line counts the files
+that were new and the ones that were already in the bucket. When a file fails, no new one starts,
+and publish stops with that error once the files already on their way are done.
+
+The last two lines name the build key and the URL of that build's index in the bucket. `<key>` is
+the build's compatibility key, so it has to match the key in the installed build for the preview to
+show in its list.
 
 ## unpublish
 
@@ -97,6 +161,51 @@ Expo loads for a release build; the environment wins over them. Keep the write k
 
 `start` needs none of them.
 
+## Errors and retries
+
+When a request to the bucket can't be sent, or the connection drops before the answer, the message
+names the request and the reason Node gave, with its error code:
+
+```
+preview: HEAD files/<sha256> failed: ENOTFOUND getaddrinfo ENOTFOUND minio.example.com
+preview: HEAD files/<sha256> failed: CERT_HAS_EXPIRED certificate has expired
+```
+
+Keys are shown as they are inside the app's slug folder. A listing, from `prune`, shows its prefix
+with the slug instead, such as `GET <slug>/files/ failed: ...`.
+
+When the code says the connection was reset or refused, or timed out (`ECONNRESET`,
+`ECONNREFUSED`, `ETIMEDOUT`, `EPIPE`, `UND_ERR_SOCKET` or `UND_ERR_CONNECT_TIMEOUT`), the CLI sends
+the request again after 1, 2 and 4 seconds. If the fourth try fails too, the message says so:
+
+```
+preview: PUT files/<sha256> failed after 4 tries: ECONNREFUSED connect ECONNREFUSED 203.0.113.7:9000
+```
+
+Every request it sends is safe to repeat. A list write whose first try did land gets 412 on the
+repeat, and the CLI reads the list again and writes it again, as it does when two publishes clash.
+
+When the bucket answers with an error status, nothing is retried and the message gives the status,
+the key and the start of the bucket's answer: `S3 403 for <key>: <body>`.
+
+A publish that stopped partway can be run again. The files already in the bucket are skipped.
+
+## Errors in the copy
+
+Each of these stops `publish`. When it happens in the copy, the message gets a second line,
+`Run again with --keep-copy to look inside the copy.`, and the copy is deleted.
+
+| Message | Cause |
+| ------- | ----- |
+| `<platform>: no lockfile in the app's folder or its workspace root, so the copy can't be installed. Run an install once to make one.` | No `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock` or `bun.lockb` |
+| `<platform>: <install command> failed with exit code <n>. If the lockfile is out of date, update it, or set EAS_NO_FROZEN_LOCKFILE=1.` | The install failed. The last sentence shows only with a frozen lockfile |
+| `<platform>: eas-build-pre-install failed with exit code <n>: <package manager> run eas-build-pre-install` | Your script failed. The same for `eas-build-post-install` |
+| `Command failed: <node> <path>/expo/bin/cli export:embed ...` | The export failed. Its own output is above. `<path>/expo/bin/cli` is your app's own Expo CLI, run with Node |
+
+See [Troubleshooting](/docs/preview/troubleshooting#a-script-or-the-install-fails-in-the-copy).
+
 ## Exit codes
 
-A command that fails prints `preview: <message>` and exits with 1.
+A command that fails prints `preview: <message>` and exits with 1. Ctrl-C during `publish` deletes
+its temp folder, unless `--keep-copy`, and exits with 130. If a command such as the install was
+running, it stops with that command's error and exits with 1.

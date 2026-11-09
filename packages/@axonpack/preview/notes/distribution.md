@@ -10,6 +10,10 @@ Publishing a preview so installed apps can find it.
 - [x] Removes a preview, and cleans up files nothing uses any more
 - [x] Records the EAS environment a preview was built with, so the app can show it
 - [x] Runs against a local S3 server while developing
+- [x] Shows upload progress, and says how many files the bucket already had
+- [x] Uploads four files at a time, and starts no new one after a failure
+- [x] Names the request and the network error when a request fails, and sends it again when the
+      connection dropped
 
 Previews go to an S3-compatible bucket: S3, R2, MinIO or any other host with the S3 API. The app
 gets the endpoint, the bucket and, for a private bucket, a read-only key from the config it passes
@@ -27,13 +31,45 @@ npx preview prune
 ```
 
 `publish` builds with `expo export:embed --dev false --bytecode`, the same step a release build
-runs, so the bundle is Hermes bytecode with its images beside it. It reads the `compatibility`
+runs, so the bundle is Hermes bytecode with its images beside it. It runs the app's own
+`expo/bin/cli`, resolved from the app's folder, with `process.execPath`. Through `npx`, npm printed
+`EBADDEVENGINES` in a workspace whose `devEngines` names pnpm or bun. It builds in a copy of the project
+with its own install, unless `--in-place` (see [bundles.md](./bundles.md)). It reads the `compatibility`
 option from the app config (see [bundles.md](./bundles.md)), builds the same key the app was built
 with, records the app version and the native fingerprint either way, uploads each file once under
-its sha256, writes the preview's manifest, and only then adds it to the lists. `--compatibility`
+its sha256 (four at a time), writes the preview's manifest, and only then adds it to the lists. `--compatibility`
 overrides the option, with a warning, since a build of the app would then not list the preview. An app never sees a preview whose files
 are not all there. The changelog is the commit subjects since the branch left the base branch
 (`--base`, default: the repo's default branch); `--changelog=<text>` or `--changelog-file` replace it.
+
+### Output and errors
+
+Each file is a `HEAD` and, when the bucket doesn't have it, a `PUT`. Four files go at once, through
+`forEachAtOnce` (`src/utils/s3/for-each-at-once.util.ts`), the same queue the app's download uses.
+Most of a request is waiting on the server, so one at a time a small file took about as long as a
+big one. Against a local fake bucket that added 300 ms to each `PUT`, the example's 44 Android files
+took 13.4 s one at a time and 3.4 s four at a time. After the first failure no file starts, the ones
+on the way are awaited, and the first error is thrown.
+
+While it uploads, `publish` prints `<platform>: uploading <n>/<total> (<done>/<all> MB) <path>`:
+the files finished, their MB, and the file started last. In a terminal that is one line redrawn in
+place as each file starts and finishes (cut to the terminal's width, since a wrapped line can't be
+redrawn) and cleared at the end; when a request fails it stays, so the error under it shows how far
+the upload got. Without a terminal it is printed after every 20th finished file. The summary is
+`<platform>: <n> files, <new> new, <skipped> already in the bucket`.
+
+Every request goes through `s3Fetch` (`src/services/s3/s3.service.ts`), the app's too. When `fetch`
+throws, Node's message is only `fetch failed` and the reason is on `cause`, so `s3Fetch` throws
+`<METHOD> <key> failed: <code> <message>` with the original as `cause`. Without a code on the cause
+(React Native's fetch sets none) it keeps fetch's own message first, which is what the list's error
+matching reads. It retries only a thrown fetch whose cause code is `ECONNRESET`, `ECONNREFUSED`,
+`ETIMEDOUT`, `EPIPE`, `UND_ERR_SOCKET` or `UND_ERR_CONNECT_TIMEOUT`, after 1, 2 and 4 s, and then says
+`failed after 4 tries`. An HTTP status is never retried, and since React Native's fetch sets no
+cause code, the app never retries at all. Every request is safe to send twice: reads, files named by their hash, manifests that are overwritten
+anyway, and the two lists, where a repeat whose first try landed gets 412 and `updateJson` reads its
+own write back and writes the same change again (`upsertPreview`, `removePreview` and
+`syncRootVersion` give the same result when run twice). A publish that stopped partway can be run
+again; the files already up are skipped.
 
 ### EAS environment
 
@@ -53,8 +89,10 @@ It needs eas-cli installed, a login (`eas login`, or `EXPO_TOKEN` in CI) and the
 EAS project (`eas init`); publish says which one is missing. Variables with **secret** visibility
 are never readable outside EAS servers: `eas env:pull` leaves them out (as a comment), so set them
 in the shell if the bundle needs them. Plain text and sensitive ones come through. A file-type
-variable is written by `eas env:pull` itself into the app's `.eas/.env/` folder, and its value is
-that file's path.
+variable is written by `eas env:pull` itself into the app's `.eas/.env/` folder whatever `--path`
+says, and its value is that file's path. `pullEasEnv` copies each such file into the run's temp
+folder, points the value there, and deletes what the pull added (`.eas`, `.eas/.env` or single
+files, whichever it created); a file that was already there stays.
 
 ## CI
 
@@ -69,7 +107,8 @@ does not run them from this package.
 | `pnpm-lock.yaml`    | [`preview.pnpm.yml`](../ci/github-actions/preview.pnpm.yml) |
 | `yarn.lock`         | [`preview.yarn.yml`](../ci/github-actions/preview.yarn.yml) |
 
-All four have the same jobs; only the setup, install and run steps differ. The yarn file uses
+All four have the same jobs; only the setup, install and run steps differ. They pass `--in-place`:
+a CI checkout is already a clean, throwaway copy, so a second copy and install would only cost time. The yarn file uses
 `yarn install --immutable` (Yarn 2 and later); for Yarn 1 change it to `--frozen-lockfile`. It
 publishes each pull request when it is opened, pushed to or reopened, with the branch name as the
 id and the pull request's base branch for the changelog. Pull requests from forks get no secrets,

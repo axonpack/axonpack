@@ -63,8 +63,11 @@ export default function Root() {
 [Settings and env files](/docs/preview/environment#the-apps-settings). If the app already mounts
 `<PreviewProvider>`, remove it.
 
-Preview's hooks, such as `usePreview()` and `usePreviewStatus()`, and a `PreviewList` of your own
-work anywhere inside `DevtoolsProvider`, since its provider is above them.
+Preview's hooks, such as `usePreview()`, `usePreviewStatus()` and `usePreviewFiles()`, and a
+`PreviewList` of your own work anywhere inside `DevtoolsProvider`, since its provider is above them.
+
+A folder can go with each preview, such as the web app a WebView shows. Its default copy goes under
+`files` in this same config. See [Files with a preview](/docs/preview/files#with-expo-devtools).
 
 ## Read its state with useSupport
 
@@ -221,7 +224,13 @@ Each one needs `--yes`, since it restarts the app. Without it the reply is
 The app answers, then restarts a moment later, or once a preview it has to download is on the device.
 If the download fails, the app stays on what it runs, and `devtools get preview now` shows the error
 in `error`. The CLI tab logs each action, refused ones too, but its log is kept in memory, so the
-restart clears it. Run `npx devtools preview` again once the app is back to see what runs.
+restart clears it. After a switch to a dev server or `default`, run `npx devtools preview` again once
+the app is back to see what runs.
+
+While a preview runs, the CLI can't reach the app. A preview is a release bundle, and the agent the
+CLI talks to is only in development bundles, so every command answers `has no devtools agent` and
+`devtools apps` shows `-` under `devtools`. Press **Back to default** in the app's Preview tab, and
+the CLI works again.
 
 ### Download, update and delete from the command line
 

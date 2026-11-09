@@ -9,9 +9,10 @@ import React
 
  React keeps the URL block it was created with, so it is swapped before the first root view exists,
  which is when this handler runs. Returning nil lets the normal root view be made with the new block.
- expo-updates is ordered ahead of every other handler and answers itself, so with it active this
- handler is not asked; the module then reloads into a selected preview once it starts
- (`startOnSelectedPreview`).
+ Every handler is asked, but expo-updates (when active, so in a release build) and the dev launcher
+ (a debug build with expo-dev-client) put a block of their own in its place when they start React,
+ so ours is never asked again. Then the module reloads into a preview chosen before the launch when
+ it starts (`startOnSelectedPreview`), and `reload()` hands React the choice itself.
  */
 public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
   private typealias BundleURLBlock = @convention(block) () -> URL?
@@ -19,7 +20,8 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
   private static var installed = false
   private static var hopped = false
   private static weak var rootViewFactory: NSObject?
-  /// What the block handed React last, to tell whether the running bundle is the selected one.
+  /// What the block handed React last, to tell whether the running bundle is the selected one. Nil
+  /// while the block has never run, as under the dev launcher.
   private static var lastServed: URL?
   /// React's own URL at the last start, when it was read: Metro's in a debug build.
   private(set) static var defaultURL: URL?
@@ -70,9 +72,10 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
   }
 
   /**
-   For an app whose start this handler did not see (expo-updates answered first): if a preview is
-   selected but the base is what started, reload once into the preview. Once per process, so a
-   preview that cannot load never turns into a reload loop.
+   For a launch whose bundle our block did not pick, because expo-updates or the dev launcher replaced
+   it: if a preview is selected but the base is what started, reload once into the preview. Never
+   after any `reload()` in this process, since that already put the choice in React's bundle
+   configuration. So a preview that cannot load never turns into a reload loop either.
    */
   static func startOnSelectedPreview() {
     // The plain lookup, not `bundleToLoad`: that would count this start as a preview start and the
@@ -88,7 +91,6 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
     if installed, lastServed?.standardizedFileURL == preview.standardizedFileURL {
       return
     }
-    hopped = true
     reload()
   }
 
@@ -100,6 +102,9 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
    whether or not the block above was installed. Each step is checked, since a missing key throws.
    */
   static func reload() {
+    // The start this triggers must not hop again: a second reload would claim a second start, find
+    // this one's claim still pending, and mark the preview broken.
+    hopped = true
     PreviewState.nextStart()
     defer { RCTTriggerReloadCommandListeners("preview: switch bundle") }
     guard
@@ -111,15 +116,32 @@ public final class PreviewReactDelegateHandler: ExpoReactDelegateHandler {
       previewLog.warning("Could not reach React's bundle manager, so the reload keeps the current bundle")
       return
     }
-    let preview = PreviewState.localServerURL == nil ? PreviewState.bundleToLoad() : nil
-    guard let configuration = bundleConfiguration(for: preview) else {
+    let local = PreviewState.localServerURL
+    let preview = local == nil ? PreviewState.bundleToLoad() : nil
+    // While the block above is React's, it loads a picked server itself, and on each later reload
+    // skips it if it stopped. The dev launcher replaces the block before it ever runs (`lastServed`
+    // stays nil), so then the server goes in the bundle configuration, the way the dev launcher
+    // hands React its own.
+    let server = lastServed == nil ? local.flatMap(serverConfiguration(for:)) : nil
+    guard let configuration = server ?? bundleConfiguration(for: preview) else {
       previewLog.warning("Could not reach React's bundle manager, so the reload keeps the current bundle")
       return
     }
     manager.setValue(configuration, forKey: "bundleConfig")
-    // With expo-updates first the block above is not installed, so this is the only record of the
-    // start. With the block, the reload asks it next and it records the same choice, or the server.
-    PreviewState.recordLoaded(local: nil, preview: preview)
+    // Once expo-updates or the dev launcher has replaced the block above, this is the only record of
+    // the start. While the block is React's, the reload asks it next and it records the same choice,
+    // or the server.
+    PreviewState.recordLoaded(local: server == nil ? nil : local, preview: preview)
+  }
+
+  /// Expo's configuration for a server URL, the one the dev launcher starts React with. Nil with an
+  /// Expo that has none, and the reload then keeps the dev launcher's server.
+  private static func serverConfiguration(for url: URL) -> NSObject? {
+    let selector = NSSelectorFromString("configurationWithBundleURL:")
+    guard let type = NSClassFromString("EXBundleConfiguration") as? NSObject.Type, type.responds(to: selector) else {
+      return nil
+    }
+    return type.perform(selector, with: url as NSURL)?.takeUnretainedValue() as? NSObject
   }
 
   private static func reactHost() -> NSObject? {

@@ -38,7 +38,9 @@ and the default bundle always loads, so the app still starts.
 | `expo-updates`          | No      | Works alongside if you use it. See [expo-updates](/docs/preview/expo-updates) |
 
 The CLI, `preview`, comes with the package. It runs from your app's root and uses your app's own
-`expo` to build and to compute the fingerprint, so it needs nothing else installed.
+`expo` to build and to compute the fingerprint, so it needs nothing else installed. `preview publish`
+builds in a copy of the project and installs there, so the app needs a lockfile, which an install
+already made. See [Publishing](/docs/preview/publishing#what-publish-does).
 
 ## Add the config plugin
 

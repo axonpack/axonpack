@@ -40,6 +40,10 @@ public final class AxonpackPreviewModule: Module {
       PreviewState.confirmStart()
     }
 
+    Function("clearBroken") { (id: String) in
+      PreviewState.clearBroken(id)
+    }
+
     // For the network sweep.
     Function("localNetworks") {
       localNetworks()

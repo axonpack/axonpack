@@ -72,6 +72,10 @@ export function gitInfo(
 export const gitTopLevel = (projectRoot: string): string | null =>
   git(projectRoot, ["rev-parse", "--show-toplevel"]);
 
+/** The full commit sha, or null outside a git repo. */
+export const gitHead = (projectRoot: string): string | null =>
+  git(projectRoot, ["rev-parse", "HEAD"]);
+
 /** The repo's default branch: what origin/HEAD points at, else main or master if one exists. */
 export function defaultBase(projectRoot: string): string | null {
   const head = git(projectRoot, [

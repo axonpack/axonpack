@@ -3,6 +3,7 @@ import { Platform, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnimatedIcon } from "@/components/animated-icon";
+import { FilesDemo } from "@/components/files-demo";
 import { HintRow } from "@/components/hint-row";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -54,6 +55,8 @@ export default function HomeScreen() {
             hint={<ThemedText type="code">npm run reset-project</ThemedText>}
           />
         </ThemedView>
+
+        {Platform.OS !== "web" && <FilesDemo />}
 
         {Platform.OS === "web" && <WebBadge />}
       </SafeAreaView>

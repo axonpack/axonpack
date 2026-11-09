@@ -83,6 +83,25 @@ type Request = {
   headers?: Record<string, string>;
 };
 
+// What Node's fetch puts on `cause` when a connection dropped or never opened, as when the server
+// restarts in the middle of a publish. Every request here is safe to send again: reads, files named
+// by their hash, manifests that are overwritten anyway, and the list writes, where a repeat that
+// gets 412 because the first try did land makes the caller read the list again and write the same
+// change. React Native's fetch sets no such code, so in the app nothing is retried.
+const TRANSIENT_CODES = new Set([
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "EPIPE",
+  "UND_ERR_SOCKET",
+  "UND_ERR_CONNECT_TIMEOUT",
+]);
+const RETRY_DELAYS_MS = [1000, 2000, 4000];
+
+/**
+ * Retries only when fetch throws. Any HTTP status, an error one too, comes back as the Response.
+ * When it gives up, the error names the request and why: `PUT files/<sha256> failed: ECONNRESET ...`.
+ */
 export async function s3Fetch(
   config: S3Config,
   request: Request,
@@ -106,11 +125,41 @@ export async function s3Fetch(
         request.body === undefined ? EMPTY_SHA256 : sha256Hex(request.body),
     });
   }
-  return fetch(url, {
-    method: request.method,
-    headers,
-    body: request.body as BodyInit | undefined,
-  });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetch(url, {
+        method: request.method,
+        headers,
+        body: request.body as BodyInit | undefined,
+      });
+    } catch (error) {
+      // Node's own message is only "fetch failed"; what went wrong is on `cause`, with a code.
+      const cause = (error as { cause?: { code?: unknown; message?: unknown } })
+        ?.cause;
+      const code = typeof cause?.code === "string" ? cause.code : undefined;
+      if (
+        code &&
+        TRANSIENT_CODES.has(code) &&
+        attempt < RETRY_DELAYS_MS.length
+      ) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+        continue;
+      }
+      const causeMessage =
+        typeof cause?.message === "string" ? cause.message : "";
+      // Without a code, fetch's own message stays first: the app's list matches its words.
+      const why = code
+        ? `${code} ${causeMessage}`.trim()
+        : [error instanceof Error ? error.message : String(error), causeMessage]
+            .filter(Boolean)
+            .join(": ");
+      const tries = attempt > 0 ? ` after ${attempt + 1} tries` : "";
+      throw new Error(
+        `${request.method} ${request.key ?? request.query?.prefix ?? ""} failed${tries}: ${why}`,
+        { cause: error },
+      );
+    }
+  }
 }
 
 /** Null when the object does not exist. The ETag is what a conditional put needs. */

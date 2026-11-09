@@ -113,6 +113,20 @@ test("a preview that stopped before starting shows as broken", () => {
   });
 });
 
+test("a broken preview with a newer revision offers Update", () => {
+  expect(
+    statuses(
+      state({
+        remote: [entry("a", "r2")],
+        local: [local("a")],
+        broken: ["a"],
+      }),
+    ),
+  ).toEqual({
+    a: "update-available",
+  });
+});
+
 test.each([
   ["appVersion", "version-1.0.1", "version-1.0.0"],
   ["fingerprint", "fingerprint-new", "fingerprint-old"],

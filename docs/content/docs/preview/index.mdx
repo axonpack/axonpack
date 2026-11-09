@@ -17,6 +17,10 @@ npx expo install @axonpack/preview expo-file-system
 
 <LatestRelease slug="preview" />
 
+<Tabs items={['Without devtools', 'With expo-devtools']}>
+
+<Tab value="Without devtools">
+
 ```tsx
 import { PreviewList, PreviewProvider } from '@axonpack/preview';
 
@@ -30,6 +34,37 @@ export default function App() {
   );
 }
 ```
+
+</Tab>
+
+<Tab value="With expo-devtools">
+
+```tsx
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import PreviewV0Support, { type PreviewConfig } from '@axonpack/expo-devtools/support/preview/v0';
+
+const previewConfig: PreviewConfig = {
+  enabled: true,
+  s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
+};
+
+export default function App() {
+  return (
+    <DevtoolsProvider
+      config={{ enabled: true, supports: [PreviewV0Support.configure(previewConfig)] }}
+    >
+      <YourApp />
+    </DevtoolsProvider>
+  );
+}
+```
+
+The list is the devtools' **Preview** tab. See
+[With expo-devtools](/docs/preview/app-setup#with-expo-devtools).
+
+</Tab>
+
+</Tabs>
 
 ```sh
 npx preview publish   # builds this branch for Android and iOS and uploads it
@@ -81,5 +116,6 @@ There is no server of your own to run. The bucket is the whole backend.
 - **A fallback.** A preview that fails while starting is marked broken and the default bundle loads.
 - **CI in one file.** Sample GitHub Actions workflows publish every pull request and remove it on close.
 - **Several Metro servers in one debug build.** One per worktree, switched live, for people and AI agents.
+- **Files beside the JS.** A folder such as a WebView's web app can go with each preview. See [Files with a preview](/docs/preview/files).
 
 **Next:** [Installation](/docs/preview/installation)

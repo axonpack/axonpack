@@ -42,13 +42,16 @@ be run by hand (see [Run by hand](#run-by-hand)).
 
    ```sh
    preview publish --id "$PREVIEW_ID" --base "origin/$BASE_BRANCH" --platform "$PLATFORM" \
-     ${EAS_ENVIRONMENT:+--environment "$EAS_ENVIRONMENT"}
+     --in-place ${EAS_ENVIRONMENT:+--environment "$EAS_ENVIRONMENT"}
    ```
 
    with the branch name as the id, the pull request's base branch for the changelog, all
    platforms, and `--environment preview`. The branch
    names go through `env`, not straight into the script, so a branch name can never run as shell
    code.
+
+   `--in-place` is there because a CI checkout is already a clean, throwaway copy, so publish
+   doesn't need to copy it again. See [Build in place](/docs/preview/publishing#build-in-place).
 
 Pushing to the pull request publishes it again under the same id, so QA sees **Update available**.
 
@@ -107,10 +110,19 @@ The last two also turn off unpublishing by dispatch.
 Then remove previews by hand with `preview unpublish <id>`, and delete the files no preview uses
 any more with `preview prune`.
 
+## Without --in-place
+
+Without `--in-place`, publish copies the checkout and installs again in the copy, once per platform,
+and runs your `eas-build-pre-install` and `eas-build-post-install` scripts there. The second install
+mostly comes from the package manager's cache, which the job's own install has just filled. It
+still adds a copy and an install per platform, about 20 s for the package's example app
+with bun on a Mac. Leave `--in-place` out only if the preview needs those scripts. They see
+`PREVIEW_PUBLISH=1`, so they can skip what only makes sense on EAS.
+
 ## Other CI systems
 
 Nothing in the CLI is specific to GitHub. Any CI that can check out the branch with its history,
 install your dependencies and set the `PREVIEW_S3_*` variables can run the same two commands. On a
-detached HEAD there is no branch name, so pass `--id` yourself.
+detached HEAD there is no branch name, so pass `--id` yourself. Pass `--in-place` there too.
 
 **Next:** [Compatibility](/docs/preview/compatibility)

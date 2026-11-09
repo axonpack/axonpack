@@ -5,6 +5,8 @@
 //   plugins: [["@axonpack/preview", { compatibility: "appVersion" | "fingerprint" }]]
 //
 // appVersion (the default) keys on the app version; fingerprint on the native fingerprint.
+// The `files` option (file sets to publish with each preview) is read by `preview publish` only,
+// so it changes nothing here.
 const { createRequire } = require("node:module");
 const { join } = require("node:path");
 const {

@@ -38,6 +38,11 @@ export type PreviewConfig = {
    * from the bucket folder named after it.
    */
   slug?: string;
+  /**
+   * The app's own copy of each file set, by the name the config plugin's `files` option gives it.
+   * `usePreviewFiles(name)` returns this copy unless the running preview carries the set.
+   */
+  files?: Record<string, PreviewFilesOptions>;
   /** @deprecated Use `s3Config.url`. */
   url?: string;
   /** @deprecated Use `s3Config.readAccessKeyId`. */
@@ -71,6 +76,32 @@ export type PreviewS3Config = {
   region?: string;
   /** Extra headers on every read, for a proxy, CDN or tunnel in front of the bucket. */
   headers?: Record<string, string>;
+};
+
+/** One file set, as the app sets it up. */
+export type PreviewFilesOptions = {
+  /**
+   * The folder of the app's own copy, as a `file://` URI, such as `file:///android_asset/www/` or
+   * `Paths.document.uri + "www/"`. Where it is embedded is up to the app.
+   */
+  default: string;
+  /**
+   * A step of the app's own on a preview's copy, such as rewriting paths in the files. It runs
+   * once each time the copy finishes downloading, with the set's name and the folder's `file://`
+   * URI, and `previousUri` undefined. The download is done only once it returns.
+   *
+   * On iOS the app's folder can move when the app is updated. On the first start after that, it
+   * runs again for the running preview, with the new folder as `uri` and the one it last ran with
+   * as `previousUri`, so the app can swap one for the other. Until it returns, `usePreviewFiles`
+   * says the set isn't `ready`.
+   *
+   * If it throws, the preview's download is deleted.
+   */
+  onPostDownload?: (
+    name: string,
+    uri: string,
+    info: { previousUri?: string },
+  ) => void | Promise<void>;
 };
 
 /** `devPreviewServers` as an object, for more than on or off. */

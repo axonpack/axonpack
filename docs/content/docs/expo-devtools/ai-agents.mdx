@@ -522,7 +522,7 @@ Performance tab first.
 | Message                                                    | What to do                                                                                                    |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `no app found on Metro ports 8081 to 8090`                 | Start `expo start` and open the app, or pass `--port` for Metro on another port.                              |
-| `... has no devtools agent`                                | Mount `<DevtoolsProvider>` with `enabled` on, and run a development bundle. A release build has no agent.      |
+| `... has no devtools agent`                                | Mount `<DevtoolsProvider>` with `enabled` on, and run a development bundle. A release build or a running preview has no agent. |
 | `no reply from ... in 5 s`                                 | The app's JavaScript may be paused at a breakpoint. Resume it and run the command again.                      |
 | `"network --limit 8" isn't a topic`                        | The whole command reached the tool as one argument. Pass the topic and each flag as separate arguments.       |
 | `2 apps match. Pick one:`                                  | Add one of the `--app` and `--device` pairs it lists.                                                         |

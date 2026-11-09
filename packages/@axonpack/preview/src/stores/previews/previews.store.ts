@@ -21,6 +21,7 @@ import {
 import { runningPreviewId } from "../../utils/previews/running.util";
 import { previewBundlePath } from "../../services/previews/select.service";
 import { fetchPreviews } from "../../services/previews/remote.service";
+import { checkFilesFolder } from "../../services/previews/preview-files.service";
 
 export type PreviewsState = {
   loading: boolean;
@@ -121,6 +122,9 @@ export const previewsStore = {
           },
         }),
       );
+      // The new copy may not have the fault that broke the old one, so it is offered again.
+      const native = nativeModule();
+      if (typeof native?.clearBroken === "function") native.clearBroken(id);
     } catch (error) {
       set({ error: message(error) });
     } finally {
@@ -193,6 +197,20 @@ export const previewsStore = {
     }
   },
 };
+
+/**
+ * The start's check of the running preview's file sets (see `checkFilesFolder`). An
+ * `onPostDownload` that throws there deletes the download, so the list shows the error and the
+ * preview as not downloaded, as after a failed download.
+ */
+export async function checkRunningFiles(config: PreviewConfig) {
+  try {
+    await checkFilesFolder(config);
+  } catch (error) {
+    set({ error: message(error) });
+    await readLocal();
+  }
+}
 
 export const usePreviewsState = () =>
   useSyncExternalStore(previewsStore.subscribe, previewsStore.getState);

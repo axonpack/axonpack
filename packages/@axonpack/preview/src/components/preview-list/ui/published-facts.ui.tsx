@@ -10,7 +10,7 @@ import type {
 
 /**
  * Who published a preview and how long ago ("Ana, 2 minutes ago", with the full date for a screen
- * reader), then its size, in two quiet lines.
+ * reader), then its size, then its file sets and their sizes when it has any, in quiet lines.
  */
 export function PublishedFacts(props: {
   theme: PreviewListTheme;
@@ -36,6 +36,7 @@ export function PublishedFacts(props: {
     .filter(Boolean)
     .join(". ");
   const quiet = { ...font(theme, "regular", 13), color: theme.muted };
+  const sets = Object.entries(entry.fileSets ?? {});
   return (
     <View style={{ flexShrink: 1, gap: 2 }}>
       {byline ? (
@@ -44,6 +45,11 @@ export function PublishedFacts(props: {
         </Text>
       ) : null}
       <Text style={quiet}>{formatSize(entry.size)}</Text>
+      {sets.length > 0 ? (
+        <Text style={quiet}>
+          {`${labels.files}: ${sets.map(([name, set]) => `${name} ${formatSize(set.size)}`).join(", ")}`}
+        </Text>
+      ) : null}
     </View>
   );
 }

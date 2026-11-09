@@ -88,6 +88,9 @@ export const DEFAULT_LABELS: PreviewListLabels = {
   environment: "Environment",
   environmentPrefix: "env:",
   compatibilityKey: "Build key",
+  files: "Files",
+  filesPreview: "Preview's copy",
+  filesDefault: "Default copy",
   backToDefault: "Back to default",
   backToBase: "Back to default",
   metroBypassed:

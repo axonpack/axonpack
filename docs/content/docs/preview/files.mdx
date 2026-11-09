@@ -1,0 +1,273 @@
+---
+title: Files with a preview
+description: Publish a folder, such as the web app a WebView shows, with each preview, and read the copy that goes with the running bundle.
+icon: FolderOpen
+---
+
+Some apps ship files beside their JS, such as a web app that a WebView loads from a `www` folder. A
+preview carries JS and images only, so a preview of a branch that changes the web app would still
+show the installed build's copy. A file set closes that gap. `preview publish` uploads the folder
+with the bundle, the app downloads it with the preview, and the app asks the package which copy goes
+with the bundle that runs.
+
+## Name the folder in the config plugin
+
+```json
+["@axonpack/preview", { "files": { "www": "web/dist" } }]
+```
+
+Each entry is a name and a folder, relative to the app's root. Build the folder before you publish,
+or give the set a [build command](#build-the-files-when-you-publish). Publish uploads what is in it,
+and stops with an error when the folder is missing or empty.
+
+Publish reads the folder from its [copy of the project](/docs/preview/publishing#the-copy), which
+has the folder even when git ignores it. A folder that a `.easignore` lists isn't in the copy, so
+give that set a build command.
+
+A name can use letters, digits, `.`, `_` and `-`, and can't start with a dot. Both platforms get the
+same files.
+
+The option changes nothing in the native build. With `compatibility: "fingerprint"`, the fingerprint
+covers the whole app config, plugin options included, so adding or changing `files`, a set's `build`
+command included, gives the build a new key. Rebuild the app after that change, or the builds made
+before it won't list the previews published after it. See
+[Compatibility](/docs/preview/compatibility).
+
+## Build the files when you publish
+
+A set can also be an object, with the command that builds its folder:
+
+```json
+["@axonpack/preview", {
+  "files": {
+    "www": { "folder": "../web/out", "build": "npm --prefix ../web run build" }
+  }
+}]
+```
+
+`preview publish` runs each set's `build` in its copy of the project, after the copy's install and
+before it reads the folders and builds the bundle. The command runs in a shell from the app's folder
+in the copy, and its output shows in the terminal. Each platform has its own copy, so the command
+runs once per platform. With `--in-place` it runs once, from the app's root. If it exits with an
+error, nothing is published:
+
+```
+files.www: the build command failed with exit code 1: npm --prefix ../web run build
+```
+
+The command gets `PREVIEW_PUBLISH=1` and the other variables in
+[The copy's environment](/docs/preview/environment#the-copys-environment). With
+`--environment <name>`, it also gets that EAS environment's variables, the same ones the app config
+and the bundle are built with. So a web export that reads `NEXT_PUBLIC_*` values matches
+the bundle published with it. Variables with secret visibility aren't included, because
+`eas env:pull` doesn't return them. Set those in the shell or as CI secrets. A variable already set
+there wins over the EAS one. See
+[Building with an EAS environment](/docs/preview/environment#building-with-an-eas-environment).
+
+A set given as a plain folder runs no command, so build it yourself before you publish.
+
+## Say where the app's own copy is
+
+The default copy is the one the installed build has. Where it is depends on how the app embeds it,
+so the app says, in the [preview config](/docs/preview/reference#previewconfig):
+
+```ts
+import type { PreviewConfig } from '@axonpack/preview';
+import { Directory, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
+
+export const previewConfig: PreviewConfig = {
+  enabled: true,
+  s3Config: { url: process.env.EXPO_PUBLIC_PREVIEW_S3_URL as string },
+  files: {
+    www: {
+      // Android reads it from the APK's assets. This app copies it to Documents on iOS.
+      default:
+        Platform.OS === 'android'
+          ? 'file:///android_asset/www/'
+          : new Directory(Paths.document, 'www').uri,
+    },
+  },
+};
+```
+
+With expo-devtools, this is the object passed to `PreviewV0Support.configure`. See
+[With expo-devtools](#with-expo-devtools).
+
+## Read the path
+
+```tsx
+import { usePreviewFiles } from '@axonpack/preview';
+import { WebView } from 'react-native-webview';
+
+export function WebScreen() {
+  const www = usePreviewFiles('www');
+  if (!www.ready) return null;
+  return <WebView source={{ uri: `${www.uri}index.html` }} />;
+}
+```
+
+`uri` is a `file://` folder that always ends in `/`, so a file name can follow it. A WebView needs
+read access to that folder. See react-native-webview's
+[`allowingReadAccessToURL`](https://github.com/react-native-webview/react-native-webview/blob/master/docs/Reference.md#allowingreadaccesstourl)
+and
+[`allowFileAccess`](https://github.com/react-native-webview/react-native-webview/blob/master/docs/Reference.md#allowfileaccess).
+
+The files follow the bundle. After **Switch** the app gets that preview's copy, and after **Back to
+default** it gets its own again:
+
+| What runs                                                   | `source`  | `uri`                                   | `previewId` |
+| ----------------------------------------------------------- | --------- | --------------------------------------- | ----------- |
+| A preview published with the set                           | `preview` | The preview's copy, in the app's documents folder | Its id |
+| A preview published without it                              | `default` | `files.<name>.default`                  | `null`      |
+| The default bundle, Metro, or a chosen preview that didn't load | `default` | `files.<name>.default`              | `null`      |
+| Where the native module isn't linked (Expo Go, web)         | `default` | `files.<name>.default`                  | `null`      |
+
+`ready` is false for a moment on start while a set with an `onPostDownload` waits for it, and stays
+false if that `onPostDownload` throws. See [After an app update](#after-an-app-update). It is always
+true for the default copy and for a set without `onPostDownload`. The hook renders again when it
+changes.
+
+What runs changes only when the app restarts, so the hook reads that once per mount. It needs the
+provider above it. Outside React, `previewFilesPath('www', previewConfig)` returns what is true at
+the moment it is called. Until the set is ready that is the preview's `uri` with `ready: false`, and
+the function can't wait, so call it again later or use the hook. Both throw for a name the config's
+`files` doesn't list.
+
+If the app builds file URLs in more than one place, set one root from `usePreviewFiles(name)` once
+`ready` is true, before any URL is built, and have every place read that root. A place that keeps
+its own copy of the default path still loads the installed files while a preview runs.
+
+## Run your own step on a download
+
+The package never changes the files. When the app needs to, for example to write the folder's path
+into the web app, give the set an `onPostDownload`. It gets the set's name, the folder's `file://`
+URI and `{ previousUri }`:
+
+```ts
+import { Directory } from 'expo-file-system';
+
+// The web build writes this where the folder's path goes.
+const PLACEHOLDER = '__WWW__/';
+
+async function replaceInFiles(folder: Directory, from: string, to: string) {
+  for (const item of folder.list()) {
+    if (item instanceof Directory) {
+      await replaceInFiles(item, from, to);
+    } else if (/\.(html|js|css)$/.test(item.name)) {
+      const text = await item.text();
+      if (text.includes(from)) await item.write(text.split(from).join(to));
+    }
+  }
+}
+
+files: {
+  www: {
+    default: 'file:///android_asset/www/',
+    // After a download the files hold the placeholder. After an app update moved the folder,
+    // they hold the old folder.
+    onPostDownload: (name, uri, { previousUri }) =>
+      replaceInFiles(new Directory(uri), previousUri ?? PLACEHOLDER, uri),
+  },
+},
+```
+
+It runs once each time a preview's copy finishes downloading, with `previousUri` undefined. By then
+every file has passed its check and sits where it will stay, so `uri` is the final folder. The
+download counts as done only when `onPostDownload` returns. If it throws, the whole download is
+deleted and the list shows the error.
+
+### After an app update
+
+On iOS the app's folder can move when the app is updated, for example when QA installs a new build
+with the same version and the preview stays chosen. A path that `onPostDownload` wrote into the
+files then points at the old folder. So the package records the folder each `onPostDownload` ran
+with. On each start it compares that with the running preview's folder, and when they differ it runs
+`onPostDownload` again with the new folder as `uri` and the old one as `previousUri`, then records
+the new one. It looks at the running preview only. On Android the folder doesn't move, so it doesn't
+run again there.
+
+A preview downloaded before its set had an `onPostDownload` gets the call on its next start too,
+with `previousUri` undefined, as after a download.
+
+Until that check is done, `usePreviewFiles` returns the set with `ready: false`. If `onPostDownload`
+throws on start, the files may be half changed, so the preview's download is deleted. The set stays
+`ready: false` until the app restarts, and the list shows the error and the preview as not
+downloaded, so QA can download it again. The preview's JS keeps running until then, without its
+files and images, and the next start runs the app's own bundle.
+
+## In the list
+
+A preview row names its sets and their size under the preview's own size, as in
+`Files: www 2.1 MB`. Under **Show details**, the header card has one row per set in the config:
+`Files: www` with **Preview's copy** or **Default copy**. The labels are `files`, `filesPreview` and
+`filesDefault`, on [Reference](/docs/preview/reference#labels).
+
+## With expo-devtools
+
+When the app sets preview up through
+[expo-devtools' preview support](/docs/expo-devtools/supports/preview), `files` goes in the config
+passed to `PreviewV0Support.configure`. The devtools hand that object to preview's provider as it is,
+so `default` and `onPostDownload` work as described above.
+
+```tsx
+import { DevtoolsProvider } from '@axonpack/expo-devtools';
+import PreviewV0Support from '@axonpack/expo-devtools/support/preview/v0';
+import { previewConfig } from './preview-config'; // the config above, with its files
+
+export default function Root() {
+  return (
+    <DevtoolsProvider
+      config={{
+        enabled: process.env.EXPO_PUBLIC_DEVTOOLS === 'on',
+        supports: [PreviewV0Support.configure(previewConfig)],
+      }}
+    >
+      <App />
+    </DevtoolsProvider>
+  );
+}
+```
+
+`usePreviewFiles('www')` works anywhere inside `DevtoolsProvider`. Preview's provider goes around the
+app even with the devtools' `enabled` off, so the hook also works inside a preview, which runs as a
+release bundle. Outside React, give `previewFilesPath` the same object:
+`previewFilesPath('www', previewConfig)`.
+
+The Preview tab, and the Preview panel in React Native DevTools, show preview's own list, so the file
+sets appear there as in [In the list](#in-the-list).
+
+## What publish and download do with them
+
+Before it builds the bundle, publish runs each set's `build` command in the copy and prints one
+line per set:
+
+```
+files www: building with npm --prefix ../web run build
+files www: 40 files from ../web/out
+```
+
+The `building with` line shows only for a set with a `build` command. The lines come for each
+platform, or once with `--in-place`.
+
+Each file then goes up like a bundle file: once, under its sha256, so a file that didn't change is
+not sent again. The manifest lists the set's files under `files/www/`, and its `fileSets` field gives
+each set's file count and size. The files count toward the preview's revision, so a device holding an
+older copy of the web app shows **Update available**. The size in the list includes them.
+
+The app downloads them with the bundle into the preview's folder, four files at a time. Every file
+is checked against its sha256, and a download that fails anywhere leaves nothing behind.
+
+## Builds made before file sets
+
+A build made with 0.2.0 still lists and runs a preview published with file sets. It downloads the
+set's files too, since the manifest lists them, but has no way to read them, so its WebView keeps
+the installed copy.
+
+## Limits
+
+- Published previews only. A dev preview server or Metro always gives the default copy.
+- A preview's JS always comes with its own files. One preview's JS with another copy of the files
+  isn't possible.
+
+**Next:** [Dev preview servers](/docs/preview/dev-preview-servers)

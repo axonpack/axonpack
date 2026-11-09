@@ -13,8 +13,12 @@ export { markLaunched } from "./services/native/native.service";
 export type {
   DevPreviewServersOptions,
   PreviewConfig,
+  PreviewFilesOptions,
   PreviewS3Config,
 } from "./utils/config/config.util";
+export { previewFilesPath } from "./services/previews/preview-files.service";
+export type { PreviewFiles } from "./services/previews/preview-files.service";
+export { usePreviewFiles } from "./services/previews/use-preview-files.service";
 export {
   previewsStore,
   usePreviewsState,

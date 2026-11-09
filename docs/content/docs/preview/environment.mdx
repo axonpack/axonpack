@@ -88,7 +88,8 @@ when the app is bundled, so restart Metro with `npx expo start --clear`, or rebu
 
 A preview is a new bundle, so its `EXPO_PUBLIC_*` values are whatever the publishing machine had
 when it ran `preview publish`, not what the installed build had. Publish runs `expo export:embed`
-in its own environment, with the same env files as above.
+in its own environment, in its [copy of the project](/docs/preview/publishing#the-copy). The copy has
+the same env files as your folder, `.env.local` included, unless a `.easignore` leaves one out.
 
 So on CI, the app's own variables have to be there too: as job env or secrets, or from EAS with
 `--environment`, below. Otherwise a preview built on CI may point at other servers than the build it
@@ -105,10 +106,13 @@ npx preview publish --environment preview
 ```
 
 - It runs `eas env:pull --environment <name> --non-interactive` into a temp folder outside your
-  app, reads the file and deletes it. Nothing is written into your project.
+  app, reads the file and deletes it. Your project is left as it was.
 - The values go into the environment of every step that reads the app config: the config itself
   (app version, slug), the fingerprint and `expo export:embed`. So the preview's key matches a build
   made in that environment.
+- They also reach every step in the copy: the install, the `eas-build-*` scripts and each
+  [file set's](/docs/preview/files#build-the-files-when-you-publish) `build` command, so a web export
+  built there uses the same values as the bundle.
 - A variable already set in your shell wins over the EAS one.
 - The environment's name is recorded in the preview's manifest and list entry. The app shows it as an
   `env: <name>` chip on the preview's row and on the header card while it runs. Previews published
@@ -121,11 +125,37 @@ and the app linked to an EAS project (`eas init`). If one is missing, publish sa
 <Callout type="info" title="Secret variables stay on EAS">
 Variables with **secret** visibility never leave EAS servers: `eas env:pull` leaves them out. If the
 bundle needs one, set it in the shell or as a CI secret. Plain text and sensitive variables come
-through. A file-type variable is written by `eas env:pull` into the app's `.eas/.env/` folder, and
-its value is that file's path.
+through.
 </Callout>
+
+`eas env:pull` writes each file-type variable into the app's `.eas/.env/` folder, and the variable's
+value is that file's path. Publish copies each of those files into its temp folder, points the
+variable at the copy, and deletes what the pull added to `.eas/`. A file that was already in
+`.eas/.env/` stays where it is. The path changes on every run, and the file is deleted with the temp
+folder when publish ends.
 
 `PREVIEW_S3_*` do not belong in EAS. Publishing is not part of the app, and `--environment` is only
 for the app's own variables. Keep the publish settings in CI secrets or `.env.local`.
+
+## The copy's environment
+
+The `eas-build-*` scripts, the install, each file set's `build` command and `expo export:embed` run
+in publish's [copy of the project](/docs/preview/publishing#the-copy). They get your shell's
+environment, with the EAS values after `--environment`, plus these:
+
+| Variable                    | Value                                                                       |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `EAS_BUILD`                 | `1`, so scripts written for EAS Build run as they do there                  |
+| `EAS_BUILD_PLATFORM`        | `android` or `ios`                                                          |
+| `EAS_BUILD_WORKINGDIR`      | The copy's root                                                             |
+| `EAS_BUILD_GIT_COMMIT_HASH` | The full hash of the commit your folder is on. Not set outside a git repository |
+| `PREVIEW_PUBLISH`           | `1`, so a script can tell a preview publish from an EAS build              |
+
+Variables that describe an EAS build, such as `EAS_BUILD_ID`, `EAS_BUILD_PROFILE`,
+`EAS_BUILD_RUNNER` and `EAS_BUILD_USERNAME`, aren't set, since a preview publish has no build to
+describe. Neither is `CI`, unless your shell sets it.
+
+With `--in-place`, the file sets' `build` commands and the export get only `PREVIEW_PUBLISH=1`, and
+no script runs.
 
 **Next:** [Publishing](/docs/preview/publishing)

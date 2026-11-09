@@ -86,6 +86,10 @@ export function HeroCard(props: {
           : null,
     ],
     [labels.compatibilityKey, compatibility.key && shortKey(compatibility.key)],
+    ...Object.entries(status.files).map(([name, files]): Row => [
+      `${labels.files}: ${name}`,
+      files.source === "preview" ? labels.filesPreview : labels.filesDefault,
+    ]),
   ];
   const shown = (list: Row[]) =>
     list

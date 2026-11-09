@@ -1,10 +1,12 @@
 import {
+  exists,
   getJson,
   listKeys,
   objectUrl,
   parseBucketUrl,
   putObject,
   S3Config,
+  S3Error,
 } from "../s3.service";
 
 const config: S3Config = {
@@ -165,4 +167,87 @@ test("without a content type, the start of the body is shown", async () => {
   await expect(getJson(config, "index.json")).rejects.toThrow(
     'but got "not json at all" (status 200)',
   );
+});
+
+describe("when fetch throws", () => {
+  // Node's fetch throws "fetch failed" and puts what happened on `cause`.
+  const networkError = (code: string, message: string) =>
+    Object.assign(new TypeError("fetch failed"), {
+      cause: Object.assign(new Error(message), { code }),
+    });
+  const delays: number[] = [];
+  const realSetTimeout = global.setTimeout;
+
+  beforeEach(() => {
+    delays.length = 0;
+    jest.spyOn(global, "setTimeout").mockImplementation(((
+      fn: () => void,
+      ms?: number,
+    ) => {
+      delays.push(ms ?? 0);
+      return realSetTimeout(fn, 0);
+    }) as unknown as typeof setTimeout);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  test("the error names the method, the key and the cause", async () => {
+    const thrown = networkError(
+      "ENOTFOUND",
+      "getaddrinfo ENOTFOUND minio.example",
+    );
+    global.fetch = jest.fn(async () => {
+      throw thrown;
+    }) as typeof fetch;
+    const error = (await exists(config, "files/abc").catch((e) => e)) as Error;
+    expect(error.message).toBe(
+      "HEAD files/abc failed: ENOTFOUND getaddrinfo ENOTFOUND minio.example",
+    );
+    expect(error.cause).toBe(thrown);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("without a cause code, as in the app, it keeps fetch's message and doesn't retry", async () => {
+    global.fetch = jest.fn(async () => {
+      throw new TypeError("Network request failed");
+    }) as typeof fetch;
+    await expect(getJson(config, "index.json")).rejects.toThrow(
+      "GET index.json failed: Network request failed",
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("a dropped connection is tried again, and the answer is used", async () => {
+    let calls = 0;
+    global.fetch = jest.fn(async () => {
+      if (++calls < 3) throw networkError("ECONNRESET", "read ECONNRESET");
+      return new Response("");
+    }) as typeof fetch;
+    await expect(putObject(config, "files/abc", "bytes")).resolves.toBe(true);
+    expect(calls).toBe(3);
+    expect(delays).toEqual([1000, 2000]);
+  });
+
+  test("it gives up after 4 tries and says so", async () => {
+    global.fetch = jest.fn(async () => {
+      throw networkError(
+        "ECONNREFUSED",
+        "connect ECONNREFUSED 51.200.6.248:9000",
+      );
+    }) as typeof fetch;
+    await expect(putObject(config, "files/abc", "bytes")).rejects.toThrow(
+      "PUT files/abc failed after 4 tries: ECONNREFUSED connect ECONNREFUSED 51.200.6.248:9000",
+    );
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
+  test("an HTTP error status is never retried", async () => {
+    global.fetch = jest.fn(
+      async () => new Response("SlowDown", { status: 503 }),
+    ) as typeof fetch;
+    await expect(putObject(config, "files/abc", "bytes")).rejects.toThrow(
+      S3Error,
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(delays).toEqual([]);
+  });
 });

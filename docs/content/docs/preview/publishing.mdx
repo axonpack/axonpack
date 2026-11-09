@@ -5,7 +5,8 @@ icon: Upload
 ---
 
 Run the CLI from your app's root, or pass `--project <dir>`. It needs the
-[publish settings](/docs/preview/environment) and a git checkout.
+[publish settings](/docs/preview/environment), a lockfile for [the copy's install](#install-and-hooks),
+and a git checkout, unless you pass `--id`.
 
 ```sh
 npx preview publish                  # id = git branch, both platforms; asks for the title
@@ -18,20 +19,112 @@ With bun, use `bunx preview`; with pnpm, `pnpm exec preview`; with yarn, `yarn p
 
 ## What publish does
 
-For each platform, Android then iOS:
+Publish builds in a copy of your project, the way an EAS build does, so it never writes to your
+app's folder. It only reads from it: the app config, the fingerprint, git and the publish
+settings. For each platform, Android then iOS:
 
-1. **Builds** with `expo export:embed --dev false --bytecode`, the same step a release build runs.
-   The result is Hermes bytecode with its images beside it, in the folders the native build uses.
-2. **Works out the key** from the `compatibility` option in your app config, the same way the
+1. **Copies the project** to a temp folder. See [The copy](#the-copy) for what goes in it.
+2. **Installs in the copy.** It runs your `eas-build-pre-install` script if `package.json` has
+   one, then the install with a frozen lockfile, then `eas-build-post-install`. See
+   [Install and hooks](#install-and-hooks).
+3. **Builds the file sets** in the copy: each [file set's](/docs/preview/files) `build` command,
+   then it reads the sets' folders there.
+4. **Builds** with `expo export:embed --dev false --bytecode` in the copy, the same step a release
+   build runs. It starts your app's own Expo CLI with Node, with no `npx` or other package manager
+   in between. The result is Hermes bytecode with its images beside it, in the folders the native
+   build uses.
+5. **Works out the key** from the `compatibility` option in your app config, the same way the
    [config plugin](/docs/preview/compatibility) did for the build. It records the app version and the
-   native fingerprint either way.
-3. **Uploads each file once**, under its sha256. Files already in the bucket are skipped.
-4. **Writes the manifest**: the files, their hashes and sizes, the changelog and the versions, and
+   native fingerprint either way. Both come from your own folder.
+6. **Uploads each file once**, under its sha256, four files at a time. Files already in the bucket
+   are skipped. It shows how many files are done and the one it started last, and a request whose
+   connection drops is sent again, up to 4 tries. See
+   [Errors and retries](/docs/preview/cli#errors-and-retries).
+7. **Writes the manifest**: the files, their hashes and sizes, the changelog and the versions, and
    the EAS environment when `--environment` is passed. The app shows that as an `env: <name>` chip.
-5. **Adds the preview to the lists**, last. An app never sees a preview whose files are not all
+8. **Adds the preview to the lists**, last. An app never sees a preview whose files are not all
    there yet.
+9. **Deletes the copy** in the background. Publish doesn't wait for it.
 
-It prints the URL of the list it wrote, so you can open it and check.
+It prints the URL of the list it wrote, so you can open it and check. If it stops partway, run it
+again: the files already uploaded are skipped.
+
+## The copy
+
+Publish copies your app's workspace root, the folder that holds the lockfile and the workspace
+config. In a monorepo that is the repository's root, so workspace packages and a file set such as
+`../web/out` are in the copy. An app outside a workspace is copied on its own.
+
+Everything is copied, including files git ignores, such as `.env.local` and a built `web/out`. So
+the bundle gets the same env values as in your folder. These are left out wherever they are:
+
+| Left out                                               | Why                                    |
+| ------------------------------------------------------ | -------------------------------------- |
+| `node_modules`                                         | The copy runs its own install          |
+| `.expo`                                                | Expo makes it again                    |
+| `ios/Pods`, `ios/build`                                | Output of a native iOS build           |
+| `android/build`, `android/app/build`, `android/.gradle` | Output of a native Android build      |
+
+Other generated folders, such as `.next`, `dist` or a docs build, are copied unless a `.easignore`
+at the copy's root lists them, so list them there if publish is slow. It uses the same syntax as
+`.gitignore`, `!` included. `.gitignore` itself isn't read.
+
+The copy has your `.git` folder, so scripts that run git work there. In a git worktree or a
+submodule, `.git` is a file that points at the real repository, and git in the copy would change
+that repository. So it is left out, and publish prints
+`<platform>: no git in the copy, since .git in <root> is a file pointing at another folder (a git worktree or submodule)`.
+The preview's branch and commit come from your folder either way. Outside a git repository publish
+still works, given `--id`, with no branch or commit, and no changelog unless you pass one.
+
+The copy goes in `<temp>/preview-publish-<random>/<platform>`, where `<temp>` is the system's temp
+folder (`$TMPDIR`). Each platform gets its own copy. Once a platform is published, its copy is
+deleted by a process of its own, and publish goes on without waiting for it. When publish fails or
+you stop it with Ctrl-C, the temp folder is deleted before it exits. Pass `--keep-copy` to keep it
+and look inside.
+
+## Install and hooks
+
+The package manager comes from the lockfile, found the way Expo finds it. The install runs in the
+copy's root:
+
+| Lockfile            | Install                                              |
+| ------------------- | ---------------------------------------------------- |
+| `package-lock.json` | `npm ci --include=dev`                               |
+| `yarn.lock`, Yarn 1 | `yarn install --frozen-lockfile --production false`  |
+| `yarn.lock`, Yarn 2+ | `yarn install --inline-builds --immutable`          |
+| `pnpm-lock.yaml`    | `pnpm install --frozen-lockfile`                     |
+| `bun.lock`, `bun.lockb` | `bun install --frozen-lockfile`                  |
+
+With `EAS_NO_FROZEN_LOCKFILE=1` set, as on EAS, the lockfile isn't frozen: `npm install`,
+`--no-immutable`, `--no-frozen-lockfile`, or no flag for Yarn 1 and bun. Without a lockfile publish
+stops.
+
+Before the install, publish runs `eas-build-pre-install` from your app's `package.json`, and after
+it `eas-build-post-install`, each as `<package manager> run <name>` in the app's folder in the copy.
+Under Yarn, `eas-build-pre-install` runs through npm, as on EAS. A script the app doesn't have is
+skipped. The end-of-build scripts (`eas-build-on-success`, `-on-error`, `-on-complete`,
+`-on-cancel`) never run, since a preview isn't a native build.
+
+The scripts, the install, the file sets' `build` commands and the export get `EAS_BUILD=1`,
+`PREVIEW_PUBLISH=1` and a few more. See
+[The copy's environment](/docs/preview/environment#the-copys-environment). A script can skip what
+only makes sense on an EAS build:
+
+```sh
+[ -n "$PREVIEW_PUBLISH" ] && exit 0
+```
+
+## Build in place
+
+`--in-place` builds in your app's folder. There is no copy, no install
+and no `eas-build-*` script, and the file sets build once for both platforms. The export then
+writes to your folder, for example `.expo/`.
+
+It's the faster option. For the package's example app in its monorepo, with bun and a warm package
+cache, an Android publish took 12 s in place and 30 s from a copy, most of it the copy's install
+and export. Deleting the copy took another 21 s, after publish had exited. Use it where the
+folder is already a clean checkout with dependencies installed, as on CI. The
+[sample workflows](/docs/preview/ci) pass it.
 
 ## The id and the title
 
@@ -81,7 +174,8 @@ npx preview publish --platform android
 npx preview publish --entry-file src/main.tsx
 ```
 
-`--entry-file` is passed to `expo export:embed`. Leave it out when Expo finds your entry on its own.
+`--entry-file` is passed to `expo export:embed`. A relative path is taken from the app's root,
+and in the copy it points at the same file. Leave it out when Expo finds your entry on its own.
 
 ## Compatibility override
 
@@ -102,6 +196,9 @@ Everything goes in a folder named after the app's slug, so several apps can shar
 | `<slug>/index.json`                          | People. Every native build and its previews          |
 | `<slug>/previews/<platform>/<key>/<id>.json` | The app, when it downloads that preview              |
 | `<slug>/files/<sha256>`                      | The app, when it downloads that preview              |
+
+A preview's [file sets](/docs/preview/files) go up the same way: each file once, under its sha256,
+listed in the manifest under `files/<name>/`.
 
 Two publishes at the same time both end up listed. The lists are written only if nobody wrote in
 between, and a clash reads again and retries.

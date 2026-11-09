@@ -31,6 +31,8 @@ type NativeModule = {
    * native side built before it.
    */
   localNetworks?(): LocalNetwork[];
+  /** Takes a preview off the broken list. Missing on a native side built before it. */
+  clearBroken?(id: string): void;
 };
 
 /** Undefined where the module isn't linked (Expo Go, web), and the package then does nothing. */

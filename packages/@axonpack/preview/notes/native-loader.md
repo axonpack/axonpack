@@ -20,7 +20,8 @@ If a preview fails before the app has mounted, it is marked broken and the defau
 Android that happens straight away: the app restarts into the default bundle. On iOS the failed preview
 leaves a blank screen until the app is closed and opened again, and that next start is the default
 bundle. Errors that do not come from a starting preview are thrown on as usual, so the app behaves as
-it would without this package.
+it would without this package. The mark stays until the preview is downloaded again or switched to,
+and a newer revision in the bucket shows as Update available, not Broken.
 
 With no preview chosen, the package changes nothing at startup: expo-updates, or the bundle inside
 the app, loads as usual.
@@ -28,9 +29,14 @@ the app, loads as usual.
 expo-updates is placed ahead of every other module on both platforms, so this package is never
 asked first. On Android a chosen preview is also put straight into React's host, in the private
 field expo-dev-launcher uses, so it wins even after expo-updates has applied a downloaded update; if
-that field is missing, the default bundle loads and a warning says why. On iOS, while expo-updates is active,
-the default bundle starts and the app reloads once straight into the preview. Going back to the
-default bundle hands the start back to expo-updates.
+that field is missing, the default bundle loads and a warning says why. On iOS, expo-updates (active
+in release builds) and expo-dev-client's launcher (debug builds) start React with their own bundle
+URL in place of this package's. With a preview chosen before the launch, the default bundle starts
+and the app reloads once straight into the preview. A switch made in the app hands the preview to
+React directly, so the start after it does not reload again. That fix was made for the dev
+launcher; a release build with expo-updates takes the same path by the code, but it hasn't been
+run there. Going back to the default bundle hands
+the start back to expo-updates, or to Metro under the dev launcher.
 
 ## Testing next to expo-updates
 
