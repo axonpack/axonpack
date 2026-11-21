@@ -16,9 +16,9 @@ export type Story = {
 export type Content = {
   brand: { name: string; logoDark: string; url: string };
   nav: { links: NavLink[]; github: { href: string; repo: string; label: string } };
+  /** The dismissible strip above the nav on the landing page. */
+  notice: { text: string; link: Link };
   hero: {
-    /** The one-line announcement above the headline. */
-    pill: { badge: string; text: string; href: string };
     title: string;
     titleAccent: string;
     lead: string;

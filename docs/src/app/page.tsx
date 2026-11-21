@@ -3,6 +3,7 @@ import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import { baseOptions } from '@/lib/layout.shared';
 import { SiteNav } from '@/components/site-nav';
 import { Hero } from '@/components/hero';
+import { NoticeBar } from '@/components/notice-bar';
 import { AgentSection } from '@/components/agent-section';
 import { LibraryGrid } from '@/components/library-grid';
 import { Products } from '@/components/products';
@@ -19,14 +20,17 @@ export const metadata: Metadata = {
 /** Composes only. Each section is its own component, per the monorepo's CONVENTIONS.md. */
 export default function HomePage() {
   return (
-    <HomeLayout {...baseOptions()} slots={{ header: SiteNav }}>
-      <main className="landing flex flex-1 flex-col">
-        <Hero />
-        <Products />
-        <AgentSection />
-        <LibraryGrid />
-        <Principles />
-      </main>
-    </HomeLayout>
+    <>
+      <NoticeBar />
+      <HomeLayout {...baseOptions()} slots={{ header: SiteNav }}>
+        <main className="landing flex flex-1 flex-col">
+          <Hero />
+          <Products />
+          <AgentSection />
+          <LibraryGrid />
+          <Principles />
+        </main>
+      </HomeLayout>
+    </>
   );
 }

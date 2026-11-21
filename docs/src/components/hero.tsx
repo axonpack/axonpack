@@ -17,15 +17,6 @@ export function Hero() {
   return (
     <header className="hero-shade px-5 pt-20 pb-14 sm:pt-28 sm:pb-16">
       <div className="mx-auto max-w-2xl text-center">
-        <a
-          href={hero.pill.href}
-          className="rise mb-8 inline-flex max-w-full items-center gap-2 rounded-full border bg-fd-card py-1 ps-1 pe-3 text-sm text-fd-muted-foreground transition-colors hover:text-fd-foreground"
-        >
-          <span className="shrink-0 rounded-full bg-fd-primary px-2 py-0.5 text-xs font-medium text-fd-primary-foreground">
-            {hero.pill.badge}
-          </span>
-          <span className="min-w-0 text-start">{hero.pill.text}</span>
-        </a>
         <h1 className="rise text-[clamp(2.25rem,1.2rem+3.4vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-balance [animation-delay:60ms]">
           {hero.title} <span className="text-fd-primary">{hero.titleAccent}</span>
         </h1>

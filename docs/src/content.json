@@ -61,12 +61,14 @@
       "label": "Star"
     }
   },
-  "hero": {
-    "pill": {
-      "badge": "New",
-      "text": "Axon Shaft, AI code review for GitHub →",
+  "notice": {
+    "text": "New: Axon Shaft, AI code review for GitHub",
+    "link": {
+      "label": "Learn more →",
       "href": "#axon-shaft"
-    },
+    }
+  },
+  "hero": {
     "title": "Axonpack ends the guesswork",
     "titleAccent": "when things break.",
     "lead": "Answers you and your agent can both read. Every request, error, log and stored value is captured on the device. Your agent can read it from the terminal, and mock or send requests from inside the app.",
