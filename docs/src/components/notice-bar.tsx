@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { X } from 'lucide-react';
 import { content } from '@/lib/services/content.service';
 
@@ -11,17 +11,24 @@ const KEY = 'notice-dismissed:axon-shaft';
  * The strip above the nav. It shows until someone closes it, and remembers that in localStorage.
  * Storage can be missing or throw (private windows, blocked site data), and then it simply shows.
  */
+const dismissed = () => {
+  try {
+    return localStorage.getItem(KEY) !== null;
+  } catch {
+    return false; // No storage: keep showing it.
+  }
+};
+const onStorage = (change: () => void) => {
+  window.addEventListener('storage', change);
+  return () => window.removeEventListener('storage', change);
+};
+
 export function NoticeBar() {
   const { notice } = content;
-  const [open, setOpen] = useState(true);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(KEY)) setOpen(false);
-    } catch {
-      // No storage: keep showing it.
-    }
-  }, []);
+  // The static HTML always has the bar; the browser hides it if it was closed before.
+  const closedBefore = useSyncExternalStore(onStorage, dismissed, () => false);
+  const [closed, setClosed] = useState(false);
+  const open = !closed && !closedBefore;
 
   if (!open) return null;
 
@@ -40,7 +47,7 @@ export function NoticeBar() {
         type="button"
         aria-label="Close the announcement"
         onClick={() => {
-          setOpen(false);
+          setClosed(true);
           try {
             localStorage.setItem(KEY, '1');
           } catch {
