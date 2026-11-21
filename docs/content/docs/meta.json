@@ -1,3 +1,11 @@
 {
-  "pages": ["index", "agent-guide", "agent-skills", "---Packages---", "..."]
+  "pages": [
+    "index",
+    "agent-guide",
+    "agent-skills",
+    "---Packages---",
+    "...",
+    "---Products---",
+    "external:[Axon Shaft](https://shaft.axonpack.dev/docs/)"
+  ]
 }
