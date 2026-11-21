@@ -8,11 +8,11 @@ import { LibraryGrid } from '@/components/library-grid';
 import { Products } from '@/components/products';
 import { Principles } from '@/components/principles';
 import { content } from '@/lib/services/content.service';
-import { appName } from '@/lib/shared';
 
 export const metadata: Metadata = {
-  title: { absolute: `${appName}: ${content.hero.title}` },
-  description: content.hero.description,
+  // The headline names the project itself now, so prefixing it with the long name said it twice.
+  title: { absolute: `${content.hero.title} ${content.hero.titleAccent}` },
+  description: content.hero.lead,
   alternates: { canonical: '/' },
 };
 

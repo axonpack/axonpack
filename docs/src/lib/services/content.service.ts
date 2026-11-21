@@ -17,24 +17,24 @@ export type Content = {
   brand: { name: string; logoDark: string; url: string };
   nav: { links: NavLink[]; github: { href: string; repo: string; label: string } };
   hero: {
-    /** The one-line announcement above the headline. */
-    pill: { badge: string; text: string; href: string };
+    /** Both lines of work in one sentence, above the headline, which is about the libraries. */
+    intro: { before: string; link: Link; after: string };
     title: string;
+    titleAccent: string;
     lead: string;
-    /** The page's meta description. */
-    description: string;
-    /** Libraries, then Axon Shaft. `{count}` in a body is the number of published packages. */
-    doors: { title: string; body: string; action: Link }[];
+    /** The AI path to a first install, under the buttons. The manual one is a link from it. */
+    start: { command: string; ask: string; prompt: string; note: string; links: Link[] };
+    actions: Link[];
+    terminal: { label: string; command: string; output: string[] };
+    panelLabel: string;
   };
   agent: {
     title: string;
-    terminal: { label: string; command: string; output: string[] };
-    panelLabel: string;
     scene: string;
     answer: string;
     steps: { command: string; text: string }[];
     usage: { title: string; body: string; label: string };
-    skills: { title: string; body: string; command: string; ask: string; prompt: string; note: string };
+    skills: { title: string; body: string; command: string };
     links: Link[];
   };
   /** Keyed by package slug. A published package with no story still gets its npm description. */

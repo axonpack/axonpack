@@ -1,75 +1,82 @@
+import Link from 'next/link';
+import { ArrowUpRight, Star } from 'lucide-react';
+import { AgentTerminal } from '@/components/agent-terminal';
+import { InstallChip } from '@/components/copy-button';
+import { DevtoolsPanel } from '@/components/devtools-panel';
+import { StarCount } from '@/components/star-count';
 import { content } from '@/lib/services/content.service';
-import { packages } from '@/lib/services/packages.service';
-import { FRAME } from '@/lib/constants/frame.const';
-import { ShaftChecks } from '@/components/shaft-review-mock';
-
-const BUTTON =
-  'inline-flex h-10 items-center rounded-lg bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground transition-transform hover:-translate-y-px';
 
 /**
- * Names the maker, then two doors of equal weight: the libraries and Axon Shaft. Each door has one
- * action and a small drawing of the real thing, the published versions or the check runs.
+ * Centred, as the hero always was. Below the type, the panel on the phone and an agent's terminal
+ * reading the same failed request. The terminal arrives last on purpose: it is the one moment the
+ * load sequence builds to.
  */
 export function Hero() {
   const { hero } = content;
-  const [libraries, shaft] = hero.doors;
-  const external = (href: string) => /^https?:/.test(href) && { target: '_blank', rel: 'noreferrer noopener' };
-
-  const doors = [
-    {
-      door: libraries,
-      body: libraries.body.replace('{count}', String(packages.length)),
-      visual: (
-        <ul className={`${FRAME} divide-y bg-fd-background font-mono text-[0.75rem] sm:text-[0.8125rem]`}>
-          {packages.map((pkg) => (
-            <li key={pkg.name} className="flex items-baseline gap-3 px-4 py-2">
-              <span className="min-w-0 flex-1 truncate">{pkg.name}</span>
-              <span className="shrink-0 text-fd-muted-foreground">v{pkg.version}</span>
-            </li>
-          ))}
-        </ul>
-      ),
-    },
-    {
-      door: shaft,
-      body: shaft.body,
-      visual: <ShaftChecks only={['review', 'security', 'tests', 'gates']} />,
-    },
-  ];
 
   return (
-    <header className="hero-shade px-5 pt-14 pb-16 sm:pt-20 sm:pb-20">
-      <div className="mx-auto max-w-3xl text-center">
-        <a
-          href={hero.pill.href}
-          className="rise inline-flex max-w-full items-center gap-2 rounded-full border bg-fd-card py-1 ps-1 pe-3 text-sm text-fd-muted-foreground transition-colors hover:text-fd-foreground"
-        >
-          <span className="shrink-0 rounded-full bg-fd-primary px-2 py-0.5 text-xs font-medium text-fd-primary-foreground">
-            {hero.pill.badge}
-          </span>
-          <span className="min-w-0 text-start">{hero.pill.text}</span>
-        </a>
-        <h1 className="rise mt-8 text-[clamp(2.25rem,1.2rem+3.4vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-balance [animation-delay:80ms]">
-          {hero.title}
+    <header className="hero-shade px-5 pt-20 pb-14 sm:pt-28 sm:pb-16">
+      <div className="mx-auto max-w-2xl text-center">
+        <p className="rise mb-6 text-sm text-fd-muted-foreground text-balance">
+          {hero.intro.before}{' '}
+          <a href={hero.intro.link.href} className="font-medium text-fd-foreground underline underline-offset-4 hover:text-fd-primary">
+            {hero.intro.link.label}
+          </a>
+          {hero.intro.after}
+        </p>
+        <h1 className="rise text-[clamp(2.25rem,1.2rem+3.4vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-balance [animation-delay:60ms]">
+          {hero.title} <span className="text-fd-primary">{hero.titleAccent}</span>
         </h1>
-        <p className="rise mt-4 text-fd-muted-foreground [animation-delay:160ms]">{hero.lead}</p>
+
+        <p className="rise mt-5 text-[0.9375rem] leading-relaxed text-fd-muted-foreground text-pretty [animation-delay:180ms]">
+          {hero.lead}
+        </p>
+
+        <div className="rise mt-8 flex flex-wrap items-center justify-center gap-3 [animation-delay:260ms]">
+          <Link
+            href={hero.actions[0].href}
+            className="inline-flex h-10 items-center rounded-lg bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground transition-transform hover:-translate-y-px"
+          >
+            {hero.actions[0].label}
+          </Link>
+          <a
+            href={hero.actions[1].href}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="group inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-medium text-fd-muted-foreground transition-colors hover:text-fd-foreground"
+          >
+            {hero.actions[1].label}
+            <StarCount className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs tabular-nums">
+              <Star className="size-3 fill-current" aria-hidden="true" />
+            </StarCount>
+            <ArrowUpRight className="size-4" aria-hidden="true" />
+          </a>
+        </div>
+
+        <div className="rise [animation-delay:340ms]">
+          <InstallChip command={hero.start.command} label="Copy the skills command" />
+          <p className="mt-3 text-sm text-fd-muted-foreground">
+            {hero.start.ask}{' '}
+            <q className="font-mono text-[0.8125rem] text-fd-foreground max-sm:mt-1 max-sm:block">{hero.start.prompt}</q>
+          </p>
+          <p className="mx-auto mt-1.5 max-w-md text-sm text-fd-muted-foreground text-pretty">{hero.start.note}</p>
+          <p className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm">
+            {hero.start.links.map((link) => (
+              <Link key={link.href} href={link.href} className="font-medium text-fd-primary underline-offset-4 hover:underline">
+                {link.label}
+              </Link>
+            ))}
+          </p>
+        </div>
       </div>
 
-      <div className="rise mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-5 md:grid-cols-2 [animation-delay:240ms]">
-        {doors.map(({ door, body, visual }) => (
-          <section key={door.title} aria-label={door.title} className="flex min-w-0 flex-col rounded-xl border bg-fd-card p-5 sm:p-6">
-            <h2 className="text-xl font-semibold tracking-tight">{door.title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-fd-muted-foreground text-pretty">{body}</p>
-            <div aria-hidden="true" className="mt-5 flex-1 text-sm select-none">
-              {visual}
-            </div>
-            <p className="mt-6">
-              <a href={door.action.href} {...external(door.action.href)} className={BUTTON}>
-                {door.action.label}
-              </a>
-            </p>
-          </section>
-        ))}
+      <div className="mx-auto mt-16 max-w-5xl sm:mt-20">
+        <div role="img" aria-label={hero.panelLabel} className="rise [animation-delay:420ms]">
+          <DevtoolsPanel />
+        </div>
+        {/* Overlaps the panel's lower right on wide screens. In flow rather than absolute, so the
+            header's own padding is what clears it. */}
+        <AgentTerminal className="rise relative mx-auto mt-4 max-w-[36rem] [animation-delay:800ms] lg:-mt-24 lg:-me-10" />
       </div>
     </header>
   );

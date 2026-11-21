@@ -62,32 +62,59 @@
     }
   },
   "hero": {
-    "pill": {
-      "badge": "New",
-      "text": "Axon Shaft reviews pull requests in your own GitHub Actions",
-      "href": "#axon-shaft"
+    "intro": {
+      "before": "Axonpack makes free, open-source libraries for React Native and Expo, and",
+      "link": {
+        "label": "Axon Shaft",
+        "href": "#axon-shaft"
+      },
+      "after": ", which reviews pull requests with Claude."
     },
-    "title": "React Native libraries and pull request reviews",
-    "lead": "Both made by Axonpack.",
-    "description": "MIT-licensed libraries for React Native and Expo, and Axon Shaft for reviewing pull requests in GitHub Actions.",
-    "doors": [
+    "title": "Axonpack ends the guesswork",
+    "titleAccent": "when things break.",
+    "lead": "Answers you and your agent can both read. Every request, error, log and stored value is captured on the device. Your agent can read it from the terminal, and mock or send requests from inside the app.",
+    "actions": [
       {
-        "title": "Libraries",
-        "body": "{count} MIT-licensed packages for React Native and Expo, installed from npm.",
-        "action": {
-          "label": "Browse libraries",
-          "href": "#libraries"
-        }
+        "label": "Read the docs",
+        "href": "/docs/",
+        "variant": "primary",
+        "icon": "arrow-right"
       },
       {
-        "title": "Axon Shaft",
-        "body": "Reviews your pull requests with Claude, as a GitHub Action on your own runners. Free for personal accounts.",
-        "action": {
-          "label": "Open Axon Shaft",
-          "href": "https://shaft.axonpack.dev/"
-        }
+        "label": "View on GitHub",
+        "href": "https://github.com/axonpack/axonpack",
+        "variant": "outline",
+        "icon": "arrow-up-right",
+        "external": true
       }
-    ]
+    ],
+    "start": {
+      "command": "npx skills add axonpack/skills",
+      "ask": "Then ask your agent:",
+      "prompt": "Set up @axonpack/expo-devtools in this app",
+      "note": "The skill reads these docs live, so the agent follows the package's current installation page and checks each step.",
+      "links": [
+        {
+          "label": "Agent skill",
+          "href": "/docs/agent-skills/"
+        },
+        {
+          "label": "Install it yourself",
+          "href": "/docs/expo-devtools/installation/"
+        }
+      ]
+    },
+    "terminal": {
+      "label": "An AI agent reading the app's failed requests from the terminal",
+      "command": "npx devtools network --where state=error --since 10m",
+      "output": [
+        "# network · my-app · iPhone 16 Pro · 1 of 214 match",
+        "id\tmethod\tcode\tstate\tms\turl",
+        "xhr-1762172184120-4\tGET\t401\terror\t190\thttps://api.acme.dev/v1/me",
+        "# next: --after xhr-1762172184120-4"
+      ]
+    },
+    "panelLabel": "The Expo Devtools panel inside the app. Its Network tab lists the app's requests, and GET /v1/me failed with 401 TOKEN_EXPIRED."
   },
   "agent": {
     "title": "Reading the running app from the terminal",
@@ -123,10 +150,7 @@
     "skills": {
       "title": "Agent skill",
       "body": "One skill covers every package. Your coding agent loads it, and it has the agent read these docs live, so it always matches the latest release. The agent sets the package up in your app with your own package manager and checks each step before the next one.",
-      "command": "npx skills add axonpack/skills",
-      "ask": "Then ask your agent:",
-      "prompt": "Set up @axonpack/expo-devtools in this app",
-      "note": "The skill reads these docs live, so the agent follows the package's current installation page and checks each step."
+      "command": "npx skills add axonpack/skills"
     },
     "links": [
       {
@@ -141,18 +165,7 @@
         "label": "Blog post on the devtools command",
         "href": "/blog/expo-devtools-cli-for-ai-agents/"
       }
-    ],
-    "terminal": {
-      "label": "An AI agent reading the app's failed requests from the terminal",
-      "command": "npx devtools network --where state=error --since 10m",
-      "output": [
-        "# network · my-app · iPhone 16 Pro · 1 of 214 match",
-        "id\tmethod\tcode\tstate\tms\turl",
-        "xhr-1762172184120-4\tGET\t401\terror\t190\thttps://api.acme.dev/v1/me",
-        "# next: --after xhr-1762172184120-4"
-      ]
-    },
-    "panelLabel": "The Expo Devtools panel inside the app. Its Network tab lists the app's requests, and GET /v1/me failed with 401 TOKEN_EXPIRED."
+    ]
   },
   "libraries": {
     "title": "Packages",

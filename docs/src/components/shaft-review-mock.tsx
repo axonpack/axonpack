@@ -70,35 +70,27 @@ export function ShaftReviewMock() {
         </div>
       </div>
 
-      <ShaftChecks />
-    </div>
-  );
-}
-
-/** The check runs as GitHub lists them under a pull request. `only` picks a few, for a small view. */
-export function ShaftChecks({ only }: { only?: string[] }) {
-  const rows = only ? checks.filter(([name]) => only.includes(name)) : checks;
-  return (
-    <div className={FRAME}>
-      <ul className="divide-y">
-        {rows.map(([name, title, state]) => (
-          <li key={name} className="flex items-center gap-3 px-4 py-2">
-            <span className="shrink-0">{mark[state]}</span>
-            {/* Name and title share a line where there is room. A phone stacks them, so neither is cut. */}
-            <span className="min-w-0 flex-1 sm:truncate">
-              <span className="font-medium">Axon Shaft / {name}</span>{' '}
-              <span className="text-fd-muted-foreground max-sm:block">{title}</span>
-            </span>
-            {name === 'gates' && (
-              <span className="shrink-0 rounded-full border px-2 text-xs text-fd-muted-foreground">Required</span>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="flex items-center gap-2 border-t bg-fd-secondary/60 px-4 py-2.5 font-medium">
-        <CircleX className="size-4 shrink-0 text-red-600 dark:text-red-400" />
-        Merging is blocked
-      </p>
+      <div className={FRAME}>
+        <ul className="divide-y">
+          {checks.map(([name, title, state]) => (
+            <li key={name} className="flex items-center gap-3 px-4 py-2">
+              <span className="shrink-0">{mark[state]}</span>
+              {/* Name and title share a line where there is room. A phone stacks them, so neither is cut. */}
+              <span className="min-w-0 flex-1 sm:truncate">
+                <span className="font-medium">Axon Shaft / {name}</span>{' '}
+                <span className="text-fd-muted-foreground max-sm:block">{title}</span>
+              </span>
+              {name === 'gates' && (
+                <span className="shrink-0 rounded-full border px-2 text-xs text-fd-muted-foreground">Required</span>
+              )}
+            </li>
+          ))}
+        </ul>
+        <p className="flex items-center gap-2 border-t bg-fd-secondary/60 px-4 py-2.5 font-medium">
+          <CircleX className="size-4 shrink-0 text-red-600 dark:text-red-400" />
+          Merging is blocked
+        </p>
+      </div>
     </div>
   );
 }
