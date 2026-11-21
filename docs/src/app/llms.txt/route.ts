@@ -14,5 +14,7 @@ export function GET() {
     .index()
     .replace(/\]\(([^)]*)\)/g, (link, url: string) => (markdown.has(url) ? `](${markdown.get(url)})` : link));
   const posts = getPosts().map((post) => `- [${post.data.title}](${post.url}): ${post.data.description}`);
-  return new Response(`${docs}\n\n# Blog\n\n${posts.join('\n')}\n`);
+  // Products keep their docs on their own sites, so this points at their index instead of copying it.
+  const products = '- [Axon Shaft](https://shaft.axonpack.dev/docs/llms.txt): pull request reviews with Claude, as a GitHub Action and a dashboard';
+  return new Response(`${docs}\n\n# Products\n\n${products}\n\n# Blog\n\n${posts.join('\n')}\n`);
 }
