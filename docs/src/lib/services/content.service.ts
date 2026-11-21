@@ -17,8 +17,8 @@ export type Content = {
   brand: { name: string; logoDark: string; url: string };
   nav: { links: NavLink[]; github: { href: string; repo: string; label: string } };
   hero: {
-    /** Both lines of work in one sentence, above the headline, which is about the libraries. */
-    intro: { before: string; link: Link; after: string };
+    /** The one-line announcement above the headline. */
+    pill: { badge: string; text: string; href: string };
     title: string;
     titleAccent: string;
     lead: string;

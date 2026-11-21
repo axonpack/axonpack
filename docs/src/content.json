@@ -62,13 +62,10 @@
     }
   },
   "hero": {
-    "intro": {
-      "before": "Axonpack makes free, open-source libraries for React Native and Expo, and",
-      "link": {
-        "label": "Axon Shaft",
-        "href": "#axon-shaft"
-      },
-      "after": ", which reviews pull requests with Claude."
+    "pill": {
+      "badge": "New",
+      "text": "Axon Shaft, AI code review for GitHub →",
+      "href": "#axon-shaft"
     },
     "title": "Axonpack ends the guesswork",
     "titleAccent": "when things break.",
@@ -222,13 +219,9 @@
     "id": "axon-shaft",
     "name": "Axon Shaft",
     "summary": "Pull request reviews with Claude, on your own GitHub runners",
-    "title": "Axon Shaft reviews every pull request before it merges",
-    "body": "It is a GitHub Action and a dashboard, made by the same team as the Axonpack libraries. Claude reads the change on your repo's own runner, then posts one summary comment, an inline comment on each line it flags, and check runs that branch protection can require.",
+    "title": "Axon Shaft: AI code review in your own GitHub Actions",
+    "body": "Axon Shaft is a GitHub app that reviews every pull request with Claude. It runs on your repo's own runner with your own Claude key, comments on the lines that need work, and blocks the merge until your checks pass.",
     "points": [
-      {
-        "title": "Your runners, your Claude token",
-        "body": "The review runs in GitHub Actions on your repo's runner, with your Claude plan or API key. The code stays there, and the workflow file holds no secrets."
-      },
       {
         "title": "A check run for each checklist",
         "body": "Security, tests, known vulnerabilities and the rest each post their own check run, such as `Axon Shaft / security`. A blocking finding fails it."
