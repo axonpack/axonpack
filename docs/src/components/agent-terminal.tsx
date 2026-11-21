@@ -1,5 +1,6 @@
 import { SquareTerminal } from 'lucide-react';
 import { content } from '@/lib/services/content.service';
+import { FRAME } from '@/lib/constants/frame.const';
 
 /**
  * The CLI prints tab-separated rows, which a real terminal lines up only by luck of tab stops. The
@@ -28,7 +29,7 @@ export function AgentTerminal({ className = '' }: { className?: string }) {
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-white/10 bg-[#0b1322] text-[#dbe4f3] shadow-2xl ring-1 ring-black/10 ${className}`}
+      className={`${FRAME} border-white/10 bg-[#0b1322] text-[#dbe4f3] ${className}`}
     >
       <div className="flex items-center gap-2 border-b border-white/10 px-3.5 py-2 text-[0.75rem] text-[#9fb0cc]">
         <SquareTerminal className="size-3.5" aria-hidden="true" />
