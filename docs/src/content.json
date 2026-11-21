@@ -155,8 +155,15 @@
     "panelLabel": "The Expo Devtools panel inside the app. Its Network tab lists the app's requests, and GET /v1/me failed with 401 TOKEN_EXPIRED."
   },
   "libraries": {
-    "title": "Packages",
+    "title": "Libraries",
     "body": "Each one is versioned and released on its own. This list is read from npm when the site builds, so everything on it is published.",
+    "lines": {
+      "expo-devtools": "Devtools that run inside your React Native or Expo app, and that your agent can read from the terminal.",
+      "react-native-devtools-tab": "Your own tab in React Native DevTools, drawn from a component that runs in the app.",
+      "react-pretty-print": "Collapsible JSON and XML trees and a syntax highlighter, for React and React Native.",
+      "in-app-updates": "Store version checks, force updates and a ready-made update modal.",
+      "preview": "Over-the-air PR previews for Expo apps, from your own S3-compatible bucket."
+    },
     "stories": {
       "expo-devtools": {
         "scene": "A tester says the feed is empty on their phone. On your simulator it loads. There is no cable and no log, and the tester can't tell you which request failed.",
