@@ -1,6 +1,5 @@
 import { content } from '@/lib/services/content.service';
 import { Prose } from '@/components/prose';
-import { SectionHeading } from '@/components/section-heading';
 import { ShaftReviewMock } from '@/components/shaft-review-mock';
 
 /**
@@ -20,7 +19,13 @@ export function Products() {
     >
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:gap-16">
         <div className="min-w-0">
-          <SectionHeading id="products-title" title={products.title} body={products.body} />
+          <h2
+            id="products-title"
+            className="text-[clamp(1.75rem,1.2rem+2vw,2.75rem)] leading-tight font-semibold tracking-[-0.03em] text-balance"
+          >
+            {products.title}
+          </h2>
+          <p className="mt-5 max-w-xl leading-relaxed text-fd-muted-foreground text-pretty">{products.body}</p>
 
           <ul className="mt-10 grid gap-x-8 gap-y-7 sm:grid-cols-2">
             {products.points.map((point) => (

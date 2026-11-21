@@ -2,7 +2,6 @@ import { Bot } from 'lucide-react';
 import { QueryRow, RecordDot } from '@/components/devtools-panel';
 import { panes } from '@/components/devtools-panes';
 import { content } from '@/lib/services/content.service';
-import { FRAME } from '@/lib/constants/frame.const';
 
 // The hero's carousel shows this pane only while it slides, and never with reduced motion, so the
 // section about it draws the same rows again, standing still.
@@ -15,7 +14,7 @@ export function AiUsagePanel() {
     <div
       role="img"
       aria-label={content.agent.usage.label}
-      className={`${FRAME} bg-fd-secondary p-1.5`}
+      className="rounded-[18px] border bg-fd-secondary p-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10"
     >
       <div className="overflow-hidden rounded-xl border bg-fd-background">
         <div className="flex items-center gap-1.5 border-b bg-fd-secondary/40 px-2.5 py-1.5">

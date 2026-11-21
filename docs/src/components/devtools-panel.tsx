@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { panes, type Block, type Chart, type JsonLine, type Pane, type Row, type Tone } from './devtools-panes';
 import styles from './devtools-panel.module.css';
-import { FRAME } from '@/lib/constants/frame.const';
 
 /**
  * A drawing of the panel rather than a screenshot, so it themes with the page, weighs nothing and
@@ -502,7 +501,7 @@ function PaneView({ pane, hidden }: { pane: Pane; hidden: boolean }) {
 
 export function DevtoolsPanel() {
   return (
-    <div className={`${FRAME} bg-fd-secondary p-1.5`}>
+    <div className="rounded-[18px] border bg-fd-secondary p-1.5 shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
       <div className="flex gap-1.5">
         {/* On the frame itself, the way a mac sidebar is part of the window rather than a panel
             inside it. No divider: the gap to the content card is the separation. */}

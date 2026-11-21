@@ -1,4 +1,3 @@
-import { FRAME } from '@/lib/constants/frame.const';
 import { CircleCheck, CircleMinus, CircleX, TriangleAlert } from 'lucide-react';
 
 /**
@@ -37,7 +36,7 @@ const chip = 'rounded border bg-fd-secondary px-1.5 py-0.5 text-xs';
 export function ShaftReviewMock() {
   return (
     <div aria-hidden="true" className="grid gap-4 text-sm select-none">
-      <div className={FRAME}>
+      <div className="overflow-hidden rounded-lg border bg-fd-background shadow-sm">
         <p className="flex flex-wrap items-center gap-x-2 border-b bg-fd-secondary/60 px-4 py-2.5">
           <span className="font-semibold">axonshaft</span>
           <span className="rounded-full border px-1.5 text-xs text-fd-muted-foreground">bot</span>
@@ -70,7 +69,7 @@ export function ShaftReviewMock() {
         </div>
       </div>
 
-      <div className={FRAME}>
+      <div className="overflow-hidden rounded-lg border bg-fd-background shadow-sm">
         <ul className="divide-y">
           {checks.map(([name, title, state]) => (
             <li key={name} className="flex items-center gap-3 px-4 py-2">
