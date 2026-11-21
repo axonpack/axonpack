@@ -62,7 +62,7 @@
     }
   },
   "notice": {
-    "text": "New: Axon Shaft, AI code review for GitHub",
+    "text": "New: Axon Shaft, AI code review for GitHub. Free during the trial.",
     "link": {
       "label": "Learn more →",
       "href": "#axon-shaft"
@@ -247,6 +247,7 @@
         "href": "https://shaft.axonpack.dev/docs/"
       }
     ],
+    "trial": "Free during the trial. Pricing isn't set yet, and no card is needed.",
     "mockLabel": "An example Axon Shaft review on a pull request: the summary comment says the change needs work, and the merge is blocked because the Axon Shaft / gates check failed."
   },
   "principles": {
