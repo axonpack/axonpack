@@ -53,8 +53,6 @@ export type Content = {
     body: string;
     points: { title: string; body: string }[];
     actions: Link[];
-    /** The trial line beside the actions. States only what is true today. */
-    trial: string;
     mockLabel: string;
   };
   principles: { title: string; body: string; items: { title: string; body: string; link: Link }[] };

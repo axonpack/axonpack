@@ -54,9 +54,6 @@ export function Products() {
               {secondary.label}
             </a>
           </p>
-          <p className="mt-4 inline-flex rounded-lg border border-fd-primary/30 bg-fd-primary/10 px-3 py-2 text-sm font-medium text-fd-foreground">
-            {products.trial}
-          </p>
         </div>
 
         <div role="img" aria-label={products.mockLabel} className="min-w-0 lg:pt-2">
