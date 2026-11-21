@@ -23,7 +23,7 @@ function align(lines: string[]): string[] {
  * text is real text rather than a picture, so it can be read, selected and scrolled.
  */
 export function AgentTerminal({ className = '' }: { className?: string }) {
-  const { terminal } = content.hero;
+  const { terminal } = content.agent;
   const output = align(terminal.output);
   const header = terminal.output.findIndex((line) => line.includes('\t'));
 
