@@ -41,8 +41,6 @@ export type Content = {
   libraries: {
     title: string;
     body: string;
-    /** One line per package for the index, keyed by slug. A package without one shows its npm description. */
-    lines: Record<string, string>;
     stories: Record<string, Story>;
   };
   /** Axon Shaft, the one product. Its docs live on its own site, so every action links out. */

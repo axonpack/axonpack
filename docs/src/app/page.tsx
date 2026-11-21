@@ -4,7 +4,6 @@ import { baseOptions } from '@/lib/layout.shared';
 import { SiteNav } from '@/components/site-nav';
 import { Hero } from '@/components/hero';
 import { AgentSection } from '@/components/agent-section';
-import { LibraryIndex } from '@/components/library-index';
 import { LibraryGrid } from '@/components/library-grid';
 import { Products } from '@/components/products';
 import { Principles } from '@/components/principles';
@@ -23,7 +22,6 @@ export default function HomePage() {
     <HomeLayout {...baseOptions()} slots={{ header: SiteNav }}>
       <main className="landing flex flex-1 flex-col">
         <Hero />
-        <LibraryIndex />
         <Products />
         <AgentSection />
         <LibraryGrid />

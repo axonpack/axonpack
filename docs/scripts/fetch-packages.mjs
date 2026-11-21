@@ -162,15 +162,6 @@ async function countDownloads(name, publishedAt) {
   return answered ? total : null;
 }
 
-/** Downloads in the last seven days npm has counted. Null when npm does not answer. */
-async function weeklyDownloads(name) {
-  try {
-    return (await json(`https://api.npmjs.org/downloads/point/last-week/${encode(name)}`)).downloads ?? null;
-  } catch {
-    return null;
-  }
-}
-
 // --- repository stars ---------------------------------------------------------------------------
 //
 // Read at build time like everything else here, so the page ships as static HTML and no visitor
@@ -220,7 +211,6 @@ for (const name of [...names].sort()) {
   }
 
   const totalDownloads = await countDownloads(name, publishedAt);
-  const weekly = await weeklyDownloads(name);
   const releases = await fetchReleases(name, manifest.version, publishedAt);
 
   packages.push({
@@ -233,7 +223,6 @@ for (const name of [...names].sort()) {
     keywords: manifest.keywords ?? [],
     license: manifest.license ?? null,
     totalDownloads,
-    weeklyDownloads: weekly,
     // Flat, derived from the package name. This is the same shape /docs/expo-devtools/ already uses, so a
     // new package needs no routing entry anywhere.
     docsHref: `/docs/${slug}/`,
