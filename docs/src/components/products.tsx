@@ -3,8 +3,9 @@ import { Prose } from '@/components/prose';
 import { ShaftReviewMock } from '@/components/shaft-review-mock';
 
 /**
- * Axon Shaft is a product with its own site, not a package, so it gets its own band after the
- * package list rather than a row in it. Every action leaves axonpack.dev.
+ * Axon Shaft is a product with its own site, not a package, so it gets its own band, straight after
+ * the hero, rather than a row in the package list. Left-aligned and on the card colour so it reads as
+ * its own thing beside the centred hero. Every action leaves axonpack.dev.
  */
 export function Products() {
   const { products } = content;
@@ -14,7 +15,7 @@ export function Products() {
     <section
       id={products.id}
       aria-labelledby="products-title"
-      className="scroll-mt-20 border-t bg-fd-card/60 px-5 py-20 sm:py-28"
+      className="scroll-mt-20 border-y bg-fd-card px-5 py-20 sm:py-28"
     >
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:gap-16">
         <div className="min-w-0">

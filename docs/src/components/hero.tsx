@@ -17,6 +17,13 @@ export function Hero() {
   return (
     <header className="hero-shade px-5 pt-20 pb-14 sm:pt-28 sm:pb-16">
       <div className="mx-auto max-w-2xl text-center">
+        <p className="rise mb-6 text-sm text-fd-muted-foreground text-balance">
+          {hero.intro.before}{' '}
+          <a href={hero.intro.link.href} className="font-medium text-fd-foreground underline underline-offset-4 hover:text-fd-primary">
+            {hero.intro.link.label}
+          </a>
+          {hero.intro.after}
+        </p>
         <h1 className="rise text-[clamp(2.25rem,1.2rem+3.4vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-balance [animation-delay:60ms]">
           {hero.title} <span className="text-fd-primary">{hero.titleAccent}</span>
         </h1>

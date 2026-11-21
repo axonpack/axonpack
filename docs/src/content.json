@@ -62,6 +62,14 @@
     }
   },
   "hero": {
+    "intro": {
+      "before": "Axonpack makes free, open-source libraries for React Native and Expo, and",
+      "link": {
+        "label": "Axon Shaft",
+        "href": "#axon-shaft"
+      },
+      "after": ", which reviews pull requests with Claude."
+    },
     "title": "Axonpack ends the guesswork",
     "titleAccent": "when things break.",
     "lead": "Answers you and your agent can both read. Every request, error, log and stored value is captured on the device. Your agent can read it from the terminal, and mock or send requests from inside the app.",
@@ -215,7 +223,7 @@
     "name": "Axon Shaft",
     "summary": "Pull request reviews with Claude, on your own GitHub runners",
     "title": "Axon Shaft reviews every pull request before it merges",
-    "body": "It is a GitHub Action and a dashboard, made by the same team as these libraries. Claude reads the change on your repo's own runner, then posts one summary comment, an inline comment on each line it flags, and check runs that branch protection can require.",
+    "body": "It is a GitHub Action and a dashboard, made by the same team as the Axonpack libraries. Claude reads the change on your repo's own runner, then posts one summary comment, an inline comment on each line it flags, and check runs that branch protection can require.",
     "points": [
       {
         "title": "Your runners, your Claude token",

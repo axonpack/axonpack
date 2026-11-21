@@ -22,9 +22,9 @@ export default function HomePage() {
     <HomeLayout {...baseOptions()} slots={{ header: SiteNav }}>
       <main className="landing flex flex-1 flex-col">
         <Hero />
+        <Products />
         <AgentSection />
         <LibraryGrid />
-        <Products />
         <Principles />
       </main>
     </HomeLayout>
