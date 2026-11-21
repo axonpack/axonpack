@@ -5,6 +5,7 @@ import { SiteNav } from '@/components/site-nav';
 import { Hero } from '@/components/hero';
 import { AgentSection } from '@/components/agent-section';
 import { LibraryGrid } from '@/components/library-grid';
+import { Products } from '@/components/products';
 import { Principles } from '@/components/principles';
 import { content } from '@/lib/services/content.service';
 
@@ -23,6 +24,7 @@ export default function HomePage() {
         <Hero />
         <AgentSection />
         <LibraryGrid />
+        <Products />
         <Principles />
       </main>
     </HomeLayout>

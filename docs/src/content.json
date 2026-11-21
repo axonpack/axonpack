@@ -210,6 +210,42 @@
       }
     }
   },
+  "products": {
+    "id": "axon-shaft",
+    "name": "Axon Shaft",
+    "summary": "Pull request reviews with Claude, on your own GitHub runners",
+    "title": "Axon Shaft reviews every pull request before it merges",
+    "body": "It is a GitHub Action and a dashboard, made by the same team as these libraries. Claude reads the change on your repo's own runner, then posts one summary comment, an inline comment on each line it flags, and check runs that branch protection can require.",
+    "points": [
+      {
+        "title": "Your runners, your Claude token",
+        "body": "The review runs in GitHub Actions on your repo's runner, with your Claude plan or API key. The code stays there, and the workflow file holds no secrets."
+      },
+      {
+        "title": "A check run for each checklist",
+        "body": "Security, tests, known vulnerabilities and the rest each post their own check run, such as `Axon Shaft / security`. A blocking finding fails it."
+      },
+      {
+        "title": "Merge gates",
+        "body": "Write requirements in plain words, like \"A migration has a rollback\". Require `Axon Shaft / gates` and a pull request can't merge until every gate is met."
+      },
+      {
+        "title": "`/ask` and `/fix` in comments",
+        "body": "Comment `/ask` to get an answer about the code, or `/fix` to have it make the change and push it to the pull request."
+      }
+    ],
+    "actions": [
+      {
+        "label": "Install on GitHub",
+        "href": "https://github.com/apps/axonshaft/installations/new"
+      },
+      {
+        "label": "Read the docs",
+        "href": "https://shaft.axonpack.dev/docs/"
+      }
+    ],
+    "mockLabel": "An example Axon Shaft review on a pull request: the summary comment says the change needs work, and the merge is blocked because the Axon Shaft / gates check failed."
+  },
   "principles": {
     "title": "Safety and dependencies",
     "body": "What the agent tool can reach, and what the packages add to your app. Each point links to the page that explains it.",

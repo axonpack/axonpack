@@ -13,7 +13,7 @@ import { StarHint } from '@/components/star-hint';
 import { appName, gitConfig } from '@/lib/shared';
 import { documented, packages } from '@/lib/services/packages.service';
 import { getReleases } from '@/lib/services/blog-entries.service';
-import { navLink } from '@/lib/services/content.service';
+import { content, navLink } from '@/lib/services/content.service';
 
 /**
  * Radix's NavigationMenu, because it opens on pointer enter with a configurable delay and handles
@@ -56,6 +56,18 @@ export function SiteNav(props: React.ComponentProps<'header'>) {
             note: pkg.description,
             badge: `v${pkg.version}`,
           })),
+        },
+      ],
+    },
+    {
+      // Products have their own sites. The entry goes to the landing page's section about it, which
+      // links out from there.
+      id: 'products',
+      label: 'Products',
+      columns: [
+        {
+          title: 'Products',
+          entries: [{ label: content.products.name, href: `/#${content.products.id}`, note: content.products.summary }],
         },
       ],
     },
