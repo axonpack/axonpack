@@ -16,6 +16,8 @@ export type Story = {
 export type Content = {
   brand: { name: string; logoDark: string; url: string };
   nav: { links: NavLink[]; github: { href: string; repo: string; label: string } };
+  /** The dismissible strip above the nav on the landing page. */
+  notice: { text: string; link: Link };
   hero: {
     title: string;
     titleAccent: string;
@@ -40,6 +42,18 @@ export type Content = {
     title: string;
     body: string;
     stories: Record<string, Story>;
+  };
+  /** Axon Shaft, the one product. Its docs live on its own site, so every action links out. */
+  products: {
+    id: string;
+    name: string;
+    /** One line, for the nav menu. */
+    summary: string;
+    title: string;
+    body: string;
+    points: { title: string; body: string }[];
+    actions: Link[];
+    mockLabel: string;
   };
   principles: { title: string; body: string; items: { title: string; body: string; link: Link }[] };
   footer: { blurb: string; columns: { title: string; links: Link[] }[]; legal: string };

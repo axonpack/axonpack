@@ -61,6 +61,13 @@
       "label": "Star"
     }
   },
+  "notice": {
+    "text": "Axon Shaft is free for everyone right now.",
+    "link": {
+      "label": "Try it out →",
+      "href": "https://shaft.axonpack.dev/"
+    }
+  },
   "hero": {
     "title": "Axonpack ends the guesswork",
     "titleAccent": "when things break.",
@@ -209,6 +216,38 @@
         }
       }
     }
+  },
+  "products": {
+    "id": "axon-shaft",
+    "name": "Axon Shaft",
+    "summary": "Pull request reviews with Claude, on your own GitHub runners",
+    "title": "Axon Shaft: AI code review in your own GitHub Actions",
+    "body": "Axon Shaft is a GitHub app that reviews every pull request with Claude. It runs on your repo's own runner with your own Claude key, comments on the lines that need work, and blocks the merge until your checks pass.",
+    "points": [
+      {
+        "title": "A check run for each checklist",
+        "body": "Security, tests, known vulnerabilities and the rest each post their own check run, such as `Axon Shaft / security`. A blocking finding fails it."
+      },
+      {
+        "title": "Merge gates",
+        "body": "Write requirements in plain words, like \"A migration has a rollback\". Require `Axon Shaft / gates` and a pull request can't merge until every gate is met."
+      },
+      {
+        "title": "`/ask` and `/fix` in comments",
+        "body": "Comment `/ask` to get an answer about the code, or `/fix` to have it make the change and push it to the pull request."
+      }
+    ],
+    "actions": [
+      {
+        "label": "Install on GitHub",
+        "href": "https://github.com/apps/axonshaft/installations/new"
+      },
+      {
+        "label": "Read the docs",
+        "href": "https://shaft.axonpack.dev/docs/"
+      }
+    ],
+    "mockLabel": "An example Axon Shaft review on a pull request: the summary comment says the change needs work, and the merge is blocked because the Axon Shaft / gates check failed."
   },
   "principles": {
     "title": "Safety and dependencies",
