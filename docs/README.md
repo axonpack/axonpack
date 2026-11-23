@@ -17,6 +17,7 @@ Live at [axonpack.github.io](https://axonpack.github.io). Docs at
 | [`@axonpack/react-pretty-print`](https://axonpack.github.io/docs/react-pretty-print)               | ![npm](https://img.shields.io/npm/v/@axonpack/react-pretty-print?label=)        | Collapsible JSON and XML trees, plus a syntax highlighter                          |
 | [`@axonpack/in-app-updates`](https://axonpack.github.io/docs/in-app-updates) | ![npm](https://img.shields.io/npm/v/@axonpack/in-app-updates?label=) | Store version checks, force updates and a ready-made update modal |
 | [`@axonpack/preview`](https://axonpack.github.io/docs/preview) | ![npm](https://img.shields.io/npm/v/@axonpack/preview?label=) | Over-the-air PR previews from your own bucket, switched in the app with no native rebuild |
+| [`@axonpdf/react`](https://axonpack.github.io/docs/axonpdf) | ![npm](https://img.shields.io/npm/v/@axonpdf/react?label=) | PDF files from React components, in Node, the browser and Web Workers |
 
 ```sh
 npx expo install @axonpack/expo-devtools
