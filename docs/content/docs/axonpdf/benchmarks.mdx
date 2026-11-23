@@ -62,16 +62,45 @@ react-pdf doesn't. The generator version is identical to the array version pixel
 
 ## In the browser
 
-How long the page's main thread is blocked while a document renders in a browser, with axonpdf in a
-Web Worker, axonpdf on the main thread, and react-pdf 4.9.0.
+The live benchmark app, `bench/live` in the axonpdf repository, renders a shipping ledger in the
+browser: A4, a fixed header with an SVG logo, a "Page n of N" footer, and shipments of 4 to 12
+lines each with wrapped notes. The app will be published so you can run it yourself:
+{/* LIVE-APP-URL */}.
 
-{/* BENCH: live-app matrix pending */}
+Machine: Apple M4 with 10 cores, 24 GB RAM, macOS 27.2.1, Chrome for Testing 156.0.8078.4
+(headless, through Playwright). Run on 2026-11-23 with the app at commit `33d9cbd`, and the engines
+from npm: @axonpdf/react 0.0.1 and react-pdf 4.9.0. One run per cell, each in a fresh tab. A run
+with no PDF after 10 minutes was stopped.
 
-| Engine | 100 pages | 500 pages | 2000 pages |
-| --- | --- | --- | --- |
-| axonpdf, Web Worker | pending | pending | pending |
-| axonpdf, main thread | pending | pending | pending |
-| react-pdf 4.9.0 | pending | pending | pending |
+What the columns mean:
+
+- Time to PDF is from the click to the finished PDF Blob, including building the data.
+- Longest frame gap is the longest time the page went without drawing a frame, which is how
+  long it froze. This is where the worker matters: at 2000 pages the page froze for 19 ms with the
+  worker and 15.1 s without it.
+- Page JS heap peak is the page's main-thread heap, from `performance.memory`. A worker's own
+  heap can't be read, so the worker rows show only the page's heap.
+
+| Engine | Thread | Target pages | Pages | Time to PDF | File size | Longest frame gap | Page JS heap peak |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| axonpdf | worker | 100 | 98 | 0.90 s | 362 KB | 18 ms | 20 MB |
+| axonpdf | main thread | 100 | 98 | 0.83 s | 362 KB | 832 ms | 42 MB |
+| react-pdf 4.9.0 | main thread | 100 | 98 | 33.7 s | 539 KB | 33.6 s | 160 MB |
+| axonpdf | worker | 500 | 487 | 3.9 s | 1.8 MB | 17 ms | 20 MB |
+| axonpdf | main thread | 500 | 487 | 3.8 s | 1.8 MB | 3.8 s | 66 MB |
+| react-pdf 4.9.0 | main thread | 500 | - | no PDF after 10 min (stopped at 601 s) | - | - | - |
+| axonpdf | worker | 2000 | 1951 | 16.2 s | 7.1 MB | 19 ms | 21 MB |
+| axonpdf | main thread | 2000 | 1951 | 15.1 s | 7.1 MB | 15.1 s | 174 MB |
+| react-pdf 4.9.0 | main thread | 2000 | - | no PDF after 10 min (stopped at 601 s) | - | - | - |
+
+To rerun a cell:
+
+```sh
+cd bench/live && npm ci && npm run build && npm run preview
+```
+
+Open the printed URL in Chromium, choose custom pages, the engine and the worker box, then Render.
+Use one fresh tab per cell.
 
 ## About pdfkit
 
