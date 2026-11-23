@@ -33,9 +33,10 @@ inside the package. Every query and action an agent makes, and the reply it got,
   needs.
 - **The app open in a dev build or Expo Go**, with `<DevtoolsProvider>` mounted and `enabled` on.
   The tool reads a development bundle only. A release build has nothing that answers it.
-- **`expo start` running.** The tool finds the app through Metro, on ports 8081 to 8090. Pass
-  `--port` for another one. It talks to Metro on `127.0.0.1`, so run it on the computer that runs
-  Metro.
+- **`expo start` running.** The tool finds the app through Metro. It looks on `RCT_METRO_PORT`,
+  ports 8081 to 8090 and every port a node process listens on, so `expo start --port 9876` is found
+  too. Pass `--port` to look on one port only. It talks to Metro on `127.0.0.1`, so run it on the
+  computer that runs Metro.
 
 ## Running it
 
@@ -521,7 +522,7 @@ Performance tab first.
 
 | Message                                                    | What to do                                                                                                    |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `no app found on Metro ports 8081 to 8090`                 | Start `expo start` and open the app, or pass `--port` for Metro on another port.                              |
+| `no app found on Metro ports 8081 to 8090, ...`            | Start `expo start` and open the app, or pass `--port` with Metro's port.                                      |
 | `... has no devtools agent`                                | Mount `<DevtoolsProvider>` with `enabled` on, and run a development bundle. A release build or a running preview has no agent. |
 | `no reply from ... in 5 s`                                 | The app's JavaScript may be paused at a breakpoint. Resume it and run the command again.                      |
 | `"network --limit 8" isn't a topic`                        | The whole command reached the tool as one argument. Pass the topic and each flag as separate arguments.       |

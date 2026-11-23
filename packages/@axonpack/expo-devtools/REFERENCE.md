@@ -831,11 +831,11 @@ app's folder, `npx devtools` can miss the local install and fetch an unrelated n
 `devtools`. `npx @axonpack/expo-devtools <command>` always runs this one. Below, `devtools` stands
 for whichever form you use.
 
-| Needs                | Why                                                                                            |
-| -------------------- | ---------------------------------------------------------------------------------------------- |
-| Node 22 or newer     | Its built-in `WebSocket` sends the Origin header Metro asks for. Older Node exits with code 1. |
-| A development bundle | The app in a dev build or Expo Go, with `<DevtoolsProvider>` mounted and `enabled` on.         |
-| `expo start` running | On this computer. The tool talks to Metro on `127.0.0.1`, ports 8081 to 8090 unless `--port`.  |
+| Needs                | Why                                                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Node 22 or newer     | Its built-in `WebSocket` sends the Origin header Metro asks for. Older Node exits with code 1.                                                         |
+| A development bundle | The app in a dev build or Expo Go, with `<DevtoolsProvider>` mounted and `enabled` on.                                                                 |
+| `expo start` running | On this computer. The tool talks to Metro on `127.0.0.1`, on `RCT_METRO_PORT`, 8081 to 8090 and every port a node process listens on, unless `--port`. |
 
 ### Commands
 
@@ -882,13 +882,17 @@ The same on every topic. `get` takes `--full`, `--json` and `--out`.
 
 Needed only when more than one app is running, or for an app on another port.
 
-| Flag           | Value        | Default      | What it does                                                                                                                          | Example          |
-| -------------- | ------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `--app`        | Expo slug    | none         | The app with this slug, whole, any case. Without an Expo manifest, the app id.                                                        | `--app my-app`   |
-| `--device`     | text         | none         | The app on a device whose name holds this text, any case.                                                                             | `--device pixel` |
-| `--port`       | whole number | 8081 to 8090 | Look on this Metro port only.                                                                                                         | `--port 8082`    |
-| `--force`      | none         | off          | Attach to an app that can't share its debugger and has no `withDevtools` to ask through. It closes a DevTools window open on the app. | `--force`        |
-| `--help`, `-h` | none         | off          | Print the help for the command instead of running it.                                                                                 | `network --help` |
+| Flag           | Value        | Default         | What it does                                                                                                                          | Example          |
+| -------------- | ------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `--app`        | Expo slug    | none            | The app with this slug, whole, any case. Without an Expo manifest, the app id.                                                        | `--app my-app`   |
+| `--device`     | text         | none            | The app on a device whose name holds this text, any case.                                                                             | `--device pixel` |
+| `--port`       | whole number | any Metro found | Look on this Metro port only.                                                                                                         | `--port 8082`    |
+| `--force`      | none         | off             | Attach to an app that can't share its debugger and has no `withDevtools` to ask through. It closes a DevTools window open on the app. | `--force`        |
+| `--help`, `-h` | none         | off             | Print the help for the command instead of running it.                                                                                 | `network --help` |
+
+Without `--port`, the tool looks on `RCT_METRO_PORT`, ports 8081 to 8090 and every port a node
+process listens on (from `lsof`, or `netstat` and `tasklist` on Windows), and keeps the ones where
+Metro answers. Where that list can't be read, it looks on the first two only.
 
 `apps` takes `--port`, `--force` and `--json`. `topics` takes the app flags and `--json`.
 An action takes the app flags and its [action flags](#action-flags).
@@ -1376,7 +1380,7 @@ The app's own errors are one `error: ...` line on stdout. The tool's own errors 
 | `the debugger socket closed (<code>: <reason>)`                                                                                                                                                                                                       | 1    |
 | `the app threw: <message>`                                                                                                                                                                                                                            | 1    |
 | `no DevTools window is open on this page`, or another error from the [window relay](https://axonpack.dev/docs/react-native-devtools-tab/reference#calling-the-app-from-a-terminal)                                                                    | 1    |
-| ``no app found on Metro ports 8081 to 8090. Open the app in a dev build or Expo Go with `expo start` running, or pass --port.`` (`port <n>` with `--port`)                                                                                            | 2    |
+| ``no app found on Metro ports 8081 to 8090, RCT_METRO_PORT or any port node listens on. Open the app in a dev build or Expo Go with `expo start` running, or pass --port.`` (`port <n>` with `--port`)                                                | 2    |
 | `no app matches <flags>. Running:`, then a `--app <slug> --device '<device>'` line per app                                                                                                                                                            | 2    |
 | `<n> apps match. Pick one:`, then a `--app <slug> --device '<device>'` line per app                                                                                                                                                                   | 2    |
 | `<app> on <device> can't share its debugger (React Native below 0.86, or Expo started headless), and metro.config.js has no withDevtools to ask through its DevTools window, so attaching could close one open on it. Pass --force to attach anyway.` | 2    |
