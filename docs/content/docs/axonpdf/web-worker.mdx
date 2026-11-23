@@ -1,0 +1,101 @@
+---
+title: Web Worker
+description: Render in a Web Worker with expose and renderInWorker, so the page stays responsive during a long render.
+icon: Cpu
+---
+
+A render on the page's main thread blocks scrolling, typing and clicks until it finishes. For a few
+pages that goes unnoticed. For a long report it doesn't. `@axonpdf/react/worker` runs the whole
+render, React and the engine included, in a Web Worker and hands the page a `Blob`.
+
+## Setup
+
+The worker file imports your document and calls `expose` with a function from props to the
+`<Document>`:
+
+```tsx title="pdf.worker.tsx"
+import { expose } from '@axonpdf/react/worker';
+import { Report } from './report';
+
+expose((props) => <Report {...props} />);
+```
+
+The page creates the worker as a module worker and calls `renderInWorker` with the props:
+
+```tsx title="download-report.ts"
+import { renderInWorker } from '@axonpdf/react/worker';
+
+const worker = new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' });
+
+const blob = await renderInWorker(worker, { rows, title: 'March' });
+const url = URL.createObjectURL(blob);
+```
+
+`renderInWorker(worker, props)` resolves with the PDF as a `Blob` of type `application/pdf`.
+
+## Bundlers
+
+`new Worker(new URL('./file', import.meta.url), { type: 'module' })` is the pattern Vite reads to
+bundle a worker file, so the code above works in Vite as written. webpack 5 documents the same
+pattern for its own worker support.
+
+## Fonts and images
+
+The worker has its own module scope, so a `Font.register` call on the page doesn't reach it.
+Register fonts in the worker file, before `expose`:
+
+```tsx title="pdf.worker.tsx"
+import { Font } from '@axonpdf/react';
+import { expose } from '@axonpdf/react/worker';
+import { Report } from './report';
+
+Font.register({ family: 'Lato', src: new URL('./fonts/Lato-Regular.ttf', import.meta.url).href });
+
+expose((props) => <Report {...props} />);
+```
+
+Font and image `src` values must be URLs the worker can fetch: absolute URLs, `data:` URLs, or
+URLs your bundler gives you. File paths only work in Node.
+
+## What props can hold
+
+Props travel from the page to the worker through `postMessage`, so they must be structured
+cloneable: plain objects, arrays, strings, numbers, dates, `Blob`s and typed arrays. Functions,
+React elements and class instances can't cross. Pass the data, and build the elements in the
+worker.
+
+## Errors
+
+When the render throws in the worker, the worker posts the error back and `renderInWorker` rejects
+with it:
+
+```ts
+try {
+  const blob = await renderInWorker(worker, props);
+} catch (error) {
+  console.error('The PDF failed', error);
+}
+```
+
+## One worker, many renders
+
+A worker answers every `renderInWorker` call it gets. Each call carries its own id, and the answer
+is matched to it, so several renders can be in flight on one worker. Create the worker once, reuse
+it, and end it when you no longer need it:
+
+```ts
+const worker = new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' });
+
+const [march, april] = await Promise.all([
+  renderInWorker(worker, { month: 'March' }),
+  renderInWorker(worker, { month: 'April' }),
+]);
+
+worker.terminate();
+```
+
+## When to use it
+
+Use a worker for long documents rendered in the browser, or any render that runs while someone is
+using the page. [Benchmarks](/docs/axonpdf/benchmarks) has how long the main thread is blocked with
+and without a worker.
