@@ -1,5 +1,11 @@
 # @axonpack/expo-devtools
 
+## 3.9.1
+
+### Patch Changes
+
+- a97223b: - **`devtools` finds Metro on any port**: without `--port`, the tool now also looks on `RCT_METRO_PORT` and every port a node process listens on, so an app on `expo start --port 9876` is found
+
 ## 3.9.0
 
 ### Minor Changes
