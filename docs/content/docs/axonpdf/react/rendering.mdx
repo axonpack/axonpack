@@ -54,6 +54,8 @@ const blob = await pdf(<Report />).toBlob();
 ## Browser components
 
 These work in the browser only. In Node they throw an error that names the browser build.
+Each of the three components also takes `worker` and `props` to render in a
+[Web Worker](/docs/axonpdf/react/web-worker#with-the-browser-components).
 
 ### PDFViewer
 

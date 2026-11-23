@@ -1,6 +1,6 @@
 ---
 title: Web Worker
-description: Render in a Web Worker with expose and renderInWorker, so the page stays responsive during a long render.
+description: Render in a Web Worker with useWorker and usePDFWorker, so the page stays responsive during a long render.
 icon: Cpu
 ---
 
@@ -20,12 +20,67 @@ import { Report } from './report';
 expose((props) => <Report {...props} />);
 ```
 
-{/* WORKER-HOOK: usePDFWorker pending. Once it is in the branch, this becomes the main path: create the worker once, call the hook with the worker and the props, and read the Blob and URL from it. Document its exact API from packages/react/src/worker.ts only. */}
+## In a component
+
+On the page, `useWorker` starts the worker and `usePDFWorker` renders with it:
+
+```tsx title="report-download.tsx"
+import { usePDFWorker, useWorker } from '@axonpdf/react/worker';
+
+export function ReportDownload({ rows }) {
+  const worker = useWorker(
+    () => new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' }),
+  );
+  const { loading, url, error } = usePDFWorker(worker, { rows, title: 'March' });
+
+  if (error) return <p>The PDF failed</p>;
+  if (loading || !url) return <p>Preparing...</p>;
+  return (
+    <a href={url} download="report.pdf">
+      Download
+    </a>
+  );
+}
+```
+
+`useWorker(create)` calls `create()` once, when the component mounts, and terminates that worker
+when it unmounts. It returns `null` until the worker exists.
+
+`usePDFWorker(worker, props)` returns `{ loading, blob, url, error }`, the same shape `usePDF`
+gives. While `worker` is `null` it waits. It renders again whenever `props` change, and it compares
+them by value as JSON, so a new object with the same contents doesn't start a render. A result
+that arrives for older props is dropped, and the old object URL is revoked when a new one replaces
+it or the component unmounts.
+
+## With the browser components
+
+`PDFViewer`, `PDFDownloadLink` and `BlobProvider` take the worker directly, with `worker` and
+`props`:
+
+```tsx
+const worker = useWorker(
+  () => new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' }),
+);
+
+<PDFDownloadLink worker={worker} props={{ rows }} fileName="report.pdf">
+  Download
+</PDFDownloadLink>;
+
+<PDFViewer worker={worker} props={{ rows }} width="100%" height={600} />;
+
+<BlobProvider worker={worker} props={{ rows }}>
+  {({ url, loading }) => (loading ? null : <a href={url}>Open</a>)}
+</BlobProvider>;
+```
+
+When `worker` is set, the component renders from `props` in the worker, and `document` (or
+`children` on `PDFViewer`) is not used. Pass one or the other.
 
 ## Calling the worker with renderInWorker
 
-`renderInWorker` is the lower-level way to call the worker, from any code. The page creates the
-worker as a module worker and calls `renderInWorker` with the props:
+`renderInWorker` is the lower-level way to call the worker, outside React or when you want the
+`Blob` yourself. The page creates the worker as a module worker and calls `renderInWorker` with the
+props:
 
 ```tsx title="download-report.ts"
 import { renderInWorker } from '@axonpdf/react/worker';

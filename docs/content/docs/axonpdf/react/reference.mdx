@@ -6,13 +6,14 @@ icon: BookOpen
 
 Use this page to look up a name. If you are new, start with [Getting started](/docs/axonpdf/getting-started).
 
+
 ## Entry points
 
 | Import | What it gives |
 | --- | --- |
 | `@axonpdf/react` | Everything below. Node and the browser get different builds through the `browser` field and the `exports` conditions (`browser`, `worker`, `default`). |
 | `@axonpdf/react/components` | The components and the prop and style types only. Nothing in it loads the engine. |
-| `@axonpdf/react/worker` | `expose` and `renderInWorker`, for rendering in a Web Worker. |
+| `@axonpdf/react/worker` | `expose`, `renderInWorker`, `usePDFWorker` and `useWorker`, for rendering in a Web Worker. |
 
 The default export holds every named export, values and types: `import ReactPDF from
 "@axonpdf/react"` gives `ReactPDF.renderToFile(...)` and `ReactPDF.DocumentProps`. Importing by
@@ -90,6 +91,7 @@ An `<iframe>` showing the document passed as its child. It renders again when th
 | Prop | Default | Notes |
 | --- | --- | --- |
 | `children` | | the `<Document>` |
+| `worker`, `props` | | a Worker that called `expose`, and the props it renders with. When `worker` is set, `children` is not used |
 | `width`, `height`, `style`, `className`, `title` | | passed to the iframe |
 | `innerRef` | | a ref to the iframe |
 | `showToolbar` | `true` | adds `#toolbar=1` or `#toolbar=0` to the URL |
@@ -102,7 +104,8 @@ An `<a download>` for the document, rendered before it is clicked. It forwards a
 
 | Prop | Default | Notes |
 | --- | --- | --- |
-| `document` | | the `<Document>`; without one it warns `You should pass a valid document to PDFDownloadLink` and renders nothing |
+| `document` | | the `<Document>`; without it or `worker` it warns `You should pass a valid document to PDFDownloadLink` and renders nothing |
+| `worker`, `props` | | a Worker that called `expose`, and the props it renders with. When `worker` is set, `document` is not used |
 | `fileName` | `document.pdf` | |
 | `children` | | a node, or a function of `{ loading, blob, url, error }` |
 | `onClick` | | `(event, instance)` |
@@ -112,7 +115,7 @@ Any other anchor attribute is passed through.
 ### BlobProvider
 
 Gives `children({ blob, url, loading, error })` the rendered file without showing it. Props:
-`document` and `children`.
+`document` and `children`, or `worker` and `props` in place of `document`.
 
 ## Web Workers (`@axonpdf/react/worker`)
 
@@ -120,6 +123,8 @@ Gives `children({ blob, url, loading, error })` the rendered file without showin
 | --- | --- |
 | `expose(document)` | Call inside a Worker. `document(props)` returns the `<Document>` to render; the Worker renders it, React and engine included, for every `renderInWorker` call. |
 | `renderInWorker(worker, props)` | Asks that Worker to render with `props` and resolves with the PDF `Blob`. Props travel through `postMessage`, so they can't hold functions. |
+| `usePDFWorker(worker, props)` | A hook. Renders `props` in `worker` and returns `UsePDFInstance` (`{ loading, blob, url, error }`), like `usePDF`. It renders again when `props` change (compared as JSON), drops a result for older props, and revokes old object URLs. While `worker` is `null` it waits. |
+| `useWorker(create)` | A hook. Calls `create()` once on mount and terminates that Worker on unmount. Returns `null` until the Worker exists. |
 
 ## StyleSheet
 
