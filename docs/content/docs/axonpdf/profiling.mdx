@@ -1,0 +1,116 @@
+---
+title: Profiling
+description: Find out whether a slow render spends its time in your components, loading assets or the engine.
+icon: Gauge
+---
+When a document takes long to render, `profile()` tells you whether the time goes into your own components or into axonpdf. It renders the document once, throws the PDF away, and reports where the time went.
+
+```tsx
+import { formatProfile, profile } from "@axonpdf/react";
+
+const report = await profile(<MyReport data={data} />);
+console.log(formatProfile(report));
+```
+
+`profile(element)` takes the same `<Document>` element you pass to `renderToFile` or `pdf()`, and returns a promise of a `ProfileReport`. `formatProfile(report)` turns the report into a short text table for a terminal or a log. The other render functions don't change, and they do no profiling.
+
+## What the report holds
+
+| Field | What it is |
+| --- | --- |
+| `totalMs` | Time from the call to the last byte of the PDF, in milliseconds. |
+| `phases.react` | Your components' own code, wherever it runs: before the engine starts, or while the engine works through a long list or a page whose content is built when the engine reaches it. |
+| `phases.tree` | Turning your components' output into the engine's input, including content built while the engine works. |
+| `phases.assets` | Loading images, fonts and emoji, and starting the engine. |
+| `phases.engine` | The engine's work. `engine` splits it up. |
+| `phases.rows` | Making `<Rows>` batches, including the row components. Your code; 0 without `<Rows>`. |
+| `engine.parse` | Reading the tree. |
+| `engine.layout` | Styles, box layout and cutting the content into pages. |
+| `engine.text` | Shaping text and breaking it into lines. |
+| `engine.paint` | Turning laid-out pages into drawing operations. |
+| `engine.write` | Writing the PDF file. |
+| `engine.callbacks` | Functions of yours that the engine calls while it works: `render` props (and the components they return), Canvas `paint` and hyphenation callbacks. |
+| `engine.bridge` | Passing data between JavaScript and the engine. |
+| `pages` | Each page's time to its last byte, in milliseconds, in page order. |
+| `bytes` | The size of the PDF. |
+| `memory.jsHeapPeak` | The largest JavaScript heap seen, in bytes, checked at every phase change and page. 0 where the platform doesn't tell. |
+| `memory.wasm` | The engine's WebAssembly memory, in bytes. It only grows, so this is its peak. |
+| `cpu` | Node only: CPU time by where the code comes from, and the busiest functions. |
+
+The phases never overlap, so they add up to `totalMs`, and the `engine` parts add up to `phases.engine`. Each time counts only that phase's own work: when the engine calls one of your `render` props during layout, that call counts under `callbacks`, not `layout`, and when it reaches a long list and the list's components run, their time counts under `react`, not `engine`.
+
+`cpu.groups` lists CPU self time by source: `your code`, each package from `node_modules` by name, `axonpdf`, `built-ins` (functions inside V8 such as `JSON.parse`), `garbage collection` and `node`. `cpu.top` lists the 15 functions with the most self time, each with its group and its file and line.
+
+## A real example
+
+This is a 25-page report rendered in Node:
+
+```
+Total 10914 ms, 25 pages, 510 KB PDF
+Memory: JS heap peak 80.7 MB, WebAssembly 19.3 MB
+
+React render (your components)      10120 ms  92.7%
+Reading the tree                       62 ms   0.6%
+Images, fonts, engine start            11 ms   0.1%
+Engine                                722 ms   6.6%
+  parse                               4.4 ms   0.0%
+  layout                              535 ms   4.9%
+  text                                 55 ms   0.5%
+  paint                               9.0 ms   0.1%
+  write                               108 ms   1.0%
+  render functions (your code)        2.6 ms   0.0%
+  JS and engine bridge                7.5 ms   0.1%
+
+Slowest pages: 1 (362 ms), 10 (43 ms), 7 (42 ms)
+
+CPU self time by where the code comes from:
+  dayjs                              9800 ms  89.8%
+  axonpdf                             777 ms   7.1%
+  your code                           129 ms   1.2%
+  garbage collection                   67 ms   0.6%
+  react                                57 ms   0.5%
+  built-ins                            37 ms   0.3%
+  react-reconciler                     23 ms   0.2%
+  node                                 17 ms   0.2%
+
+Busiest functions (self time):
+     8261 ms  f.tz [dayjs] node_modules/dayjs/plugin/timezone.js:1
+      333 ms  m.format [dayjs] node_modules/dayjs/dayjs.min.js:1
+      252 ms  (anonymous) [dayjs] node_modules/dayjs/dayjs.min.js:1
+      206 ms  m.isValid [dayjs] node_modules/dayjs/dayjs.min.js:1
+      150 ms  O [dayjs] node_modules/dayjs/dayjs.min.js:1
+      110 ms  m [dayjs] node_modules/dayjs/dayjs.min.js:1
+       79 ms  m.$set [dayjs] node_modules/dayjs/dayjs.min.js:1
+       78 ms  M [dayjs] node_modules/dayjs/dayjs.min.js:1
+       67 ms  (garbage collector) [garbage collection]
+       53 ms  p [dayjs] node_modules/dayjs/dayjs.min.js:1
+```
+
+## How to read it
+
+Start with the first two rows. "React render (your components)" is the time your components took to return their elements. "Engine" is axonpdf laying out and writing the pages. In the example the components took 10.1 seconds and the engine 0.7, so making the engine faster would barely change the total.
+
+The CPU groups then say which code took the time. Here 9.8 of the 10.9 seconds were in dayjs, and 8.3 of those in its timezone plugin's `tz`. The report converted every date in every table cell to a time zone, and each conversion builds an `Intl.DateTimeFormat` internally. V8's sampler doesn't see inside `Intl`, so that work shows up as the self time of the function that calls it, `tz` here.
+
+If your app bundles its dependencies into one file, they show up under `your code` with the bundle's file and line, because the profiler sees one file. Group names come from `node_modules` paths, so a package only gets its own row when it loads from its own files.
+
+The first page usually takes longest: its time includes reading the tree and, when a `render` prop reads `totalPages`, the pass that counts the pages.
+
+## Browser and Node
+
+In Node, `profile()` also samples the CPU with V8's profiler through `node:inspector`, every 250 µs, and fills in `cpu`. In a browser it reports the phases, the page times and memory, and `cpu` is left out. `memory.jsHeapPeak` comes from `process.memoryUsage()` in Node and from `performance.memory` in Chromium browsers; other browsers report 0.
+
+## Marks in DevTools
+
+While `profile()` runs, each phase is also recorded with `performance.measure`, named `axonpdf react`, `axonpdf tree`, `axonpdf assets`, `axonpdf engine` and `axonpdf rows`. Component calls inside another phase are too short and too many to get a measure of their own; they count under `react` in the report only. Record a trace in the Performance panel of the browser's DevTools while `profile()` runs, and these appear in the Timings track, next to the browser's own view of your components' JavaScript. The engine's parts and the page times are in the report only.
+
+## What profiling costs
+
+A normal render does no profiling and costs nothing extra: the engine's timing points are switched off, and with them off a 191-page render took the same time as before they existed. With `profile()`, the engine's own timing adds about 1%. The CPU sampler in Node adds more, so a profiled render reads somewhat slower than a normal one. Compare the phases with each other, not the total with a normal render.
+
+## Common causes of a slow render
+
+- Making a date or number formatter for every cell. Creating an `Intl.DateTimeFormat`, or calling a date library's time zone conversion, which makes one each time, costs far more than formatting with one you already have. Create the formatter once and reuse it, or convert each date once before you render.
+- React in development mode. Outside production, React runs extra checks on every component. Set `NODE_ENV=production` when you render on a server.
+- A very long list. axonpdf builds a long list's rows as the engine reaches them, but the elements your own code creates up front (`data.map(...)`) stay in memory. `<Rows>` takes the data itself and makes each row only when it is needed, so memory stays flat however long the list is.
+- `render` props that read `totalPages`. When any `render` function reads `totalPages`, the engine cuts the pages twice: once to count them and once to draw them. Read `totalPages` only where you show it. When a document builds long lists or pages as the engine reaches them and nothing outside them reads the total, axonpdf first runs their components once to check, so their time shows up twice under `react`.
