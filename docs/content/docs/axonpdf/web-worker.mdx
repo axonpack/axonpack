@@ -20,7 +20,12 @@ import { Report } from './report';
 expose((props) => <Report {...props} />);
 ```
 
-The page creates the worker as a module worker and calls `renderInWorker` with the props:
+{/* WORKER-HOOK: usePDFWorker pending. Once it is in the branch, this becomes the main path: create the worker once, call the hook with the worker and the props, and read the Blob and URL from it. Document its exact API from packages/react/src/worker.ts only. */}
+
+## Calling the worker with renderInWorker
+
+`renderInWorker` is the lower-level way to call the worker, from any code. The page creates the
+worker as a module worker and calls `renderInWorker` with the props:
 
 ```tsx title="download-report.ts"
 import { renderInWorker } from '@axonpdf/react/worker';
