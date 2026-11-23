@@ -157,5 +157,7 @@ worker.terminate();
 ## When to use it
 
 Use a worker for long documents rendered in the browser, or any render that runs while someone is
-using the page. [Benchmarks](/docs/axonpdf/benchmarks) has how long the main thread is blocked with
-and without a worker.
+using the page. In the browser run of 2026-11-23 (one flowing `<Page>`, 100 pages), rendering on the
+main thread froze the page for 832 ms, against 18 ms in a worker. The live
+benchmark app lets you switch to the main thread up to 100 pages and watch it; see
+[Benchmarks](/docs/axonpdf/benchmarks#in-the-browser-2026-11-23).

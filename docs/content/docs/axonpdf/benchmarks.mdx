@@ -1,15 +1,87 @@
 ---
 title: Benchmarks
-description: Render time, memory and file size for axonpdf, react-pdf 4.9.0 and pdfkit 0.21.0 at 100 to 5000 pages.
+description: Render time, memory and file size for axonpdf and react-pdf 4.9.0 in a browser Web Worker, and for axonpdf, react-pdf 4.9.0 and pdfkit 0.21.0 in Node.
 icon: ChartColumn
 ---
 
 These numbers come from `bench/` in the axonpdf repository. Every run is logged in
 `bench/RESULTS.md` with its date, commit, machine and the command that reruns it.
 
-## What was measured
+There are two runs. The browser run of 2026-11-23 is the current one. The Node run of 2026-11-21
+used one flowing `<Page>`, the layout where react-pdf is slowest, and is kept for its pdfkit
+comparison and the memory work.
 
-One A4 report, rendered at 100, 1000 and 5000 pages. Each page has a header with a logo, and the
+## In the browser (2026-11-23)
+
+The live benchmark app, `bench/live` in the axonpdf repository, renders a shipping ledger in the
+browser: A4, a fixed header with an SVG logo, a "Page n of N" footer, and shipments of 4 to 12
+lines each with wrapped notes. The app will be published so you can run it yourself:
+{/* LIVE-APP-URL */}.
+
+Machine: Apple M4 with 10 cores, 24 GB RAM, macOS 27.2.1, Chrome for Testing 156.0.8078.4 (new
+headless, through Playwright). Run on 2026-11-23 with the app at commit `8aa5dca`, and the engines
+from npm: @axonpdf/react 0.0.1 and react-pdf 4.9.0. Both engines render in a Web Worker. One run per
+cell, each in a fresh browser. A run with no PDF after 10 minutes was stopped.
+
+The ledger comes in two layouts with the same data:
+
+- Sections puts the summary on its own `<Page>`, then one `<Page>` per day of shipments, 28 in
+  all. This is how real reports are usually built. The largest section is about 4 pages at 100,
+  19 at 500 and 74 at 2000. Each section ends on a part-filled page, so the page counts run a few
+  percent over the target.
+- One flowing page puts everything in a single `<Page>`.
+
+What the columns mean:
+
+- Time to PDF is from the render call to the finished PDF Blob.
+- Longest freeze is the longest gap between frames on the page's main thread. Both engines run in
+  the worker, so the page stays responsive for both.
+- Worker heap peak is the worker's JavaScript heap, read through the Chrome DevTools Protocol
+  (`Runtime.getHeapUsage`, what DevTools' Memory panel shows) about once a second. A render that
+  finishes in under a second may get no sample. For a stopped run it is the peak up to then.
+
+### Sections
+
+| Engine | Target pages | Pages | Time to PDF | File size | Longest freeze | Worker heap peak |
+| --- | --- | --- | --- | --- | --- | --- |
+| axonpdf | 100 | 112 | 0.90 s | 382 KB | 19 ms | 11.6 MB |
+| react-pdf 4.9.0 | 100 | 112 | 2.8 s | 563 KB | 18 ms | 192.5 MB |
+| axonpdf | 500 | 499 | 4.1 s | 1.8 MB | 19 ms | 55.9 MB |
+| react-pdf 4.9.0 | 500 | 499 | 45.8 s | 2.7 MB | 18 ms | 2230 MB |
+| axonpdf | 2000 | 1964 | 15.9 s | 7.1 MB | 18 ms | 141.6 MB |
+| react-pdf 4.9.0 | 2000 | - | no PDF after 10 min | - | - | 3158 MB when stopped |
+
+At 2000 pages react-pdf didn't finish: its sections are about 74 pages each, and its heap passed
+3 GB before the run was stopped.
+
+### One flowing page
+
+| Engine | Target pages | Pages | Time to PDF | File size | Longest freeze | Worker heap peak |
+| --- | --- | --- | --- | --- | --- | --- |
+| axonpdf | 100 | 98 | 0.86 s | 362 KB | 18 ms | not sampled (under 1 s) |
+| react-pdf 4.9.0 | 100 | 98 | 32.8 s | 539 KB | 19 ms | 560.1 MB |
+| axonpdf | 500 | 487 | 3.9 s | 1.8 MB | 19 ms | 39.2 MB |
+| react-pdf 4.9.0 | 500 | - | no PDF after 10 min | - | - | 2458 MB when stopped |
+
+react-pdf's time grows with the square of how many pages one `<Page>` wraps onto, so the same
+report in one flowing page takes it far longer than in sections. axonpdf's time grows with the page
+count in both layouts.
+
+### Rerunning a cell
+
+```sh
+cd bench/live && npm ci && npm run build && npm run preview
+```
+
+For each cell, open the page, pick the layout, the page count and the engine (worker thread), and
+Render. The published numbers come from a scripted Playwright run, one per cell, which reads the
+worker heap through the DevTools Protocol.
+
+## In Node, one flowing `<Page>` (2026-11-21)
+
+### What was measured
+
+One A4 report in a single `<Page>`, rendered at 100, 1000 and 5000 pages. Each page has a header with a logo, and the
 footer says "Page n of N". The first page has three paragraphs, and a bordered five-column table
 starts under them and runs to the last page, with its header row repeated on every page.
 
@@ -31,7 +103,7 @@ Machine: Apple M4 with 10 cores, 24 GB RAM, macOS 27.2.1, Node 24.11.0. Run on 2
 commit `f843e84`, which is the engine as of `ecb0699` plus the generator version of the benchmark.
 axonpdf was a development build (version 0.0.0) at that commit.
 
-## Results
+### Results
 
 | Engine | 100 pages | 1000 pages | 5000 pages |
 | --- | --- | --- | --- |
@@ -59,48 +131,6 @@ The outputs match closely. At 100 pages, axonpdf's first and last pages differ f
 0.13% and 0.12% of their pixels. Most of that is the table's left border: axonpdf draws it and
 react-pdf doesn't. The generator version is identical to the array version pixel for pixel, and the
 `<Rows>` version differs from it in 0.02 to 0.03% of the pixels.
-
-## In the browser
-
-The live benchmark app, `bench/live` in the axonpdf repository, renders a shipping ledger in the
-browser: A4, a fixed header with an SVG logo, a "Page n of N" footer, and shipments of 4 to 12
-lines each with wrapped notes. The app will be published so you can run it yourself:
-{/* LIVE-APP-URL */}.
-
-Machine: Apple M4 with 10 cores, 24 GB RAM, macOS 27.2.1, Chrome for Testing 156.0.8078.4
-(headless, through Playwright). Run on 2026-11-23 with the app at commit `33d9cbd`, and the engines
-from npm: @axonpdf/react 0.0.1 and react-pdf 4.9.0. One run per cell, each in a fresh tab. A run
-with no PDF after 10 minutes was stopped.
-
-What the columns mean:
-
-- Time to PDF is from the click to the finished PDF Blob, including building the data.
-- Longest frame gap is the longest time the page went without drawing a frame, which is how
-  long it froze. This is where the worker matters: at 2000 pages the page froze for 19 ms with the
-  worker and 15.1 s without it.
-- Page JS heap peak is the page's main-thread heap, from `performance.memory`. A worker's own
-  heap can't be read, so the worker rows show only the page's heap.
-
-| Engine | Thread | Target pages | Pages | Time to PDF | File size | Longest frame gap | Page JS heap peak |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| axonpdf | worker | 100 | 98 | 0.90 s | 362 KB | 18 ms | 20 MB |
-| axonpdf | main thread | 100 | 98 | 0.83 s | 362 KB | 832 ms | 42 MB |
-| react-pdf 4.9.0 | main thread | 100 | 98 | 33.7 s | 539 KB | 33.6 s | 160 MB |
-| axonpdf | worker | 500 | 487 | 3.9 s | 1.8 MB | 17 ms | 20 MB |
-| axonpdf | main thread | 500 | 487 | 3.8 s | 1.8 MB | 3.8 s | 66 MB |
-| react-pdf 4.9.0 | main thread | 500 | - | no PDF after 10 min (stopped at 601 s) | - | - | - |
-| axonpdf | worker | 2000 | 1951 | 16.2 s | 7.1 MB | 19 ms | 21 MB |
-| axonpdf | main thread | 2000 | 1951 | 15.1 s | 7.1 MB | 15.1 s | 174 MB |
-| react-pdf 4.9.0 | main thread | 2000 | - | no PDF after 10 min (stopped at 601 s) | - | - | - |
-
-To rerun a cell:
-
-```sh
-cd bench/live && npm ci && npm run build && npm run preview
-```
-
-Open the printed URL in Chromium, choose custom pages, the engine and the worker box, then Render.
-Use one fresh tab per cell.
 
 ## About pdfkit
 
@@ -166,7 +196,7 @@ const report = await profile(<Invoice data={data} />);
 console.log(formatProfile(report));
 ```
 
-## Running the benchmark yourself
+## Running the Node benchmark yourself
 
 From a clone of [the axonpdf repository](https://github.com/axonpack/axonpdf), with poppler and qpdf installed:
 

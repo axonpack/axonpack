@@ -51,9 +51,22 @@ shows how to switch with one import.
 
 ## Performance
 
-One A4 report with a logo, three paragraphs and a five-column table that runs across every page,
-rendered in Node on an Apple M4 (24 GB RAM, Node 24.11.0) with React in production mode. Each cell
-is the render time, the peak memory of the whole process, and the size of the PDF.
+In Chrome on an Apple M4, on 2026-11-23, the live benchmark app rendered a shipping ledger built
+as one `<Page>` per section, with each engine in a Web Worker. Each cell is the time to the finished
+PDF, then the worker's peak JavaScript heap:
+
+| Pages | axonpdf             | react-pdf 4.9.0                         |
+| ----- | ------------------- | --------------------------------------- |
+| 100   | 0.90 s, 11.6 MB     | 2.8 s, 192.5 MB                         |
+| 500   | 4.1 s, 55.9 MB      | 45.8 s, 2230 MB                         |
+| 2000  | 15.9 s, 141.6 MB    | no PDF after 10 min, 3158 MB when stopped |
+
+The [benchmarks page](/docs/axonpdf/benchmarks#in-the-browser-2026-11-23) has the full tables,
+including the same report in one flowing `<Page>`, and the live app, which will be published later
+{/* LIVE-APP-URL */}.
+
+An earlier run, in Node on 2026-11-21, rendered a report in one flowing `<Page>`. Each cell is the
+render time, the peak memory of the whole process, and the size of the PDF:
 
 | Engine                         | 100 pages                | 1000 pages                | 5000 pages                 |
 | ------------------------------ | ------------------------ | ------------------------- | -------------------------- |
@@ -64,22 +77,8 @@ is the render time, the peak memory of the whole process, and the size of the PD
 | pdfkit 0.21.0                  | 145 ms, 97 MB, 357 KB    | 1.1 s, 175 MB, 3.5 MB     | 5.3 s, 347 MB, 17.3 MB     |
 
 pdfkit draws the same pages by hand with page breaks worked out in advance, so read its row as a
-lower bound.
-
-In Chrome, the live benchmark app renders a shipping ledger. Each cell is the time to the finished
-PDF, then the longest time the page froze. With axonpdf in a Web Worker the page stays responsive:
-
-| Pages | axonpdf, Web Worker | react-pdf 4.9.0       |
-| ----- | ------------------- | --------------------- |
-| 100   | 0.90 s, 18 ms       | 33.7 s, 33.6 s        |
-| 500   | 3.9 s, 17 ms        | no PDF after 10 min   |
-| 2000  | 16.2 s, 19 ms       | no PDF after 10 min   |
-
-The [benchmarks page](/docs/axonpdf/benchmarks#in-the-browser) has the full table, with axonpdf on
-the main thread too, and the live app, which will be published later {/* LIVE-APP-URL */}.
-
-[Benchmarks](/docs/axonpdf/benchmarks) has the method, the commit and the command that reruns
-every row.
+lower bound. [Benchmarks](/docs/axonpdf/benchmarks) has the method, the commit and the command that
+reruns every row.
 
 ## For AI agents
 

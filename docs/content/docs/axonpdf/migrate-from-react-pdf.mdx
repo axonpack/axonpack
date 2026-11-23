@@ -105,6 +105,8 @@ Passing long lists as a generator child also lowers memory, and keeps the docume
 
 ## Speed and memory
 
-At 100 pages, react-pdf 4.9.0 took 36.1 s and 1289 MB where axonpdf took 817 ms and 117 MB, on
-the same report and machine. [Benchmarks](/docs/axonpdf/benchmarks) has every size, the method and
-the commands to rerun them.
+In the browser benchmark of 2026-11-23, with the ledger built as one `<Page>` per section and each
+engine in a Web Worker, react-pdf 4.9.0 took 2.8 s and a 192.5 MB worker heap at 100 pages, where
+axonpdf took 0.90 s and 11.6 MB. At 500 pages react-pdf took 45.8 s and 2230 MB, and axonpdf 4.1 s
+and 55.9 MB. [Benchmarks](/docs/axonpdf/benchmarks) has every size, both layouts, the method and the
+commands to rerun them.
