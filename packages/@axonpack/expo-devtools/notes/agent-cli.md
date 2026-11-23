@@ -61,6 +61,11 @@ once. `network` and `context` have actions, and so does a support's topic, such 
 - **Metro's Origin rules.** dev-middleware refuses a debugger socket without an Origin, and Expo
   drops any Origin but exactly `http://127.0.0.1:<port>`. Node's built-in `WebSocket` can send one,
   which is why the tool needs Node 22.
+- **Metro on any port.** Without `--port` the tool looks on `RCT_METRO_PORT`, 8081 to 8090 and every
+  port a node process listens on (`lsof -c node`, or `netstat -ano` with `tasklist`'s node.exe pids
+  on Windows). Only a port answering `packager-status:running` on `/status` counts, so an extra
+  port costs one quick request and never a wrong match. When the list can't be read it falls back
+  to the first two without a word. The Windows path is untested on a real machine.
 - **`/json/list` is read once per command.** While a device has no page yet it prints a seven-line
   warning in Metro's terminal on every read, so the tool never polls it.
 - **The slug comes from the Expo manifest.** In Expo Go every page's app id is the Expo Go app.

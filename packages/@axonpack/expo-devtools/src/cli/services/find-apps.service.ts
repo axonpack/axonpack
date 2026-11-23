@@ -1,7 +1,5 @@
 import { RELAY_ROUTE, pageOf } from './evaluate.service';
 
-export const DEFAULT_PORTS = Array.from({ length: 10 }, (_, i) => 8081 + i);
-
 /** The page dev-middleware adds for React Native below 0.76, which has no stable page of its own. */
 const LEGACY_PAGE = 'React Native Experimental (Improved Chrome Reloads)';
 const HTTP_TIMEOUT_MS = 2000;
