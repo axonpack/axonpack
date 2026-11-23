@@ -1,7 +1,8 @@
 const APP_FLAGS = `App flags (only needed when more than one app is running)
   --app <slug>        the app's Expo slug, as \`devtools apps\` shows it
   --device <text>     part of the device name, any case
-  --port <n>          look on this Metro port only (default: 8081 to 8090)
+  --port <n>          look on this Metro port only (default: RCT_METRO_PORT, 8081 to 8090
+                      and every port a node process listens on)
   --force             attach to an app that can't share its debugger (React Native below
                       0.86, or Expo started headless) when metro.config.js has no
                       withDevtools to ask through its DevTools window. It closes that window`;
@@ -74,7 +75,8 @@ Examples
   devtools network override https://api.example.com/v1/me --status 500 --body '{"error":"down"}'
   devtools network send GET https://api.example.com/v1/me`;
 
-const APPS = `devtools apps: the apps running on Metro ports 8081 to 8090
+const APPS = `devtools apps: the apps running on Metro, on RCT_METRO_PORT, ports 8081 to 8090 or any
+port a node process listens on
 
 One row per app and device:
   app       the Expo slug, which --app takes

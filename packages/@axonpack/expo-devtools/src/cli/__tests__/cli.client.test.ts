@@ -2,6 +2,9 @@ import { main, nodeVersionError } from '../cli.client';
 import { HELP } from '../constants/help.const';
 import { pickApp, type App } from '../services/find-apps.service';
 
+// No real lsof: the ports node listens on here would make the tests depend on the machine.
+jest.mock('node:child_process', () => ({ execFileSync: () => '' }));
+
 type Page = ReturnType<typeof page>;
 
 const SILENT = Symbol('silent');
@@ -203,6 +206,17 @@ describe('a query', () => {
     metro = {};
     expect(await main(['network'])).toBe(2);
     expect(stderr).toContain('no app found on Metro ports 8081 to 8090');
+  });
+
+  it('finds Metro on RCT_METRO_PORT without --port', async () => {
+    metro = { 9876: { pages: [page('iPhone 16', 9876)], slug: 'my-app' } };
+    process.env.RCT_METRO_PORT = '9876';
+    try {
+      expect(await main(['apps'])).toBe(0);
+    } finally {
+      delete process.env.RCT_METRO_PORT;
+    }
+    expect(stdout).toContain('9876');
   });
 
   it('writes the entry alone to --out, so the file is JSON, and its # line to stdout', async () => {

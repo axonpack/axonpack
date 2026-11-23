@@ -1,6 +1,7 @@
 import { HELP } from './constants/help.const';
 import { NO_REPLY, callAgent, type Way } from './services/evaluate.service';
-import { DEFAULT_PORTS, findApps, pickApp, type App } from './services/find-apps.service';
+import { findApps, pickApp, type App } from './services/find-apps.service';
+import { metroPorts } from './services/metro-ports.service';
 import { parseArgv, type CliArgs } from './utils/parse-argv.util';
 import type { AgentHello } from '../agent/services/install-agent.service';
 import type { AgentActionCall } from '../agent/utils/run-action.util';
@@ -61,9 +62,11 @@ async function command(args: CliArgs): Promise<number> {
     }
   }
 
-  const apps = await findApps(args.port ? [args.port] : DEFAULT_PORTS);
+  const apps = await findApps(args.port ? [args.port] : metroPorts());
   if (apps.length === 0) {
-    const ports = args.port ? `port ${args.port}` : 'ports 8081 to 8090';
+    const ports = args.port
+      ? `port ${args.port}`
+      : 'ports 8081 to 8090, RCT_METRO_PORT or any port node listens on';
     return fail(
       2,
       `no app found on Metro ${ports}. Open the app in a dev build or Expo Go with \`expo start\` running, or pass --port.`
