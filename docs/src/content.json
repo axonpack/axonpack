@@ -217,7 +217,7 @@
       },
       "axonpdf": {
         "scene": "A customer asks for a year of orders as a PDF. The report is 3,000 pages, and the server runs out of memory halfway through, or the browser tab freezes until it finishes.",
-        "fix": "axonpdf renders React components to PDF and writes each page as soon as it is laid out, so a 5,000-page report renders in under 500 MB. It follows the React PDF renderer API, so an existing project switches by changing one import. In the browser it can render in a Web Worker.",
+        "fix": "axonpdf renders React components to PDF and writes each page as soon as it is laid out, so a 5,000-page report renders in under 500 MB. It lays out with flexbox and embeds only the characters each font uses. In the browser it can render in a Web Worker.",
         "sample": {
           "lang": "tsx",
           "title": "report.tsx",

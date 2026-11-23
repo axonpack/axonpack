@@ -38,8 +38,7 @@ row elements above.
 
 ## Pass long lists as a generator
 
-A generator is an ordinary iterable child in React, so a document that uses one still renders with
-any React PDF renderer. With a generator, the full list of row elements never exists at once:
+A generator is an ordinary iterable child in React. With a generator, the full list of row elements never exists at once:
 
 ```tsx
 function* rows(items) {
@@ -86,8 +85,6 @@ Some things work differently in a document with `Rows`:
   outside the rows, so that it is loaded before the engine starts. With an async source, images in
   rows load between batches.
 - `Rows` can't be used inside a `render` function.
-
-A document that uses `Rows` renders only in axonpdf.
 
 ## Memory and time
 

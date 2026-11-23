@@ -1,0 +1,110 @@
+---
+title: Migrate from react-pdf
+description: Move a react-pdf 4.9.0 project to axonpdf by changing one import or adding an npm alias.
+icon: ArrowRightLeft
+---
+
+axonpdf's API is compatible with react-pdf 4.9.0 (`@react-pdf/renderer`): the same components,
+props, style keys, units, `StyleSheet`, `Font` methods, render functions, browser components and
+error messages. A react-pdf project moves to axonpdf with no change to its document code.
+
+## Change the import
+
+```sh
+npm uninstall @react-pdf/renderer
+npm install @axonpdf/react
+```
+
+```tsx
+// before
+import { Document, Page, Text, renderToFile } from '@react-pdf/renderer';
+// after
+import { Document, Page, Text, renderToFile } from '@axonpdf/react';
+```
+
+## Or keep the imports and add an npm alias
+
+If `@react-pdf/renderer` appears in many files, or in code you don't own, alias it in
+`package.json` and leave every import as it is:
+
+```json
+{
+  "dependencies": {
+    "@react-pdf/renderer": "npm:@axonpdf/react@0.0.1"
+  }
+}
+```
+
+Use the current version of `@axonpdf/react`. That one alias covers the components, render
+functions, `Font`, `StyleSheet` and the browser components. No other line changes.
+
+## What is supported
+
+Everything react-pdf 4.9.0 documents, each item checked against react-pdf's own output:
+
+| Area                        | Covered                                                                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Package shape               | The Node and browser builds, the wrong-environment errors, the default export with every API, and the `ReactPDF.DocumentProps` type shape |
+| Render functions            | `renderToFile`, `render`, `renderToStream`, `renderToBuffer`, `renderToString`, `pdf()` and its members, `onRender`                      |
+| Browser components and hook | `PDFViewer`, `PDFDownloadLink`, `BlobProvider`, `usePDF`                                                                                |
+| `StyleSheet` and `Font`     | `StyleSheet.create`, every `Font` method, hyphenation callbacks and emoji sources                                                        |
+| Common props                | `style`, `fixed`, `break`, `wrap`, `debug`, `minPresenceAhead`, `bookmark`, `id`, `render`                                               |
+| Components                  | `Document`, `Page` (with `layout`), `View`, `Text`, `Link`, `Image`, `ImageBackground`, `Note`, `Canvas`, every SVG component and every form field |
+| Styles                      | Every style key and unit, flexbox, borders, transforms, media queries, floats, bidirectional text and OpenType features                  |
+| Layout                      | Line breaking, hyphenation, orphans and widows, and page breaks                                                                         |
+| Add-on packages             | `@react-pdf/tailwind`, `@react-pdf/math`, `@react-pdf/mermaid`, `@react-pdf/hyphenate` and the `@react-pdf/ui` playground run on axonpdf |
+
+## What is different
+
+| Area                      | Difference                                                                                                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| React versions            | React 18 and 19 only. Earlier versions are not supported.                                                                                                                                                                                       |
+| Separate packages         | There is no axonpdf version of `@react-pdf/types`, `@react-pdf/stylesheet` or `@react-pdf/font`. Import `Style`, `Font`, `StyleSheet`, `PageSize`, `SourceObject` and the other types from `@axonpdf/react` instead.                          |
+| Creator and producer      | A `Document` without `creator` or `producer` writes `axonpdf` in both.                                                                                                                                                                           |
+| Streaming                 | `renderToStream`, `renderToFile` and `toBuffer` send each page as soon as it is finished, instead of laying the whole document out first. `toBuffer` waits for the last page only when the `Document` has an `onRender` prop, so `onRender` is still called before you get the stream. |
+| Bookmarks                 | A bookmark's `left` is measured from the page's left edge.                                                                                                                                                                                       |
+| Gradients                 | A radial gradient runs from its focal point (`fx`, `fy`) to its outer circle, as SVG defines it. `gradientTransform` angles are degrees, and `skewX` and `skewY` act on the right axes.                                                          |
+| Checkboxes                | An unchecked checkbox is blank.                                                                                                                                                                                                                  |
+| Floats                    | Floats sit inside their parent's padding, and a float whose text wraps pushes the content below it down.                                                                                                                                         |
+| Split tables              | A table border that runs across a page break is drawn on both pages.                                                                                                                                                                            |
+| Rendering                 | A document is rendered by walking its elements once, without mounting it in a React reconciler. Hooks get their first-render values and effects don't run. The render falls back to a full reconciler for `React.lazy`, legacy context and `setState` during render. |
+
+The bookmark, gradient, checkbox, float and table rows are bugs in how react-pdf 4.9.0 draws. If a
+document worked around one of them, remove the workaround.
+
+If a page renders differently in any other way, open an issue at
+[github.com/axonpack/axonpdf](https://github.com/axonpack/axonpdf/issues) with the document.
+
+## Check the result
+
+Render a few of your real documents before and after the switch and compare them. One way is to
+rasterise both files and compare the pages:
+
+```sh
+pdftoppm -png -r 72 before.pdf before
+pdftoppm -png -r 72 after.pdf after
+```
+
+Small differences in antialiasing are normal. A different page count or a moved block is not.
+
+## What you get after switching
+
+These are axonpdf's own. A document that uses them no longer renders in react-pdf.
+
+| Feature                    | Page                                                                 |
+| -------------------------- | -------------------------------------------------------------------- |
+| `Rows`, for long lists and async sources | [Long documents](/docs/axonpdf/long-documents)          |
+| `PageNumber` and `PageCount` | [axonpdf extras](/docs/axonpdf/extras#pagenumber-and-pagecount)    |
+| `Table` with a repeating header | [axonpdf extras](/docs/axonpdf/extras#tables)                    |
+| Header and footer bands    | [axonpdf extras](/docs/axonpdf/extras#header-and-footer-bands)       |
+| Rendering in a Web Worker  | [Web Worker](/docs/axonpdf/web-worker)                               |
+| `profile()`                | [Profiling](/docs/axonpdf/profiling)                                 |
+
+Passing long lists as a generator child also lowers memory, and keeps the document portable. See
+[Long documents](/docs/axonpdf/long-documents#pass-long-lists-as-a-generator).
+
+## Speed and memory
+
+At 100 pages, react-pdf 4.9.0 took 36.1 s and 1289 MB where axonpdf took 817 ms and 117 MB, on
+the same report and machine. [Benchmarks](/docs/axonpdf/benchmarks) has every size, the method and
+the commands to rerun them.
