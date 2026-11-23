@@ -1,0 +1,154 @@
+---
+title: Components
+description: Document, Page, View, Text, Link, Image, Note, Canvas, the SVG components and form fields.
+icon: Component
+---
+
+Every component here is part of the React PDF renderer API. axonpdf's own components are on
+[axonpdf extras](/docs/axonpdf/extras), and every prop is in the [Reference](/docs/axonpdf/reference#components).
+
+## Document and Page
+
+```tsx
+<Document title="Quarterly report" author="Finance" language="en-GB">
+  <Page size="A4" orientation="portrait" style={{ padding: 40 }}>
+    ...
+  </Page>
+  <Page size={[400, 600]}>...</Page>
+</Document>
+```
+
+`Document` is the root and holds the file's metadata, passwords and PDF/A settings. Each `Page`
+starts a new page and continues onto as many more as its content needs. Its `padding` is the
+margin on every page it wraps onto.
+
+`size` takes a name (`A4`, `LETTER`, `LEGAL` and the rest of the ISO A, B, C and RA series), a
+`[width]` or `[width, height]` array, or `{ width, height? }`. Lengths take `pt`, `in`, `mm`, `cm`
+or `px`. A page with no height grows to fit its content.
+
+`layout` on a `Page` is a template drawn around every page. It gets `{ children, pageNumber,
+totalPages, subPageNumber, subPageTotalPages }` and must render `children` exactly once, where the
+content flows:
+
+```tsx
+function Letterhead({ children, pageNumber }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text>Acme Ltd</Text>
+      {children}
+      <Text>Page {pageNumber}</Text>
+    </View>
+  );
+}
+
+<Page layout={Letterhead}>...</Page>;
+```
+
+## View
+
+The box everything is laid out in, with flexbox. A `View` splits across pages unless it has
+`wrap={false}`. Its `render({ pageNumber, subPageNumber })` prop replaces its children on each page.
+
+## Text
+
+```tsx
+<Text style={{ fontSize: 11, lineHeight: 1.4, textAlign: 'justify' }}>
+  Revenue rose in <Text style={{ fontWeight: 'bold' }}>every region</Text> this quarter.
+</Text>
+```
+
+Nested `Text` and `Link` elements are runs inside the same paragraph. A string outside a `Text` is
+dropped with a warning. Lines break with the Knuth-Plass algorithm, and words are hyphenated with
+English patterns unless you register your own callback. `orphans` and `widows` (both 2 by default)
+keep at least that many lines together at a page break.
+
+`render` replaces the text on each page and is how the page number is written without axonpdf's
+own components:
+
+```tsx
+<Text fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+```
+
+When a `render` function reads `totalPages`, the pages are cut once to count them, then again to
+draw them.
+
+## Link
+
+```tsx
+<Link src="https://example.com">example.com</Link>
+<Link src="#summary">Back to the summary</Link>
+<View id="summary">...</View>
+```
+
+`src` (or `href`) is a URL, or `#id` for an element's `id` in the same document. Inside `Text` a
+link is a run; around other elements it makes their box clickable. `hitSlop` enlarges the clickable
+area.
+
+## Image and ImageBackground
+
+```tsx
+<Image src="https://example.com/logo.png" style={{ width: 80 }} />
+<Image src={{ uri: url, method: 'GET', headers: { Authorization: token } }} />
+<Image srcSet="small.jpg 300w, large.jpg 600w" sizes="50vw" />
+```
+
+`src` takes a URL, a file path in Node, a `Buffer`, `Uint8Array`, `ArrayBuffer` or `Blob`, `{ data,
+format }`, `{ uri, method, headers, body, credentials }`, or a function or promise returning one.
+PNG, JPEG, GIF, WebP and SVG files work; an SVG file is drawn as vectors. With `srcSet`, only the
+candidate that fits the shown width is loaded. An image never splits across pages.
+`ImageBackground` takes the same props and draws the image behind its children.
+
+## Note
+
+`<Note>Checked by finance</Note>` writes a sticky-note annotation. Its `style.backgroundColor`
+colors the note.
+
+## Canvas
+
+```tsx
+<Canvas
+  style={{ width: 200, height: 100 }}
+  paint={(painter, width, height) =>
+    painter.rect(0, 0, width, height).fillColor('#e9c46a').fill()
+  }
+/>
+```
+
+`paint` gets a painter whose methods chain, and the box's width and height. The painter's methods
+are listed in the [Reference](/docs/axonpdf/reference#canvas).
+
+## SVG
+
+```tsx
+<Svg width={120} height={60} viewBox="0 0 120 60">
+  <Defs>
+    <LinearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <Stop offset="0" stopColor="#264653" />
+      <Stop offset="1" stopColor="#2a9d8f" />
+    </LinearGradient>
+  </Defs>
+  <Rect x={0} y={0} width={120} height={60} rx={8} fill="url(#fade)" />
+</Svg>
+```
+
+`Svg`, `G`, `Path`, `Rect`, `Circle`, `Ellipse`, `Line`, `Polyline`, `Polygon`, `Text`, `Tspan`,
+`Defs`, `ClipPath`, `LinearGradient`, `RadialGradient`, `Stop` and `Marker` take SVG's own
+attributes and presentation attributes. An Svg never splits across pages.
+
+## Form fields
+
+`FieldSet`, `TextInput`, `Checkbox`, `Select` and `List` write fields a reader can fill in.
+[Security and archiving](/docs/axonpdf/security-and-archiving#forms) covers them.
+
+## Props every component takes
+
+`id`, `style`, `fixed` (repeat on every page), `break` (start a new page), `minPresenceAhead`,
+`bookmark` (an outline entry), and axonpdf's `breakBefore`, `breakAfter` and `breakInside`. `wrap`
+and `debug` work on the components that split or draw a box. The
+[Reference](/docs/axonpdf/reference#props-every-component-takes) says what each one does.
+
+## Pagination
+
+`View`, `Text` and `Link` split across pages. `Image`, `Svg`, `Canvas` and `Note` move to the next
+page whole. An element that can't split and is taller than the page stays on the page it starts on,
+with a warning.
