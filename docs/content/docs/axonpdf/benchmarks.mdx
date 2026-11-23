@@ -1,0 +1,150 @@
+---
+title: Benchmarks
+description: Render time, memory and file size for axonpdf, react-pdf 4.9.0 and pdfkit 0.21.0 at 100 to 5000 pages.
+icon: ChartColumn
+---
+
+These numbers come from `bench/` in the axonpdf repository. Every run is logged in
+`bench/RESULTS.md` with its date, commit, machine and the command that reruns it.
+
+## What was measured
+
+One A4 report, rendered at 100, 1000 and 5000 pages. Each page has a header with a logo, and the
+footer says "Page n of N". The first page has three paragraphs, and a bordered five-column table
+starts under them and runs to the last page, with its header row repeated on every page.
+
+- axonpdf and react-pdf 4.9.0 render the same JSX file (`bench/report.jsx`), where the table rows
+  are an array of elements. react-pdf gets the file through an alias of the `@axonpdf/react` import,
+  so neither engine has its own version.
+- "rows from a generator" is the same report with the rows passed as a generator child
+  (`bench/report-generator.jsx`).
+- "rows in `<Rows>`" puts the rows inside axonpdf's `<Rows>` component (`bench/report-rows.jsx`).
+- pdfkit 0.21.0 draws the same pages by hand (`bench/report-pdfkit.mjs`), with the same page size,
+  fonts, sizes and table. The page breaks are worked out in advance, so pages stream out as they
+  are drawn.
+
+Each run is its own Node process, and runs go one at a time. Time is the render call alone, without
+Node start-up. Memory is the peak resident set size (RSS) of the whole process. Both React engines
+ran with `NODE_ENV=production`.
+
+Machine: Apple M4 with 10 cores, 24 GB RAM, macOS 27.2.1, Node 24.11.0. Run on 2026-11-21 at
+commit `f843e84`, which is the engine as of `ecb0699` plus the generator version of the benchmark.
+axonpdf was a development build (version 0.0.0) at that commit.
+
+## Results
+
+| Engine | 100 pages | 1000 pages | 5000 pages |
+| --- | --- | --- | --- |
+| axonpdf, rows as an array | 817 ms, 117 MB | 7.8 s, 154 MB | 39.2 s, 471 MB |
+| axonpdf, rows from a generator | 863 ms, 117 MB | 7.8 s, 130 MB | 39.2 s, 215 MB |
+| axonpdf, rows in `<Rows>` | 527 ms, 129 MB | 4.8 s, 147 MB | 24.1 s, 259 MB |
+| react-pdf 4.9.0 | 36.1 s, 1289 MB | stopped at 15 min | not run |
+| pdfkit 0.21.0 | 145 ms, 97 MB | 1.1 s, 175 MB | 5.3 s, 347 MB |
+
+Output size, from the same runs:
+
+| Engine | 100 pages | 1000 pages | 5000 pages |
+| --- | --- | --- | --- |
+| axonpdf, rows as an array or a generator | 442 KB | 4.3 MB | 21.5 MB |
+| axonpdf, rows in `<Rows>` | 447 KB | 4.3 MB | 21.7 MB |
+| react-pdf 4.9.0 | 643 KB | | |
+| pdfkit 0.21.0 | 357 KB | 3.5 MB | 17.3 MB |
+
+react-pdf's 100-page run is from the same session as the axonpdf and pdfkit runs. Its 1000-page run
+comes from an earlier session on the same machine with the same react-pdf version: it was stopped
+at the 15-minute limit while it held 3.5 to 3.7 GB, so the 5000-page size was not tried. Every PDF
+that finished passed `qpdf --check`.
+
+The outputs match closely. At 100 pages, axonpdf's first and last pages differ from react-pdf's in
+0.13% and 0.12% of their pixels. Most of that is the table's left border: axonpdf draws it and
+react-pdf doesn't. The generator version is identical to the array version pixel for pixel, and the
+`<Rows>` version differs from it in 0.02 to 0.03% of the pixels.
+
+## In the browser
+
+How long the page's main thread is blocked while a document renders in a browser, with axonpdf in a
+Web Worker, axonpdf on the main thread, and react-pdf 4.9.0.
+
+{/* BENCH: live-app matrix pending */}
+
+| Engine | 100 pages | 500 pages | 2000 pages |
+| --- | --- | --- | --- |
+| axonpdf, Web Worker | pending | pending | pending |
+| axonpdf, main thread | pending | pending | pending |
+| react-pdf 4.9.0 | pending | pending | pending |
+
+## About pdfkit
+
+pdfkit is a lower-level library. You call it to draw text, lines and images at positions you work
+out yourself, and you decide where each page ends. It has no flexbox and no automatic page breaks.
+The two React engines read a component tree, lay it out and break the pages for you, and that
+layout is most of their work. pdfkit is the fastest here because the hand-written version does that
+work in its own code, ahead of time, for one fixed layout. Read its numbers as a lower bound for
+what drawing these pages costs.
+
+## Long documents without code changes
+
+A document written the usual way needs no changes for long output. axonpdf walks the React elements
+once and builds long lists of children, and each page's content, only when the engine reaches them.
+The engine's own memory stays about the same size whatever the page count.
+
+How you pass long lists still makes a difference at large sizes. In the array version, the array of
+190,000 row elements stays alive for the whole render. That makes V8 place the elements each row
+creates in its old generation, where they stay until a full garbage collection, and the process
+peaked at 471 MB at 5000 pages. Passing the same rows as a generator child avoids it:
+
+```jsx
+function* itemRows(items) {
+  for (const item of items) yield <ItemRow key={item.id} item={item} />;
+}
+
+// Instead of {items.map((item) => <ItemRow key={item.id} item={item} />)}
+<View>{itemRows(items)}</View>
+```
+
+That version peaked at 215 MB at 5000 pages, with the same time and the same output. A generator is
+an ordinary iterable child in React, so react-pdf renders this code unchanged.
+
+## `<Rows>` for async data
+
+`<Rows>` is axonpdf's own component for long lists. It takes the rows as an array or an async
+iterable, such as a database cursor, and renders and writes them in batches. In this benchmark it
+was the fastest of the axonpdf versions at every size, and it peaked at 259 MB at 5000 pages.
+
+```jsx
+import { Rows } from '@axonpdf/react';
+
+<Rows rows={items} batchSize={200}>
+  {(item) => <ItemRow item={item} />}
+</Rows>
+```
+
+`batchSize` defaults to 100. A document that uses `<Rows>` no longer renders in react-pdf, so use it
+when the rows come from an async source or when the speed matters more than keeping the document
+portable.
+
+## Finding slow components with `profile()`
+
+`profile()` renders a document without writing it and reports where the time went: your React
+components, reading the tree, images and fonts, and each engine phase (layout, text, paint,
+write). It also gives each page's time and the peak memory. In Node it samples the CPU and groups
+the time by package and by function.
+
+```js
+import { profile, formatProfile } from '@axonpdf/react';
+
+const report = await profile(<Invoice data={data} />);
+console.log(formatProfile(report));
+```
+
+## Running the benchmark yourself
+
+From a clone of [the axonpdf repository](https://github.com/axonpack/axonpdf), with poppler and qpdf installed:
+
+```sh
+cd bench && npm ci && cd ..
+node bench/run.mjs                                   # every engine, 10 to 5000 pages
+node bench/run.mjs --engines axonpdf --sizes 1000    # one run
+```
+
+Each run adds a row to `bench/RESULTS.md`.
