@@ -1,0 +1,613 @@
+---
+title: Reference
+description: Every export, component, prop, style key, unit, type, error and warning in @axonpdf/react.
+icon: BookOpen
+---
+
+Use this page to look up a name. If you are new, start with [Getting started](/docs/axonpdf/getting-started).
+
+## Entry points
+
+| Import | What it gives |
+| --- | --- |
+| `@axonpdf/react` | Everything below. Node and the browser get different builds through the `browser` field and the `exports` conditions (`browser`, `worker`, `default`). |
+| `@axonpdf/react/components` | The components and the prop and style types only. Nothing in it loads the engine. |
+| `@axonpdf/react/worker` | `expose` and `renderInWorker`, for rendering in a Web Worker. |
+
+The default export holds every named export, values and types: `import ReactPDF from
+"@axonpdf/react"` gives `ReactPDF.renderToFile(...)` and `ReactPDF.DocumentProps`. Importing by
+name lets a bundler drop what you don't use.
+
+## Exports
+
+| Export | Node | Browser |
+| --- | --- | --- |
+| Components (see Components) | yes | yes |
+| `Rows`, `PageNumber`, `PageCount`, `Table`, `TableHeader`, `TableRow`, `TableCell` | yes | yes |
+| `TextInstance`, `Fragment` (the node type names `"TEXT_INSTANCE"` and `"FRAGMENT"`) | yes | yes |
+| `StyleSheet` | yes | yes |
+| `Font` | yes | yes |
+| `pdf` | yes | yes |
+| `renderToFile`, `render`, `renderToStream`, `renderToBuffer`, `renderToString` | yes | throw |
+| `usePDF`, `PDFViewer`, `PDFDownloadLink`, `BlobProvider` | throw | yes |
+| `createRenderer` | yes | yes |
+| `profile`, `formatProfile` | yes | yes |
+| `version` | yes | yes |
+| `environmentError` | yes | yes |
+
+"throw" means the export exists and throws when called:
+
+- In Node: `<name> is a web specific API. You're either using this component on Node, or your bundler is not loading axonpdf from the appropriate web build.`
+- In a browser: `<name> is a Node specific API. You're either using this method in a browser, or your bundler is not loading axonpdf from the appropriate web build.`
+
+`environmentError(name, environment)` returns a function that throws that message.
+
+## Render functions (Node)
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `renderToFile(element, path, callback?)` | `Promise<NodeJS.ReadableStream>` | Writes each piece of the PDF to the file as it is made. Resolves with a stream that reads the file back, and calls `callback(stream, path)` first. |
+| `render(element, path, callback?)` | the same | Another name for `renderToFile`. |
+| `renderToStream(element)` | `Promise<NodeJS.ReadableStream>` | Resolves as soon as the first bytes exist; pages flow out while later ones are laid out. A slow reader holds the render back. An error before the first byte rejects the promise; a later one errors the stream. |
+| `renderToBuffer(element)` | `Promise<Buffer>` | The whole PDF. |
+| `renderToString(element)` | `Promise<string>` | Deprecated. The PDF as a string, one character per byte, with its streams left undeflated. In development (`NODE_ENV=development`) it warns: ``renderToString` is deprecated and will be removed in next major release, use `renderToBuffer` instead``. |
+
+`element` must render to a `<Document>`, or the render throws `The root element must be a
+<Document>.`
+
+## pdf
+
+```ts
+pdf(element?: ReactElement<DocumentProps>): PDFInstance
+```
+
+| Member | What it does |
+| --- | --- |
+| `toBlob()` | `Promise<Blob>` of type `application/pdf`. |
+| `toBuffer()` | `Promise` of a stream of the PDF: a Node `Readable` in Node, a web `ReadableStream` in a browser. Pages flow out as they are made, except when the `Document` has `onRender`: then the bytes wait until the last page is laid out, and `onRender` is called before the promise resolves. |
+| `toString()` | Deprecated. `Promise<string>` of the PDF, one character per byte, streams undeflated. Warns in development: `` `toString` is deprecated and will be removed in next major release``. |
+| `updateContainer(element, callback?)` | Replaces the document. Change listeners run, then `callback`. |
+| `on("change", listener)` | Calls `listener` after every `updateContainer`. |
+| `removeListener("change", listener)` | Stops calling it. |
+| `container` | The document as a React host tree, `{ document }`. Reading it mounts the document in a React reconciler root. |
+
+## Browser components and hook
+
+### usePDF
+
+```ts
+usePDF({ document? }): [UsePDFInstance, (document) => void]
+```
+
+Renders the document to a Blob and an object URL, and again each time you call the update
+function. One render runs at a time; an update during a render waits, and a newer one replaces it.
+Old object URLs are revoked. `UsePDFInstance` is `{ loading, blob, url, error }`.
+
+### PDFViewer
+
+An `<iframe>` showing the document passed as its child. It renders again when the child changes.
+
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `children` | | the `<Document>` |
+| `width`, `height`, `style`, `className`, `title` | | passed to the iframe |
+| `innerRef` | | a ref to the iframe |
+| `showToolbar` | `true` | adds `#toolbar=1` or `#toolbar=0` to the URL |
+
+Any other iframe attribute is passed through.
+
+### PDFDownloadLink
+
+An `<a download>` for the document, rendered before it is clicked. It forwards a ref to the anchor.
+
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `document` | | the `<Document>`; without one it warns `You should pass a valid document to PDFDownloadLink` and renders nothing |
+| `fileName` | `document.pdf` | |
+| `children` | | a node, or a function of `{ loading, blob, url, error }` |
+| `onClick` | | `(event, instance)` |
+
+Any other anchor attribute is passed through.
+
+### BlobProvider
+
+Gives `children({ blob, url, loading, error })` the rendered file without showing it. Props:
+`document` and `children`.
+
+## Web Workers (`@axonpdf/react/worker`)
+
+| Function | What it does |
+| --- | --- |
+| `expose(document)` | Call inside a Worker. `document(props)` returns the `<Document>` to render; the Worker renders it, React and engine included, for every `renderInWorker` call. |
+| `renderInWorker(worker, props)` | Asks that Worker to render with `props` and resolves with the PDF `Blob`. Props travel through `postMessage`, so they can't hold functions. |
+
+## StyleSheet
+
+`StyleSheet.create(styles)` returns `styles` as given. It types them as `Styles`.
+
+## Font
+
+The font store. An app has one, even when it bundles two copies of the package. In Node, font
+`src` paths and `file:` URLs are read from disk.
+
+| Method | What it does |
+| --- | --- |
+| `Font.register({ family, src, fontStyle?, fontWeight?, method?, headers?, body?, postscriptName? })` | Adds one face. `src` is a URL, a `data:` URL, a file path (Node), or a built-in face's name. |
+| `Font.register({ family, fonts: [...] })` | Adds several faces. |
+| `Font.registerHyphenationCallback(callback)` | `callback(word, builtin)` returns the parts of each word; `builtin(word)` is the default split. `(word) => [word]` turns hyphenation off. |
+| `Font.registerEmojiSource(source)` | `{ url, format?, withVariationSelectors? }` or `{ builder(code), withVariationSelectors? }`. Emoji are drawn as images; one whose image fails to load stays text, with the warning `<error> Failed to load emoji image`. |
+| `Font.getFont(descriptor)` | The registered face nearest to the descriptor. Throws `Font family not registered: <family>. Please register it calling Font.register() method.` |
+| `Font.load(descriptor)` | Loads that face's bytes. |
+| `Font.reset()` | Forgets loaded bytes, keeps registrations. |
+| `Font.clear()` | Removes every family, the emoji source and the hyphenation callback. |
+| `Font.getRegisteredFonts()`, `Font.getRegisteredFontFamilies()`, `Font.getEmojiSource()`, `Font.getHyphenationCallback()` | Read the store. |
+
+Courier, Helvetica and Times-Roman are built in, with bold, italic and bold italic faces, and are
+never embedded. TrueType, OpenType, WOFF and WOFF2 files are embedded as subsets. A font collection
+(TTC) throws `Font collection is not supported`.
+
+`fontWeight` is a number or a name: `thin` and `hairline` are 100, `ultralight` and `extralight`
+200, `light` 300, `normal` 400, `medium` 500, `semibold` and `demibold` 600, `bold` 700,
+`ultrabold` and `extrabold` 800, `heavy` and `black` 900. When text asks for a weight that isn't
+registered, the engine picks a face the way browsers do: for 600 it tries heavier faces first,
+for 300 lighter ones.
+
+## createRenderer
+
+```ts
+createRenderer({ onChange }): PDFRenderer
+```
+
+A React reconciler for PDF host elements, matched to the installed React (18, 19.0 and 19.1, or
+19.2 and later). `onChange(container)` runs after every commit.
+
+| Method | What it does |
+| --- | --- |
+| `createContainer(container, onError?)` | Creates a root that commits into `container.document`. `onError` gets the errors React catches; it defaults to `console.error`. |
+| `updateContainer(element, root, parent?, callback?)` | Renders `element` into the root synchronously. |
+
+## profile and formatProfile
+
+```ts
+profile(element): Promise<ProfileReport>
+formatProfile(report): string
+```
+
+`profile` renders the document once, drops the PDF, and reports where the time went: your
+components, building the tree, loading assets, the engine's own phases, each page, the JavaScript
+heap peak and the WebAssembly memory. In Node it adds CPU time by package and the busiest
+functions. In a browser each phase is also a `performance.measure`. `formatProfile` turns the
+report into a text table.
+
+| `ProfileReport` field | Meaning |
+| --- | --- |
+| `totalMs` | From the call to the last byte. |
+| `phases` | `react`, `tree`, `assets`, `engine`, `rows`, in milliseconds. They add up to `totalMs`. |
+| `engine` | `parse`, `layout`, `text`, `paint`, `write`, `callbacks` (your `render`, `paint` and hyphenation functions) and `bridge` (passing data between JavaScript and the engine). |
+| `pages` | Each page's time to its last byte. |
+| `bytes` | The PDF's size. |
+| `memory` | `jsHeapPeak` (0 where the platform doesn't tell) and `wasm`. |
+| `cpu` | Node only: `groups` (self time by source) and `top` (the busiest functions). |
+
+## version
+
+The package version, as a string.
+
+## Props every component takes
+
+| Prop | Meaning |
+| --- | --- |
+| `id` | A target for internal links (`<Link src="#id">`). |
+| `style` | A style object or a list of them, nested to any depth. `null`, `undefined` and `false` entries are skipped; later entries win. |
+| `fixed` | Repeats the element on every page its `Page` wraps onto. |
+| `break` | Starts a new page at the element. |
+| `minPresenceAhead` | Moves the element to the next page unless this many points of the content after it fit below it. |
+| `bookmark` | Adds an outline entry: a title, or `{ title, top?, left?, zoom?, fit?, expanded? }`. Entries nest by their place in the tree. `left` and `top` are measured from the page's top left. |
+| `breakBefore` | `"page"` is the same as `break`. axonpdf only. |
+| `breakAfter` | `"page"` starts a new page after the element. axonpdf only. |
+| `breakInside` | `"avoid"` is the same as `wrap={false}`. axonpdf only. |
+| `wrap` | `false` keeps the element on one page (on View, Text, Link, Page and the table components). |
+| `debug` | Draws the element's box, padding and margin (on View, Text, Link, Page, Image, Canvas, Svg). |
+
+## Components
+
+### Document
+
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `title`, `author`, `subject`, `keywords` | | the PDF's info |
+| `creator`, `producer` | `axonpdf` | |
+| `language` | | a BCP 47 tag such as `en-GB` |
+| `creationDate` | the render's time | a `Date` |
+| `modificationDate` | | a `Date` |
+| `pdfVersion` | `1.3` | `1.3` to `1.7`, or `1.7ext3` |
+| `conformance` | | `PDF/A-1`, `PDF/A-1b`, `PDF/A-2`, `PDF/A-2b`, `PDF/A-3` or `PDF/A-3b` |
+| `pageMode` | | `useNone`, `useOutlines`, `useThumbs`, `fullScreen`, `useOC`, `useAttachments` |
+| `pageLayout` | | `singlePage`, `oneColumn`, `twoColumnLeft`, `twoColumnRight`, `twoPageLeft`, `twoPageRight` |
+| `ownerPassword`, `userPassword` | | encrypt the file (see Encryption) |
+| `permissions` | | what a user with the user password may do (see Encryption) |
+| `onRender` | | called after each render (see below) |
+| `style` | | |
+
+`onRender` gets `{ blob, _INTERNAL__LAYOUT__DATA_ }` after `toBlob`, `{ _INTERNAL__LAYOUT__DATA_ }`
+after `toBuffer` and the Node render functions, and `{}` after `toString`.
+`_INTERNAL__LAYOUT__DATA_` is `{ type: "DOCUMENT", children }`, one `{ type: "PAGE", box: { left,
+top, width, height } }` per page written. Tools that count a document's pages read it.
+
+#### Encryption
+
+A `userPassword` or `ownerPassword` encrypts the file. The method follows `pdfVersion`:
+
+| `pdfVersion` | Method |
+| --- | --- |
+| `1.3` | RC4, 40-bit |
+| `1.4`, `1.5` | RC4, 128-bit |
+| `1.6`, `1.7` | AES, 128-bit |
+| `1.7ext3` | AES, 256-bit |
+
+`permissions` is `{ printing?: "lowResolution" | "highResolution", modifying?, copying?,
+annotating?, fillingForms?, contentAccessibility?, documentAssembly? }`. Anything left out is not
+allowed.
+
+#### PDF/A
+
+`conformance` adds the XMP metadata that names the part and level and an sRGB output intent. It
+raises the PDF version to 1.4 for PDF/A-1 and 1.7 for PDF/A-2 and PDF/A-3 unless you set
+`pdfVersion`. The built-in fonts are never embedded, so a conforming file should use registered
+fonts only.
+
+### Page
+
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `size` | `A4` | a name (`4A0`, `2A0`, `A0` to `A10`, `B0` to `B10`, `C0` to `C10`, `RA0` to `RA4`, `SRA0` to `SRA4`, `EXECUTIVE`, `FOLIO`, `LEGAL`, `LETTER`, `TABLOID`, `ID1`), `[width]`, `[width, height]` or `{ width, height? }`. Lengths take `pt`, `in`, `mm`, `cm` or `px`. Without a height the page grows to fit its content. A size the engine doesn't know throws `Invalid page size: <size>`. |
+| `orientation` | `portrait` | `landscape` swaps width and height |
+| `wrap` | `true` | `false` keeps the content on one page instead of breaking it onto more |
+| `dpi` | 72 | dots per inch for `px` |
+| `style` | | the page's padding is the margin on every page it wraps onto |
+| `layout` | | a template around every page (see below) |
+| `experimentalPagination` | | uses the newer pagination engine for the whole document |
+| `header`, `footer` | | bands at the top and bottom of every page (see Header and footer bands). axonpdf only. |
+| `id`, `bookmark`, `debug` | | |
+
+`layout` is a component that gets `{ children, pageNumber, totalPages, subPageNumber,
+subPageTotalPages }` and returns the page around `children`, which marks where the content flows.
+Everything else it returns repeats on every page, with its space kept. It must render `children`
+exactly once, or the render throws `[layout] A page layout must render its children exactly once
+(found <n>).` Like `render` functions, it can't use hooks. `layout` on any page switches the whole
+document to the newer pagination engine.
+
+### View
+
+The box everything is laid out in. Props: the common ones plus `wrap`, `debug` and
+`render({ pageNumber, subPageNumber })`, which replaces the children on each page.
+
+### Text
+
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `render` | | `({ pageNumber, totalPages, subPageNumber, subPageTotalPages }) => node`. Called while pages are cut, then again once the total is known. |
+| `hyphenationCallback` | | `(word, builtin) => parts`, for this text only |
+| `hyphenationPenalty` | 100 when justified, 600 otherwise | how much a line break at a hyphen costs |
+| `orphans` | 2 | the fewest lines left at the bottom of a page |
+| `widows` | 2 | the fewest lines carried to the next page |
+| `wrap`, `debug` | | |
+
+Nested `Text` and `Link` elements are runs inside the same paragraph. A string anywhere outside a
+`Text` (or `Link`, `Note` or SVG `Tspan`) is dropped with the warning `Invalid '<string>' string
+child outside <Text> component`. Strings returned by a `render` function are dropped without it.
+
+### Link
+
+| Prop | Notes |
+| --- | --- |
+| `src` or `href` | a URL, or `#id` for an element's `id` in the document |
+| `hitSlop` | a number, or `{ top?, right?, bottom?, left? }`: enlarges the clickable area; `debug` tints it |
+| `wrap`, `debug` | |
+
+A link inside `Text` is a run; around other elements it makes their box clickable. Links are blue
+and underlined unless styled otherwise.
+
+### Image
+
+| Prop | Notes |
+| --- | --- |
+| `src` or `source` | a URL or file path (Node), a `Buffer`, `Uint8Array`, `ArrayBuffer` or `Blob`, `{ data, format: "png" \| "jpg" }`, `{ uri, method?, headers?, body?, credentials? }`, a function returning any of these, or a promise of one |
+| `srcSet` | `"a.jpg 300w, b.jpg 600w"`: the narrowest candidate at least as wide as the shown width is drawn, else the widest. Only that one is loaded. |
+| `sizes` | the shown width for `srcSet`: points, a length (`px`, `pt`, `in`, `mm`, `cm`, `vw`, `%`, the last two of the page's width), or entries like `"(max-width: 400px) 200px, 50vw"`. Without it, the page's width. |
+| `cache` | `false` fetches a URL again instead of reusing it |
+| `debug` | |
+
+PNG (with alpha), JPEG (EXIF orientation applied), GIF, WebP and SVG files. An SVG file is drawn
+as vectors. An image never splits across pages. Bytes that can't be read throw `Invalid image:
+<why>`, a source of another kind throws `Invalid image source: <source>`, and a failed fetch throws
+`Failed to fetch <url>: <status> <text>`.
+
+### ImageBackground
+
+The Image props plus `imageStyle` and children: the image fills the box behind the children.
+
+### Note
+
+A string child, written as a sticky-note annotation. Its `style.backgroundColor` colors the note.
+
+### Canvas
+
+`paint(painter, availableWidth, availableHeight)` draws into the box. The painter's methods chain:
+`save`, `restore`, `moveTo`, `lineTo`, `bezierCurveTo`, `quadraticCurveTo`, `rect`, `roundedRect`,
+`ellipse`, `circle`, `polygon`, `path`, `clip`, `fill`, `stroke`, `fillAndStroke`, `fillColor`,
+`strokeColor`, `opacity`, `fillOpacity`, `strokeOpacity`, `lineWidth`, `lineCap`, `lineJoin`,
+`miterLimit`, `dash`, `translate`, `rotate`, `scale`, `font`, `fontSize` and `text`.
+`linearGradient(x1, y1, x2, y2)` and `radialGradient(x1, y1, r1, x2, y2, r2)` return a gradient
+with `stop(offset, color, opacity?)`, usable as a color. A Canvas never splits across pages.
+
+### SVG
+
+| Component | Props |
+| --- | --- |
+| `Svg` | `width`, `height`, `viewBox`, `preserveAspectRatio`, `style`, `debug` |
+| `G` | `style`, presentation attributes |
+| `Path` | `d` |
+| `Rect` | `x`, `y`, `width`, `height`, `rx`, `ry` |
+| `Circle` | `cx`, `cy`, `r` |
+| `Ellipse` | `cx`, `cy`, `rx`, `ry` |
+| `Line` | `x1`, `y1`, `x2`, `y2` |
+| `Polyline`, `Polygon` | `points` |
+| `Text` | `x`, `y`, `hyphenationCallback` |
+| `Tspan` | `x`, `y` |
+| `Defs` | |
+| `ClipPath` | `id` |
+| `LinearGradient` | `id`, `x1`, `y1`, `x2`, `y2`, `gradientTransform`, `gradientUnits`, `xlinkHref` |
+| `RadialGradient` | `id`, `cx`, `cy`, `r`, `fx`, `fy`, `gradientTransform`, `gradientUnits`, `xlinkHref` |
+| `Stop` | `offset`, `stopColor`, `stopOpacity` |
+| `Marker` | `id`, `viewBox`, `refX`, `refY`, `markerWidth`, `markerHeight`, `orient`, `markerUnits` |
+
+The shapes also take the presentation attributes, as props or in `style`: `fill`, `color`,
+`stroke`, `transform`, `strokeDasharray`, `opacity`, `strokeWidth`, `fillOpacity`, `fillRule`,
+`strokeOpacity`, `textAnchor`, `strokeLinecap`, `strokeLinejoin`, `visibility`, `clipPath`,
+`markerStart`, `markerMid`, `markerEnd` and `dominantBaseline`. Colors and clip paths refer to
+definitions with `url(#id)`.
+
+A radial gradient runs from its focal point (`fx`, `fy`) to the circle at `cx`, `cy`, `r`, as SVG
+defines it. Angles in `gradientTransform` are degrees, or radians with `rad`. An Svg never splits
+across pages.
+
+### Form fields
+
+Fields are interactive AcroForm fields.
+
+| Component | Props |
+| --- | --- |
+| `FieldSet` | `name`; groups the fields inside it under one parent field |
+| `TextInput` | `align` (`left`, `center`, `right`), `multiline`, `password`, `noSpell`, `format` (`{ type, param?, nDec?, sepComma?, negStyle?, currency?, currencyPrepend? }`, with `type` one of `date`, `time`, `percent`, `number`, `zip`, `zipPlus4`, `phone`, `ssn`), `fontSize`, `maxLength` |
+| `Checkbox` | `checked`, `onState`, `offState`, `backgroundColor`, `borderColor`, `xMark` |
+| `Select`, `List` | `select` (the options), `sort`, `edit`, `multiSelect`, `noSpell` |
+
+Every field also takes `name`, `required`, `noExport`, `readOnly`, `value` and `defaultValue`, and
+the common props. A checked checkbox shows a check mark, or a cross with `xMark`; an unchecked one
+is blank. `Select` and `List` never belong to a `FieldSet`.
+
+### Rows (axonpdf only)
+
+```tsx
+<Rows rows={source} batchSize={100}>{(row, index) => <Row data={row} />}</Rows>
+```
+
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `rows` | | an array or other iterable, or an async iterable such as a database cursor |
+| `batchSize` | 100 | rows rendered and written at a time |
+| `children` | | `(row, index) => node` |
+
+Only the batch being laid out is held. With an async source, pages are written between batches
+and a stream's slow reader holds the source back. In a document with `Rows`, the page total can't
+be known ahead: `totalPages` in `render` functions and page bands is a placeholder the engine fills
+in when the file is finished, so show it but don't compute with it. `PageCount` and `isLast` work
+as usual. `Rows` can't be used inside a `render` function (`Rows can't be used inside a render
+function.`). With a synchronous source, an image in a row must also be used outside the rows, so
+it is loaded before the engine starts.
+
+### PageNumber and PageCount (axonpdf only)
+
+`<PageNumber />` is the current page's number and `<PageCount />` the document's page count, drawn
+as text. They take `style` and can sit inside a `Text`. `PageCount` makes the engine count the
+pages before drawing them, as a `render` function that reads `totalPages` does; in a document with
+`Rows` the number is written in when the file is finished.
+
+### Table, TableHeader, TableRow, TableCell (axonpdf only)
+
+`Table` is a box whose border is drawn on every page it reaches. `TableRow` lays its cells out in
+a row, and `TableHeader` is a row that repeats at the top of every page the table reaches.
+`TableCell` is a box. Borders that meet collapse into one, the wider: between rows, and between
+cells of a row. `Table` and `TableRow` take `wrap`; all four take the common props.
+
+### Header and footer bands (axonpdf only)
+
+`header` and `footer` on `Page` are an element, or a function of `{ pageNumber, totalPages,
+isFirst, isLast, isOdd }`. A band is drawn at the top or bottom of every page, and the content
+area shrinks to make room for it. Use the function's arguments for first, last, odd and even
+pages.
+
+## Styles
+
+### Units
+
+| Unit | Meaning |
+| --- | --- |
+| number, `pt` | points (1/72 in) |
+| `in`, `mm`, `cm` | inches, millimetres, centimetres |
+| `px` | pixels at the page's `dpi` (72 by default) |
+| `rem` | the page's `fontSize`, or 18 |
+| `vw`, `vh` | percent of the page's width or height |
+| `%` | percent of the parent, for sizes, positions, margins, paddings and corner radii |
+
+### Layout
+
+| Key | Values |
+| --- | --- |
+| `display` | `flex`, `none` |
+| `flexDirection` | `column` (default), `row`, `column-reverse`, `row-reverse` |
+| `flexWrap` | `nowrap`, `wrap`, `wrap-reverse` |
+| `flex` | a number is grow n, shrink 1, basis 0; `"<grow> <shrink> <basis>"`; `auto`, `none`, `initial` |
+| `flexGrow`, `flexShrink`, `flexBasis` | `flexShrink: 0` counts as 1, the default |
+| `alignItems`, `alignSelf` | `flex-start`, `center`, `flex-end`, `stretch`, `baseline` (`alignSelf` also `auto`) |
+| `alignContent` | as `alignItems`, plus `space-between`, `space-around`, `space-evenly` |
+| `justifyContent` | `flex-start`, `center`, `flex-end`, `space-between`, `space-around`, `space-evenly` |
+| `gap`, `rowGap`, `columnGap` | lengths |
+| `aspectRatio` | a number |
+| `position` | `relative`, `absolute`, `static` |
+| `top`, `right`, `bottom`, `left` | lengths |
+| `zIndex` | a number; higher draws on top |
+| `overflow` | `hidden` clips the children to the box |
+| `width`, `height`, `minWidth`, `minHeight`, `maxWidth`, `maxHeight` | lengths |
+| `margin`, `marginTop`, `marginRight`, `marginBottom`, `marginLeft`, `marginHorizontal`, `marginVertical` | lengths or `auto`; `margin` takes one to four values |
+| `padding` and its sides | lengths; `padding` takes one to four values |
+| `float` | `left`, `right`: the box sits at the top of its parent and text wraps beside it |
+| `clear` | `left`, `right`, `both`: moves the element below earlier floats |
+| `shapeOutside` | `circle()`, `ellipse()`, `polygon()`, `inset()`: the shape text wraps around |
+
+`flexFlow` and `justifySelf` are accepted and have no effect.
+
+### Borders
+
+| Key | Values |
+| --- | --- |
+| `border`, `borderTop`, `borderRight`, `borderBottom`, `borderLeft` | `"<width> <style> <color>"`, such as `"1pt solid red"` |
+| `borderWidth`, `borderStyle`, `borderColor` and the per-side forms (`borderTopWidth`, ...) | styles are `solid`, `dashed`, `dotted` |
+| `borderRadius` | a length on all four corners. A percentage throws `Invalid border radius: <value>`. |
+| `borderTopLeftRadius`, `borderTopRightRadius`, `borderBottomRightRadius`, `borderBottomLeftRadius` | lengths or percentages |
+
+### Color
+
+`color`, `backgroundColor` and `opacity`. Colors are names, `#rgb`, `#rrggbb`, `rgb()`, `rgba()`,
+`hsl()` or `hsla()`.
+
+### Text
+
+| Key | Values |
+| --- | --- |
+| `fontFamily` | a family, or a list tried in order for each character, then Helvetica. Every family in the list must be registered. |
+| `fontSize` | default 18 |
+| `fontStyle` | `normal`, `italic`, `oblique` |
+| `fontWeight` | a number or a name (`thin` to `black`) |
+| `fontFeatureSettings` | OpenType features: a list of tags to turn on (`["tnum", "onum"]`), or an object that sets each tag (`{ liga: 0, ss01: 1 }`, numbers or booleans). Kerning and the standard ligatures are on by default, so the object form is how to turn one off. Tags that aren't four letters are skipped. The built-in fonts have no features. |
+| `letterSpacing`, `wordSpacing` | lengths |
+| `lineHeight` | a multiplier of the element's own `fontSize` (or 18 when it has none), a length, or a percentage |
+| `textAlign` | `left`, `right`, `center`, `justify` |
+| `textDecoration` | `underline`, `line-through`, both, or `none` |
+| `textDecorationColor`, `textDecorationStyle` | the line's color, and `solid`, `dashed` or `dotted` |
+| `textIndent` | the first line's indent |
+| `textTransform` | `uppercase`, `lowercase`, `capitalize`, `upperfirst`, `none` |
+| `textOverflow`, `maxLines` | `textOverflow: "ellipsis"` with `maxLines` ends the last line with an ellipsis |
+| `verticalAlign` | `sub`, `super` |
+| `direction` | `ltr`, `rtl`: the paragraph's direction for bidirectional text |
+| `visibility` | `visible`, `hidden` |
+
+Lines break with the Knuth-Plass algorithm, and words are hyphenated with English patterns by
+default. Soft hyphens (`­`) in a word replace the patterns for that word. Arabic and Hebrew
+are shaped right to left, and mixed runs are ordered by the Unicode bidirectional algorithm, with
+brackets mirrored.
+
+### Transforms and images
+
+| Key | Values |
+| --- | --- |
+| `transform` | a string of `translate`, `translateX`, `translateY`, `scale`, `scaleX`, `scaleY`, `rotate`, `skew`, `skewX`, `skewY`, `matrix`, or a list of `{ operation, value }`. An unknown operation is skipped with the warning `Transform operation: '<op>' doesn't supported`. |
+| `transformOrigin`, `transformOriginX`, `transformOriginY` | keywords, lengths or percentages |
+| `gradientTransform` | as `transform`, on SVG gradients |
+| `objectFit` | `fill`, `contain`, `cover`, `none`, `scale-down` |
+| `objectPosition`, `objectPositionX`, `objectPositionY` | keywords, lengths or percentages |
+
+### SVG paint
+
+`fill`, `stroke`, `strokeWidth`, `strokeDasharray`, `strokeLinecap`, `strokeLinejoin`,
+`strokeOpacity`, `fillOpacity`, `fillRule`, `textAnchor`, `dominantBaseline`, `visibility` and
+`clipPath`.
+
+### Media queries
+
+A key such as `"@media max-width: 400"` holds a style that applies when the page matches. Features
+are `min-width`, `max-width`, `min-height`, `max-height` (points) and `orientation` (`landscape`,
+`portrait`), joined with `and` or `,` (or).
+
+### Inheritance
+
+Children inherit `color`, `fontFamily`, `fontSize`, `fontStyle`, `fontWeight`,
+`fontFeatureSettings`, `letterSpacing`, `opacity`, `textDecoration`, `textTransform`, `lineHeight`,
+`textAlign`, `visibility` and `wordSpacing`. A child's own `fontFeatureSettings` replaces the
+inherited one rather than adding to it. A `Text` also passes its `backgroundColor` to the text nested in it.
+
+## Pagination
+
+`View`, `Text` and `Link` split across pages. `Image`, `Svg`, `Canvas` and `Note` move to the next
+page whole. An element that can't split and is taller than the page stays on the page it starts
+on, with the warning `Node of type <TYPE> can't wrap between pages and it's bigger than available
+page height`.
+
+When something reads `totalPages`, the pages are cut once to count them, then cut again to draw
+them.
+
+## Rendering without a reconciler
+
+A document is rendered by walking its elements once, without mounting it in a React reconciler.
+Hooks get their first-render values and effects don't run. Context, `memo`, `forwardRef` and class
+components work. Long lists of children, and each `<Page>` of a document with several, are built
+only when the engine reaches them. The render falls back to a reconciler root, built once, for
+`React.lazy`, legacy context, `setState` during render, lazy children next to `Rows`, and element
+types it doesn't know.
+
+A `render` function or `layout` template that uses an image the rest of the document doesn't use
+throws `An Image inside a render function must also be used outside it.`
+
+## Types
+
+The prop types: `DocumentProps`, `PageProps`, `ViewProps`, `TextProps`, `LinkProps`,
+`ImageProps` (`ImageWithSrcProp`, `ImageWithSourceProp`, `BaseImageProps`), `ImageBackgroundProps`
+(`ImageBackgroundWithSrcProp`, `ImageBackgroundWithSourceProp`, `BaseImageBackgroundProps`),
+`NoteProps`, `CanvasProps`, `NodeProps`, `PageLayoutProps`, `PageBandInfo`, `PageBand`,
+`OnRenderProps`, `RowsProps`, `PageNumberProps`, `TableProps`, `TableRowProps`.
+
+Form fields: `FieldSetProps`, `TextInputProps`, `TextInputFormatting`, `CheckboxProps`,
+`FormCommonProps`, `SelectAndListProps`, `SelectAndListPropsBase`, `SelectAndListPropsWithEdit`,
+`SelectAndListPropsWithNoSpell`.
+
+SVG: `SVGProps`, `GProps`, `PathProps`, `RectProps`, `CircleProps`, `EllipseProps`, `LineProps`,
+`PolylineProps`, `PolygonProps`, `SVGTextProps`, `TspanProps`, `DefsProps`, `ClipPathProps`,
+`LinearGradientProps`, `RadialGradientProps`, `StopProps`, `MarkerProps`,
+`SVGPresentationAttributes`.
+
+Styles and values: `Style`, `StyleProp`, `Styles`, `BaseStyle`,
+`MediaQueryStyle`, `BorderStyleValue`, `Transform`, `ShapeOutside`, `FontStyle`, `FontWeight`,
+`PageSize`, `Orientation`, `PDFVersion`, `PDFConformance`, `PageLayout`, `PageMode`,
+`Permissions`, `Bookmark`, `HitSlop`, `SourceObject`, `SrcSet`, `Sizes`, `EmojiSource`,
+`HyphenationCallback`.
+
+The rest: `PDFInstance`, `PDFRenderer`, `UsePDFInstance`, `PDFViewerProps`,
+`PDFDownloadLinkProps`, `BlobProviderProps`, `BlobProviderParams`, `FontDescriptor`, `FontSource`,
+`ProfileReport`, `ProfilePhases`, `CpuProfile`.
+
+## Errors and warnings
+
+| Message | When |
+| --- | --- |
+| `The root element must be a <Document>.` | The element doesn't render to a `Document`. |
+| `Font family not registered: <family>. Please register it calling Font.register() method.` | A `fontFamily` names a family nobody registered. |
+| `Could not resolve font for <family>, fontWeight <n>, fontStyle <style>` | The family has no face in that style. |
+| `Font collection is not supported` | A registered font is a TTC file. |
+| `Unknown font format` | A registered font's bytes aren't a font. |
+| `Invalid page size: <size>` | A `Page` size the engine doesn't know. |
+| `Invalid border radius: <value>` | The `borderRadius` shorthand was given a percentage or a word. |
+| `[layout] A page layout must render its children exactly once (found <n>).` | See Page. |
+| `Invalid image: <why>` | Image bytes the engine can't read. |
+| `Invalid image source: <source>` | An image source of no known kind. |
+| `Failed to fetch <url>: <status> <text>` | A URL for an image or font answered with an error. |
+| `An Image inside a render function must also be used outside it.` | See Rendering without a reconciler. |
+| `Rows can't be used inside a render function.` | See Rows. |
+| `The PDF stream was closed.`, `The PDF stream was cancelled.` | The reader of a live stream went away. |
+| `The render could not go on after its first page: <why>` | Lazy content needed something that could only be loaded by starting again, after pages were already sent. |
+| the environment errors | See Exports. |
+
+Warnings: `Invalid '<string>' string child outside <Text> component`, `Node of type <TYPE> can't
+wrap between pages and it's bigger than available page height`, `Transform operation: '<op>'
+doesn't supported`, `<error> Failed to load emoji image`, `You should pass a valid document to
+PDFDownloadLink`, and the `toString` and `renderToString` deprecation warnings.
