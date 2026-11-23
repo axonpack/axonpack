@@ -1,0 +1,22 @@
+{
+  "title": "@axonpdf/react",
+  "description": "Components, styles, fonts and render functions",
+  "icon": "Component",
+  "defaultOpen": true,
+  "pages": [
+    "index",
+    "---Building documents---",
+    "components",
+    "styling",
+    "fonts",
+    "extras",
+    "security-and-archiving",
+    "---Rendering---",
+    "rendering",
+    "web-worker",
+    "long-documents",
+    "profiling",
+    "---Reference---",
+    "reference"
+  ]
+}

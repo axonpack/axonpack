@@ -18,7 +18,7 @@ bands.
 ## Rows
 
 `<Rows>` renders long lists in batches and writes pages between them, so memory stays flat however
-long the list is. [Long documents](/docs/axonpdf/long-documents) covers it in full.
+long the list is. [Long documents](/docs/axonpdf/react/long-documents) covers it in full.
 
 ```tsx
 <Rows rows={records} batchSize={200}>
@@ -115,4 +115,4 @@ console.log(formatProfile(await profile(<Report />)));
 
 `profile` renders the document once without keeping the PDF and reports the time spent in your
 components, building the tree, loading assets and each of the engine's phases, with the time of
-each page and the peak memory. See [Profiling](/docs/axonpdf/profiling).
+each page and the peak memory. See [Profiling](/docs/axonpdf/react/profiling).

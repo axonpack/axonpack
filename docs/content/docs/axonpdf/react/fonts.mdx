@@ -8,7 +8,7 @@ icon: Type
 
 Courier, Helvetica and Times-Roman are built in, each with bold, italic and bold italic faces.
 Helvetica is the default. Built-in fonts are never embedded in the file, which keeps it small but
-rules them out for [PDF/A](/docs/axonpdf/security-and-archiving#pdfa).
+rules them out for [PDF/A](/docs/axonpdf/react/security-and-archiving#pdfa).
 
 ## Registering a font
 
@@ -34,7 +34,7 @@ TrueType, OpenType, WOFF and WOFF2 files work, and only the characters the docum
 embedded. A font collection (TTC) throws `Font collection is not supported`.
 
 The store is shared by the whole app, even when it bundles two copies of the package. In a
-[Web Worker](/docs/axonpdf/web-worker) the worker has its own, so register fonts in the worker file.
+[Web Worker](/docs/axonpdf/react/web-worker) the worker has its own, so register fonts in the worker file.
 
 ## Weights and fallback
 
@@ -78,4 +78,4 @@ each image's URL. An emoji whose image fails to load stays text, with a warning.
 `Font.getFont(descriptor)`, `Font.load(descriptor)`, `Font.reset()` (forget loaded bytes, keep the
 registrations), `Font.clear()` (remove everything), `Font.getRegisteredFonts()`,
 `Font.getRegisteredFontFamilies()`, `Font.getEmojiSource()` and `Font.getHyphenationCallback()`.
-See the [Reference](/docs/axonpdf/reference#font).
+See the [Reference](/docs/axonpdf/react/reference#font).
