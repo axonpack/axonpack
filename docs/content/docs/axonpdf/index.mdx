@@ -1,0 +1,99 @@
+---
+title: Overview
+description: Create PDF files from React components, in Node, in the browser and in a Web Worker.
+icon: House
+---
+
+`@axonpdf/react` turns React components into PDF files. You build the document from components
+such as `Document`, `Page`, `View` and `Text`, lay it out with flexbox, and render it to a file, a
+stream, a Blob or a viewer. Layout and PDF writing run in a Rust engine compiled to WebAssembly,
+which is published on its own as `@axonpdf/core`.
+
+```sh
+npm install @axonpdf/react react
+```
+
+<LatestRelease slug="axonpdf" />
+
+```tsx
+import { Document, Page, Text, renderToFile } from '@axonpdf/react';
+
+await renderToFile(
+  <Document title="Hello">
+    <Page size="A4" style={{ padding: 40 }}>
+      <Text>Hello</Text>
+    </Page>
+  </Document>,
+  'hello.pdf',
+);
+```
+
+## Switching takes one import
+
+axonpdf follows the React PDF renderer API: the same components, props, style keys, units,
+`StyleSheet`, `Font`, render functions and browser components. A project that already uses that
+API changes its import to `@axonpdf/react`, or adds an npm alias and leaves every import alone.
+[Switching](/docs/axonpdf/switching) has both ways and the few places where the output differs.
+
+## What axonpdf adds
+
+|                                       | axonpdf                                                                 | The React PDF renderer API                  |
+| ------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------- |
+| Components, styles, `Font`, renders   | Yes                                                                     | Yes                                         |
+| Pages written as they finish          | Yes: streams and files get each page as soon as it is laid out          | The whole document is laid out first        |
+| `Rows`                                | Rows from an array or an async iterable, rendered and written in batches | No                                          |
+| `PageNumber`, `PageCount`             | Page number and count as text, with no `render` function                | A `render` function on `Text`               |
+| Tables                                | `Table` with a header row that repeats on every page and borders that collapse | Build them from `View`s                |
+| Header and footer bands               | `header` and `footer` on `Page`, and the content area shrinks to fit them | `fixed` elements positioned by hand        |
+| CSS break props                       | `breakBefore`, `breakAfter`, `breakInside`                              | `break` and `wrap`                          |
+| Web Worker                            | `expose` and `renderInWorker` from `@axonpdf/react/worker`              | No helper                                   |
+| Profiler                              | `profile()` reports time per phase, per page, and memory                | No                                          |
+| Layout engine                         | Rust, compiled to WebAssembly                                           |                                             |
+
+A document that uses one of the additions renders only in axonpdf. The [extras](/docs/axonpdf/extras)
+page covers each one.
+
+## Performance
+
+One A4 report with a logo, three paragraphs and a five-column table that runs across every page,
+rendered in Node on an Apple M4 (24 GB RAM, Node 24.11.0) with React in production mode. Each cell
+is the render time, the peak memory of the whole process, and the size of the PDF.
+
+| Engine                         | 100 pages                | 1000 pages                | 5000 pages                 |
+| ------------------------------ | ------------------------ | ------------------------- | -------------------------- |
+| axonpdf, rows as an array      | 817 ms, 117 MB, 442 KB   | 7.8 s, 154 MB, 4.3 MB     | 39.2 s, 471 MB, 21.5 MB    |
+| axonpdf, rows from a generator | 863 ms, 117 MB, 442 KB   | 7.8 s, 130 MB, 4.3 MB     | 39.2 s, 215 MB, 21.5 MB    |
+| axonpdf, rows in `<Rows>`      | 527 ms, 129 MB, 447 KB   | 4.8 s, 147 MB, 4.3 MB     | 24.1 s, 259 MB, 21.7 MB    |
+| react-pdf 4.9.0                | 36.1 s, 1289 MB, 643 KB  | stopped at 15 min         | not run                    |
+| pdfkit 0.21.0                  | 145 ms, 97 MB, 357 KB    | 1.1 s, 175 MB, 3.5 MB     | 5.3 s, 347 MB, 17.3 MB     |
+
+pdfkit draws the same pages by hand with page breaks worked out in advance, so read its row as a
+lower bound. In the browser, rendering in a Web Worker keeps the page responsive while a long
+document renders:
+
+{/* BENCH: live-app matrix pending */}
+
+| Engine                   | 100 pages | 500 pages | 2000 pages |
+| ------------------------ | --------- | --------- | ---------- |
+| axonpdf, Web Worker      | pending   | pending   | pending    |
+| axonpdf, main thread     | pending   | pending   | pending    |
+| react-pdf 4.9.0          | pending   | pending   | pending    |
+
+[Benchmarks](/docs/axonpdf/benchmarks) has the method, the commit and the command that reruns
+every row.
+
+## For AI agents
+
+The `axonpack` agent skill reads these docs, so your coding agent can set axonpdf up from them.
+[Agent skill](/docs/agent-skills) has the command for each package manager.
+
+```sh
+npx skills add axonpack/skills
+```
+
+## Packages
+
+| Package          | What it is                                                                       |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `@axonpdf/react` | The components, styles, fonts and render functions. Most apps need only this one. |
+| `@axonpdf/core`  | The engine as WebAssembly, for writing a binding for another framework. See [Core engine](/docs/axonpdf/core). |
