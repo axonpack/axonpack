@@ -19,13 +19,13 @@ whether a bundler processes it or not:
 ```js title="axonpdf.worker.js"
 import { createElement } from 'react';
 import { expose } from '@axonpdf/react/worker';
-import { Report } from './report.js';
+import { Report } from './report';
 
 expose((props) => createElement(Report, props));
 ```
 
-`expose` takes a function from props to the `<Document>`. `Report` is your own component, and it
-can live in a `.jsx` or `.tsx` file when a bundler builds the worker.
+`expose` takes a function from props to the `<Document>`. `Report` is your own component, in a file
+next to the worker. It can be a `.jsx` or `.tsx` file when a bundler builds the worker.
 
 ## With a bundler
 
@@ -53,6 +53,65 @@ export function ReportDownload({ rows }) {
 
 This works under `vite` and in a `vite build` served with `vite preview`. Through `new URL`, Vite
 also compiles a worker written as `axonpdf.worker.tsx` with JSX in it.
+
+## In Next.js
+
+Next.js bundles the worker through the same `new URL(..., import.meta.url)` line, in `next dev` and
+`next build`, with Turbopack or webpack. This needs `@axonpdf/react` 0.0.6 or later.
+
+Put the worker file from above in `src/app/axonpdf.worker.js`, with your `Report` component beside
+it. A small one to start from:
+
+```tsx title="src/app/report.tsx"
+import { Document, Page, Text } from '@axonpdf/react';
+
+export function Report({ rows, title }: { rows: string[]; title: string }) {
+  return (
+    <Document>
+      <Page size="A4">
+        <Text>{title}</Text>
+        {rows.map((row) => (
+          <Text key={row}>{row}</Text>
+        ))}
+      </Page>
+    </Document>
+  );
+}
+```
+
+The component that starts the worker needs `'use client'` as its first line, because Next.js
+renders pages on the server first and the worker only exists in the browser:
+
+```jsx title="src/app/report-download.jsx"
+'use client';
+
+import { usePDFWorker, useWorker } from '@axonpdf/react/worker';
+
+export function ReportDownload({ rows }) {
+  const worker = useWorker(
+    () => new Worker(new URL('./axonpdf.worker.js', import.meta.url), { type: 'module' }),
+  );
+  const { loading, url, error } = usePDFWorker(worker, { rows, title: 'March' });
+
+  if (error) return <p>The PDF failed</p>;
+  if (loading || !url) return <p>Preparing...</p>;
+  return (
+    <a href={url} download="report.pdf">
+      Download
+    </a>
+  );
+}
+```
+
+Then use it in a page:
+
+```tsx title="src/app/page.tsx"
+import { ReportDownload } from './report-download';
+
+export default function Home() {
+  return <ReportDownload rows={['First row', 'Second row']} />;
+}
+```
 
 ## Without a bundler, or from `public/`
 
@@ -174,6 +233,11 @@ worker.
 - The build fails with "The JSX syntax extension is not currently enabled". A `.js` worker has JSX
   in it. Use `createElement`, as in the worker file above, or name the file `.jsx` or `.tsx` and let
   the bundler compile it.
+- `useState is not a function or its return value is not iterable` while Next.js prerenders a page.
+  The file that calls `useWorker` has no `'use client'` line. Add it as the first line, as in
+  [In Next.js](#in-nextjs).
+- In Next.js the PDF stays on "Preparing..." and the console shows `Failed to parse URL from
+  /_next/static/media/axonpdf...wasm`. The app has `@axonpdf/react` 0.0.5 or older. Update it.
 - `WebAssembly.instantiate(): expected magic word` in a prebuilt worker. `axonpdf.wasm` isn't next
   to the worker file, so the server answered with an HTML page. Copy it into the same folder.
 - A registered font isn't used. `Font.register` ran on the page, not in the worker file.
