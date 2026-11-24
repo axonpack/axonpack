@@ -29,7 +29,7 @@ An error before the first byte rejects the `renderToStream` promise. A later one
 
 ### Streaming from a server
 
-```ts
+```tsx
 app.get('/report.pdf', async (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   const stream = await renderToStream(<Report />);
@@ -41,7 +41,7 @@ The response starts with the first page, and the process never holds the whole f
 
 ## pdf(), in Node and the browser
 
-```ts
+```tsx
 import { pdf } from '@axonpdf/react';
 
 const blob = await pdf(<Report />).toBlob();
