@@ -6,7 +6,7 @@ icon: House
 
 `@axonpdf/react` turns React components into PDF files. You build the document from components
 such as `Document`, `Page`, `View` and `Text`, lay it out with flexbox, and render it to a file, a
-stream, a Blob or a viewer. Layout and PDF writing run in a Rust engine compiled to WebAssembly,
+stream, a Blob or a viewer. Layout and PDF writing run in a Rust engine, with Yoga for flexbox, compiled to WebAssembly,
 which is published on its own as `@axonpdf/core`.
 
 ```sh
@@ -44,7 +44,7 @@ await renderToFile(
 | Web Worker                  | The whole render off the page's main thread                                                     | [Web Worker](/docs/axonpdf/react/web-worker)                |
 | Profiler                    | `profile()` reports time per phase and per page, and memory                                     | [Profiling](/docs/axonpdf/react/profiling)                  |
 | Security and archiving      | Passwords, permissions and PDF/A                                                               | [Security and archiving](/docs/axonpdf/react/security-and-archiving) |
-| Engine                      | Layout and PDF writing in Rust, compiled to WebAssembly                                        | [Core engine](/docs/axonpdf/core)                     |
+| Engine                      | Layout and PDF writing in Rust, with Yoga for flexbox, compiled to WebAssembly                 | [Core engine](/docs/axonpdf/core)                     |
 
 Coming from react-pdf? Its API is compatible, and [Migrate from react-pdf](/docs/axonpdf/migrate-from-react-pdf)
 shows how to switch with one import.

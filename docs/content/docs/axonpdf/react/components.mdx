@@ -89,7 +89,7 @@ area.
 ```tsx
 <Image src="https://example.com/logo.png" style={{ width: 80 }} />
 <Image src={{ uri: url, method: 'GET', headers: { Authorization: token } }} />
-<Image srcSet="small.jpg 300w, large.jpg 600w" sizes="50vw" />
+<Image src="large.jpg" srcSet="small.jpg 300w, large.jpg 600w" sizes="50vw" />
 ```
 
 `src` takes a URL, a file path in Node, a `Buffer`, `Uint8Array`, `ArrayBuffer` or `Blob`, `{ data,
