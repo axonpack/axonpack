@@ -259,6 +259,7 @@ async function sync({ name, slug }) {
 
   const page = `---
 title: Changelog
+icon: History
 description: Every published release of ${name}, newest first.
 ---
 

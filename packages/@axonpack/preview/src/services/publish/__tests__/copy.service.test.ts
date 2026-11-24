@@ -64,7 +64,12 @@ function repo(committed: Record<string, string>) {
   const git = (...args: string[]) =>
     actual.execFileSync(
       "git",
-      ["-c", "user.name=t", "-c", "user.email=t@t", ...args],
+      // No background maintenance: it writes .git/objects/maintenance.lock while the test copies .git.
+      [
+        ...["-c", "user.name=t", "-c", "user.email=t@t"],
+        ...["-c", "maintenance.auto=false", "-c", "gc.auto=0"],
+        ...args,
+      ],
       { cwd: dir, stdio: "ignore" },
     );
   git("init", "-q", "-b", "main");
