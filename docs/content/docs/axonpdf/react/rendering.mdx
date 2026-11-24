@@ -1,0 +1,117 @@
+---
+title: Rendering
+description: Render functions for Node, pdf() for both, and PDFViewer, PDFDownloadLink, BlobProvider and usePDF for the browser.
+icon: Printer
+---
+
+Every render takes a React element that renders to a `<Document>`. Anything else throws `The root
+element must be a <Document>.`
+
+## Node
+
+```tsx
+import { renderToBuffer, renderToFile, renderToStream } from '@axonpdf/react';
+
+await renderToFile(<Report />, 'report.pdf');
+const buffer = await renderToBuffer(<Report />);
+const stream = await renderToStream(<Report />);
+```
+
+| Function                                 | Returns                          | Notes                                                                                                                                         |
+| ---------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `renderToFile(element, path, callback?)` | `Promise<NodeJS.ReadableStream>` | Writes each piece of the PDF to the file as it is made, then resolves with a stream that reads the file back. Calls `callback(stream, path)` first. |
+| `render(element, path, callback?)`       | the same                         | Another name for `renderToFile`.                                                                                                              |
+| `renderToStream(element)`                | `Promise<NodeJS.ReadableStream>` | Resolves once the first bytes exist. Later pages flow out while they are laid out, and a slow reader holds the render back.                    |
+| `renderToBuffer(element)`                | `Promise<Buffer>`                | The whole PDF.                                                                                                                                |
+| `renderToString(element)`                | `Promise<string>`                | Deprecated. Use `renderToBuffer`.                                                                                                             |
+
+An error before the first byte rejects the `renderToStream` promise. A later one errors the stream.
+
+### Streaming from a server
+
+```ts
+app.get('/report.pdf', async (req, res) => {
+  res.setHeader('Content-Type', 'application/pdf');
+  const stream = await renderToStream(<Report />);
+  stream.pipe(res);
+});
+```
+
+The response starts with the first page, and the process never holds the whole file.
+
+## pdf(), in Node and the browser
+
+```ts
+import { pdf } from '@axonpdf/react';
+
+const blob = await pdf(<Report />).toBlob();
+```
+
+`pdf(element)` returns an instance with `toBlob()`, `toBuffer()` (a Node `Readable` in Node, a web
+`ReadableStream` in a browser), `updateContainer(element, callback?)` to replace the document, and
+`on('change', listener)` and `removeListener('change', listener)`.
+
+## Browser components
+
+These work in the browser only. In Node they throw an error that names the browser build.
+Each of the three components also takes `worker` and `props` to render in a
+[Web Worker](/docs/axonpdf/react/web-worker#with-the-browser-components).
+
+### PDFViewer
+
+```tsx
+<PDFViewer width="100%" height={600} showToolbar={false}>
+  <Report />
+</PDFViewer>
+```
+
+An `<iframe>` that shows the document passed as its child, and renders it again when the child
+changes. `showToolbar` (true by default) adds `#toolbar=1` or `#toolbar=0` to the URL. Other iframe
+attributes pass through, and `innerRef` is a ref to the iframe.
+
+### PDFDownloadLink
+
+```tsx
+<PDFDownloadLink document={<Report />} fileName="report.pdf">
+  {({ loading, error }) => (error ? 'Failed' : loading ? 'Preparing...' : 'Download')}
+</PDFDownloadLink>
+```
+
+An `<a download>` for the document, rendered before it is clicked. `children` is a node or a
+function of `{ loading, blob, url, error }`, and `onClick` gets `(event, instance)`. `fileName`
+defaults to `document.pdf`.
+
+### BlobProvider
+
+```tsx
+<BlobProvider document={<Report />}>
+  {({ url, loading }) => (loading ? null : <a href={url}>Open</a>)}
+</BlobProvider>
+```
+
+Gives `children` the rendered `{ blob, url, loading, error }` without showing anything.
+
+### usePDF
+
+```tsx
+const [instance, update] = usePDF({ document: <Report data={data} /> });
+
+useEffect(() => update(<Report data={data} />), [data]);
+
+if (instance.loading) return <p>Rendering</p>;
+return <a href={instance.url}>Download</a>;
+```
+
+Renders the document to a Blob and an object URL, and again each time you call `update`. One render
+runs at a time: an update during a render waits, and a newer update replaces it. Old object URLs
+are revoked.
+
+## How a document is rendered
+
+axonpdf walks your elements once instead of mounting them in a React reconciler. Context, `memo`,
+`forwardRef` and class components work. Hooks get their first-render values and effects don't run,
+so fetch data before you render, not inside the document. The render falls back to a reconciler for
+`React.lazy`, legacy context and `setState` during render.
+
+A main-thread render blocks the page while it runs. For long documents in the browser, render in a
+[Web Worker](/docs/axonpdf/react/web-worker).

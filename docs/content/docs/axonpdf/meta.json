@@ -1,0 +1,20 @@
+{
+  "title": "axonpdf",
+  "description": "PDF files from React components, in Node, the browser and Web Workers",
+  "root": true,
+  "icon": "FileText",
+  "pages": [
+    "---Get it working---",
+    "index",
+    "getting-started",
+    "migrate-from-react-pdf",
+    "---Packages---",
+    "react",
+    "core",
+    "---Performance---",
+    "benchmarks",
+    "---Releases---",
+    "changelog"
+  ],
+  "defaultOpen": true
+}

@@ -1,0 +1,118 @@
+---
+title: Getting started
+description: Install @axonpdf/react, write a first document and render it in Node or the browser.
+icon: Rocket
+---
+
+## Install
+
+```sh
+npm install @axonpdf/react react
+```
+
+React 18 and 19 are supported. Node and the browser get different builds of the same package
+through its `browser` field and `exports` conditions, so there is nothing to configure. The engine
+is a WebAssembly file that loads on the first render.
+
+## A first document
+
+```tsx
+import { Document, Page, StyleSheet, Text, View } from '@axonpdf/react';
+
+const styles = StyleSheet.create({
+  page: { padding: 40, fontSize: 12 },
+  heading: { fontSize: 20, marginBottom: 12 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  footer: { position: 'absolute', bottom: 20, left: 40, right: 40, textAlign: 'center', fontSize: 9 },
+});
+
+export function Invoice({ lines }: { lines: { name: string; price: string }[] }) {
+  return (
+    <Document title="Invoice">
+      <Page size="A4" style={styles.page}>
+        <Text style={styles.heading}>Invoice</Text>
+        {lines.map((line) => (
+          <View key={line.name} style={styles.row}>
+            <Text>{line.name}</Text>
+            <Text>{line.price}</Text>
+          </View>
+        ))}
+        <Text
+          style={styles.footer}
+          fixed
+          render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`}
+        />
+      </Page>
+    </Document>
+  );
+}
+```
+
+A `Document` holds one or more `Page`s. Content that doesn't fit on a page continues on the next
+one. `fixed` repeats the footer on every page, and its `render` function gets each page's number
+and the total.
+
+## Render in Node
+
+```tsx
+import { renderToBuffer, renderToFile, renderToStream } from '@axonpdf/react';
+
+await renderToFile(<Invoice lines={lines} />, 'invoice.pdf');
+
+const buffer = await renderToBuffer(<Invoice lines={lines} />);
+
+const stream = await renderToStream(<Invoice lines={lines} />);
+stream.pipe(response);
+```
+
+`renderToFile` writes each page to the file as soon as it is finished. `renderToStream` resolves
+with the stream before the last page is laid out, and a slow reader holds the render back, so a web
+server can send a long report without keeping it in memory.
+
+## Render in the browser
+
+```tsx
+import { PDFDownloadLink, PDFViewer } from '@axonpdf/react';
+
+function Preview({ lines }) {
+  const doc = <Invoice lines={lines} />;
+  return (
+    <>
+      <PDFDownloadLink document={doc} fileName="invoice.pdf">
+        {({ loading }) => (loading ? 'Preparing...' : 'Download')}
+      </PDFDownloadLink>
+      <PDFViewer style={{ width: '100%', height: 600 }}>{doc}</PDFViewer>
+    </>
+  );
+}
+```
+
+`PDFViewer` shows the file in an iframe and renders it again when the document changes.
+`PDFDownloadLink` renders the file before the click. [Rendering](/docs/axonpdf/react/rendering) covers
+`usePDF`, `BlobProvider` and `pdf()`, and [Web Worker](/docs/axonpdf/react/web-worker) moves the render
+off the page's main thread.
+
+## Fonts
+
+Courier, Helvetica and Times-Roman are built in. Register any other font before rendering:
+
+```tsx
+import { Font } from '@axonpdf/react';
+
+Font.register({
+  family: 'Lato',
+  fonts: [
+    { src: 'fonts/Lato-Regular.ttf' },
+    { src: 'fonts/Lato-Bold.ttf', fontWeight: 'bold' },
+  ],
+});
+```
+
+[Fonts](/docs/axonpdf/react/fonts) has the rest.
+
+## Next
+
+- [Components](/docs/axonpdf/react/components) and [Styling](/docs/axonpdf/react/styling)
+- [axonpdf extras](/docs/axonpdf/react/extras): `Rows`, `PageNumber`, `PageCount`, `Table`, page bands
+- [Long documents](/docs/axonpdf/react/long-documents)
+- [Reference](/docs/axonpdf/react/reference): every export, prop and style key

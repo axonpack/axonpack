@@ -1,0 +1,10 @@
+{
+  "title": "@axonpdf/core",
+  "description": "The engine as WebAssembly, for Node, browsers and Workers",
+  "icon": "Box",
+  "defaultOpen": false,
+  "pages": [
+    "index",
+    "reference"
+  ]
+}

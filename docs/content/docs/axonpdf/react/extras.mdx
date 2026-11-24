@@ -1,0 +1,118 @@
+---
+title: axonpdf extras
+description: Rows, PageNumber, PageCount, tables, header and footer bands, CSS break props and the profiler.
+icon: Sparkles
+---
+These components and props help with long documents, page numbers, tables and repeated page
+bands.
+
+| Addition | What it gives |
+| --- | --- |
+| `Rows` | Rows from an array or an async iterable, rendered and written in batches |
+| `PageNumber`, `PageCount` | The page number and the page count as text, with no `render` function |
+| `Table`, `TableHeader`, `TableRow`, `TableCell` | A table whose header row repeats on every page and whose borders collapse |
+| `header` and `footer` on `Page` | Bands that repeat on every page and shrink the content area |
+| `breakBefore`, `breakAfter`, `breakInside` | Page breaks with their CSS names |
+| `profile`, `formatProfile` | A report of where a render spends its time |
+
+## Rows
+
+`<Rows>` renders long lists in batches and writes pages between them, so memory stays flat however
+long the list is. [Long documents](/docs/axonpdf/react/long-documents) covers it in full.
+
+```tsx
+<Rows rows={records} batchSize={200}>
+  {(record, index) => <Row item={record} />}
+</Rows>
+```
+
+## PageNumber and PageCount
+
+```tsx
+<Text style={{ textAlign: "center" }}>
+  Page <PageNumber /> of <PageCount />
+</Text>
+```
+
+Both draw like `Text` and take a `style`, and both can sit inside a `Text`. Like a `render`
+function that reads `totalPages`, `PageCount` makes the engine count the pages before it draws
+them. In a document with `Rows`, where the pages can't be counted ahead, the engine writes the
+number in when the file is finished, so `PageCount` still shows the right total.
+
+## Tables
+
+```tsx
+<Table style={{ border: "1pt solid #333" }}>
+  <TableHeader style={{ backgroundColor: "#264653", color: "white" }}>
+    <TableCell style={{ width: 60, padding: 4 }}><Text>Date</Text></TableCell>
+    <TableCell style={{ flex: 1, padding: 4 }}><Text>Item</Text></TableCell>
+  </TableHeader>
+  {orders.map((order) => (
+    <TableRow key={order.id} wrap={false} style={{ borderTop: "0.5pt solid #bbb" }}>
+      <TableCell style={{ width: 60, padding: 4 }}><Text>{order.date}</Text></TableCell>
+      <TableCell style={{ flex: 1, padding: 4 }}><Text>{order.item}</Text></TableCell>
+    </TableRow>
+  ))}
+</Table>
+```
+
+| Component | What it is |
+| --- | --- |
+| `Table` | A box whose border is drawn on every page it reaches. Takes `wrap`. |
+| `TableHeader` | A row that repeats at the top of every page the table reaches. |
+| `TableRow` | A row of cells. `wrap={false}` keeps a row on one page. |
+| `TableCell` | A box. Size it with `width` or `flex`. |
+
+Where two borders meet, between rows or between the cells of a row, they collapse into one, the
+wider of the two.
+
+## Header and footer bands
+
+```tsx
+<Page
+  size="A4"
+  style={{ paddingHorizontal: 30 }}
+  header={({ pageNumber, isFirst }) => (
+    <View style={{ padding: "16 30 6", borderBottom: "1pt solid #2a9d8f" }}>
+      <Text>{isFirst ? "Orders" : `Orders, page ${pageNumber}`}</Text>
+    </View>
+  )}
+  footer={({ isLast }) => (
+    <Text style={{ padding: "6 30 16", textAlign: "center" }}>
+      Page <PageNumber /> of <PageCount />
+      {isLast ? " (end)" : ""}
+    </Text>
+  )}
+>
+  {content}
+</Page>
+```
+
+`header` and `footer` are an element, or a function of `{ pageNumber, totalPages, isFirst, isLast,
+isOdd }`. A band is drawn at the top or bottom of every page, and the content area shrinks by the
+band's height, so content never runs under it. Use the arguments for a different first page, a
+last page, or odd and even pages.
+
+## CSS break props
+
+Every component takes these:
+
+| Prop | Same as |
+| --- | --- |
+| `breakBefore="page"` | `break` |
+| `breakAfter="page"` | a `break` on the next element |
+| `breakInside="avoid"` | `wrap={false}` |
+
+`"auto"` leaves the default.
+
+## profile and formatProfile
+
+```tsx
+import { formatProfile, profile } from "@axonpdf/react";
+
+console.log(formatProfile(await profile(<Report />)));
+```
+
+`profile` renders the document once without keeping the PDF and reports the time spent in your
+components, building the tree, loading assets and each of the engine's phases, with the time of
+each page and the peak memory. See [Profiling](/docs/axonpdf/react/profiling).

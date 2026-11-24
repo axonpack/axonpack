@@ -92,6 +92,10 @@ if (names.size === 0) {
   throw new Error("no @axonpack packages found, refusing to build an empty catalogue");
 }
 
+// Packages outside the @axonpack scope that these docs cover, with their docs folder.
+const OTHER_SCOPES = { "@axonpdf/react": "axonpdf" };
+for (const name of Object.keys(OTHER_SCOPES)) names.add(name);
+
 const exists = async (relative) => {
   try {
     await access(new URL(relative, import.meta.url));
@@ -198,7 +202,7 @@ console.log(`  ${repo.name} -> ${repo.stars ?? "?"} stars`);
 const packages = [];
 for (const name of [...names].sort()) {
   const manifest = await json(`https://registry.npmjs.org/${encode(name)}/latest`);
-  const slug = name.slice(SCOPE.length);
+  const slug = OTHER_SCOPES[name] ?? name.slice(SCOPE.length);
 
   // The registry's full document is the only place per-version publish times live; the changelog
   // has notes but no dates, so the two are joined here. It also gives the first publish, which is

@@ -1,0 +1,117 @@
+---
+title: Styling
+description: Style objects, units, flexbox, borders, text, transforms and media queries.
+icon: Palette
+---
+
+Styles are plain objects with CSS-like keys in camelCase. Pass one to `style`, or a list of them:
+
+```tsx
+import { StyleSheet, Text, View } from '@axonpdf/react';
+
+const styles = StyleSheet.create({
+  card: { padding: 12, border: '1pt solid #ccc', borderRadius: 4 },
+  highlighted: { backgroundColor: '#fff3c4' },
+});
+
+<View style={[styles.card, isLate && styles.highlighted]}>
+  <Text>Due today</Text>
+</View>;
+```
+
+`StyleSheet.create` returns the object as given and types it. In a list, `null`, `undefined` and
+`false` entries are skipped, lists can nest, and later entries win.
+
+## Units
+
+| Unit             | Meaning                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| a number, `pt`   | points (1/72 in)                                                             |
+| `in`, `mm`, `cm` | inches, millimetres, centimetres                                             |
+| `px`             | pixels at the page's `dpi` (72 by default)                                   |
+| `rem`            | the page's `fontSize`, or 18                                                 |
+| `vw`, `vh`       | percent of the page's width or height                                        |
+| `%`              | percent of the parent, for sizes, positions, margins, paddings and corner radii |
+
+```tsx
+<View style={{ width: '50%', marginTop: '1cm', padding: '4mm 8mm' }} />
+```
+
+## Flexbox
+
+Layout is flexbox, with `column` as the default direction as in React Native.
+
+```tsx
+<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+  <Text style={{ flex: 1 }}>Description</Text>
+  <Text style={{ width: 60, textAlign: 'right' }}>Amount</Text>
+</View>
+```
+
+`flex`, `flexGrow`, `flexShrink`, `flexBasis`, `flexWrap`, `alignItems`, `alignSelf`,
+`alignContent`, `justifyContent`, `gap`, `rowGap`, `columnGap` and `aspectRatio` behave as in CSS.
+`position: 'absolute'` with `top`, `right`, `bottom` and `left` places a box against its parent, and
+`zIndex` decides what draws on top. `overflow: 'hidden'` clips the children.
+
+`float: 'left'` or `'right'` puts a box at the top of its parent with text wrapping beside it.
+`clear` moves an element below earlier floats, and `shapeOutside` (`circle()`, `ellipse()`,
+`polygon()`, `inset()`) sets the shape the text wraps around.
+
+## Borders and color
+
+```tsx
+<View style={{ border: '1pt solid #333', borderBottom: '2pt dashed red', borderTopLeftRadius: 6 }} />
+```
+
+Borders take `"<width> <style> <color>"` shorthands or the separate width, style and color keys,
+per side. Styles are `solid`, `dashed` and `dotted`. `color`, `backgroundColor` and `opacity` take
+color names, `#rgb`, `#rrggbb`, `rgb()`, `rgba()`, `hsl()` and `hsla()`.
+
+## Text
+
+`fontFamily`, `fontSize` (18 by default), `fontStyle`, `fontWeight`, `lineHeight`, `letterSpacing`,
+`wordSpacing`, `textAlign`, `textIndent`, `textTransform`, `textDecoration` with its color and
+style, `verticalAlign` (`sub`, `super`) and `direction` (`ltr`, `rtl`).
+
+```tsx
+<Text style={{ fontFeatureSettings: ['tnum'], textOverflow: 'ellipsis', maxLines: 2 }}>...</Text>
+```
+
+`fontFeatureSettings` turns OpenType features on with a list of tags, or sets each one with an
+object (`{ liga: 0 }` turns standard ligatures off). `textOverflow: 'ellipsis'` with `maxLines` ends
+the last line with an ellipsis. Arabic and Hebrew are shaped right to left, and mixed runs are
+ordered by the Unicode bidirectional algorithm.
+
+## Transforms and images
+
+`transform` takes a CSS string (`'rotate(45deg) scale(0.5)'`) or a list of `{ operation, value }`,
+with `transformOrigin`. `objectFit` and `objectPosition` place an image inside its box.
+
+## Media queries
+
+```tsx
+const styles = StyleSheet.create({
+  column: {
+    width: '50%',
+    '@media max-width: 400': { width: '100%' },
+    '@media orientation: landscape': { width: '33%' },
+  },
+});
+```
+
+A key that starts with `@media` applies when the page matches. The features are `min-width`,
+`max-width`, `min-height`, `max-height` (in points) and `orientation`, joined with `and` or `,`.
+
+## Inheritance
+
+Children inherit `color`, `fontFamily`, `fontSize`, `fontStyle`, `fontWeight`,
+`fontFeatureSettings`, `letterSpacing`, `opacity`, `textDecoration`, `textTransform`, `lineHeight`,
+`textAlign`, `visibility` and `wordSpacing`. Set a font on the `Page` and every `Text` on it uses
+it.
+
+## Debugging a layout
+
+`debug` on a `View`, `Text`, `Link`, `Page`, `Image`, `Canvas` or `Svg` draws its box, padding and
+margin on the page.
+
+Every key and its values is in the [Reference](/docs/axonpdf/react/reference#styles).

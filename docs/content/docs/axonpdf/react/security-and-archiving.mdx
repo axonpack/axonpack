@@ -1,0 +1,111 @@
+---
+title: Security and archiving
+description: Passwords and permissions, PDF/A conformance, and fillable form fields.
+icon: ShieldCheck
+---
+## Passwords and permissions
+
+```tsx
+<Document
+  ownerPassword="owner-secret"
+  userPassword="open-sesame"
+  pdfVersion="1.7ext3"
+  permissions={{ printing: "highResolution", copying: true }}
+>
+  ...
+</Document>
+```
+
+A `userPassword` is asked for when the file is opened. The `ownerPassword` unlocks everything the
+permissions leave out. Setting either one encrypts the file. The `pdfVersion` decides how:
+
+| `pdfVersion` | Encryption |
+| --- | --- |
+| `1.3` (the default) | RC4, 40-bit |
+| `1.4`, `1.5` | RC4, 128-bit |
+| `1.6`, `1.7` | AES, 128-bit |
+| `1.7ext3` | AES, 256-bit |
+
+Use `1.7ext3` unless the file has to open in very old viewers.
+
+`permissions` says what someone with only the user password may do. Everything it leaves out is
+denied:
+
+| Key | Values |
+| --- | --- |
+| `printing` | `"lowResolution"` or `"highResolution"` |
+| `modifying` | `true` to allow changes to the document |
+| `copying` | `true` to allow copying text and images |
+| `annotating` | `true` to allow comments and form filling |
+| `fillingForms` | `true` to allow filling forms |
+| `contentAccessibility` | `true` to allow screen readers to extract text |
+| `documentAssembly` | `true` to allow inserting, rotating and deleting pages |
+
+Viewers enforce permissions themselves, and some ignore them. Don't rely on them to protect the
+content; the user password does that.
+
+## PDF/A
+
+```tsx
+<Document conformance="PDF/A-2b" title="Annual report" language="en-GB">
+  ...
+</Document>
+```
+
+`conformance` takes `PDF/A-1`, `PDF/A-1b`, `PDF/A-2`, `PDF/A-2b`, `PDF/A-3` or `PDF/A-3b`. It adds
+the XMP metadata that names the part and level, and an sRGB output intent. Unless you set
+`pdfVersion`, the file is written as PDF 1.4 for PDF/A-1 and PDF 1.7 for PDF/A-2 and PDF/A-3.
+
+PDF/A requires every font to be embedded. The built-in fonts (Courier, Helvetica, Times-Roman) are
+never embedded, so register the fonts a PDF/A document uses:
+
+```tsx
+Font.register({ family: "Lato", src: "fonts/Lato-Regular.ttf" });
+
+<Page style={{ fontFamily: "Lato" }}>...</Page>;
+```
+
+Set a `title` and a `language` as well; validators check for them. To confirm a file conforms,
+run it through a validator such as veraPDF.
+
+## Forms
+
+Form components write interactive fields that a reader can fill in and save.
+
+```tsx
+import { Checkbox, FieldSet, List, Select, Text, TextInput, View } from "@axonpdf/react";
+
+<FieldSet name="applicant">
+  <View style={{ flexDirection: "row", alignItems: "center" }}>
+    <Text style={{ width: 90 }}>Name</Text>
+    <TextInput name="name" style={{ width: 200, height: 18 }} fontSize={10} maxLength={40} required />
+  </View>
+  <TextInput name="address" multiline style={{ width: 200, height: 50 }} defaultValue="" />
+  <TextInput name="date" format={{ type: "date", param: "dd/mm/yyyy" }} style={{ width: 100, height: 18 }} />
+  <Checkbox name="terms" checked style={{ width: 14, height: 14 }} />
+  <Select name="team" select={["Sales", "Support", "Finance"]} value="Support" style={{ width: 120, height: 18 }} />
+  <List name="languages" select={["English", "French", "German"]} multiSelect style={{ width: 120, height: 60 }} />
+</FieldSet>;
+```
+
+Give every field a `style` with a `width` and `height`; the field takes that box.
+
+| Component | Props |
+| --- | --- |
+| `FieldSet` | `name`. The fields inside become children of one parent field, named `<set>.<field>`. Nested sets are listed on their own. |
+| `TextInput` | `align` (`left`, `center`, `right`), `multiline`, `password`, `noSpell`, `fontSize`, `maxLength`, `format` |
+| `Checkbox` | `checked`, `onState`, `offState`, `backgroundColor`, `borderColor`, `xMark` (a cross instead of a check mark) |
+| `Select` | a drop-down: `select` (the options), `edit` (the reader may type a value), `sort`, `noSpell` |
+| `List` | a list box: the `Select` props plus `multiSelect` |
+
+Every field also takes `name`, `required`, `readOnly`, `noExport` (left out when the form is
+submitted), `value` and `defaultValue`.
+
+`format` on a `TextInput` is `{ type, param?, nDec?, sepComma?, negStyle?, currency?,
+currencyPrepend? }`. `type` is `date`, `time`, `percent`, `number`, `zip`, `zipPlus4`, `phone` or
+`ssn`; `param` is the date or time pattern.
+
+An unchecked checkbox is blank. `Select` and `List` never belong to a `FieldSet`.
+
+Viewers draw text fields, selects and lists themselves from the field values. Checkboxes carry
+their own appearance, so they look the same everywhere.

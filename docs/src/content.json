@@ -214,6 +214,15 @@
           "title": "App.tsx",
           "code": "import { UpdatePrompt } from '@axonpack/in-app-updates';\nimport { Text, View } from 'react-native';\n\nexport default function App() {\n  return (\n    <View style={{ flex: 1 }}>\n      <Text>My app</Text>\n      <UpdatePrompt />\n    </View>\n  );\n}"
         }
+      },
+      "axonpdf": {
+        "scene": "A customer asks for a year of orders as a PDF. The report is 3,000 pages, and the server runs out of memory halfway through, or the browser tab freezes until it finishes.",
+        "fix": "axonpdf renders React components to PDF and writes each page as soon as it is laid out, so a 5,000-page report renders in under 500 MB. It lays out with flexbox and embeds only the characters each font uses. In the browser it can render in a Web Worker.",
+        "sample": {
+          "lang": "tsx",
+          "title": "report.tsx",
+          "code": "import { Document, Page, Text, renderToFile } from '@axonpdf/react';\n\nawait renderToFile(\n  <Document>\n    <Page size=\"A4\">\n      <Text>Hello</Text>\n    </Page>\n  </Document>,\n  'hello.pdf',\n);"
+        }
       }
     }
   },

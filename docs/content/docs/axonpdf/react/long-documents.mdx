@@ -1,0 +1,107 @@
+---
+title: Long documents
+description: How axonpdf keeps memory flat for reports of thousands of pages, and the two changes that help most.
+icon: Layers
+---
+
+A report of a few thousand pages renders in about the same memory as one of a hundred. This page
+covers what axonpdf does on its own, and the two changes that help most when a document gets very
+large.
+
+## What happens without any changes
+
+axonpdf doesn't mount your document in a React reconciler. It walks the elements once and hands the
+engine a tree to lay out. Three things keep that tree small:
+
+- A container with a long list of children sends the first ones up front. The rest are built from
+  your components only when the engine's page cut reaches them, a batch at a time.
+- In a document with several `<Page>` elements, each page's content is built when the engine opens
+  that page.
+- Each finished page is written to the output and dropped. The engine keeps about 70 bytes for each
+  page after that, the small records the end of the file needs.
+
+So the usual way of writing a report already works for long documents:
+
+```tsx
+<Page size="A4">
+  <Header />
+  <View>
+    {items.map((item) => (
+      <Row key={item.id} item={item} />
+    ))}
+  </View>
+</Page>
+```
+
+What still costs memory is anything your own code holds for the whole render, such as the array of
+row elements above.
+
+## Pass long lists as a generator
+
+A generator is an ordinary iterable child in React. With a generator, the full list of row elements never exists at once:
+
+```tsx
+function* rows(items) {
+  for (const item of items) yield <Row key={item.id} item={item} />;
+}
+
+<View>{rows(items)}</View>;
+```
+
+An array of 190,000 row elements stays alive for the whole render. V8 then starts placing the
+elements each `Row` creates straight into its old generation, where they wait for a full garbage
+collection. The generator avoids that.
+
+## Use Rows for very long tables and database cursors
+
+`<Rows>` is axonpdf's own component. It takes an array or an async iterable, renders its rows in
+batches, and writes the pages between batches:
+
+```tsx
+import { Rows } from '@axonpdf/react';
+
+// `cursor` is any async iterable, such as your database client's cursor.
+<Rows rows={cursor} batchSize={200}>
+  {(record, index) => <Row item={record} striped={index % 2 === 1} />}
+</Rows>;
+```
+
+| Prop        | Default | Notes                                             |
+| ----------- | ------- | ------------------------------------------------- |
+| `rows`      |         | an array or other iterable, or an async iterable  |
+| `batchSize` | 100     | rows rendered at a time                           |
+| `children`  |         | `(row, index) => element`                         |
+
+With `renderToStream`, a slow reader of the stream holds the source back, so the cursor is read
+only as fast as the PDF is consumed.
+
+Some things work differently in a document with `Rows`:
+
+- The page total can't be known ahead, because the rows are read once. `totalPages` in `render`
+  functions and page bands is a placeholder that the engine replaces with the number when the file
+  is finished. Show it in text, but don't compute with it. `<PageCount />` and a band's `isLast` work
+  as usual.
+- With an array or other synchronous source, an image used in a row must also appear somewhere
+  outside the rows, so that it is loaded before the engine starts. With an async source, images in
+  rows load between batches.
+- `Rows` can't be used inside a `render` function.
+
+## Memory and time
+
+Measured in Node on 2026-11-21, with the whole report in one flowing `<Page>`. The benchmark report is A4, with a header and logo, three paragraphs, and a bordered five-column
+table that runs across pages, with "Page n of N" in the footer. Measured on an Apple M4 (24 GB RAM,
+Node 24.11.0), React in production mode, one process per run. Each cell is the render time and the
+peak memory of the whole process.
+
+| How the rows are passed | 100 pages     | 1000 pages    | 5000 pages     |
+| ----------------------- | ------------- | ------------- | -------------- |
+| an array                | 0.8 s, 117 MB | 7.8 s, 154 MB | 39.2 s, 471 MB |
+| a generator             | 0.9 s, 117 MB | 7.8 s, 130 MB | 39.2 s, 215 MB |
+| `<Rows>`                | 0.5 s, 129 MB | 4.8 s, 147 MB | 24.1 s, 259 MB |
+
+[Benchmarks](/docs/axonpdf/benchmarks) has the full method and the command that reruns each row.
+
+## Finding what is slow
+
+When a long document is slower than you expect, `profile()` shows whether the time goes into your
+components, loading assets, or the engine. See [Profiling](/docs/axonpdf/react/profiling).

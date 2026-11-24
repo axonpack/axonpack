@@ -1,0 +1,25 @@
+---
+title: Overview
+description: "@axonpdf/react: React components, styles, fonts and render functions for PDF files."
+icon: House
+---
+
+`@axonpdf/react` is the package most apps use. It holds the components, `StyleSheet`, `Font`, the
+render functions for Node and the browser, and the Web Worker helpers. It drives
+[`@axonpdf/core`](/docs/axonpdf/core) for you, so you don't install the engine yourself.
+
+```sh
+npm install @axonpdf/react react
+```
+
+React 18 and 19 are supported.
+
+| Import                       | What it gives                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `@axonpdf/react`             | Everything. Node and the browser get different builds automatically.           |
+| `@axonpdf/react/components`  | The components and the prop and style types only. Nothing in it loads the engine. |
+| `@axonpdf/react/worker`      | `expose`, `renderInWorker`, `usePDFWorker` and `useWorker`, for rendering in a Web Worker. |
+
+Start with [Getting started](/docs/axonpdf/getting-started), then
+[Components](/docs/axonpdf/react/components). Every export is in the
+[Reference](/docs/axonpdf/react/reference).

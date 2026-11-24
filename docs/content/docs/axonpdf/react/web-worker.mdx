@@ -1,0 +1,163 @@
+---
+title: Web Worker
+description: Render in a Web Worker with useWorker and usePDFWorker, so the page stays responsive during a long render.
+icon: Cpu
+---
+
+A render on the page's main thread blocks scrolling, typing and clicks until it finishes. For a few
+pages that goes unnoticed. For a long report it doesn't. `@axonpdf/react/worker` runs the whole
+render, React and the engine included, in a Web Worker and hands the page a `Blob`.
+
+## Setup
+
+The worker file imports your document and calls `expose` with a function from props to the
+`<Document>`:
+
+```tsx title="pdf.worker.tsx"
+import { expose } from '@axonpdf/react/worker';
+import { Report } from './report';
+
+expose((props) => <Report {...props} />);
+```
+
+## In a component
+
+On the page, `useWorker` starts the worker and `usePDFWorker` renders with it:
+
+```tsx title="report-download.tsx"
+import { usePDFWorker, useWorker } from '@axonpdf/react/worker';
+
+export function ReportDownload({ rows }) {
+  const worker = useWorker(
+    () => new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' }),
+  );
+  const { loading, url, error } = usePDFWorker(worker, { rows, title: 'March' });
+
+  if (error) return <p>The PDF failed</p>;
+  if (loading || !url) return <p>Preparing...</p>;
+  return (
+    <a href={url} download="report.pdf">
+      Download
+    </a>
+  );
+}
+```
+
+`useWorker(create)` calls `create()` once, when the component mounts, and terminates that worker
+when it unmounts. It returns `null` until the worker exists.
+
+`usePDFWorker(worker, props)` returns `{ loading, blob, url, error }`, the same shape `usePDF`
+gives. While `worker` is `null` it waits. It renders again whenever `props` change, and it compares
+them by value as JSON, so a new object with the same contents doesn't start a render. A result
+that arrives for older props is dropped, and the old object URL is revoked when a new one replaces
+it or the component unmounts.
+
+## With the browser components
+
+`PDFViewer`, `PDFDownloadLink` and `BlobProvider` take the worker directly, with `worker` and
+`props`:
+
+```tsx
+const worker = useWorker(
+  () => new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' }),
+);
+
+<PDFDownloadLink worker={worker} props={{ rows }} fileName="report.pdf">
+  Download
+</PDFDownloadLink>;
+
+<PDFViewer worker={worker} props={{ rows }} width="100%" height={600} />;
+
+<BlobProvider worker={worker} props={{ rows }}>
+  {({ url, loading }) => (loading ? null : <a href={url}>Open</a>)}
+</BlobProvider>;
+```
+
+When `worker` is set, the component renders from `props` in the worker, and `document` (or
+`children` on `PDFViewer`) is not used. Pass one or the other.
+
+## Calling the worker with renderInWorker
+
+`renderInWorker` is the lower-level way to call the worker, outside React or when you want the
+`Blob` yourself. The page creates the worker as a module worker and calls `renderInWorker` with the
+props:
+
+```tsx title="download-report.ts"
+import { renderInWorker } from '@axonpdf/react/worker';
+
+const worker = new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' });
+
+const blob = await renderInWorker(worker, { rows, title: 'March' });
+const url = URL.createObjectURL(blob);
+```
+
+`renderInWorker(worker, props)` resolves with the PDF as a `Blob` of type `application/pdf`.
+
+## Bundlers
+
+`new Worker(new URL('./file', import.meta.url), { type: 'module' })` is the pattern Vite reads to
+bundle a worker file, so the code above works in Vite as written. webpack 5 documents the same
+pattern for its own worker support.
+
+## Fonts and images
+
+The worker has its own module scope, so a `Font.register` call on the page doesn't reach it.
+Register fonts in the worker file, before `expose`:
+
+```tsx title="pdf.worker.tsx"
+import { Font } from '@axonpdf/react';
+import { expose } from '@axonpdf/react/worker';
+import { Report } from './report';
+
+Font.register({ family: 'Lato', src: new URL('./fonts/Lato-Regular.ttf', import.meta.url).href });
+
+expose((props) => <Report {...props} />);
+```
+
+Font and image `src` values must be URLs the worker can fetch: absolute URLs, `data:` URLs, or
+URLs your bundler gives you. File paths only work in Node.
+
+## What props can hold
+
+Props travel from the page to the worker through `postMessage`, so they must be structured
+cloneable: plain objects, arrays, strings, numbers, dates, `Blob`s and typed arrays. Functions,
+React elements and class instances can't cross. Pass the data, and build the elements in the
+worker.
+
+## Errors
+
+When the render throws in the worker, the worker posts the error back and `renderInWorker` rejects
+with it:
+
+```ts
+try {
+  const blob = await renderInWorker(worker, props);
+} catch (error) {
+  console.error('The PDF failed', error);
+}
+```
+
+## One worker, many renders
+
+A worker answers every `renderInWorker` call it gets. Each call carries its own id, and the answer
+is matched to it, so several renders can be in flight on one worker. Create the worker once, reuse
+it, and end it when you no longer need it:
+
+```ts
+const worker = new Worker(new URL('./pdf.worker.tsx', import.meta.url), { type: 'module' });
+
+const [march, april] = await Promise.all([
+  renderInWorker(worker, { month: 'March' }),
+  renderInWorker(worker, { month: 'April' }),
+]);
+
+worker.terminate();
+```
+
+## When to use it
+
+Use a worker for long documents rendered in the browser, or any render that runs while someone is
+using the page. In the browser run of 2026-11-23 (one flowing `<Page>`, 100 pages), rendering on the
+main thread froze the page for 832 ms, against 18 ms in a worker. The live
+benchmark app lets you switch to the main thread up to 100 pages and watch it; see
+[Benchmarks](/docs/axonpdf/benchmarks#in-the-browser-2026-11-23).
