@@ -57,6 +57,26 @@ These work in the browser only. In Node they throw an error that names the brows
 Each of the three components also takes `worker` and `props` to render in a
 [Web Worker](/docs/axonpdf/react/web-worker#with-the-browser-components).
 
+In Next.js, a page is rendered on the server first, even with `'use client'`, and these components
+throw there. Load the component that uses them with `next/dynamic` and `ssr: false`, so it only
+runs in the browser:
+
+```tsx title="src/app/report/page.tsx"
+'use client';
+
+import dynamic from 'next/dynamic';
+
+const ReportDownload = dynamic(() => import('./report-download'), { ssr: false });
+
+export default function Page() {
+  return <ReportDownload />;
+}
+```
+
+`report-download.tsx` beside it holds the `PDFDownloadLink` (or any of the others) as its default
+export. With webpack (`next build` without `--turbopack`), this needs `@axonpdf/react` 0.0.6 or
+later.
+
 ### PDFViewer
 
 ```tsx
