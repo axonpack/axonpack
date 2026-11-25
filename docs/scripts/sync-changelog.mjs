@@ -119,6 +119,17 @@ const stripCommitPrefix = (line) =>
 const dedent = (line) => (line.startsWith('  - ') ? line.slice(2) : line);
 
 /**
+ * MDX reads `<Tag>` and `{expr}` in prose as JSX, so a changelog line that mentions an element
+ * ("The root element must be a <Document>") breaks the docs build. Escape them outside inline code;
+ * the caller skips fenced blocks.
+ */
+const escapeMdx = (line) =>
+  line
+    .split(/(`[^`]*`)/)
+    .map((part, i) => (i % 2 ? part : part.replace(/[<{]/g, '\\$&')))
+    .join('');
+
+/**
  * Early changesets wrote their own `## ✨ Features` category headings inside the body. Left alone
  * those come out as a heading nested in a list item, at the same level as the version heading above
  * it, and fumadocs puts them in the page's table of contents as if they were releases. They still
@@ -146,7 +157,9 @@ function promoteHeadings(lines) {
 function parse(markdown) {
   const releases = [];
   let current = null;
+  let fenced = false;
   for (const raw of markdown.split('\n')) {
+    if (/^\s*```/.test(raw)) fenced = !fenced;
     const version = raw.match(/^## (\d+\.\d+\.\d+.*)$/);
     if (version) {
       current = { version: version[1].trim(), sections: [] };
@@ -160,7 +173,7 @@ function parse(markdown) {
       continue;
     }
     const open = current.sections.at(-1);
-    if (open) open.lines.push(dedent(stripCommitPrefix(raw)));
+    if (open) open.lines.push(dedent(stripCommitPrefix(fenced ? raw : escapeMdx(raw))));
   }
   for (const release of releases) {
     for (const section of release.sections) section.lines = promoteHeadings(section.lines);
