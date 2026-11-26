@@ -339,6 +339,24 @@ describe('patchXHR with a rule in the way', () => {
     expect(networkLogStore.getSnapshot()[0]?.intercepted).toBe('overridden');
   });
 
+  // React Native's own XHR assigns `status` and the body when the response arrives, which is after
+  // the override is installed. A getter with no setter made that assignment throw in strict code.
+  it('keeps the override when the platform writes the real response afterwards', () => {
+    networkOverridesStore.set({ url: URL, action: 'respond', status: 503, body: 'nope' });
+    const xhr = open();
+    xhr.send();
+
+    expect(() => {
+      // React Native's XHR is a class, so its code is strict, where writing to a getter throws.
+      'use strict';
+      xhr.status = 200;
+      xhr.statusText = 'OK';
+      xhr.response = 'the real body';
+    }).not.toThrow();
+    expect(xhr.status).toBe(503);
+    expect(xhr.responseText).toBe('nope');
+  });
+
   it.each([102, 599])('delivers a %i override as it is, and logs it', (status) => {
     networkOverridesStore.set({ url: URL, action: 'respond', status, body: 'mocked' });
     const xhr = open();

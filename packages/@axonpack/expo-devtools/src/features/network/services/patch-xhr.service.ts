@@ -196,10 +196,14 @@ function patchSetReadyState() {
   };
 }
 
-/** Replaces a read-only property on the instance, which is all an override needs to be visible. */
+/**
+ * Replaces a property on the instance, which is all an override needs to be visible. The setter
+ * drops writes: React Native's XHR assigns `status` itself when the real response lands, and in its
+ * strict class code a getter with no setter turns that assignment into a crash.
+ */
 function defineReadable(xhr: XMLHttpRequest, name: string, get: () => unknown) {
   try {
-    Object.defineProperty(xhr, name, { configurable: true, get });
+    Object.defineProperty(xhr, name, { configurable: true, get, set() {} });
   } catch {
     // A runtime that refuses is one where the override simply does not apply.
   }
