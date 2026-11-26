@@ -17,7 +17,7 @@
     },
     "packages/@axonpack/expo-devtools": {
       "name": "@axonpack/expo-devtools",
-      "version": "3.9.1",
+      "version": "3.9.2",
       "bin": {
         "devtools": "bin/devtools.js",
       },

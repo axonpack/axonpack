@@ -1,5 +1,11 @@
 # @axonpack/expo-devtools
 
+## 3.9.2
+
+### Patch Changes
+
+- 08bee23: - **XHR overrides no longer crash the app**: a response override on a request made through `XMLHttpRequest` (axios included) threw "Cannot assign to property 'status' which has only a getter" when the real response arrived. The app now gets the overridden response
+
 ## 3.9.1
 
 ### Patch Changes
