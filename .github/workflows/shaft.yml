@@ -1,0 +1,35 @@
+name: Axon Shaft
+on:
+  # pull_request_target, so a fork's pull request gets an OIDC token too. The action never runs the PR's code.
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+# A new push cancels the review of the commit before it. Comments each run on their own.
+concurrency:
+  group: axon-shaft-${{ github.event_name == 'pull_request_target' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  # The run's OIDC token is how the action signs in to Axon Shaft, which answers with
+  # a GitHub token for this repo, the Claude token, the settings and the review prompt.
+  id-token: write
+jobs:
+  axon-shaft:
+    # Skip comments with no line that starts with /, and bots' comments (Axon Shaft's own included),
+    # so they don't start a runner. The action picks out the command: /review, /fix, /ask, /axonshaft or /help.
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event.sender.type != 'Bot' &&
+      contains(format('{0}{1}{0}{2}', fromJSON('"\n"'), github.event.comment.body, github.event.review.body), format('{0}/', fromJSON('"\n"'))))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Leaves no token in .git/config for the model to read.
+          persist-credentials: false
+      - uses: axonpack/shaft-actions@v1
